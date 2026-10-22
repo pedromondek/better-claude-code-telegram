@@ -24,6 +24,10 @@ export default defineConfig({
           process.env.COVERAGE_RATCHET === "1"
             ? (next: number): number => Math.floor(next)
             : false,
+        lines: 100,
+        statements: -6,
+        functions: -3,
+        branches: -19,
       },
     },
   },

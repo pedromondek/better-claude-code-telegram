@@ -1,0 +1,12 @@
+better-claude-code-telegram
+Copyright 2026 pedromondek
+
+This product includes software from the official Telegram channel plugin for
+Claude Code (https://github.com/anthropics/claude-plugins-official,
+external_plugins/telegram), licensed under the Apache License, Version 2.0.
+
+The files under plugins/telegram/ outside plugins/telegram/extensions/ are a
+copy of upstream version 0.0.7, with two changes: plugins/telegram/server.ts
+carries a small patch that calls the code in plugins/telegram/extensions/, and
+plugins/telegram/skills/configure/SKILL.md is rewritten so the bot token is
+never saved through Claude. Every other upstream file is unchanged.
