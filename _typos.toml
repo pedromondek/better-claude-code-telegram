@@ -1,0 +1,11 @@
+[files]
+ignore-hidden = false
+extend-exclude = [".git/", "*.pt-br.md", "docs/decisions/"]
+
+[default.extend-words]
+aprove = "aprove"
+comando = "comando"
+erro = "erro"
+foto = "foto"
+instale = "instale"
+transcrito = "transcrito"

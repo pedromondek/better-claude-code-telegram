@@ -1,6 +1,8 @@
 import { basename, dirname, join, relative } from "node:path";
 
 const quoted = (files) => files.map((file) => `"${file}"`).join(" ");
+const tool = (command) => `sh scripts/mise-exec.sh ${command}`;
+const fromRoot = (files) => files.map((file) => relative(process.cwd(), file));
 
 export const scriptTestOf = (file) =>
   join(
@@ -10,7 +12,10 @@ export const scriptTestOf = (file) =>
   );
 
 export default {
-  "*": (files) => [`secretlint --no-glob ${quoted(files)}`],
+  "*": (files) => [
+    `secretlint --no-glob ${quoted(files)}`,
+    tool(`typos --force-exclude ${quoted(fromRoot(files))}`),
+  ],
   "*.{ts,mts,cts,js,mjs,cjs}": (files) => {
     const inFolders = files.filter(
       (file) => dirname(relative(process.cwd(), file)) !== ".",
@@ -26,6 +31,16 @@ export default {
     ];
   },
   "*.{json,md,yml,yaml}": (files) => [`prettier --write ${quoted(files)}`],
+  ".github/workflows/*.{yml,yaml}": (files) => [
+    tool(`actionlint ${quoted(files)}`),
+    tool(`zizmor --offline ${quoted(files)}`),
+    tool(`pinact run --fix=false --no-api ${quoted(files)}`),
+  ],
+  ".github/actions/**/action.{yml,yaml}": (files) => [
+    tool(`zizmor --offline ${quoted(files)}`),
+    tool(`pinact run --fix=false --no-api ${quoted(files)}`),
+  ],
+  ".github/actionlint.{yml,yaml}": () => [tool("actionlint")],
   "{.husky/*,.husky/**/*.sh}": () => ["npm run --silent test:hooks"],
   "scripts/**/*.sh": (files) => [
     `vitest run --passWithNoTests ${quoted(files.map(scriptTestOf))}`,

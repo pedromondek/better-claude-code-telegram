@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  cpSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -11,30 +12,37 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { miseEnv } from "./support/mise-env.mjs";
+import { MISSPELLED, TYPOS_REPORT } from "./support/typo-fixtures.mjs";
+
 const ROOT = join(import.meta.dirname, "..", "..");
 const COPIED = [
   ".husky/pre-commit",
   ".husky/lib/node-env.sh",
   ".husky/lib/explain-lint-staged-failure.mjs",
   "scripts/check-private-data.mjs",
+  "scripts/mise-exec.sh",
   "lint-staged.config.mjs",
   ".prettierrc.json",
   ".secretlintrc.json",
+  "_typos.toml",
+  "mise.toml",
+  "mise.lock",
 ];
 const AT = "@";
-const COMMIT_TIMEOUT = 30_000;
+const COMMIT_TIMEOUT = 60_000;
 const UNALIGNED_TABLE = "| a | b |\n| - | - |\n| longer cell | x |\n";
 const ALIGNED_TABLE =
   "| a           | b   |\n| ----------- | --- |\n| longer cell | x   |\n";
 
-const env = Object.fromEntries(
-  Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
-);
-
 let repo;
 
 function git(...args) {
-  return spawnSync("git", args, { cwd: repo, encoding: "utf8", env });
+  return spawnSync("git", args, {
+    cwd: repo,
+    encoding: "utf8",
+    env: { ...process.env, ...miseEnv(repo) },
+  });
 }
 
 function stage(file, content) {
@@ -54,6 +62,8 @@ beforeEach(() => {
     mkdirSync(dirname(join(repo, file)), { recursive: true });
     copyFileSync(join(ROOT, file), join(repo, file));
   }
+
+  cpSync(join(ROOT, ".mise"), join(repo, ".mise"), { recursive: true });
 
   symlinkSync(join(ROOT, "node_modules"), join(repo, "node_modules"));
   mkdirSync(join(repo, "hooks"));
@@ -87,6 +97,16 @@ describe(".husky/pre-commit", { timeout: COMMIT_TIMEOUT }, () => {
     expect(output).toContain("secretlint");
     expect(output).toContain("NPM_ACCESS_TOKEN");
     expect(output).not.toContain(token);
+    expect(git("log", "--format=%s").stdout).toBe("base\n");
+  });
+
+  it("blocks a commit with a typo through typos run by mise", () => {
+    stage("notes.md", `Call the ${MISSPELLED} function.\n`);
+
+    const result = commit("add notes");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain(TYPOS_REPORT);
     expect(git("log", "--format=%s").stdout).toBe("base\n");
   });
 

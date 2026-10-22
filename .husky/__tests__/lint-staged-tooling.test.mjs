@@ -11,11 +11,18 @@ const scripts = () =>
   JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
 const quoted = (files) =>
   files.map((file) => `"${join(ROOT, file)}"`).join(" ");
+const tool = (command) => `sh scripts/mise-exec.sh ${command}`;
 const secretsTask = (...files) => `secretlint --no-glob ${quoted(files)}`;
+const typosTask = (...files) =>
+  tool(`typos --force-exclude ${files.map((file) => `"${file}"`).join(" ")}`);
+const everyFileTasks = (...files) => [
+  secretsTask(...files),
+  typosTask(...files),
+];
 
 function lintTasks(...files) {
   return [
-    secretsTask(...files),
+    ...everyFileTasks(...files),
     `prettier --write ${quoted(files)}`,
     `oxlint --fix --max-warnings 0 ${quoted(files)}`,
     `eslint --fix --max-warnings 0 --no-warn-ignored ${quoted(files)}`,
@@ -38,7 +45,7 @@ const repositoryFiles = () =>
     .split("\n")
     .filter(Boolean);
 
-describe("lint-staged: secrets", () => {
+describe("lint-staged: every file", () => {
   it.each([
     "LICENSE",
     "NOTICE",
@@ -46,18 +53,25 @@ describe("lint-staged: secrets", () => {
     "plugins/telegram/bun.lock",
     "plugins/telegram/server.ts",
     ".husky/pre-commit",
-  ])("checks %s for secrets", (file) => {
-    expect(tasksFor(file)[0]).toBe(secretsTask(file));
+  ])("checks %s for secrets and typos first", (file) => {
+    expect(tasksFor(file).slice(0, 2)).toEqual(everyFileTasks(file));
   });
 
-  it("checks every file of the commit in one secretlint run, with globs off for paths with brackets", () => {
+  it("checks every file of the commit in one run of each tool, with secretlint globs off for paths with brackets", () => {
     const files = ["README.md", "plugins/(group)/[id].ts"];
 
-    expect(tasksForFiles(files)[0]).toBe(secretsTask(...files));
+    expect(tasksForFiles(files).slice(0, 2)).toEqual(everyFileTasks(...files));
   });
 
-  it("checks the whole repository by hand through lint:secrets", () => {
+  it("passes typos the paths relative to the repository, because the folder exclusions of _typos.toml only match relative paths", () => {
+    expect(tasksFor("docs/decisions/Fork/001-x.md")[1]).toBe(
+      'sh scripts/mise-exec.sh typos --force-exclude "docs/decisions/Fork/001-x.md"',
+    );
+  });
+
+  it("checks the whole repository by hand through lint:secrets and lint:typos", () => {
     expect(scripts()["lint:secrets"]).toBe('secretlint "**/*"');
+    expect(scripts()["lint:typos"]).toBe("sh scripts/mise-exec.sh typos");
   });
 });
 
@@ -114,12 +128,54 @@ describe("lint-staged: data and docs", () => {
     "plugins/telegram-hooks/hooks.json",
     "README.md",
     "docs/decisions/Fork/001-x.md",
-    ".github/workflows/ci.yml",
     ".coderabbit.yaml",
   ])("only formats %s", (file) => {
     expect(tasksFor(file)).toEqual([
-      secretsTask(file),
+      ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
+    ]);
+  });
+});
+
+describe("lint-staged: workflows and actions", () => {
+  it.each([".github/workflows/ci.yml", ".github/workflows/release.yaml"])(
+    "formats %s and passes actionlint, zizmor offline and the offline pin check of pinact",
+    (file) => {
+      expect(tasksFor(file)).toEqual([
+        ...everyFileTasks(file),
+        `prettier --write ${quoted([file])}`,
+        tool(`actionlint ${quoted([file])}`),
+        tool(`zizmor --offline ${quoted([file])}`),
+        tool(`pinact run --fix=false --no-api ${quoted([file])}`),
+      ]);
+    },
+  );
+
+  it("passes zizmor and pinact on a composite action, which actionlint does not read", () => {
+    const file = ".github/actions/setup/action.yml";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      tool(`zizmor --offline ${quoted([file])}`),
+      tool(`pinact run --fix=false --no-api ${quoted([file])}`),
+    ]);
+  });
+
+  it("lints every workflow again when the actionlint config changes", () => {
+    const file = ".github/actionlint.yaml";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      tool("actionlint"),
+    ]);
+  });
+
+  it("leaves a YAML file outside .github to prettier only", () => {
+    expect(tasksFor("docs/example.yml")).toEqual([
+      ...everyFileTasks("docs/example.yml"),
+      `prettier --write ${quoted(["docs/example.yml"])}`,
     ]);
   });
 });
@@ -131,13 +187,16 @@ describe("lint-staged: git hooks", () => {
     ".husky/lib/node-env.sh",
     ".husky/lib/progress.sh",
   ])("runs the hook tests when %s changes, without prettier", (file) => {
-    expect(tasksFor(file)).toEqual([secretsTask(file), HOOK_TESTS]);
+    expect(tasksFor(file)).toEqual([...everyFileTasks(file), HOOK_TESTS]);
   });
 
   it("runs the hook tests once for several hook files", () => {
     const files = [".husky/pre-commit", ".husky/lib/progress.sh"];
 
-    expect(tasksForFiles(files)).toEqual([secretsTask(...files), HOOK_TESTS]);
+    expect(tasksForFiles(files)).toEqual([
+      ...everyFileTasks(...files),
+      HOOK_TESTS,
+    ]);
   });
 
   it("the hook tests run only the tests of .husky", () => {
@@ -148,7 +207,7 @@ describe("lint-staged: git hooks", () => {
 describe("lint-staged: shell scripts", () => {
   it("runs the test named after the shell script, without prettier", () => {
     expect(tasksFor("scripts/telegram.sh")).toEqual([
-      secretsTask("scripts/telegram.sh"),
+      ...everyFileTasks("scripts/telegram.sh"),
       'vitest run --passWithNoTests "scripts/__tests__/telegram.test.mjs"',
     ]);
   });
@@ -157,7 +216,7 @@ describe("lint-staged: shell scripts", () => {
     const files = ["scripts/shell.sh", "scripts/telegram.sh"];
 
     expect(tasksForFiles(files)).toEqual([
-      secretsTask(...files),
+      ...everyFileTasks(...files),
       'vitest run --passWithNoTests "scripts/__tests__/shell.test.mjs" "scripts/__tests__/telegram.test.mjs"',
     ]);
   });
@@ -187,9 +246,9 @@ describe("lint-staged: shell scripts", () => {
 
 describe("lint-staged: files with no other task", () => {
   it.each(["LICENSE", "NOTICE", ".gitignore", "plugins/telegram/bun.lock"])(
-    "only checks %s for secrets",
+    "only checks %s for secrets and typos",
     (file) => {
-      expect(tasksFor(file)).toEqual([secretsTask(file)]);
+      expect(tasksFor(file)).toEqual(everyFileTasks(file));
     },
   );
 });
