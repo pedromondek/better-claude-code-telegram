@@ -31,6 +31,7 @@
   },
   "scripts": {
     "commit": "czg",
+    "branch": "node scripts/branch.mjs",
     "lint": "oxlint --max-warnings 0 && eslint --max-warnings 0 && npm run --silent typecheck",
     "lint:oxlint": "oxlint --max-warnings 0",
     "lint:eslint": "eslint --max-warnings 0",
@@ -53,7 +54,7 @@
     "test:mutation": "stryker run",
     "check:private": "node scripts/check-private-data.mjs",
     "postinstall": "command -v patch-package >/dev/null 2>&1 || exit 0; patch-package",
-    "prepare": "command -v husky >/dev/null 2>&1 || exit 0; husky"
+    "prepare": "command -v husky >/dev/null 2>&1 || exit 0; husky && node scripts/husky-extra-hooks.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

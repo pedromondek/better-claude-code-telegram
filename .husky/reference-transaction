@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+
+if [ "$1" != "prepared" ]; then
+  cat >/dev/null
+  exit 0
+fi
+
+status=0
+
+while read -r old_value new_value ref_name; do
+  case "$ref_name" in
+    refs/heads/*) ;;
+    *) continue ;;
+  esac
+  case "$old_value" in
+    *[!0]*) continue ;;
+  esac
+  case "$new_value" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+
+  node "$(dirname "$0")/../scripts/branch.mjs" check "${ref_name#refs/heads/}" >&2 || status=1
+done
+
+exit "$status"
