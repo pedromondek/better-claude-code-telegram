@@ -1,0 +1,222 @@
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+import { ROOT, tasksFor, tasksForFiles } from "./support/lint-staged-tasks.mjs";
+
+const HOOK_TESTS = "npm run --silent test:hooks";
+const HOOK = readFileSync(join(ROOT, ".husky", "pre-commit"), "utf8");
+const scripts = () =>
+  JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
+const quoted = (files) =>
+  files.map((file) => `"${join(ROOT, file)}"`).join(" ");
+const secretsTask = (...files) => `secretlint --no-glob ${quoted(files)}`;
+
+function lintTasks(...files) {
+  return [
+    secretsTask(...files),
+    `prettier --write ${quoted(files)}`,
+    `oxlint --fix --max-warnings 0 ${quoted(files)}`,
+    `eslint --fix --max-warnings 0 --no-warn-ignored ${quoted(files)}`,
+  ];
+}
+
+function codeTasks(...files) {
+  return [
+    ...lintTasks(...files),
+    `vitest related --run --passWithNoTests ${quoted(files)}`,
+  ];
+}
+
+const repositoryFiles = () =>
+  execFileSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard"],
+    { cwd: ROOT, encoding: "utf8" },
+  )
+    .split("\n")
+    .filter(Boolean);
+
+describe("lint-staged: secrets", () => {
+  it.each([
+    "LICENSE",
+    "NOTICE",
+    ".gitignore",
+    "plugins/telegram/bun.lock",
+    "plugins/telegram/server.ts",
+    ".husky/pre-commit",
+  ])("checks %s for secrets", (file) => {
+    expect(tasksFor(file)[0]).toBe(secretsTask(file));
+  });
+
+  it("checks every file of the commit in one secretlint run, with globs off for paths with brackets", () => {
+    const files = ["README.md", "plugins/(group)/[id].ts"];
+
+    expect(tasksForFiles(files)[0]).toBe(secretsTask(...files));
+  });
+
+  it("checks the whole repository by hand through lint:secrets", () => {
+    expect(scripts()["lint:secrets"]).toBe('secretlint "**/*"');
+  });
+});
+
+describe("lint-staged: code", () => {
+  it.each([
+    "plugins/telegram/extensions/i18n.ts",
+    "plugins/telegram-hooks/telegram.mjs",
+    "scripts/setup.mjs",
+    ".husky/lib/validate-commit-msg.mjs",
+    ".husky/__tests__/commit-msg.test.mjs",
+  ])(
+    "formats %s, passes oxlint and eslint with no warning and runs the related tests",
+    (file) => {
+      expect(tasksFor(file)).toEqual(codeTasks(file));
+    },
+  );
+
+  it("runs each tool once with every file of the commit", () => {
+    const files = ["scripts/setup.mjs", "plugins/telegram/extensions/i18n.ts"];
+
+    expect(tasksForFiles(files)).toEqual(codeTasks(...files));
+  });
+});
+
+describe("lint-staged: configs at the root", () => {
+  it.each([
+    "vitest.config.ts",
+    "vitest.config.e2e.ts",
+    "vitest.config.stryker.ts",
+    "vitest.setup.ts",
+    "eslint.config.mjs",
+    "lint-staged.config.mjs",
+  ])(
+    "formats %s and passes oxlint and eslint, without vitest related, which would run the whole suite against the files outside the stage",
+    (file) => {
+      expect(tasksFor(file)).toEqual(lintTasks(file));
+    },
+  );
+
+  it("still runs the related tests of the code in folders committed with a config", () => {
+    const tasks = tasksForFiles(["vitest.config.ts", "scripts/setup.mjs"]);
+
+    expect(tasks).toContain(
+      `vitest related --run --passWithNoTests ${quoted(["scripts/setup.mjs"])}`,
+    );
+  });
+});
+
+describe("lint-staged: data and docs", () => {
+  it.each([
+    "package.json",
+    ".oxlintrc.json",
+    ".secretlintrc.json",
+    "plugins/telegram-hooks/hooks.json",
+    "README.md",
+    "docs/decisions/Fork/001-x.md",
+    ".github/workflows/ci.yml",
+    ".coderabbit.yaml",
+  ])("only formats %s", (file) => {
+    expect(tasksFor(file)).toEqual([
+      secretsTask(file),
+      `prettier --write ${quoted([file])}`,
+    ]);
+  });
+});
+
+describe("lint-staged: git hooks", () => {
+  it.each([
+    ".husky/pre-commit",
+    ".husky/commit-msg",
+    ".husky/lib/node-env.sh",
+    ".husky/lib/progress.sh",
+  ])("runs the hook tests when %s changes, without prettier", (file) => {
+    expect(tasksFor(file)).toEqual([secretsTask(file), HOOK_TESTS]);
+  });
+
+  it("runs the hook tests once for several hook files", () => {
+    const files = [".husky/pre-commit", ".husky/lib/progress.sh"];
+
+    expect(tasksForFiles(files)).toEqual([secretsTask(...files), HOOK_TESTS]);
+  });
+
+  it("the hook tests run only the tests of .husky", () => {
+    expect(scripts()["test:hooks"]).toBe("vitest run .husky");
+  });
+});
+
+describe("lint-staged: shell scripts", () => {
+  it("runs the test named after the shell script, without prettier", () => {
+    expect(tasksFor("scripts/telegram.sh")).toEqual([
+      secretsTask("scripts/telegram.sh"),
+      'vitest run --passWithNoTests "scripts/__tests__/telegram.test.mjs"',
+    ]);
+  });
+
+  it("runs the tests of several shell scripts in one go", () => {
+    const files = ["scripts/shell.sh", "scripts/telegram.sh"];
+
+    expect(tasksForFiles(files)).toEqual([
+      secretsTask(...files),
+      'vitest run --passWithNoTests "scripts/__tests__/shell.test.mjs" "scripts/__tests__/telegram.test.mjs"',
+    ]);
+  });
+
+  it("every shell script lives in .husky or scripts, and each one in scripts has the test named after it", () => {
+    const files = repositoryFiles();
+    const shellScripts = files.filter((file) => file.endsWith(".sh"));
+
+    expect(shellScripts).not.toEqual([]);
+    expect(
+      shellScripts.filter(
+        (file) => !file.startsWith(".husky/") && !file.startsWith("scripts/"),
+      ),
+    ).toEqual([]);
+    expect(
+      shellScripts
+        .filter((file) => file.startsWith("scripts/"))
+        .filter(
+          (file) =>
+            !files.includes(
+              file.replace(/([^/]+)\.sh$/u, "__tests__/$1.test.mjs"),
+            ),
+        ),
+    ).toEqual([]);
+  });
+});
+
+describe("lint-staged: files with no other task", () => {
+  it.each(["LICENSE", "NOTICE", ".gitignore", "plugins/telegram/bun.lock"])(
+    "only checks %s for secrets",
+    (file) => {
+      expect(tasksFor(file)).toEqual([secretsTask(file)]);
+    },
+  );
+});
+
+describe(".husky/pre-commit", () => {
+  it("uses the Node version of .nvmrc", () => {
+    expect(HOOK.split("\n")[0]).toBe('. "$(dirname "$0")/lib/node-env.sh"');
+  });
+
+  it("checks the stage for private data before lint-staged", () => {
+    const check = HOOK.indexOf(
+      'node "$(dirname "$0")/../scripts/check-private-data.mjs"',
+    );
+
+    expect(check).toBeGreaterThan(0);
+    expect(check).toBeLessThan(HOOK.indexOf("lint-staged"));
+  });
+
+  it("explains a lint-staged failure and keeps its exit code", () => {
+    expect(HOOK).toMatch(
+      /lint-staged \|\| \{ code=\$\?; node "\$\(dirname "\$0"\)\/lib\/explain-lint-staged-failure\.mjs"; exit "\$code"; \}/,
+    );
+  });
+
+  it("the private data check also runs by hand through check:private", () => {
+    expect(scripts()["check:private"]).toBe(
+      "node scripts/check-private-data.mjs",
+    );
+  });
+});
