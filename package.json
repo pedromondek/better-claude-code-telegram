@@ -1,0 +1,72 @@
+{
+  "name": "better-claude-code-telegram",
+  "private": true,
+  "description": "Telegram for Claude Code: answer AskUserQuestion with buttons, get a notice when Claude waits on you, and reach every instance on your machine through one bot.",
+  "keywords": [
+    "claude-code",
+    "claude",
+    "telegram",
+    "plugin",
+    "mcp",
+    "askuserquestion",
+    "chat",
+    "tool",
+    "utilities",
+    "ai-assisted",
+    "ai"
+  ],
+  "homepage": "https://github.com/pedromondek/better-claude-code-telegram#readme",
+  "bugs": {
+    "url": "https://github.com/pedromondek/better-claude-code-telegram/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedromondek/better-claude-code-telegram.git"
+  },
+  "license": "Apache-2.0",
+  "author": "pedromondek",
+  "type": "module",
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "lint": "oxlint --max-warnings 0 && eslint --max-warnings 0 && npm run --silent typecheck",
+    "lint:oxlint": "oxlint --max-warnings 0",
+    "lint:eslint": "eslint --max-warnings 0",
+    "lint:fix": "oxlint --fix && eslint --fix",
+    "typecheck": "tsc -p tsconfig.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "format:file": "prettier --write",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.config.e2e.ts",
+    "test:all": "npm run --silent test && npm run --silent test:e2e",
+    "test:cov": "vitest run --coverage",
+    "test:mutation": "stryker run",
+    "postinstall": "command -v patch-package >/dev/null 2>&1 || exit 0; patch-package"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/instrumenter": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-oxlint": "1.88.0",
+    "globals": "17.13.0",
+    "oxlint": "1.88.0",
+    "patch-package": "8.0.1",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5"
+  },
+  "overrides": {
+    "typed-rest-client": {
+      "qs": "6.16.1"
+    }
+  }
+}
