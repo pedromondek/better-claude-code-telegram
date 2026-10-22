@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { gitVariablesIn } from "../../vitest.setup.ts";
+import {
+  gitVariablesIn,
+  PRE_PUSH_CONTROL_VARIABLES,
+} from "../../vitest.setup.ts";
 
 let dir;
 
@@ -44,6 +47,20 @@ describe("vitest.setup", () => {
 
   it("leaves no git variable in the test process", () => {
     expect(gitVariablesIn(process.env)).toEqual([]);
+  });
+
+  it("removes the variables the pre-push exports or CI sets for its own run, so a test never inherits the range or a skipped step", () => {
+    expect(PRE_PUSH_CONTROL_VARIABLES).toEqual([
+      "PREPUSH_SKIP_MUTATION",
+      "PREPUSH_SKIP_BRANCH_CHECK",
+      "MUTATION_RANGE",
+      "MUTATION_FORCE",
+      "COVERAGE_RANGE",
+      "TEST_PROGRESS_FILE",
+    ]);
+    expect(
+      PRE_PUSH_CONTROL_VARIABLES.filter((name) => name in process.env),
+    ).toEqual([]);
   });
 
   it("keeps a test git repository away from the index of the repository that runs the suite", () => {

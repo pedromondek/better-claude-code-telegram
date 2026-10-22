@@ -1,0 +1,189 @@
+#!/usr/bin/env sh
+
+timeout 10 git fetch --quiet origin main 2>/dev/null || true
+
+SAW_PUSH=0
+RANGE_OK=0
+PUSHED_OID=""
+PUSHED_RANGE=""
+CHANGED=""
+BRANCH_NAME_FAILED=0
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+  case "$local_oid" in
+    *[!0]*) : ;;
+    *) continue ;;
+  esac
+
+  SAW_PUSH=1
+  PUSHED_OID=$local_oid
+
+  case "$remote_ref" in
+    refs/heads/*)
+      if [ -z "$CI" ] && [ -z "$PREPUSH_SKIP_BRANCH_CHECK" ]; then
+        node "$(dirname "$0")/../scripts/branch.mjs" check "${remote_ref#refs/heads/}" || BRANCH_NAME_FAILED=1
+      fi
+      ;;
+  esac
+
+  case "$remote_oid" in
+    *[!0]*)
+      range="$remote_oid..$local_oid"
+      PUSHED_RANGE="$remote_oid...$local_oid"
+      ;;
+    *)
+      if base=$(git merge-base origin/main "$local_oid" 2>/dev/null) && [ -n "$base" ]; then
+        range="$base..$local_oid"
+        PUSHED_RANGE="$base...$local_oid"
+      else
+        range=""
+        PUSHED_RANGE=""
+      fi
+      ;;
+  esac
+
+  if [ -n "$range" ] && changed=$(git diff --name-only "$range" 2>/dev/null); then
+    RANGE_OK=1
+    CHANGED="$CHANGED
+$changed"
+  else
+    RANGE_OK=0
+    break
+  fi
+done
+
+[ "$BRANCH_NAME_FAILED" = "1" ] && exit 1
+[ "$SAW_PUSH" = "1" ] || exit 0
+
+RUN_WORKFLOWS=0
+
+if [ "$RANGE_OK" = "0" ]; then
+  echo "⚠ No reliable range (new branch or no upstream): running every check"
+  RUN_WORKFLOWS=1
+elif echo "$CHANGED" | grep -qE '^\.github/(workflows/[^/]+\.ya?ml|actions/.+/action\.ya?ml|actionlint\.ya?ml)$'; then
+  RUN_WORKFLOWS=1
+fi
+
+FIXUP_COUNT=$(git log --format=%s "origin/main..$PUSHED_OID" 2>/dev/null | grep -cE '^(fixup|squash|amend)! ' || true)
+[ "$FIXUP_COUNT" -gt 0 ] && echo "ℹ $FIXUP_COUNT fixup!/squash!/amend! on the branch: before the merge, fuse them with npm run fixup:fuse"
+
+. "$(dirname "$0")/lib/progress.sh"
+
+CHEAP_FAILED=0
+
+require_npm_script() {
+  if node -e 'const { scripts } = JSON.parse(require("node:fs").readFileSync("package.json", "utf8")); process.exit(scripts && Object.hasOwn(scripts, process.argv[1]) ? 0 : 1);' "$1" 2>/dev/null; then
+    return 0
+  fi
+  echo "npm script \"$1\" does not exist in package.json"
+  return 1
+}
+
+run_step() {
+  step_label=$1
+  shift
+
+  step_log=$(mktemp "${TMPDIR:-/tmp}/pre-push-log.XXXXXX") || { echo "✗ could not create a temporary file"; exit 1; }
+  step_progress=$(mktemp "${TMPDIR:-/tmp}/pre-push-progress.XXXXXX") || { echo "✗ could not create a temporary file"; rm -f "$step_log"; exit 1; }
+
+  (
+    for script in "$@"; do
+      require_npm_script "${script%% *}" || exit 1
+    done
+    for script in "$@"; do
+      TEST_PROGRESS_FILE="$step_progress" npm run --silent $script || exit $?
+    done
+  ) > "$step_log" 2>&1 &
+  step_pid=$!
+
+  trap 'kill "$step_pid" 2>/dev/null || true; rm -f "$step_log" "$step_progress"; exit 130' INT TERM
+
+  if wait_step "$step_pid" "$step_label..." "$step_progress"; then step_code=0; else step_code=$?; fi
+
+  trap 'exit 130' INT TERM
+
+  step_result=$(progress_result "$step_progress" "$progress_elapsed")
+
+  if [ "$step_code" = "0" ]; then
+    echo "✓ $step_label OK$step_result"
+  else
+    echo "✗ $step_label failed$step_result"
+    cat "$step_log"
+    CHEAP_FAILED=1
+  fi
+
+  rm -f "$step_log" "$step_progress"
+}
+
+ROOT=$(pwd)
+WORKTREE=""
+WORKTREE_LOCK_PREFIX="pre-push pid"
+
+remove_worktree() {
+  [ -n "$WORKTREE" ] || return 0
+  cd "$ROOT" || return 0
+  git worktree remove -f -f "$WORKTREE" >/dev/null 2>&1 || rm -rf "$WORKTREE"
+}
+
+remove_stale_worktrees() {
+  worktree_list=$(git worktree list --porcelain 2>/dev/null) || return 0
+  printf '%s\n' "$worktree_list" | while IFS= read -r line; do
+    case "$line" in
+      "worktree "*) listed_path=${line#worktree } ;;
+      "locked $WORKTREE_LOCK_PREFIX "*)
+        owner_pid=${line#"locked $WORKTREE_LOCK_PREFIX "}
+        if ! kill -0 "$owner_pid" 2>/dev/null && git worktree remove -f -f "$listed_path" >/dev/null 2>&1; then
+          echo "✓ removed the worktree an interrupted push left behind: $listed_path"
+        fi
+        ;;
+    esac
+  done
+  git worktree prune >/dev/null 2>&1 || true
+}
+
+link_node_modules() {
+  source_dir="$ROOT/node_modules"
+  [ -d "$source_dir" ] || return 0
+  mkdir -p "$WORKTREE/node_modules"
+  set --
+  for entry in "$source_dir"/* "$source_dir"/.[!.]*; do
+    if [ -e "$entry" ] || [ -L "$entry" ]; then
+      set -- "$@" "$entry"
+    fi
+  done
+  [ "$#" -gt 0 ] && ln -s "$@" "$WORKTREE/node_modules/"
+  return 0
+}
+
+remove_stale_worktrees
+
+WORKTREE=$(mktemp -d "${TMPDIR:-/tmp}/pre-push-worktree.XXXXXX") || { echo "✗ could not create the folder of the temporary worktree"; exit 1; }
+trap remove_worktree EXIT
+trap 'exit 130' INT TERM
+
+if ! git worktree add --detach --quiet --lock --reason "$WORKTREE_LOCK_PREFIX $$" "$WORKTREE" "$PUSHED_OID" >/dev/null 2>&1; then
+  echo "✗ could not create the temporary worktree of the pushed commit"
+  exit 1
+fi
+
+link_node_modules
+
+unset $(git rev-parse --local-env-vars)
+if [ -n "$PUSHED_RANGE" ]; then
+  export MUTATION_RANGE="$PUSHED_RANGE"
+fi
+cd "$WORKTREE" || exit 1
+
+run_step "lint and typecheck" lint
+run_step "secrets" lint:secrets
+run_step "typos" lint:typos
+run_step "lockfile" lint:lockfile
+[ "$RUN_WORKFLOWS" = "1" ] && [ -d .github ] && run_step "workflow linters" lint:workflows
+run_step "unit tests with coverage" "test:cov -- --reporter=minimal --reporter=./scripts/vitest-progress-reporter.mjs" test:cov:changed
+
+if [ "$CHEAP_FAILED" = "1" ]; then
+  echo "✗ push stopped"
+  exit 1
+fi
+
+exit 0

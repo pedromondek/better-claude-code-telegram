@@ -39,6 +39,7 @@
     "lint:secrets": "secretlint \"**/*\"",
     "lint:lockfile": "node scripts/check-lockfile-sync.mjs && lockfile-lint",
     "lint:typos": "sh scripts/mise-exec.sh typos",
+    "lint:workflows": "sh scripts/mise-exec.sh actionlint && sh scripts/mise-exec.sh zizmor --offline . && sh scripts/mise-exec.sh pinact run --fix=false --no-api",
     "typecheck": "tsc -p tsconfig.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -53,6 +54,8 @@
     "test:hooks": "vitest run .husky",
     "test:mutation": "stryker run",
     "check:private": "node scripts/check-private-data.mjs",
+    "check:commit": "sh .husky/lib/check-commit.sh",
+    "fixup:fuse": "GIT_SEQUENCE_EDITOR=: git rebase -i --autosquash --keep-base origin/main && npm run --silent check:commit",
     "postinstall": "command -v patch-package >/dev/null 2>&1 || exit 0; patch-package",
     "prepare": "command -v husky >/dev/null 2>&1 || exit 0; husky && node scripts/husky-extra-hooks.mjs"
   },
