@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; } && node \"${CLAUDE_PLUGIN_ROOT}/hooks/telegram.mjs\" permission 2>/dev/null || true",
+            "timeout": 86400
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; } && node \"${CLAUDE_PLUGIN_ROOT}/hooks/telegram.mjs\" prompt 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; } && node \"${CLAUDE_PLUGIN_ROOT}/hooks/telegram.mjs\" post 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && date +%s%3N > \"$d/last-activity\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; } && node \"${CLAUDE_PLUGIN_ROOT}/hooks/telegram.mjs\" stop 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && date +%s%3N > \"$d/last-activity\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
