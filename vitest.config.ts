@@ -17,6 +17,14 @@ export default defineConfig({
       provider: "v8",
       include: ["plugins/telegram/extensions/**/*.ts"],
       exclude: ["**/__tests__/**"],
+      reportsDirectory: "./coverage",
+      reporter: ["text-summary", "json-summary", "json", "html"],
+      thresholds: {
+        autoUpdate:
+          process.env.COVERAGE_RATCHET === "1"
+            ? (next: number): number => Math.floor(next)
+            : false,
+      },
     },
   },
 });

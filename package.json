@@ -47,6 +47,8 @@
     "test:e2e": "vitest run --config vitest.config.e2e.ts",
     "test:all": "npm run --silent test && npm run --silent test:e2e",
     "test:cov": "vitest run --coverage",
+    "test:cov:changed": "node scripts/coverage-changed-lines.mjs",
+    "test:cov:ratchet": "node scripts/coverage-ratchet.mjs",
     "test:hooks": "vitest run .husky",
     "test:mutation": "stryker run",
     "check:private": "node scripts/check-private-data.mjs",
