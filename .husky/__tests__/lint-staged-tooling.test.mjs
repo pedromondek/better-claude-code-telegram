@@ -122,7 +122,7 @@ describe("lint-staged: configs at the root", () => {
 
 describe("lint-staged: data and docs", () => {
   it.each([
-    "package.json",
+    "plugins/telegram/package.json",
     ".oxlintrc.json",
     ".secretlintrc.json",
     "plugins/telegram-hooks/hooks.json",
@@ -134,6 +134,39 @@ describe("lint-staged: data and docs", () => {
       ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
     ]);
+  });
+});
+
+describe("lint-staged: lockfile", () => {
+  it.each(["package.json", "package-lock.json", ".lockfile-lintrc.json"])(
+    "checks the lock against package.json and its sources when %s changes",
+    (file) => {
+      expect(tasksFor(file)).toEqual([
+        ...everyFileTasks(file),
+        `prettier --write ${quoted([file])}`,
+        "npm run --silent lint:lockfile",
+      ]);
+    },
+  );
+
+  it("checks the lock once when package.json and the lock change together", () => {
+    expect(
+      tasksForFiles(["package.json", "package-lock.json"]).filter(
+        (task) => task === "npm run --silent lint:lockfile",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("does not check the lock for any other JSON file, like the manifest of a plugin", () => {
+    expect(tasksFor("plugins/telegram/package.json")).not.toContain(
+      "npm run --silent lint:lockfile",
+    );
+  });
+
+  it("lint:lockfile checks the sync with package.json first and then the sources of the lock", () => {
+    expect(scripts()["lint:lockfile"]).toBe(
+      "node scripts/check-lockfile-sync.mjs && lockfile-lint",
+    );
   });
 });
 

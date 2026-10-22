@@ -193,26 +193,6 @@ describe("findPrivateData", () => {
       },
     ]);
   });
-
-  it("finds a lock entry resolved outside the public npm registry, only in package-lock.json", () => {
-    const lines = [
-      '"resolved": "https://registry.npmjs.org/a/-/a-1.0.0.tgz",',
-      '"resolved": "https://npm.internal.example/b/-/b-1.0.0.tgz",',
-      '"resolved": "git+ssh://git@github.com/owner/c.git#abc",',
-    ];
-
-    expect(scan({ diff: diffOf("package-lock.json", lines) })).toEqual([
-      {
-        where: "package-lock.json:2",
-        kind: "lock entry resolved outside the public npm registry",
-      },
-      {
-        where: "package-lock.json:3",
-        kind: "lock entry resolved outside the public npm registry",
-      },
-    ]);
-    expect(scan({ diff: diffOf("docs/lock.md", [lines[1]]) })).toEqual([]);
-  });
 });
 
 describe("formatFindings", () => {

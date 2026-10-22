@@ -2,13 +2,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 
-export const PUBLIC_REGISTRY = "https://registry.npmjs.org/";
-
 const EMAIL = /[\w.%+-]+@[a-z\d-]+(?:\.[a-z\d-]+)*\.[a-z]{2,}/giu;
 const PUBLIC_EMAIL_DOMAIN =
   /(?:^|\.)(?:noreply\.github\.com|example\.(?:com|net|org)|example|test|invalid|localhost)$/iu;
 const PUBLIC_EMAILS = new Set(["git@github.com"]);
-const LOCK_RESOLVED = /"resolved":\s*"(?<url>[^"]+)"/u;
 const HUNK_HEADER = /^@@ -\d+(?:,\d+)? \+(?<start>\d+)(?:,\d+)? @@/u;
 const DESTINATION = "+++ b/";
 
@@ -81,7 +78,7 @@ function hasLocalTerm(text, localPatterns) {
   return localPatterns.some((pattern) => lower.includes(pattern));
 }
 
-function contentFindings(text, file, { machinePath, localPatterns }) {
+function contentFindings(text, { machinePath, localPatterns }) {
   const kinds = [];
 
   if ([...text.matchAll(EMAIL)].some(([email]) => !isPublicEmail(email))) {
@@ -92,14 +89,6 @@ function contentFindings(text, file, { machinePath, localPatterns }) {
 
   if (hasLocalTerm(text, localPatterns)) {
     kinds.push("term from the local private list");
-  }
-
-  const resolved = file.endsWith("package-lock.json")
-    ? LOCK_RESOLVED.exec(text)?.groups.url
-    : undefined;
-
-  if (resolved !== undefined && !resolved.startsWith(PUBLIC_REGISTRY)) {
-    kinds.push("lock entry resolved outside the public npm registry");
   }
 
   return kinds;
@@ -133,10 +122,7 @@ export function findPrivateData({
   }
 
   for (const { file, line, text } of addedLines(diff)) {
-    for (const kind of contentFindings(text, file, {
-      machinePath,
-      localPatterns,
-    })) {
+    for (const kind of contentFindings(text, { machinePath, localPatterns })) {
       findings.push({ where: `${file}:${line}`, kind });
     }
   }

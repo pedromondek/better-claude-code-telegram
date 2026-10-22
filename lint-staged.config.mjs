@@ -31,6 +31,10 @@ export default {
     ];
   },
   "*.{json,md,yml,yaml}": (files) => [`prettier --write ${quoted(files)}`],
+  "{package.json,package-lock.json,.lockfile-lintrc.json}": (files) =>
+    fromRoot(files).some((file) => dirname(file) === ".")
+      ? ["npm run --silent lint:lockfile"]
+      : [],
   ".github/workflows/*.{yml,yaml}": (files) => [
     tool(`actionlint ${quoted(files)}`),
     tool(`zizmor --offline ${quoted(files)}`),

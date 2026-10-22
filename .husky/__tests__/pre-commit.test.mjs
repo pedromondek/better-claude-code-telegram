@@ -21,6 +21,8 @@ const COPIED = [
   ".husky/lib/node-env.sh",
   ".husky/lib/explain-lint-staged-failure.mjs",
   "scripts/check-private-data.mjs",
+  "scripts/check-lockfile-sync.mjs",
+  ".lockfile-lintrc.json",
   "scripts/mise-exec.sh",
   "lint-staged.config.mjs",
   ".prettierrc.json",
@@ -108,6 +110,46 @@ describe(".husky/pre-commit", { timeout: COMMIT_TIMEOUT }, () => {
     expect(result.status).toBe(1);
     expect(result.stdout + result.stderr).toContain(TYPOS_REPORT);
     expect(git("log", "--format=%s").stdout).toBe("base\n");
+  });
+
+  it("blocks a commit whose package.json and lock are out of sync", () => {
+    const manifest = {
+      name: "probe",
+      version: "1.0.0",
+      scripts: {
+        "lint:lockfile":
+          "node scripts/check-lockfile-sync.mjs && lockfile-lint",
+      },
+      devDependencies: { "left-pad": "1.3.0" },
+    };
+    stage("package.json", `${JSON.stringify(manifest, null, 2)}\n`);
+    stage(
+      "package-lock.json",
+      `${JSON.stringify(
+        {
+          name: "probe",
+          version: "1.0.0",
+          lockfileVersion: 3,
+          requires: true,
+          packages: {
+            "": {
+              name: "probe",
+              version: "1.0.0",
+              devDependencies: { "left-pad": "1.2.0" },
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const result = commit("bump left-pad");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain(
+      'devDependencies.left-pad: package.json "1.3.0" × package-lock.json "1.2.0"',
+    );
   });
 
   it("blocks a commit with private data in the stage before lint-staged runs", () => {
