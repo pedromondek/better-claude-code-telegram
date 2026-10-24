@@ -32,6 +32,7 @@
   "scripts": {
     "commit": "czg",
     "branch": "node scripts/branch.mjs",
+    "telegram:release": "node scripts/release.mjs",
     "lint": "oxlint --max-warnings 0 && eslint --max-warnings 0 && npm run --silent typecheck",
     "lint:oxlint": "oxlint --max-warnings 0",
     "lint:eslint": "eslint --max-warnings 0",
