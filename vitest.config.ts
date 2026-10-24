@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-export const E2E_TESTS = "**/*.e2e.test.ts";
+export const E2E_TESTS = "**/*.e2e.test.{ts,mjs}";
 
 export default defineConfig({
   test: {
