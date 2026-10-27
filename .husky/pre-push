@@ -115,6 +115,25 @@ run_step() {
   rm -f "$step_log" "$step_progress"
 }
 
+MUTATION_FAILED=0
+INCREMENTAL_FILE=reports/stryker-incremental.json
+
+run_mutation() {
+  printf '%s %s\n' '→' "mutation..."
+
+  if require_npm_script test:mutation:prepush && npm run --silent test:mutation:prepush; then
+    echo "✓ mutation OK"
+  else
+    echo "✗ mutation failed"
+    MUTATION_FAILED=1
+  fi
+
+  if [ -f "$INCREMENTAL_FILE" ]; then
+    mkdir -p "$ROOT/reports"
+    cp "$INCREMENTAL_FILE" "$ROOT/$INCREMENTAL_FILE"
+  fi
+}
+
 ROOT=$(pwd)
 WORKTREE=""
 WORKTREE_LOCK_PREFIX="pre-push pid"
@@ -168,6 +187,11 @@ fi
 
 link_node_modules
 
+if [ -f "$ROOT/$INCREMENTAL_FILE" ]; then
+  mkdir -p "$WORKTREE/reports"
+  cp "$ROOT/$INCREMENTAL_FILE" "$WORKTREE/$INCREMENTAL_FILE"
+fi
+
 unset $(git rev-parse --local-env-vars)
 if [ -n "$PUSHED_RANGE" ]; then
   export MUTATION_RANGE="$PUSHED_RANGE"
@@ -182,8 +206,21 @@ run_step "lockfile" lint:lockfile
 run_step "unit tests with coverage" "test:cov -- --reporter=minimal --reporter=./scripts/vitest-progress-reporter.mjs" test:cov:changed
 
 if [ "$CHEAP_FAILED" = "1" ]; then
+  echo "✗ mutation skipped: fix the failures above first"
   echo "✗ push stopped"
   exit 1
+fi
+
+if [ "$PREPUSH_SKIP_MUTATION" = "1" ]; then
+  echo "✓ mutation skipped (PREPUSH_SKIP_MUTATION=1)"
+  exit 0
+fi
+
+run_mutation
+
+if [ "$MUTATION_FAILED" = "1" ]; then
+  echo "✗ push stopped"
+  exit 3
 fi
 
 exit 0

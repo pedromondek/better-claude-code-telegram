@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -25,6 +26,7 @@ const PASSING = {
   "lint:workflows": "exit 0",
   "test:cov": "exit 0",
   "test:cov:changed": "exit 0",
+  "test:mutation:prepush": "exit 0",
 };
 const STEPS = [
   "lint and typecheck",
@@ -32,6 +34,7 @@ const STEPS = [
   "typos",
   "lockfile",
   "unit tests with coverage",
+  "mutation",
 ];
 
 let repo;
@@ -181,6 +184,22 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       expect(result.stdout).toContain("UNCOVERED_MARKER");
     });
 
+    it("does not run the mutation and lists the failures together", () => {
+      useScripts({
+        lint: "echo 'LINT_FAILURE_MARKER' && exit 1",
+        "test:mutation:prepush": "echo 'MUTATION_RAN_MARKER'",
+      });
+
+      const result = push();
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("LINT_FAILURE_MARKER");
+      expect(result.stdout).toMatch(/^✓ unit tests with coverage OK$/mu);
+      expect(result.stdout).toMatch(/^✗ mutation skipped: fix the failures/mu);
+      expect(result.stdout).toMatch(/^✗ push stopped$/mu);
+      expect(result.stdout).not.toMatch(/MUTATION_RAN_MARKER|→ mutation/u);
+    });
+
     it("says which npm script is missing instead of failing quietly", () => {
       writeFileSync(
         join(repo, "package.json"),
@@ -195,6 +214,137 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       expect(result.stdout).toContain(
         'npm script "lint:secrets" does not exist in package.json',
       );
+    });
+  });
+
+  describe("mutation", () => {
+    it("runs after every cheap step and shows its output without the npm banner", () => {
+      useScripts({
+        "test:mutation:prepush": "echo 'MUTATION_SURVIVOR_MARKER' && exit 1",
+      });
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toMatch(/^✗ mutation failed$/mu);
+      expect(result.stdout).toContain("MUTATION_SURVIVOR_MARKER");
+      expect(result.stdout).toMatch(/^✗ push stopped$/mu);
+      expect(npmBanners(result.stdout)).toEqual([]);
+      expect(
+        result.stdout.indexOf("✓ unit tests with coverage OK"),
+      ).toBeLessThan(result.stdout.indexOf("→ mutation..."));
+    });
+
+    it("leaves the push through with 0 when the mutation passes", () => {
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/^→ mutation\.\.\.$/mu);
+      expect(result.stdout).toMatch(/^✓ mutation OK$/mu);
+    });
+
+    it("with PREPUSH_SKIP_MUTATION=1 runs only the cheap steps and lets the push through without calling the mutation", () => {
+      useScripts({
+        "test:mutation:prepush": "echo 'MUTATION_RAN_MARKER' && exit 1",
+      });
+
+      const result = push({ env: { PREPUSH_SKIP_MUTATION: "1" } });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/^✓ unit tests with coverage OK$/mu);
+      expect(result.stdout).toContain(
+        "mutation skipped (PREPUSH_SKIP_MUTATION=1)",
+      );
+      expect(result.stdout).not.toMatch(/MUTATION_RAN_MARKER|→ mutation/u);
+    });
+
+    it("with PREPUSH_SKIP_MUTATION=1 a cheap failure still exits with 1", () => {
+      useScripts({ lint: "exit 1" });
+
+      const result = push({ env: { PREPUSH_SKIP_MUTATION: "1" } });
+
+      expect(result.status).toBe(1);
+    });
+
+    it("fails saying which npm script is missing", () => {
+      const { "test:mutation:prepush": _missing, ...withoutMutation } = PASSING;
+      writeFileSync(
+        join(repo, "package.json"),
+        JSON.stringify({ name: "probe", scripts: withoutMutation }),
+      );
+      git("add", "package.json");
+      git("commit", "-qm", "no mutation");
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toMatch(/^✗ mutation failed$/mu);
+      expect(result.stdout).toContain(
+        'npm script "test:mutation:prepush" does not exist in package.json',
+      );
+    });
+
+    it("writes straight to the push output, without waiting for the end in a temporary file", () => {
+      useScripts({
+        "test:mutation:prepush": `node -e "console.log('MUTATION_STDOUT_IS_FILE=' + require('node:fs').fstatSync(1).isFile())"`,
+      });
+
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("MUTATION_STDOUT_IS_FILE=false");
+      expect(result.stdout).toMatch(/^✓ mutation OK$/mu);
+    });
+
+    it("hands the exact range of the push to the mutation", () => {
+      const remote = git("rev-parse", "HEAD");
+      commitFile("a.txt", "a\n");
+      useScripts({
+        "test:mutation:prepush": 'echo "RANGE=$MUTATION_RANGE"',
+      });
+
+      const result = push({ input: pushLine(remote) });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(
+        new RegExp(
+          `^RANGE=${remote}\\.\\.\\.${git("rev-parse", "HEAD")}$`,
+          "mu",
+        ),
+      );
+    });
+
+    it("starts the mutation with the Stryker incremental of the main tree and hands it back updated", () => {
+      useScripts({
+        "test:mutation:prepush":
+          "cat reports/stryker-incremental.json && echo v2 > reports/stryker-incremental.json",
+      });
+      mkdirSync(join(repo, "reports"), { recursive: true });
+      writeFileSync(join(repo, "reports", "stryker-incremental.json"), "v1\n");
+
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/^v1$/mu);
+      expect(
+        readFileSync(join(repo, "reports", "stryker-incremental.json"), "utf8"),
+      ).toBe("v2\n");
+    });
+
+    it("hands the incremental back even when the mutation fails", () => {
+      useScripts({
+        "test:mutation:prepush":
+          "echo v2 > reports/stryker-incremental.json && exit 1",
+      });
+      mkdirSync(join(repo, "reports"), { recursive: true });
+      writeFileSync(join(repo, "reports", "stryker-incremental.json"), "v1\n");
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(
+        readFileSync(join(repo, "reports", "stryker-incremental.json"), "utf8"),
+      ).toBe("v2\n");
     });
   });
 
@@ -310,30 +460,33 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       expect(hookLeftovers()).toEqual([]);
     });
 
-    it("removes the temporary worktree when the push is stopped with Ctrl+C during a step", async () => {
-      const started = join(repo, "step-started");
-      useScripts({ lint: `touch ${started} && sleep 30 && true` });
-      const hook = spawn("sh", [...HUSKY_HOOK_ARGS, PRE_PUSH], {
-        cwd: repo,
-        env: { ...process.env, CI: "", TMPDIR: hookTmp },
-        stdio: ["pipe", "ignore", "ignore"],
-        detached: true,
-      });
-      const exited = new Promise((resolve) => hook.once("exit", resolve));
-      hook.stdin.end(pushLine());
+    it.each(["lint", "test:mutation:prepush"])(
+      "removes the temporary worktree when the push is stopped with Ctrl+C during %s",
+      async (step) => {
+        const started = join(repo, "step-started");
+        useScripts({ [step]: `touch ${started} && sleep 30 && true` });
+        const hook = spawn("sh", [...HUSKY_HOOK_ARGS, PRE_PUSH], {
+          cwd: repo,
+          env: { ...process.env, CI: "", TMPDIR: hookTmp },
+          stdio: ["pipe", "ignore", "ignore"],
+          detached: true,
+        });
+        const exited = new Promise((resolve) => hook.once("exit", resolve));
+        hook.stdin.end(pushLine());
 
-      try {
-        await waitForFile(started);
-        process.kill(-hook.pid, "SIGINT");
+        try {
+          await waitForFile(started);
+          process.kill(-hook.pid, "SIGINT");
 
-        expect(await exited).toBe(130);
-      } finally {
-        killGroup(hook.pid);
-      }
+          expect(await exited).toBe(130);
+        } finally {
+          killGroup(hook.pid);
+        }
 
-      expect(worktreeCount()).toBe(1);
-      expect(hookLeftovers()).toEqual([]);
-    });
+        expect(worktreeCount()).toBe(1);
+        expect(hookLeftovers()).toEqual([]);
+      },
+    );
   });
 
   describe("workflow linters", () => {

@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "2",
+  "files": {
+    "src/svc.ts": {
+      "language": "typescript",
+      "source": "class Svc {\n  method(id) {\n    this.logger.log('start', { id });\n    if (id > 0) {\n      return 'positive';\n    }\n    this.logger.warn('end');\n    return id === 0 ? 'zero' : 'negative';\n  }\n}\n",
+      "mutants": [
+        {
+          "id": "1",
+          "mutatorName": "ConditionalExpression",
+          "replacement": "true",
+          "status": "Killed",
+          "testsCompleted": 2,
+          "coveredBy": ["t1"],
+          "location": {
+            "start": { "line": 4, "column": 9 },
+            "end": { "line": 4, "column": 15 }
+          }
+        },
+        {
+          "id": "2",
+          "mutatorName": "BlockStatement",
+          "replacement": "{}",
+          "status": "Timeout",
+          "testsCompleted": 1,
+          "coveredBy": ["t1"],
+          "location": {
+            "start": { "line": 4, "column": 17 },
+            "end": { "line": 6, "column": 5 }
+          }
+        },
+        {
+          "id": "3",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "Survived",
+          "testsCompleted": 2,
+          "coveredBy": ["t1"],
+          "location": {
+            "start": { "line": 3, "column": 20 },
+            "end": { "line": 3, "column": 28 }
+          }
+        },
+        {
+          "id": "4",
+          "mutatorName": "ConditionalExpression",
+          "replacement": "true",
+          "status": "Survived",
+          "testsCompleted": 3,
+          "coveredBy": ["t1"],
+          "location": {
+            "start": { "line": 8, "column": 12 },
+            "end": { "line": 8, "column": 20 }
+          }
+        },
+        {
+          "id": "5",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "NoCoverage",
+          "location": {
+            "start": { "line": 5, "column": 14 },
+            "end": { "line": 5, "column": 24 }
+          }
+        },
+        {
+          "id": "6",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "Survived",
+          "testsCompleted": 0,
+          "coveredBy": ["t1"],
+          "location": {
+            "start": { "line": 7, "column": 21 },
+            "end": { "line": 7, "column": 26 }
+          }
+        },
+        {
+          "id": "7",
+          "mutatorName": "EqualityOperator",
+          "replacement": "id !== 0",
+          "status": "Ignored",
+          "location": {
+            "start": { "line": 8, "column": 12 },
+            "end": { "line": 8, "column": 20 }
+          }
+        },
+        {
+          "id": "8",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "Killed",
+          "testsCompleted": 1,
+          "coveredBy": ["t1"],
+          "location": {
+            "start": { "line": 8, "column": 23 },
+            "end": { "line": 8, "column": 29 }
+          }
+        }
+      ]
+    },
+    "src/none.ts": {
+      "language": "typescript",
+      "source": "export const none = 'x';\n",
+      "mutants": [
+        {
+          "id": "9",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "status": "NoCoverage",
+          "location": {
+            "start": { "line": 1, "column": 20 },
+            "end": { "line": 1, "column": 23 }
+          }
+        }
+      ]
+    }
+  },
+  "testFiles": {
+    "src/__tests__/svc.spec.ts": { "tests": [{ "id": "t1", "name": "svc" }] }
+  }
+}
