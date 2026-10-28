@@ -23,6 +23,8 @@ temp/
 coverage/
 reports/
 .stryker-tmp/
+mutants.out/
+mutants.out.old/
 
 # Logs
 logs/

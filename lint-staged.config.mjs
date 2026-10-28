@@ -35,6 +35,14 @@ export default {
     fromRoot(files).some((file) => dirname(file) === ".")
       ? ["npm run --silent lint:lockfile"]
       : [],
+  "rust/**/*.rs": (files) => [
+    `rustfmt --edition 2024 ${quoted(files)}`,
+    "npm run --silent rust:lint",
+    "npm run --silent rust:test",
+  ],
+  "rust/**/{Cargo.toml,Cargo.lock,deny.toml}": () => [
+    "npm run --silent rust:deny",
+  ],
   ".github/workflows/*.{yml,yaml}": (files) => [
     tool(`actionlint ${quoted(files)}`),
     tool(`zizmor --offline ${quoted(files)}`),

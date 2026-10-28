@@ -77,6 +77,7 @@
     "rust:cov": "sh scripts/mise-exec.sh cargo llvm-cov nextest --manifest-path rust/Cargo.toml --locked --fail-under-lines 100",
     "rust:deny": "sh scripts/mise-exec.sh cargo deny --manifest-path rust/Cargo.toml check advisories",
     "rust:mutation": "sh scripts/mise-exec.sh cargo mutants --manifest-path rust/Cargo.toml",
+    "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
     "rust:build": "cargo build --manifest-path rust/Cargo.toml --release --locked",
     "check:private": "node scripts/check-private-data.mjs",
     "check:commit": "sh .husky/lib/check-commit.sh",

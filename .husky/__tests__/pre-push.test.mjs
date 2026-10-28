@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -27,6 +28,10 @@ const PASSING = {
   "test:cov": "exit 0",
   "test:cov:changed": "exit 0",
   "test:mutation:prepush": "exit 0",
+  "rust:lint": "exit 0",
+  "rust:deny": "exit 0",
+  "rust:cov": "exit 0",
+  "rust:mutation:prepush": "exit 0",
 };
 const STEPS = [
   "lint and typecheck",
@@ -34,7 +39,11 @@ const STEPS = [
   "typos",
   "lockfile",
   "unit tests with coverage",
+  "rust lint",
+  "rust dependencies",
+  "rust tests with coverage",
   "mutation",
+  "rust mutation",
 ];
 
 let repo;
@@ -345,6 +354,144 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       expect(
         readFileSync(join(repo, "reports", "stryker-incremental.json"), "utf8"),
       ).toBe("v2\n");
+    });
+  });
+
+  describe("rust", () => {
+    it("runs lint, dependencies and coverage after the unit tests, in that order", () => {
+      const result = push();
+      const at = (step) => result.stdout.indexOf(`✓ ${step} OK`);
+
+      expect(at("unit tests with coverage")).toBeGreaterThan(-1);
+      expect(at("unit tests with coverage")).toBeLessThan(at("rust lint"));
+      expect(at("rust lint")).toBeLessThan(at("rust dependencies"));
+      expect(at("rust dependencies")).toBeLessThan(
+        at("rust tests with coverage"),
+      );
+      expect(at("rust tests with coverage")).toBeLessThan(
+        result.stdout.indexOf("→ mutation..."),
+      );
+    });
+
+    it.each([
+      ["rust:lint", "rust lint"],
+      ["rust:deny", "rust dependencies"],
+      ["rust:cov", "rust tests with coverage"],
+    ])(
+      "stops the push with 1 and skips the mutation when %s fails",
+      (script, label) => {
+        useScripts({
+          [script]: "echo 'RUST_FAILURE_MARKER' && exit 1",
+          "test:mutation:prepush": "echo 'MUTATION_RAN_MARKER'",
+          "rust:mutation:prepush": "echo 'RUST_MUTATION_RAN_MARKER'",
+        });
+
+        const result = push();
+
+        expect(result.status).toBe(1);
+        expect(result.stdout).toContain(`✗ ${label} failed`);
+        expect(result.stdout).toContain("RUST_FAILURE_MARKER");
+        expect(result.stdout).toMatch(
+          /^✗ mutation skipped: fix the failures/mu,
+        );
+        expect(result.stdout).not.toMatch(/MUTATION_RAN_MARKER|→ mutation/u);
+      },
+    );
+
+    it("runs the rust mutation after the Stryker mutation, with its output straight to the push", () => {
+      useScripts({
+        "rust:mutation:prepush": "echo 'RUST_MUTATION_MARKER'",
+      });
+
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/^→ rust mutation\.\.\.$/mu);
+      expect(result.stdout).toContain("RUST_MUTATION_MARKER");
+      expect(result.stdout).toMatch(/^✓ rust mutation OK$/mu);
+      expect(result.stdout.indexOf("✓ mutation OK")).toBeLessThan(
+        result.stdout.indexOf("→ rust mutation..."),
+      );
+    });
+
+    it("stops the push with 3 when the rust mutation fails, even with the Stryker mutation passing", () => {
+      useScripts({
+        "rust:mutation:prepush": "echo 'RUST_SURVIVOR_MARKER' && exit 1",
+      });
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toMatch(/^✓ mutation OK$/mu);
+      expect(result.stdout).toMatch(/^✗ rust mutation failed$/mu);
+      expect(result.stdout).toContain("RUST_SURVIVOR_MARKER");
+      expect(result.stdout).toMatch(/^✗ push stopped$/mu);
+    });
+
+    it("still runs the rust mutation when the Stryker mutation fails", () => {
+      useScripts({
+        "test:mutation:prepush": "exit 1",
+        "rust:mutation:prepush": "echo 'RUST_MUTATION_RAN_MARKER'",
+      });
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toContain("RUST_MUTATION_RAN_MARKER");
+    });
+
+    it("fails the rust mutation saying which npm script is missing", () => {
+      const { "rust:mutation:prepush": _missing, ...withoutRust } = PASSING;
+      writeFileSync(
+        join(repo, "package.json"),
+        JSON.stringify({ name: "probe", scripts: withoutRust }),
+      );
+      git("add", "package.json");
+      git("commit", "-qm", "no rust mutation");
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toMatch(/^✗ rust mutation failed$/mu);
+      expect(result.stdout).toContain(
+        'npm script "rust:mutation:prepush" does not exist in package.json',
+      );
+    });
+
+    it("with PREPUSH_SKIP_MUTATION=1 runs the cheap rust steps and not the rust mutation", () => {
+      useScripts({
+        "rust:mutation:prepush": "echo 'RUST_MUTATION_RAN_MARKER' && exit 1",
+      });
+
+      const result = push({ env: { PREPUSH_SKIP_MUTATION: "1" } });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/^✓ rust tests with coverage OK$/mu);
+      expect(result.stdout).not.toMatch(
+        /RUST_MUTATION_RAN_MARKER|→ rust mutation/u,
+      );
+    });
+
+    it("builds in the target folder of the main tree, not in the temporary worktree", () => {
+      useScripts({ "rust:cov": 'echo "TARGET=$CARGO_TARGET_DIR" && exit 1' });
+
+      const result = push();
+
+      expect(result.stdout).toContain(
+        `TARGET=${realpathSync(repo)}/rust/target`,
+      );
+    });
+
+    it("hands the same target folder to the rust mutation", () => {
+      useScripts({
+        "rust:mutation:prepush": 'echo "TARGET=$CARGO_TARGET_DIR"',
+      });
+
+      const result = push();
+
+      expect(result.stdout).toContain(
+        `TARGET=${realpathSync(repo)}/rust/target`,
+      );
     });
   });
 

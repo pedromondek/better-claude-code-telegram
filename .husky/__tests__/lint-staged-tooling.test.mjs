@@ -277,6 +277,86 @@ describe("lint-staged: shell scripts", () => {
   });
 });
 
+describe("lint-staged: Rust", () => {
+  it.each(["rust/crates/bcct/src/lib.rs", "rust/crates/bcct/tests/cli.rs"])(
+    "checks %s for secrets and typos, formats it with rustfmt and runs clippy and the tests",
+    (file) => {
+      expect(tasksFor(file)).toEqual([
+        ...everyFileTasks(file),
+        `rustfmt --edition 2024 ${quoted([file])}`,
+        "npm run --silent rust:lint",
+        "npm run --silent rust:test",
+      ]);
+    },
+  );
+
+  it("formats every staged Rust file in one rustfmt run and lints once", () => {
+    const files = ["rust/crates/bcct/src/lib.rs", "rust/crates/bcct/src/a.rs"];
+
+    expect(tasksForFiles(files)).toEqual([
+      ...everyFileTasks(...files),
+      `rustfmt --edition 2024 ${quoted(files)}`,
+      "npm run --silent rust:lint",
+      "npm run --silent rust:test",
+    ]);
+  });
+
+  it.each([
+    "rust/Cargo.toml",
+    "rust/Cargo.lock",
+    "rust/deny.toml",
+    "rust/crates/bcct/Cargo.toml",
+  ])("checks the dependencies of the crates when %s changes", (file) => {
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      "npm run --silent rust:deny",
+    ]);
+  });
+
+  it("checks the dependencies once for several manifests", () => {
+    expect(
+      tasksForFiles(["rust/Cargo.toml", "rust/Cargo.lock"]).filter(
+        (task) => task === "npm run --silent rust:deny",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("does not run the Rust tasks for a file outside rust/", () => {
+    expect(tasksFor("scripts/lib.rs")).toEqual(
+      everyFileTasks("scripts/lib.rs"),
+    );
+  });
+
+  it("runs the Rust gates through the rust:* scripts", () => {
+    expect(scripts()).toMatchObject({
+      "rust:fmt": "cargo fmt --manifest-path rust/Cargo.toml --all --check",
+      "rust:lint":
+        "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings && npm run --silent rust:fmt",
+      "rust:test": tool(
+        "cargo nextest run --manifest-path rust/Cargo.toml --locked",
+      ),
+      "rust:cov": tool(
+        "cargo llvm-cov nextest --manifest-path rust/Cargo.toml --locked --fail-under-lines 100",
+      ),
+      "rust:deny": tool(
+        "cargo deny --manifest-path rust/Cargo.toml check advisories",
+      ),
+      "rust:mutation": tool("cargo mutants --manifest-path rust/Cargo.toml"),
+      "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
+      "rust:build":
+        "cargo build --manifest-path rust/Cargo.toml --release --locked",
+    });
+  });
+
+  it("keeps the cargo-mutants and build output out of git", () => {
+    const ignore = readFileSync(join(ROOT, ".gitignore"), "utf8").split("\n");
+
+    expect(ignore).toEqual(
+      expect.arrayContaining(["target/", "mutants.out/", "mutants.out.old/"]),
+    );
+  });
+});
+
 describe("lint-staged: files with no other task", () => {
   it.each(["LICENSE", "NOTICE", ".gitignore", "plugins/telegram/bun.lock"])(
     "only checks %s for secrets and typos",

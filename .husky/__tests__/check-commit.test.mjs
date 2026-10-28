@@ -26,6 +26,9 @@ const PASSING = {
   "lint:workflows": "exit 0",
   "test:cov": "exit 0",
   "test:cov:changed": "exit 0",
+  "rust:lint": "exit 0",
+  "rust:deny": "exit 0",
+  "rust:cov": "exit 0",
   "check:commit": `sh ${CHECK_COMMIT}`,
   "fixup:fuse": ROOT_SCRIPTS["fixup:fuse"],
 };
@@ -124,6 +127,10 @@ describe("check:commit", { timeout: HOOK_TIMEOUT }, () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("✓ lint and typecheck OK");
+    expect(result.stdout).toContain("✓ rust lint OK");
+    expect(result.stdout).toContain("✓ rust dependencies OK");
+    expect(result.stdout).toContain("✓ rust tests with coverage OK");
+    expect(result.stdout).not.toContain("rust mutation");
     expect(result.stdout + result.stderr).not.toContain("outside the pattern");
   });
 

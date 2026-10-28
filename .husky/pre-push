@@ -128,6 +128,15 @@ run_mutation() {
     MUTATION_FAILED=1
   fi
 
+  printf '%s %s\n' '→' "rust mutation..."
+
+  if require_npm_script rust:mutation:prepush && npm run --silent rust:mutation:prepush; then
+    echo "✓ rust mutation OK"
+  else
+    echo "✗ rust mutation failed"
+    MUTATION_FAILED=1
+  fi
+
   if [ -f "$INCREMENTAL_FILE" ]; then
     mkdir -p "$ROOT/reports"
     cp "$INCREMENTAL_FILE" "$ROOT/$INCREMENTAL_FILE"
@@ -196,6 +205,7 @@ unset $(git rev-parse --local-env-vars)
 if [ -n "$PUSHED_RANGE" ]; then
   export MUTATION_RANGE="$PUSHED_RANGE"
 fi
+export CARGO_TARGET_DIR="$ROOT/rust/target"
 cd "$WORKTREE" || exit 1
 
 run_step "lint and typecheck" lint
@@ -204,6 +214,9 @@ run_step "typos" lint:typos
 run_step "lockfile" lint:lockfile
 [ "$RUN_WORKFLOWS" = "1" ] && [ -d .github ] && run_step "workflow linters" lint:workflows
 run_step "unit tests with coverage" "test:cov -- --reporter=minimal --reporter=./scripts/vitest-progress-reporter.mjs" test:cov:changed
+run_step "rust lint" rust:lint
+run_step "rust dependencies" rust:deny
+run_step "rust tests with coverage" rust:cov
 
 if [ "$CHEAP_FAILED" = "1" ]; then
   echo "✗ mutation skipped: fix the failures above first"
