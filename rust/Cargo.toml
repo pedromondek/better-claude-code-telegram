@@ -12,7 +12,7 @@ publish = false
 
 [workspace.dependencies]
 lexopt = "=0.3.2"
-serde_json = "=1.0.154"
+serde_json = { version = "=1.0.154", features = ["float_roundtrip", "preserve_order"] }
 tempfile = "=3.27.0"
 assert_cmd = "=2.2.2"
 predicates = "=3.1.4"

@@ -1,5 +1,9 @@
+pub mod config;
+pub mod files;
+pub mod js;
 pub mod locale;
 pub mod messages;
+pub mod paths;
 
 use std::ffi::OsString;
 use std::io::{self, Write};
