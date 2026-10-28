@@ -1,3 +1,6 @@
+pub mod locale;
+pub mod messages;
+
 use std::ffi::OsString;
 use std::io::{self, Write};
 use std::process::ExitCode;

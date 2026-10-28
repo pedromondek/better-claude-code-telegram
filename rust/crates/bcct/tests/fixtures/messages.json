@@ -1,0 +1,1647 @@
+{
+  "en-us": {
+    "statusMain": "(Main)",
+    "statusSecondary": "(Secondary)",
+    "statusConnected": [
+      { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram connected" }
+    ],
+    "statusDown": [{ "args": ["alpha 1"], "out": "📱 alpha 1 Telegram down" }],
+    "statusConnecting": [
+      { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram connecting…" }
+    ],
+    "stepLabels.token": "bot token",
+    "stepLabels.pairing": "pairing",
+    "stepTitles.language": "Language / Idioma",
+    "stepTitles.plugin": "Plugins",
+    "stepTitles.token": "Bot token",
+    "stepTitles.pairing": "Pairing",
+    "stepTitles.delay": "Wait time",
+    "stepTitles.quiet-hours": "Quiet hours",
+    "stepTitles.transcription": "Audio transcription",
+    "stepTitles.inbox": "Received files",
+    "stepTitles.statusline": "Status line",
+    "stepTitles.health": "Final check",
+    "healthHasFailures": [
+      {
+        "args": ["alpha 1"],
+        "out": "Some checks failed. Fix what is marked with ✘ and run 'alpha 1' again."
+      }
+    ],
+    "notConfigured": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'claude --telegram' is not set up yet. Missing:\n  • alpha 1\nRun 'beta 'two'' first."
+      }
+    ],
+    "alreadyRunning": [
+      {
+        "args": [4242],
+        "out": "A 'claude --telegram' instance is already open (bot in process 4242). Close it before opening another one."
+      }
+    ],
+    "unknownSteps": [
+      {
+        "args": ["foo, bar", "language, token, pairing"],
+        "out": "Unknown step:\n  • foo, bar\nUse one or more of these (none runs them all):\n  • language, token, pairing"
+      }
+    ],
+    "networkFailure": [
+      {
+        "args": ["alpha 1"],
+        "out": "Network failure calling Telegram (alpha 1)."
+      }
+    ],
+    "telegramRefused": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Telegram refused alpha 1:\n  • beta 'two'"
+      }
+    ],
+    "noDescription": "no description",
+    "failed": [{ "args": ["alpha 1"], "out": "Failed:\n  • alpha 1" }],
+    "yesNoHint": [
+      { "args": [true], "out": "(y/n) [default: y]" },
+      { "args": [false], "out": "(y/n) [default: n]" }
+    ],
+    "defaultHint": [{ "args": ["alpha 1"], "out": "[default: alpha 1]" }],
+    "languageDefaultHint": [
+      { "args": ["alpha 1"], "out": "[default / padrão: alpha 1]" }
+    ],
+    "selectHint": "↑/↓ to move · Enter to confirm",
+    "yes": "Yes",
+    "no": "No",
+    "custom": "Custom",
+    "recommended": "Recommended",
+    "previousChoice": "previously chosen",
+    "invalidAnswer": [
+      { "args": ["x", "y or n"], "out": "'x' is not valid. Use:\n  • y or n" }
+    ],
+    "enterKeepsDefault": "Press Enter on an empty answer to keep the default or the existing setting.",
+    "cancelled": "Cancelled.",
+    "exitPrompt": "Leave the setup?",
+    "continueSetup": "Go on where it stopped",
+    "exitSetup": "Leave",
+    "interrupted": "Setup interrupted.",
+    "nothingChanged": "Nothing was changed.",
+    "doneSoFar": [
+      { "args": ["alpha 1"], "out": "So far the setup has:\n  • alpha 1" }
+    ],
+    "undoPrompt": "Undo what the setup did?",
+    "undoAll": "Undo everything",
+    "keepDone": "Keep it as it is",
+    "undone": "Everything the setup did was undone.",
+    "undoLeft": [
+      { "args": ["alpha 1"], "out": "Could not undo:\n  • alpha 1" }
+    ],
+    "keptDone": [
+      { "args": ["alpha 1"], "out": "Kept. Run 'alpha 1' to go on later." }
+    ],
+    "changedSetting": [
+      { "args": ["⚙ delay", "3 min", "5 min"], "out": "⚙ delay: 3 min → 5 min" }
+    ],
+    "notSet": "not set",
+    "ruleOn": "on",
+    "ruleOff": "off",
+    "pluginOn": "enabled",
+    "pluginOff": "disabled",
+    "pluginSetting": [{ "args": ["alpha 1"], "out": "plugin 'alpha 1'" }],
+    "undoing": [{ "args": ["alpha 1"], "out": "Undoing: alpha 1…" }],
+    "undoneItem": [{ "args": ["alpha 1"], "out": "Undone:\n  • alpha 1" }],
+    "settingsKeys.statusLine": "status line",
+    "settingsKeys.permissions": "security rule for the token file",
+    "settingsKeys.enabledPlugins": "enabled plugins",
+    "changeKinds.fileCreated": [
+      { "args": ["alpha 1"], "out": "created alpha 1" }
+    ],
+    "changeKinds.fileChanged": [
+      { "args": ["alpha 1"], "out": "changed alpha 1" }
+    ],
+    "changeKinds.dirCreated": [
+      { "args": ["alpha 1"], "out": "created the folder alpha 1" }
+    ],
+    "changeKinds.marketplaceAdded": [
+      { "args": ["alpha 1"], "out": "registered the marketplace 'alpha 1'" }
+    ],
+    "changeKinds.pluginInstalled": [
+      { "args": ["alpha 1"], "out": "installed the plugin 'alpha 1'" }
+    ],
+    "changeKinds.pluginRemoved": [
+      { "args": ["alpha 1"], "out": "removed the plugin 'alpha 1'" }
+    ],
+    "changeKinds.toolInstalled": [
+      {
+        "args": ["alpha 1"],
+        "out": "installed alpha 1, which stays installed (remove it by hand if you want)"
+      }
+    ],
+    "toolsDeclined": [
+      {
+        "args": ["alpha 1"],
+        "out": "Nothing was installed; alpha 1 is still missing from PATH."
+      }
+    ],
+    "invalidSetting": [
+      {
+        "args": ["alpha 1", "beta 'two'", "gamma/3"],
+        "out": "'beta 'two'' is not a valid alpha 1. Use:\n  • gamma/3\nNothing was changed."
+      }
+    ],
+    "settingHints.language": "en-us or pt-br",
+    "settingHints.delay": "the minutes, greater than 0 (for example 3)",
+    "settingHints.quiet-hours": "HH:MM-HH:MM (for example 22:00-08:00) or off",
+    "settingHints.transcription": "base, small, medium or off",
+    "settingHints.inbox": "the days, greater than 0, or off",
+    "settingHints.statusline": "on, after, replace, custom or off",
+    "inboxQuestion": "Days to keep the photos and files received on Telegram before deleting them",
+    "inboxDaysLabel": [
+      { "args": [7], "out": "7 day(s)" },
+      { "args": [1], "out": "1 day(s)" }
+    ],
+    "inboxForeverLabel": "Never delete",
+    "inboxCustomPrompt": "Days (greater than 0): ",
+    "inboxCustomHint": "a whole number of days greater than 0",
+    "inboxSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Received files:\n  • alpha 1\nSaved in beta 'two'."
+      }
+    ],
+    "inboxKept": [
+      { "args": ["alpha 1"], "out": "Received files kept:\n  • alpha 1" }
+    ],
+    "languageKept": [
+      { "args": ["alpha 1"], "out": "Language kept:\n  • alpha 1" }
+    ],
+    "delayKept": [
+      { "args": [3], "out": "Wait time kept:\n  • 3 min" },
+      { "args": [1.5], "out": "Wait time kept:\n  • 1.5 min" }
+    ],
+    "quietKept": [
+      { "args": ["alpha 1"], "out": "Quiet hours kept:\n  • alpha 1" }
+    ],
+    "transcriptionModelKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Local transcription kept with the alpha 1 model, already installed."
+      }
+    ],
+    "transcriptionKeptOff": "Local transcription stays off.",
+    "transcriptionSwitched": [
+      {
+        "args": ["alpha 1"],
+        "out": "Local transcription on with the alpha 1 model, already installed."
+      }
+    ],
+    "removeModelsQuestion": "Which transcription models should be uninstalled?",
+    "removeModelsKeep": "None (keep it as it is)",
+    "removeModelsAll": [
+      { "args": ["base, small"], "out": "All of them (base, small)" }
+    ],
+    "removeModel": [{ "args": ["alpha 1"], "out": "Only the alpha 1 model" }],
+    "modelInUse": "in use",
+    "modelUsedUntilNow": "used until now",
+    "transcriptionUninstall": "Uninstall",
+    "transcriptionInstalledHeading": "Installed:",
+    "transcriptionAvailableHeading": "To download:",
+    "modelsRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Transcription models removed:\n  • alpha 1"
+      }
+    ],
+    "inboxDays": [
+      { "args": [7], "out": "deleted after 7 day(s)" },
+      { "args": [1], "out": "deleted after 1 day(s)" }
+    ],
+    "inboxForever": "kept forever",
+    "notSettable": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'alpha 1' cannot be set with --set, only beta 'two'. The token, the pairing and the plugins go through 'npm run setup' in your own terminal."
+      }
+    ],
+    "unknownHealthGroups": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Unknown group:\n  • alpha 1\nUse all, or one or more of these:\n  • beta 'two'"
+      }
+    ],
+    "healthGroupTitles.install": "Install",
+    "healthGroupTitles.telegram": "Telegram",
+    "healthGroupTitles.security": "Security",
+    "healthGroupTitles.extras": "Extras",
+    "healthLabels.node": "Node",
+    "healthLabels.user": "Running as root",
+    "healthLabels.claude": "claude",
+    "healthLabels.bun": "bun",
+    "healthLabels.plugins": "Plugins",
+    "healthLabels.shell": "Shell",
+    "healthLabels.token": "Bot token",
+    "healthLabels.groups": "Groups",
+    "healthLabels.pairing": "Pairing",
+    "healthLabels.polling": "Connection",
+    "healthLabels.protection": "Token protection",
+    "healthLabels.config": "Settings",
+    "healthLabels.transcription": "Transcription",
+    "healthLabels.mermaid": "Diagrams (mmdc)",
+    "healthLabels.statusline": "Status line",
+    "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
+    "healthDetail.found": "found",
+    "healthDetail.missing": "missing",
+    "healthDetail.installed": "installed",
+    "healthDetail.notInstalled": [
+      {
+        "args": ["alpha 1"],
+        "out": "missing alpha 1. Run 'npm run setup:plugin'."
+      }
+    ],
+    "healthDetail.loadedIn": [
+      { "args": ["alpha 1"], "out": "loaded by alpha 1" }
+    ],
+    "healthDetail.notLoaded": [
+      {
+        "args": ["alpha 1"],
+        "out": "not loaded by alpha 1. Run 'npm run setup:plugin'."
+      }
+    ],
+    "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
+    "healthDetail.noToken": "no token. Run 'npm run setup:token' in your own terminal.",
+    "healthDetail.paired": [
+      { "args": ["alpha 1"], "out": "paired with one account (alpha 1)" }
+    ],
+    "healthDetail.notPaired": "not paired. Run 'npm run setup:pairing'.",
+    "healthDetail.notAllowlist": [
+      {
+        "args": ["alpha 1"],
+        "out": "dmPolicy is alpha 1, so strangers who write to the bot get a pairing code. Run 'npm run setup:pairing'."
+      }
+    ],
+    "healthDetail.pendingPairings": [
+      {
+        "args": [2],
+        "out": "2 pairing(s) pending in access.json. Run 'npm run setup:pairing'."
+      }
+    ],
+    "healthDetail.groupsAllowed": [
+      {
+        "args": [2],
+        "out": "2 group(s) can talk to the bot. Run 'npm run setup:pairing'."
+      }
+    ],
+    "healthDetail.groupsOff": "the bot cannot be added to groups",
+    "healthDetail.groupsUnknown": "needs a working bot token",
+    "healthDetail.regularUser": "no, runs as a regular user (as recommended)",
+    "healthDetail.root": "running as root; use a regular user, so Claude cannot change the whole machine",
+    "healthDetail.connected": "connected",
+    "healthDetail.notOpen": "'claude --telegram' is not open",
+    "healthDetail.connecting": "connecting; 'claude --telegram' was just opened",
+    "healthDetail.down": "the bot stopped receiving messages; reopen 'claude --telegram'",
+    "healthDetail.protected": "Claude cannot read the bot token",
+    "healthDetail.unprotected": [
+      {
+        "args": ["alpha 1"],
+        "out": "Claude can read the bot token. Run 'alpha 1'."
+      }
+    ],
+    "healthDetail.valid": "valid",
+    "healthDetail.invalid": [
+      { "args": ["alpha 1"], "out": "alpha 1 is not valid JSON" }
+    ],
+    "healthDetail.off": "off",
+    "healthDetail.model": [{ "args": ["alpha 1"], "out": "model alpha 1" }],
+    "healthDetail.broken": [
+      {
+        "args": ["alpha 1"],
+        "out": "the Python environment does not work. Run 'alpha 1'."
+      }
+    ],
+    "healthDetail.statusline.ours": "Telegram indicator on",
+    "healthDetail.statusline.ours-after": "Telegram indicator after your status line",
+    "healthDetail.statusline.other": "another status line, without the indicator",
+    "healthDetail.statusline.none": "no status line",
+    "healthDetail.statusline.custom": "yours, with the indicator Claude added",
+    "healthDetail.statusline.custom-pending": "Claude fits the indicator into yours on the next 'claude --telegram'",
+    "installToolPrompt": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'alpha 1' is missing. Install it now with the official installer (beta 'two')?"
+      }
+    ],
+    "toolInstalled": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'alpha 1' installed in beta 'two'. Open a new terminal later so your shell finds it."
+      }
+    ],
+    "installFailed": [
+      {
+        "args": ["alpha 1"],
+        "out": "The installer of 'alpha 1' failed; nothing else was changed."
+      }
+    ],
+    "toolStillMissing": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'alpha 1' was installed but is not in beta 'two'; check the installer output."
+      }
+    ],
+    "nodeTooOld": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Node alpha 1 is too old; the setup needs Node beta 'two' or newer (see .nvmrc; with nvm, run nvm install)."
+      }
+    ],
+    "bcctPrompt": "(optional) Also add the /bcct: commands to Claude Code (setup steps and health from inside a session)?",
+    "bcctInstalledQuestion": "(optional) The /bcct: commands are already in Claude Code. What should happen to them?",
+    "bcctChoices.keep": "Keep them",
+    "bcctChoices.remove": "Remove them",
+    "bcctHints.keep": "nothing changes",
+    "bcctHints.remove": "the /bcct: commands leave Claude Code; the setup goes on from the terminal",
+    "pluginsChecked": "Checked:",
+    "requiredPlugins": [
+      { "args": [2, 3], "out": "2 of 3 required plugins installed" }
+    ],
+    "optionalPlugins": [
+      { "args": [1, 2], "out": "1 of 2 optional plugin installed" }
+    ],
+    "marketplaceFound": "Marketplace registered",
+    "marketplaceMissing": "Marketplace not registered yet",
+    "planHeader": "To finish this step, the setup needs to:",
+    "planMarketplace": [
+      {
+        "args": ["alpha 1"],
+        "out": "register the marketplace 'alpha 1' from this folder"
+      }
+    ],
+    "planPlugin": [
+      {
+        "args": ["alpha 1"],
+        "out": "install the plugin 'alpha 1' for your user"
+      }
+    ],
+    "planShellLine": [
+      {
+        "args": ["alpha 1"],
+        "out": "add to alpha 1 the line that loads 'claude --telegram'"
+      }
+    ],
+    "planPrompt": "Go ahead with the installation?",
+    "nothingInstalled": "Nothing was installed.",
+    "byHand": "To do it by hand, run:",
+    "marketplaceAdded": [
+      { "args": ["alpha 1"], "out": "Marketplace 'alpha 1' registered." }
+    ],
+    "pluginsChecking": "Checking the marketplace and the installed plugins…",
+    "marketplaceAdding": [
+      { "args": ["alpha 1"], "out": "Registering the marketplace 'alpha 1'…" }
+    ],
+    "pluginInstalling": [
+      { "args": ["alpha 1"], "out": "Installing the plugin 'alpha 1'…" }
+    ],
+    "pluginRemoving": [
+      { "args": ["alpha 1"], "out": "Removing the plugin 'alpha 1'…" }
+    ],
+    "pluginEnabling": [
+      { "args": ["alpha 1"], "out": "Enabling 'alpha 1' in every instance…" }
+    ],
+    "pluginDisabling": [
+      {
+        "args": ["alpha 1"],
+        "out": "Disabling 'alpha 1' outside 'claude --telegram'…"
+      }
+    ],
+    "pluginAdded": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' installed for your user."
+      }
+    ],
+    "marketplaceRegistered": [
+      {
+        "args": ["alpha 1"],
+        "out": "Marketplace 'alpha 1' already registered."
+      }
+    ],
+    "pluginInstalled": [
+      { "args": ["alpha 1"], "out": "Plugin 'alpha 1' already installed." }
+    ],
+    "pluginDisabledOutside": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' disabled outside 'claude --telegram'."
+      }
+    ],
+    "pluginEnabled": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' enabled in every instance."
+      }
+    ],
+    "pluginAlreadyDisabledOutside": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' already disabled outside 'claude --telegram'."
+      }
+    ],
+    "pluginAlreadyEnabled": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' already enabled in every instance."
+      }
+    ],
+    "rcAlreadyLoads": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 already loads 'claude --telegram'."
+      }
+    ],
+    "rcNowLoads": [
+      { "args": ["alpha 1"], "out": "alpha 1 now loads 'claude --telegram'." }
+    ],
+    "shellUnsupported": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "The alpha 1 shell cannot load 'claude --telegram'. Use 'npm run telegram' in this repository, or load this line in bash or zsh:\n  beta 'two'"
+      }
+    ],
+    "rcNoLongerLoads": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 no longer loads 'claude --telegram'."
+      }
+    ],
+    "statuslineRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Telegram status line removed from alpha 1."
+      }
+    ],
+    "envRuleRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Rule that kept Claude from reading the bot token removed from alpha 1."
+      }
+    ],
+    "envProtected": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Security rule added:\n  • Claude Code may not read alpha 1, the file that holds the bot token (deny rule in beta 'two')"
+      }
+    ],
+    "envAlreadyProtected": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Security rule already on:\n  • Claude Code may not read alpha 1 (deny rule in beta 'two')"
+      }
+    ],
+    "pluginRemoved": [
+      { "args": ["alpha 1"], "out": "Plugin 'alpha 1' removed." }
+    ],
+    "pluginNotRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Could not remove the plugin 'alpha 1'. To do it by hand, run:\n  claude plugin uninstall alpha 1 --scope user"
+      }
+    ],
+    "pluginNotInstalled": [
+      { "args": ["alpha 1"], "out": "Plugin 'alpha 1' was not installed." }
+    ],
+    "marketplaceRemoved": [
+      { "args": ["alpha 1"], "out": "Marketplace 'alpha 1' removed." }
+    ],
+    "marketplaceNotRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Could not remove the marketplace 'alpha 1'. To do it by hand, run:\n  claude plugin marketplace remove alpha 1"
+      }
+    ],
+    "marketplaceNotRegistered": [
+      {
+        "args": ["alpha 1"],
+        "out": "Marketplace 'alpha 1' was not registered."
+      }
+    ],
+    "claudeMissingForUninstall": [
+      {
+        "args": ["alpha 1"],
+        "out": "'claude' is not in the PATH. To remove the plugins later, run:\nalpha 1"
+      }
+    ],
+    "closeInstanceBeforeUninstall": "Close 'claude --telegram' before uninstalling; nothing was changed.",
+    "transcriptionFound": [
+      {
+        "args": ["alpha 1"],
+        "out": "Local transcription installed by the setup:\n  • alpha 1"
+      }
+    ],
+    "deleteTranscriptionPrompt": "Remove the local transcription (Python environment and downloaded models)?",
+    "transcriptionRemoved": "Local transcription removed.",
+    "transcriptionKept": "Local transcription kept.",
+    "deleteMermaidPrompt": "Also remove mermaid-cli (mmdc), used for the diagrams? The setup did not install it, and other tools may use it.",
+    "mermaidRemoved": "mermaid-cli removed.",
+    "mermaidNotRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Could not remove mermaid-cli. To do it by hand, run:\n  alpha 1"
+      }
+    ],
+    "deleteStatePrompt": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Also delete the bot token and the pairing in alpha 1 and the settings in beta 'two'?"
+      }
+    ],
+    "stateDeleted": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "alpha 1 and beta 'two' deleted."
+      }
+    ],
+    "stateKept": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Bot token and pairing kept in alpha 1, settings in beta 'two'."
+      }
+    ],
+    "uninstallDone": "Done. Open a new terminal; this repository folder can now be deleted.",
+    "noSavedToken": [
+      {
+        "args": ["alpha 1"],
+        "out": "No saved token. Run this first:\n  alpha 1"
+      }
+    ],
+    "useSavedBot": [
+      { "args": ["alpha 1"], "out": "Use the saved bot, @alpha 1?" }
+    ],
+    "tokenPrompt": "Bot token (from @BotFather; hidden while you type): ",
+    "tokenSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Token of bot @alpha 1 saved in beta 'two'."
+      }
+    ],
+    "noPairingMessage": "No message with the code arrived in 3 min. Run the setup again.",
+    "alreadyPaired": [
+      { "args": ["alpha 1"], "out": "Bot already paired with alpha 1." }
+    ],
+    "pairingChoiceQuestion": [
+      {
+        "args": ["alpha 1"],
+        "out": "The bot is already paired with alpha 1. What now?"
+      }
+    ],
+    "pairingChoices.keep": "Keep this account",
+    "pairingChoices.replace": "Pair another account (with a new code)",
+    "tooManyAccounts": [
+      {
+        "args": [3, "npm run setup:pairing"],
+        "out": "access.json lets 3 Telegram accounts talk to the bot, but it only talks to one. Run 'npm run setup:pairing' to keep only yours."
+      }
+    ],
+    "permissionsSkipped": [
+      {
+        "args": ["alpha 1"],
+        "out": "'claude --telegram' does not start with alpha 1:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option."
+      }
+    ],
+    "groupsWarning": [
+      {
+        "args": ["alpha 1"],
+        "out": "@alpha 1 can be added to groups. In @BotFather send /setjoingroups, pick @alpha 1 and choose Disable."
+      }
+    ],
+    "closeInstanceBeforePairing": "Close the 'claude --telegram' instance before pairing, because it holds the bot.",
+    "webhookConfigured": [
+      {
+        "args": ["alpha 1"],
+        "out": "Bot @alpha 1 has a webhook set; use a bot only for Claude."
+      }
+    ],
+    "sendPairingCode": [
+      {
+        "args": ["my_bot", "A1B2C3", "https://t.me/my_bot?start=A1B2C3"],
+        "out": "To pair, open this link and tap Start:\n  • https://t.me/my_bot?start=A1B2C3\nOr send this code to @my_bot:\n  • A1B2C3\nWaiting up to 3 min. Only the message with this code pairs."
+      }
+    ],
+    "confirmPairing": [
+      {
+        "args": ["Ana (@ana)", 123456789],
+        "out": "Pair with Ana (@ana) (id 123456789)?"
+      }
+    ],
+    "pairingCancelled": "Pairing cancelled.",
+    "pairedChatMessage": "Paired with Claude Code.\n\nRun 'claude --telegram' to chat here.",
+    "pairedWith": [
+      {
+        "args": ["alpha 1"],
+        "out": "Paired with alpha 1; only this account talks to the bot."
+      }
+    ],
+    "delayQuestion": "Minutes without an answer in the terminal before going to Telegram",
+    "delayLabel": [
+      { "args": [3], "out": "3 min" },
+      { "args": [1.5], "out": "1.5 min" }
+    ],
+    "delayCustomPrompt": "Minutes (greater than 0): ",
+    "delayCustomHint": "a number of minutes greater than 0",
+    "delaySaved": [
+      {
+        "args": [3, "config.json"],
+        "out": "Delay of 3 min saved in config.json."
+      },
+      {
+        "args": [1.5, "config.json"],
+        "out": "Delay of 1.5 min saved in config.json."
+      }
+    ],
+    "quietQuestion": "Quiet hours, when nothing goes to Telegram",
+    "quietOffLabel": "Off",
+    "quietPresets.outsideWork": "Outside business hours",
+    "quietPresets.fullNight": "All night",
+    "quietPresets.night": "Night",
+    "quietPresets.lateNight": "Small hours",
+    "quietStartPrompt": "Start of the quiet hours (HH:MM): ",
+    "quietEndPrompt": "End of the quiet hours (HH:MM): ",
+    "timeHint": "HH:MM, from 00:00 to 23:59",
+    "quietEndHint": [
+      {
+        "args": ["alpha 1"],
+        "out": "HH:MM, from 00:00 to 23:59 and other than alpha 1"
+      }
+    ],
+    "quietSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Quiet hours alpha 1 saved in beta 'two'."
+      }
+    ],
+    "quietOff": "off",
+    "transcriptionPurpose": "Turns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.",
+    "transcriptionQuestion": "Local voice transcription",
+    "transcriptionOffLabel": "Off",
+    "transcriptionModels.base": "fastest, uses the least RAM, fine for clear speech, ~150 MB of storage",
+    "transcriptionModels.small": "more accurate, slower, uses more RAM, ~490 MB of storage",
+    "transcriptionModels.medium": "most accurate, much slower, uses much more RAM, ~1.5 GB of storage",
+    "transcriptionDisabled": "Transcription off:\n  • voice messages reach Claude as attachments",
+    "pythonEnvFailed": "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+    "installWhisper": "install faster-whisper",
+    "downloadingModel": [
+      {
+        "args": ["alpha 1"],
+        "out": "Downloading the alpha 1 transcription model (first time only)…"
+      }
+    ],
+    "modelDownload": "download the model",
+    "savedBotChecking": "Checking the saved bot…",
+    "tokenChecking": "Checking the token with Telegram…",
+    "pairedAccountChecking": "Looking up the paired account…",
+    "pairingPreparing": "Getting the pairing ready…",
+    "pairingWaiting": "Waiting for the message with the code on Telegram…",
+    "pairingFinishing": "Finishing the pairing…",
+    "whisperEnvCreating": "Creating the Python environment of the transcription…",
+    "whisperInstalling": "Installing faster-whisper…",
+    "modelRemoving": [
+      { "args": ["alpha 1"], "out": "Removing the alpha 1 model…" }
+    ],
+    "marketplaceRemoving": [
+      { "args": ["alpha 1"], "out": "Removing the marketplace 'alpha 1'…" }
+    ],
+    "transcriptionRemoving": "Deleting the transcription files…",
+    "mermaidRemoving": "Removing mermaid-cli…",
+    "transcriptionReady": [
+      {
+        "args": ["alpha 1"],
+        "out": "Installed:\n  • the alpha 1 model of the local transcription"
+      }
+    ],
+    "languageQuestion": "Language / Idioma",
+    "languageSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Language alpha 1 saved in beta 'two'."
+      }
+    ],
+    "statuslinePrompt": [
+      {
+        "args": ["alpha 1"],
+        "out": "Claude Code's footer (status line) can show whether Telegram is connected, like this:\n  • alpha 1\nShow it?"
+      }
+    ],
+    "statuslineInstalled": [
+      { "args": ["alpha 1"], "out": "Status line set in alpha 1." }
+    ],
+    "statuslineKept": "Status line kept:\n  • yours stays, without the Telegram indicator",
+    "statuslineSkipped": "Status line left unchanged.",
+    "statuslineChoiceQuestion": [
+      {
+        "args": ["~/bin/line.sh", "📱 (Main) Telegram connected"],
+        "out": "You already have a status line (~/bin/line.sh).\nWhere should the Telegram indicator (📱 (Main) Telegram connected) go?"
+      }
+    ],
+    "statuslineChoices.after": "Next to yours",
+    "statuslineChoices.replace": "Instead of yours",
+    "statuslineChoices.custom": "Ask Claude to fit it into mine",
+    "statuslineChoices.keep": "Nowhere (keep only yours)",
+    "statuslineChoices.keepCustom": "Keep yours (it already has the indicator)",
+    "statuslineChoiceHints.after": "yours stays and the indicator shows beside it",
+    "statuslineChoiceHints.replace": "only the indicator; yours is saved and comes back on uninstall",
+    "statuslineChoiceHints.custom": "on the next 'claude --telegram', Claude fits the indicator into yours the way you want",
+    "statuslineChoiceHints.keep": "nothing changes",
+    "statuslineCustomKept": "Status line kept:\n  • yours, with the indicator Claude added",
+    "statuslineCustomRequested": "Request noted:\n  • on the next 'claude --telegram', Claude asks how to fit the indicator into your status line",
+    "statuslineCustomNeedsOwn": "There is no status line of yours to fit the indicator into; use on to show only the indicator.",
+    "statuslineCustomPrompt": [
+      {
+        "args": ["alpha 1", "beta 'two'", "gamma/3", "delta_4"],
+        "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in alpha 1):\n  beta 'two'\n\nThe indicator is this command:\n  gamma/3\nIt prints the Telegram state with ANSI color (for example delta_4) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed"
+      }
+    ],
+    "statuslineCustomLeft": [
+      {
+        "args": ["alpha 1"],
+        "out": "Your status line still calls the Telegram indicator, which Claude added to it. Ask Claude to remove this call:\n  alpha 1"
+      }
+    ],
+    "statuslineChained": [
+      {
+        "args": ["alpha 1"],
+        "out": "Telegram indicator added after your status line in alpha 1."
+      }
+    ],
+    "statuslineReplaced": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Status line replaced in alpha 1; the previous settings are in beta 'two'."
+      }
+    ],
+    "statuslineAlready": "The Telegram indicator is already in your status line.",
+    "statuslineOursQuestion": [
+      {
+        "args": ["alpha 1"],
+        "out": "The Telegram indicator (alpha 1) is already in your status line. What should happen to it?"
+      }
+    ],
+    "statuslineOursChoices.keep": "Keep it",
+    "statuslineOursChoices.remove": "Remove it",
+    "statuslineOursHints.keep": "nothing changes",
+    "statuslineOursHints.restore": "your previous status line comes back",
+    "statuslineOursHints.remove": "the footer is left without a status line",
+    "statuslineOursKept": "Status line kept with the Telegram indicator.",
+    "statuslineRestored": [
+      {
+        "args": ["alpha 1"],
+        "out": "Your previous status line is back in alpha 1."
+      }
+    ],
+    "settingsInvalid": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 is not a valid JSON object. Fix it and run the setup again; nothing was changed."
+      }
+    ],
+    "doneAll": "Done. Open a new terminal and run 'claude --telegram' (or 'npm run telegram' in this repository).",
+    "doneReopen": "Done. Reopen 'claude --telegram' for it to apply.",
+    "doneLive": "Done. It applies to the next messages, nothing to reopen.",
+    "questionReleased": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Released the question from [alpha 1]: beta 'two'"
+      }
+    ],
+    "nothingPending": [
+      {
+        "args": ["ab12cd34"],
+        "out": "No pending question from session ab12cd34."
+      },
+      { "args": [null], "out": "No pending question." },
+      { "args": [""], "out": "No pending question." }
+    ]
+  },
+  "pt-br": {
+    "statusMain": "(Principal)",
+    "statusSecondary": "(Secundário)",
+    "statusConnected": [
+      { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram conectado" }
+    ],
+    "statusDown": [{ "args": ["alpha 1"], "out": "📱 alpha 1 Telegram fora" }],
+    "statusConnecting": [
+      { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram conectando…" }
+    ],
+    "stepLabels.token": "token do bot",
+    "stepLabels.pairing": "pareamento",
+    "stepTitles.language": "Language / Idioma",
+    "stepTitles.plugin": "Plugins",
+    "stepTitles.token": "Token do bot",
+    "stepTitles.pairing": "Pareamento",
+    "stepTitles.delay": "Tempo de espera",
+    "stepTitles.quiet-hours": "Silêncio",
+    "stepTitles.transcription": "Transcrição de áudio",
+    "stepTitles.inbox": "Arquivos recebidos",
+    "stepTitles.statusline": "Statusline",
+    "stepTitles.health": "Verificação final",
+    "healthHasFailures": [
+      {
+        "args": ["alpha 1"],
+        "out": "Algumas verificações falharam. Corrija o que está com ✘ e rode 'alpha 1' de novo."
+      }
+    ],
+    "notConfigured": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O 'claude --telegram' ainda não está configurado. Falta:\n  • alpha 1\nRode 'beta 'two'' antes."
+      }
+    ],
+    "alreadyRunning": [
+      {
+        "args": [4242],
+        "out": "Já existe uma instância do 'claude --telegram' aberta (bot no processo 4242). Feche-a antes de abrir outra."
+      }
+    ],
+    "unknownSteps": [
+      {
+        "args": ["foo, bar", "language, token, pairing"],
+        "out": "Etapa desconhecida:\n  • foo, bar\nUse uma ou mais destas (sem nenhuma, roda todas):\n  • language, token, pairing"
+      }
+    ],
+    "networkFailure": [
+      {
+        "args": ["alpha 1"],
+        "out": "Falha de rede ao chamar o Telegram (alpha 1)."
+      }
+    ],
+    "telegramRefused": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O Telegram recusou alpha 1:\n  • beta 'two'"
+      }
+    ],
+    "noDescription": "sem descrição",
+    "failed": [{ "args": ["alpha 1"], "out": "Falhou:\n  • alpha 1" }],
+    "yesNoHint": [
+      { "args": [true], "out": "(s/n) [padrão: s]" },
+      { "args": [false], "out": "(s/n) [padrão: n]" }
+    ],
+    "defaultHint": [{ "args": ["alpha 1"], "out": "[padrão: alpha 1]" }],
+    "languageDefaultHint": [
+      { "args": ["alpha 1"], "out": "[default / padrão: alpha 1]" }
+    ],
+    "selectHint": "↑/↓ para escolher · Enter para confirmar",
+    "yes": "Sim",
+    "no": "Não",
+    "custom": "Customizado",
+    "recommended": "Recomendado",
+    "previousChoice": "escolhido anteriormente",
+    "invalidAnswer": [
+      { "args": ["x", "y or n"], "out": "'x' não vale. Use:\n  • y or n" }
+    ],
+    "enterKeepsDefault": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.",
+    "cancelled": "Cancelado.",
+    "exitPrompt": "Sair do setup?",
+    "continueSetup": "Continuar de onde parou",
+    "exitSetup": "Sair",
+    "interrupted": "Setup interrompido.",
+    "nothingChanged": "Nada foi alterado.",
+    "doneSoFar": [
+      { "args": ["alpha 1"], "out": "Até aqui o setup:\n  • alpha 1" }
+    ],
+    "undoPrompt": "Desfazer o que o setup fez?",
+    "undoAll": "Desfazer tudo",
+    "keepDone": "Manter como está",
+    "undone": "Tudo o que o setup fez foi desfeito.",
+    "undoLeft": [
+      { "args": ["alpha 1"], "out": "Não foi possível desfazer:\n  • alpha 1" }
+    ],
+    "keptDone": [
+      {
+        "args": ["alpha 1"],
+        "out": "Mantido. Rode 'alpha 1' para continuar depois."
+      }
+    ],
+    "changedSetting": [
+      { "args": ["⚙ delay", "3 min", "5 min"], "out": "⚙ delay: 3 min → 5 min" }
+    ],
+    "notSet": "não definido",
+    "ruleOn": "ativada",
+    "ruleOff": "desativada",
+    "pluginOn": "ativado",
+    "pluginOff": "desativado",
+    "pluginSetting": [{ "args": ["alpha 1"], "out": "plugin 'alpha 1'" }],
+    "undoing": [{ "args": ["alpha 1"], "out": "Desfazendo: alpha 1…" }],
+    "undoneItem": [{ "args": ["alpha 1"], "out": "Desfeito:\n  • alpha 1" }],
+    "settingsKeys.statusLine": "statusline",
+    "settingsKeys.permissions": "regra de segurança do arquivo do token",
+    "settingsKeys.enabledPlugins": "plugins ativados",
+    "changeKinds.fileCreated": [
+      { "args": ["alpha 1"], "out": "criou alpha 1" }
+    ],
+    "changeKinds.fileChanged": [
+      { "args": ["alpha 1"], "out": "alterou alpha 1" }
+    ],
+    "changeKinds.dirCreated": [
+      { "args": ["alpha 1"], "out": "criou a pasta alpha 1" }
+    ],
+    "changeKinds.marketplaceAdded": [
+      { "args": ["alpha 1"], "out": "registrou o marketplace 'alpha 1'" }
+    ],
+    "changeKinds.pluginInstalled": [
+      { "args": ["alpha 1"], "out": "instalou o plugin 'alpha 1'" }
+    ],
+    "changeKinds.pluginRemoved": [
+      { "args": ["alpha 1"], "out": "removeu o plugin 'alpha 1'" }
+    ],
+    "changeKinds.toolInstalled": [
+      {
+        "args": ["alpha 1"],
+        "out": "instalou alpha 1, que continua instalado (remova à mão se quiser)"
+      }
+    ],
+    "toolsDeclined": [
+      {
+        "args": ["alpha 1"],
+        "out": "Nada foi instalado; alpha 1 continua faltando no PATH."
+      }
+    ],
+    "invalidSetting": [
+      {
+        "args": ["alpha 1", "beta 'two'", "gamma/3"],
+        "out": "'beta 'two'' não vale para alpha 1. Use:\n  • gamma/3\nNada foi alterado."
+      }
+    ],
+    "settingHints.language": "en-us ou pt-br",
+    "settingHints.delay": "os minutos, maiores que 0 (por exemplo 3)",
+    "settingHints.quiet-hours": "HH:MM-HH:MM (por exemplo 22:00-08:00) ou off",
+    "settingHints.transcription": "base, small, medium ou off",
+    "settingHints.inbox": "os dias, maiores que 0, ou off",
+    "settingHints.statusline": "on, after, replace, custom ou off",
+    "inboxQuestion": "Dias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar",
+    "inboxDaysLabel": [
+      { "args": [7], "out": "7 dia(s)" },
+      { "args": [1], "out": "1 dia(s)" }
+    ],
+    "inboxForeverLabel": "Nunca apagar",
+    "inboxCustomPrompt": "Dias (maior que 0): ",
+    "inboxCustomHint": "um número inteiro de dias maior que 0",
+    "inboxSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Arquivos recebidos:\n  • alpha 1\nSalvo em beta 'two'."
+      }
+    ],
+    "inboxKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Arquivos recebidos mantidos:\n  • alpha 1"
+      }
+    ],
+    "languageKept": [
+      { "args": ["alpha 1"], "out": "Idioma mantido:\n  • alpha 1" }
+    ],
+    "delayKept": [
+      { "args": [3], "out": "Tempo de espera mantido:\n  • 3 min" },
+      { "args": [1.5], "out": "Tempo de espera mantido:\n  • 1.5 min" }
+    ],
+    "quietKept": [
+      { "args": ["alpha 1"], "out": "Silêncio mantido:\n  • alpha 1" }
+    ],
+    "transcriptionModelKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Transcrição local mantida com o modelo alpha 1, já instalado."
+      }
+    ],
+    "transcriptionKeptOff": "Transcrição local continua desligada.",
+    "transcriptionSwitched": [
+      {
+        "args": ["alpha 1"],
+        "out": "Transcrição local ligada com o modelo alpha 1, já instalado."
+      }
+    ],
+    "removeModelsQuestion": "Quais modelos de transcrição desinstalar?",
+    "removeModelsKeep": "Nenhum (manter como está)",
+    "removeModelsAll": [
+      { "args": ["base, small"], "out": "Todos (base, small)" }
+    ],
+    "removeModel": [{ "args": ["alpha 1"], "out": "Só o modelo alpha 1" }],
+    "modelInUse": "em uso",
+    "modelUsedUntilNow": "usado até agora",
+    "transcriptionUninstall": "Desinstalar",
+    "transcriptionInstalledHeading": "Instalados:",
+    "transcriptionAvailableHeading": "Para baixar:",
+    "modelsRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Modelos de transcrição removidos:\n  • alpha 1"
+      }
+    ],
+    "inboxDays": [
+      { "args": [7], "out": "apagados depois de 7 dia(s)" },
+      { "args": [1], "out": "apagados depois de 1 dia(s)" }
+    ],
+    "inboxForever": "mantidos para sempre",
+    "notSettable": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'alpha 1' não muda pelo --set, só beta 'two'. Token, pareamento e plugins passam pelo 'npm run setup' no seu próprio terminal."
+      }
+    ],
+    "unknownHealthGroups": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Grupo desconhecido:\n  • alpha 1\nUse all, ou um ou mais destes:\n  • beta 'two'"
+      }
+    ],
+    "healthGroupTitles.install": "Instalação",
+    "healthGroupTitles.telegram": "Telegram",
+    "healthGroupTitles.security": "Segurança",
+    "healthGroupTitles.extras": "Extras",
+    "healthLabels.node": "Node",
+    "healthLabels.user": "Execução como root",
+    "healthLabels.claude": "claude",
+    "healthLabels.bun": "bun",
+    "healthLabels.plugins": "Plugins",
+    "healthLabels.shell": "Shell",
+    "healthLabels.token": "Token do bot",
+    "healthLabels.groups": "Grupos",
+    "healthLabels.pairing": "Pareamento",
+    "healthLabels.polling": "Conexão",
+    "healthLabels.protection": "Proteção do token",
+    "healthLabels.config": "Configurações",
+    "healthLabels.transcription": "Transcrição",
+    "healthLabels.mermaid": "Mermaid (mmdc)",
+    "healthLabels.statusline": "Statusline",
+    "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
+    "healthDetail.found": "encontrado",
+    "healthDetail.missing": "não encontrado",
+    "healthDetail.installed": "instalados",
+    "healthDetail.notInstalled": [
+      {
+        "args": ["alpha 1"],
+        "out": "faltam alpha 1. Rode 'npm run setup:plugin'."
+      }
+    ],
+    "healthDetail.loadedIn": [
+      { "args": ["alpha 1"], "out": "carregado por alpha 1" }
+    ],
+    "healthDetail.notLoaded": [
+      {
+        "args": ["alpha 1"],
+        "out": "não carregado por alpha 1. Rode 'npm run setup:plugin'."
+      }
+    ],
+    "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
+    "healthDetail.noToken": "sem token. Rode 'npm run setup:token' no seu próprio terminal.",
+    "healthDetail.paired": [
+      { "args": ["alpha 1"], "out": "pareado com uma conta (alpha 1)" }
+    ],
+    "healthDetail.notPaired": "não pareado. Rode 'npm run setup:pairing'.",
+    "healthDetail.notAllowlist": [
+      {
+        "args": ["alpha 1"],
+        "out": "o dmPolicy é alpha 1, e quem escreve para o bot recebe um código de pareamento. Rode 'npm run setup:pairing'."
+      }
+    ],
+    "healthDetail.pendingPairings": [
+      {
+        "args": [2],
+        "out": "2 pareamento(s) pendente(s) no access.json. Rode 'npm run setup:pairing'."
+      }
+    ],
+    "healthDetail.groupsAllowed": [
+      {
+        "args": [2],
+        "out": "2 grupo(s) podem falar com o bot. Rode 'npm run setup:pairing'."
+      }
+    ],
+    "healthDetail.groupsOff": "o bot não entra em grupos",
+    "healthDetail.groupsUnknown": "precisa de um token de bot válido",
+    "healthDetail.regularUser": "não, roda como usuário comum (o recomendado)",
+    "healthDetail.root": "rodando como root; use um usuário comum, para o Claude não poder mexer na máquina inteira",
+    "healthDetail.connected": "conectado",
+    "healthDetail.notOpen": "o 'claude --telegram' não está aberto",
+    "healthDetail.connecting": "conectando; o 'claude --telegram' acabou de abrir",
+    "healthDetail.down": "o bot parou de receber mensagens; reabra o 'claude --telegram'",
+    "healthDetail.protected": "o Claude não consegue ler o token do bot",
+    "healthDetail.unprotected": [
+      {
+        "args": ["alpha 1"],
+        "out": "o Claude consegue ler o token do bot. Rode 'alpha 1'."
+      }
+    ],
+    "healthDetail.valid": "válidas",
+    "healthDetail.invalid": [
+      { "args": ["alpha 1"], "out": "alpha 1 não é um JSON válido" }
+    ],
+    "healthDetail.off": "desligado",
+    "healthDetail.model": [{ "args": ["alpha 1"], "out": "modelo alpha 1" }],
+    "healthDetail.broken": [
+      {
+        "args": ["alpha 1"],
+        "out": "o ambiente Python não funciona. Rode 'alpha 1'."
+      }
+    ],
+    "healthDetail.statusline.ours": "indicador do Telegram ligado",
+    "healthDetail.statusline.ours-after": "indicador do Telegram depois da sua statusline",
+    "healthDetail.statusline.other": "outra statusline, sem o indicador",
+    "healthDetail.statusline.none": "sem statusline",
+    "healthDetail.statusline.custom": "a sua, com o indicador que o Claude juntou",
+    "healthDetail.statusline.custom-pending": "o Claude junta o indicador à sua no próximo 'claude --telegram'",
+    "installToolPrompt": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O 'alpha 1' não está instalado. Instalar agora com o instalador do próprio projeto (beta 'two')?"
+      }
+    ],
+    "toolInstalled": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'alpha 1' instalado em beta 'two'. Depois abra um terminal novo para o shell encontrá-lo."
+      }
+    ],
+    "installFailed": [
+      {
+        "args": ["alpha 1"],
+        "out": "O instalador do 'alpha 1' falhou; nada mais foi alterado."
+      }
+    ],
+    "toolStillMissing": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O 'alpha 1' foi instalado mas não está em beta 'two'; confira a saída do instalador."
+      }
+    ],
+    "nodeTooOld": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O Node alpha 1 é antigo demais; o setup precisa do Node beta 'two' ou mais novo (veja o .nvmrc; com nvm, rode nvm install)."
+      }
+    ],
+    "bcctPrompt": "(opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)?",
+    "bcctInstalledQuestion": "(opcional) Os comandos /bcct: já estão no Claude Code. O que fazer com eles?",
+    "bcctChoices.keep": "Manter",
+    "bcctChoices.remove": "Remover",
+    "bcctHints.keep": "nada muda",
+    "bcctHints.remove": "os comandos /bcct: deixam o Claude Code; o setup continua no terminal",
+    "pluginsChecked": "Conferido:",
+    "requiredPlugins": [
+      { "args": [2, 3], "out": "2 de 3 plugins obrigatórios instalados" }
+    ],
+    "optionalPlugins": [
+      { "args": [1, 2], "out": "1 de 2 plugin opcional instalado" }
+    ],
+    "marketplaceFound": "Marketplace registrado",
+    "marketplaceMissing": "Marketplace ainda não registrado",
+    "planHeader": "Para concluir esta etapa, o setup precisa:",
+    "planMarketplace": [
+      {
+        "args": ["alpha 1"],
+        "out": "registrar o marketplace 'alpha 1' a partir desta pasta"
+      }
+    ],
+    "planPlugin": [
+      {
+        "args": ["alpha 1"],
+        "out": "instalar o plugin 'alpha 1' para o seu usuário"
+      }
+    ],
+    "planShellLine": [
+      {
+        "args": ["alpha 1"],
+        "out": "acrescentar em alpha 1 a linha que carrega o 'claude --telegram'"
+      }
+    ],
+    "planPrompt": "Seguir com a instalação?",
+    "nothingInstalled": "Nada foi instalado.",
+    "byHand": "Para fazer à mão, rode:",
+    "marketplaceAdded": [
+      { "args": ["alpha 1"], "out": "Marketplace 'alpha 1' registrado." }
+    ],
+    "pluginsChecking": "Conferindo o marketplace e os plugins instalados…",
+    "marketplaceAdding": [
+      { "args": ["alpha 1"], "out": "Registrando o marketplace 'alpha 1'…" }
+    ],
+    "pluginInstalling": [
+      { "args": ["alpha 1"], "out": "Instalando o plugin 'alpha 1'…" }
+    ],
+    "pluginRemoving": [
+      { "args": ["alpha 1"], "out": "Removendo o plugin 'alpha 1'…" }
+    ],
+    "pluginEnabling": [
+      {
+        "args": ["alpha 1"],
+        "out": "Ativando 'alpha 1' em todas as instâncias…"
+      }
+    ],
+    "pluginDisabling": [
+      {
+        "args": ["alpha 1"],
+        "out": "Desativando 'alpha 1' fora do 'claude --telegram'…"
+      }
+    ],
+    "pluginAdded": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' instalado para o seu usuário."
+      }
+    ],
+    "marketplaceRegistered": [
+      { "args": ["alpha 1"], "out": "Marketplace 'alpha 1' já registrado." }
+    ],
+    "pluginInstalled": [
+      { "args": ["alpha 1"], "out": "Plugin 'alpha 1' já instalado." }
+    ],
+    "pluginDisabledOutside": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' desativado fora do 'claude --telegram'."
+      }
+    ],
+    "pluginEnabled": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' ativado em todas as instâncias."
+      }
+    ],
+    "pluginAlreadyDisabledOutside": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' já desativado fora do 'claude --telegram'."
+      }
+    ],
+    "pluginAlreadyEnabled": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugin 'alpha 1' já ativado em todas as instâncias."
+      }
+    ],
+    "rcAlreadyLoads": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 já carrega o 'claude --telegram'."
+      }
+    ],
+    "rcNowLoads": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 passou a carregar o 'claude --telegram'."
+      }
+    ],
+    "shellUnsupported": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O shell alpha 1 não carrega o 'claude --telegram'. Use 'npm run telegram' neste repositório, ou carregue esta linha no bash ou no zsh:\n  beta 'two'"
+      }
+    ],
+    "rcNoLongerLoads": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 não carrega mais o 'claude --telegram'."
+      }
+    ],
+    "statuslineRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Statusline do Telegram removida de alpha 1."
+      }
+    ],
+    "envRuleRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Regra que impedia o Claude de ler o token do bot removida de alpha 1."
+      }
+    ],
+    "envProtected": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Adicionada regra de segurança:\n  • o Claude Code não pode ler alpha 1, o arquivo com o token do bot (regra deny em beta 'two')"
+      }
+    ],
+    "envAlreadyProtected": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Regra de segurança já ativa:\n  • o Claude Code não pode ler alpha 1 (regra deny em beta 'two')"
+      }
+    ],
+    "pluginRemoved": [
+      { "args": ["alpha 1"], "out": "Plugin 'alpha 1' removido." }
+    ],
+    "pluginNotRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Não foi possível remover o plugin 'alpha 1'. Para fazer à mão, rode:\n  claude plugin uninstall alpha 1 --scope user"
+      }
+    ],
+    "pluginNotInstalled": [
+      { "args": ["alpha 1"], "out": "Plugin 'alpha 1' não estava instalado." }
+    ],
+    "marketplaceRemoved": [
+      { "args": ["alpha 1"], "out": "Marketplace 'alpha 1' removido." }
+    ],
+    "marketplaceNotRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Não foi possível remover o marketplace 'alpha 1'. Para fazer à mão, rode:\n  claude plugin marketplace remove alpha 1"
+      }
+    ],
+    "marketplaceNotRegistered": [
+      {
+        "args": ["alpha 1"],
+        "out": "Marketplace 'alpha 1' não estava registrado."
+      }
+    ],
+    "claudeMissingForUninstall": [
+      {
+        "args": ["alpha 1"],
+        "out": "O 'claude' não está no PATH. Para remover os plugins depois, rode:\nalpha 1"
+      }
+    ],
+    "closeInstanceBeforeUninstall": "Feche o 'claude --telegram' antes de desinstalar; nada foi alterado.",
+    "transcriptionFound": [
+      {
+        "args": ["alpha 1"],
+        "out": "Transcrição local instalada pelo setup:\n  • alpha 1"
+      }
+    ],
+    "deleteTranscriptionPrompt": "Remover a transcrição local (ambiente Python e modelos baixados)?",
+    "transcriptionRemoved": "Transcrição local removida.",
+    "transcriptionKept": "Transcrição local mantida.",
+    "deleteMermaidPrompt": "Remover também o mermaid-cli (mmdc), que gera as imagens dos fluxos? Ele não foi instalado pelo setup e outras ferramentas podem usá-lo.",
+    "mermaidRemoved": "mermaid-cli removido.",
+    "mermaidNotRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "Não foi possível remover o mermaid-cli. Para fazer à mão, rode:\n  alpha 1"
+      }
+    ],
+    "deleteStatePrompt": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Apagar também o token do bot e o pareamento em alpha 1 e as configurações em beta 'two'?"
+      }
+    ],
+    "stateDeleted": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "alpha 1 e beta 'two' apagados."
+      }
+    ],
+    "stateKept": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Token do bot e pareamento mantidos em alpha 1, configurações em beta 'two'."
+      }
+    ],
+    "uninstallDone": "Pronto. Abra um terminal novo; já dá para apagar a pasta deste repositório.",
+    "noSavedToken": [
+      {
+        "args": ["alpha 1"],
+        "out": "Nenhum token salvo. Rode antes:\n  alpha 1"
+      }
+    ],
+    "useSavedBot": [
+      { "args": ["alpha 1"], "out": "Usar o bot salvo, @alpha 1?" }
+    ],
+    "tokenPrompt": "Token do bot (do @BotFather; não aparece no terminal): ",
+    "tokenSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Token do bot @alpha 1 salvo em beta 'two'."
+      }
+    ],
+    "noPairingMessage": "Nenhuma mensagem com o código chegou em 3 min. Rode o setup de novo.",
+    "alreadyPaired": [
+      { "args": ["alpha 1"], "out": "Bot já pareado com alpha 1." }
+    ],
+    "pairingChoiceQuestion": [
+      {
+        "args": ["alpha 1"],
+        "out": "O bot já está pareado com alpha 1. O que fazer?"
+      }
+    ],
+    "pairingChoices.keep": "Manter esta conta",
+    "pairingChoices.replace": "Trocar por outra conta (com um código novo)",
+    "tooManyAccounts": [
+      {
+        "args": [3, "npm run setup:pairing"],
+        "out": "O access.json deixa 3 contas do Telegram falarem com o bot, mas ele só fala com uma. Rode 'npm run setup:pairing' para deixar só a sua."
+      }
+    ],
+    "permissionsSkipped": [
+      {
+        "args": ["alpha 1"],
+        "out": "O 'claude --telegram' não abre com alpha 1:\n  • com o canal ligado, uma mensagem no Telegram poderia fazer o Claude executar qualquer coisa sem te perguntar\nAbra sem essa opção."
+      }
+    ],
+    "groupsWarning": [
+      {
+        "args": ["alpha 1"],
+        "out": "O @alpha 1 pode entrar em grupos. No @BotFather mande /setjoingroups, escolha o @alpha 1 e depois Disable."
+      }
+    ],
+    "closeInstanceBeforePairing": "Feche a instância do 'claude --telegram' antes de parear, porque ela segura o bot.",
+    "webhookConfigured": [
+      {
+        "args": ["alpha 1"],
+        "out": "O bot @alpha 1 tem webhook configurado; use um bot só para o Claude."
+      }
+    ],
+    "sendPairingCode": [
+      {
+        "args": ["my_bot", "A1B2C3", "https://t.me/my_bot?start=A1B2C3"],
+        "out": "Para parear, abra este link e toque em Iniciar:\n  • https://t.me/my_bot?start=A1B2C3\nOu mande este código para @my_bot:\n  • A1B2C3\nAguardando até 3 min. Só a mensagem com esse código pareia."
+      }
+    ],
+    "confirmPairing": [
+      {
+        "args": ["Ana (@ana)", 123456789],
+        "out": "Parear com Ana (@ana) (id 123456789)?"
+      }
+    ],
+    "pairingCancelled": "Pareamento cancelado.",
+    "pairedChatMessage": "Pareado com o Claude Code.\n\nRode 'claude --telegram' para conversar por aqui.",
+    "pairedWith": [
+      {
+        "args": ["alpha 1"],
+        "out": "Pareado com alpha 1; só essa conta fala com o bot."
+      }
+    ],
+    "delayQuestion": "Minutos sem resposta no terminal antes de levar ao Telegram",
+    "delayLabel": [
+      { "args": [3], "out": "3 min" },
+      { "args": [1.5], "out": "1.5 min" }
+    ],
+    "delayCustomPrompt": "Minutos (maior que 0): ",
+    "delayCustomHint": "um número de minutos maior que 0",
+    "delaySaved": [
+      {
+        "args": [3, "config.json"],
+        "out": "Espera de 3 min salva em config.json."
+      },
+      {
+        "args": [1.5, "config.json"],
+        "out": "Espera de 1.5 min salva em config.json."
+      }
+    ],
+    "quietQuestion": "Horário de silêncio, sem mensagens no Telegram",
+    "quietOffLabel": "Desligado",
+    "quietPresets.outsideWork": "Fora do horário comercial",
+    "quietPresets.fullNight": "Noite completa",
+    "quietPresets.night": "Noite",
+    "quietPresets.lateNight": "Madrugada",
+    "quietStartPrompt": "Início do silêncio (HH:MM): ",
+    "quietEndPrompt": "Fim do silêncio (HH:MM): ",
+    "timeHint": "HH:MM, de 00:00 a 23:59",
+    "quietEndHint": [
+      {
+        "args": ["alpha 1"],
+        "out": "HH:MM, de 00:00 a 23:59 e diferente de alpha 1"
+      }
+    ],
+    "quietSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Silêncio alpha 1 salvo em beta 'two'."
+      }
+    ],
+    "quietOff": "desligado",
+    "transcriptionPurpose": "Transforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.",
+    "transcriptionQuestion": "Transcrição local dos áudios",
+    "transcriptionOffLabel": "Desligada",
+    "transcriptionModels.base": "a mais rápida, usa menos RAM, boa para fala clara, ~150 MB de armazenamento",
+    "transcriptionModels.small": "mais precisa, mais lenta, usa mais RAM, ~490 MB de armazenamento",
+    "transcriptionModels.medium": "a mais precisa, bem mais lenta, usa muito mais RAM, ~1,5 GB de armazenamento",
+    "transcriptionDisabled": "Transcrição desligada:\n  • o áudio chega ao Claude como anexo",
+    "pythonEnvFailed": "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • o venv do Python (no Debian e no Ubuntu, sudo apt install python3-venv)",
+    "installWhisper": "instalar o faster-whisper",
+    "downloadingModel": [
+      {
+        "args": ["alpha 1"],
+        "out": "Baixando o modelo alpha 1 da transcrição (só na primeira vez)…"
+      }
+    ],
+    "modelDownload": "baixar o modelo",
+    "savedBotChecking": "Conferindo o bot salvo…",
+    "tokenChecking": "Conferindo o token com o Telegram…",
+    "pairedAccountChecking": "Buscando a conta pareada…",
+    "pairingPreparing": "Preparando o pareamento…",
+    "pairingWaiting": "Aguardando a mensagem com o código no Telegram…",
+    "pairingFinishing": "Concluindo o pareamento…",
+    "whisperEnvCreating": "Criando o ambiente Python da transcrição…",
+    "whisperInstalling": "Instalando o faster-whisper…",
+    "modelRemoving": [
+      { "args": ["alpha 1"], "out": "Removendo o modelo alpha 1…" }
+    ],
+    "marketplaceRemoving": [
+      { "args": ["alpha 1"], "out": "Removendo o marketplace 'alpha 1'…" }
+    ],
+    "transcriptionRemoving": "Apagando os arquivos da transcrição…",
+    "mermaidRemoving": "Removendo o mermaid-cli…",
+    "transcriptionReady": [
+      {
+        "args": ["alpha 1"],
+        "out": "Instalado:\n  • modelo alpha 1 da transcrição local"
+      }
+    ],
+    "languageQuestion": "Language / Idioma",
+    "languageSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Idioma alpha 1 salvo em beta 'two'."
+      }
+    ],
+    "statuslinePrompt": [
+      {
+        "args": ["alpha 1"],
+        "out": "O rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • alpha 1\nMostrar?"
+      }
+    ],
+    "statuslineInstalled": [
+      { "args": ["alpha 1"], "out": "Statusline configurada em alpha 1." }
+    ],
+    "statuslineKept": "Statusline mantida:\n  • a sua continua, sem o indicador do Telegram",
+    "statuslineSkipped": "Statusline sem mudança.",
+    "statuslineChoiceQuestion": [
+      {
+        "args": ["~/bin/line.sh", "📱 (Main) Telegram connected"],
+        "out": "Você já tem uma statusline (~/bin/line.sh).\nOnde mostrar o indicador do Telegram (📱 (Main) Telegram connected)?"
+      }
+    ],
+    "statuslineChoices.after": "Junto da sua",
+    "statuslineChoices.replace": "No lugar da sua",
+    "statuslineChoices.custom": "Pedir ao Claude para customizar com a minha",
+    "statuslineChoices.keep": "Em lugar nenhum (manter só a sua)",
+    "statuslineChoices.keepCustom": "Manter a sua (já com o indicador)",
+    "statuslineChoiceHints.after": "a sua continua e o indicador aparece ao lado",
+    "statuslineChoiceHints.replace": "só o indicador; a sua fica guardada e volta no uninstall",
+    "statuslineChoiceHints.custom": "no próximo 'claude --telegram', o Claude junta o indicador à sua do jeito que você quiser",
+    "statuslineChoiceHints.keep": "nada muda",
+    "statuslineCustomKept": "Statusline mantida:\n  • a sua, com o indicador que o Claude juntou",
+    "statuslineCustomRequested": "Pedido anotado:\n  • no próximo 'claude --telegram', o Claude pergunta como juntar o indicador à sua statusline",
+    "statuslineCustomNeedsOwn": "Não há uma statusline sua para juntar o indicador; use on para mostrar só ele.",
+    "statuslineCustomPrompt": [
+      {
+        "args": ["alpha 1", "beta 'two'", "gamma/3", "delta_4"],
+        "out": "O setup do better-claude-code-telegram pediu que você junte o indicador do Telegram à minha statusline.\n\nMinha statusline hoje (statusLine em alpha 1):\n  beta 'two'\n\nO indicador é este comando:\n  gamma/3\nEle imprime o estado do Telegram com cor ANSI (por exemplo delta_4) ou nada, e não lê a entrada.\n\nFaça assim:\n  • antes de mudar algo, pergunte como eu quero juntar os dois (onde fica o indicador, separador, cor)\n  • mude só a minha statusline, para ela chamar também o indicador\n  • se o arquivo do indicador não existir mais, a statusline continua funcionando sem ele\n  • no fim, mostre o que mudou"
+      }
+    ],
+    "statuslineCustomLeft": [
+      {
+        "args": ["alpha 1"],
+        "out": "A sua statusline ainda chama o indicador do Telegram, que o Claude juntou a ela. Peça ao Claude para tirar esta chamada:\n  alpha 1"
+      }
+    ],
+    "statuslineChained": [
+      {
+        "args": ["alpha 1"],
+        "out": "Indicador do Telegram acrescentado depois da sua statusline em alpha 1."
+      }
+    ],
+    "statuslineReplaced": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Statusline trocada em alpha 1; as configurações anteriores estão em beta 'two'."
+      }
+    ],
+    "statuslineAlready": "O indicador do Telegram já está na sua statusline.",
+    "statuslineOursQuestion": [
+      {
+        "args": ["alpha 1"],
+        "out": "O indicador do Telegram (alpha 1) já está na sua statusline. O que fazer com ele?"
+      }
+    ],
+    "statuslineOursChoices.keep": "Manter",
+    "statuslineOursChoices.remove": "Remover",
+    "statuslineOursHints.keep": "nada muda",
+    "statuslineOursHints.restore": "a sua statusline anterior volta",
+    "statuslineOursHints.remove": "o rodapé fica sem statusline",
+    "statuslineOursKept": "Statusline mantida com o indicador do Telegram.",
+    "statuslineRestored": [
+      {
+        "args": ["alpha 1"],
+        "out": "Sua statusline anterior voltou em alpha 1."
+      }
+    ],
+    "settingsInvalid": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 não é um objeto JSON válido. Corrija e rode o setup de novo; nada foi alterado."
+      }
+    ],
+    "doneAll": "Pronto. Abra um terminal novo e rode 'claude --telegram' (ou 'npm run telegram' neste repositório).",
+    "doneReopen": "Pronto. Reabra o 'claude --telegram' para valer.",
+    "doneLive": "Pronto. Já vale para as próximas mensagens, sem reabrir nada.",
+    "questionReleased": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Pergunta de [alpha 1] solta: beta 'two'"
+      }
+    ],
+    "nothingPending": [
+      {
+        "args": ["ab12cd34"],
+        "out": "Nenhuma pergunta pendente da sessão ab12cd34."
+      },
+      { "args": [null], "out": "Nenhuma pergunta pendente." },
+      { "args": [""], "out": "Nenhuma pergunta pendente." }
+    ]
+  }
+}
