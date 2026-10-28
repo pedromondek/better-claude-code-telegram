@@ -2,7 +2,7 @@
 
 Telegram for Claude Code: a fork of the official Telegram channel plugin extended with `AskUserQuestion` buttons, a notice when Claude waits on you, voice transcription and one bot shared by every Claude Code instance on the machine. Each user runs it with a bot of their own.
 
-**Stack:** TypeScript (strict) for the channel server and its extensions, Node.js scripts (`.mjs`) for setup, hooks and tooling, Bun to run the channel server, Vitest, Stryker, oxlint, ESLint, Prettier, Husky. One layer, no backend/frontend split. A Rust binary is planned for the hooks, setup, launcher and status line; the TypeScript extensions and the channel server stay TypeScript.
+**Stack:** TypeScript (strict) for the channel server and its extensions, Node.js scripts (`.mjs`) for setup, hooks and tooling, Bun to run the channel server, Vitest, Stryker, oxlint, ESLint, Prettier, Husky. One layer, no backend/frontend split. The Rust binary `bcct` ports the hooks, setup, health, launcher and status line from the Node.js scripts; the TypeScript extensions and the channel server stay TypeScript.
 
 ## Layout
 
@@ -10,6 +10,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `plugins/telegram-hooks/` - the hooks and status line plugin.
 - `plugins/bcct/` - the `/bcct:` skills (setup, health, token, pairing and the rest).
 - `scripts/` - setup, health, release, mutation, coverage and git helpers, each with its test in `scripts/__tests__/`.
+- `rust/` - the Rust workspace of the `bcct` binary (`rust/crates/bcct/`), with the toolchain pinned in `rust-toolchain.toml` at the root and its lints, `clippy.toml`, `rustfmt.toml` and `deny.toml` in `rust/`.
 - `.husky/` - git hooks, with their tests in `.husky/__tests__/`.
 - `docs/` - `docs/setup/` (setup guide) and `docs/decisions/<Scope>/NNN-slug.md` (one file per decision, `000` is the scope index).
 
@@ -20,6 +21,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `npm run lint` - oxlint, ESLint and `tsc`; `npm run lint:typos`, `lint:secrets`, `lint:lockfile`.
 - `npm run format` / `format:check` / `format:file -- <files>` - Prettier.
 - `npm run test:mutation`, `test:mutation:changed`, `test:mutation:score`, `test:mutation:baseline` - Stryker.
+- `npm run rust:lint` (clippy with `-D warnings` and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants), `rust:build` (release binary). The cargo tools come pinned through mise.
 - `npm run check:commit` - runs the pre-push checks (without mutation) on a commit in a temporary worktree.
 - `npm run check:private` - scans the staged changes for personal data.
 - Run tools through these scripts, never `npx`.

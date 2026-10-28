@@ -1,0 +1,19 @@
+[package]
+name = "bcct"
+description = "Telegram for Claude Code: hooks, setup, health and status line of better-claude-code-telegram."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+lexopt.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true
+
+[lints]
+workspace = true
