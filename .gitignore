@@ -39,6 +39,10 @@ docs/dev/
 # Claude Code local files
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+.claude/rules/
+.claude/worktrees/
+.claude/plans/
+CLAUDE.local.md
 .playwright-mcp/
 
 # OS generated files
