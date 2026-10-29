@@ -1,0 +1,4668 @@
+{
+  "now": 1700000000123,
+  "healthTtlMs": 15000,
+  "launchGraceMs": 60000,
+  "scenarios": [
+    {
+      "name": "locale none: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {},
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "locale none: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale none: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale none: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "locale none: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale none: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale en-us: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"en-us\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale en-us: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"en-us\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale en-us: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"en-us\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale en-us: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"en-us\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale en-us: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"en-us\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale en-us: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"en-us\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale pt-br: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Principal) Telegram fora\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale pt-br: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Principal) Telegram conectado\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale pt-br: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Principal) Telegram fora\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale pt-br: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale pt-br: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secundário) Telegram conectado\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale pt-br: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secundário) Telegram fora\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale unknown: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"fr\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale unknown: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"fr\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale unknown: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"fr\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale unknown: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"fr\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale unknown: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"fr\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale unknown: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"fr\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale broken: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "{" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
+      "name": "locale broken: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": { "content": "{", "mode": "600" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale broken: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": { "content": "{", "mode": "600" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale broken: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
+      "name": "locale broken: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": { "content": "{", "mode": "600" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale broken: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": { "content": "{", "mode": "600" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale array: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "[\"pt-br\"]" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "[\"pt-br\"]",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale array: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "[\"pt-br\"]",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "[\"pt-br\"]",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale array: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "[\"pt-br\"]",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "[\"pt-br\"]",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale array: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "[\"pt-br\"]" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "[\"pt-br\"]",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale array: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "[\"pt-br\"]",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "[\"pt-br\"]",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale array: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "[\"pt-br\"]",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "[\"pt-br\"]",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale number: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "{\"language\":1}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":1}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale number: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":1}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":1}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale number: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":1}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":1}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale number: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":1}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":1}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale number: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":1}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":1}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale number: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":1}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":1}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale padded: main missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\" pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale padded: main connected",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\" pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale padded: main down",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\" pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale padded: secondary missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\" pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale padded: secondary connected",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\" pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale padded: secondary down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\" pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt inside the ttl: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999985124,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999985124,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt inside the ttl: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999985124,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999985124,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt exactly the ttl: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999985123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999985123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt exactly the ttl: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999985123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999985123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt past the ttl: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999985122,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999985122,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt past the ttl: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999985122,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999985122,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt now: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1700000000123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1700000000123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt now: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1700000000123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1700000000123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt future: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1700000005123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1700000005123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt future: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1700000005123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1700000005123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt numeric string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"1700000000023\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"1700000000023\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt numeric string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"1700000000023\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"1700000000023\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt padded string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\" 1700000000023\\n\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\" 1700000000023\\n\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt padded string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\" 1700000000023\\n\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\" 1700000000023\\n\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt hex string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"0x10\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"0x10\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt hex string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"0x10\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"0x10\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt empty string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":\"\",\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt empty string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":\"\",\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt text string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"abc\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"abc\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt text string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"abc\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"abc\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt infinity: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"Infinity\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"Infinity\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt infinity: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"Infinity\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"Infinity\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt minus infinity: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"-Infinity\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"-Infinity\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt minus infinity: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":\"-Infinity\",\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":\"-Infinity\",\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt single item array: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":[1700000000023],\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[1700000000023],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt single item array: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":[1700000000023],\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[1700000000023],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt nested single item array: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":[[1700000000023]],\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[[1700000000023]],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt nested single item array: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":[[1700000000023]],\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[[1700000000023]],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt two item array: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":[1700000000023,1],\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[1700000000023,1],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt two item array: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":[1700000000023,1],\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[1700000000023,1],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt empty array: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":[],\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt empty array: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":[],\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":[],\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt true: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":true,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":true,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt true: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":true,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":true,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt false: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":false,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":false,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt false: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":false,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":false,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt null: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":null,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":null,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt null: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":null,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":null,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt object: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":{},\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":{},\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt object: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":{},\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":{},\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt float: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1700000000022.5,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1700000000022.5,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt float: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1700000000022.5,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1700000000022.5,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt negative: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"checkedAt\":-1,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":-1,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "checkedAt negative: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{\"checkedAt\":-1,\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":-1,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health without checkedAt is stale",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{\"polling\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "{\"polling\":true}", "mode": "600" }
+      }
+    },
+    {
+      "name": "health null: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "null" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "null", "mode": "600" }
+      }
+    },
+    {
+      "name": "health null: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "null" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "null", "mode": "600" }
+      }
+    },
+    {
+      "name": "health number: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "5" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "5", "mode": "600" }
+      }
+    },
+    {
+      "name": "health number: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "5" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "5", "mode": "600" }
+      }
+    },
+    {
+      "name": "health string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "\"checkedAt\"" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "\"checkedAt\"", "mode": "600" }
+      }
+    },
+    {
+      "name": "health string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "\"checkedAt\"" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "\"checkedAt\"", "mode": "600" }
+      }
+    },
+    {
+      "name": "health array: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "[{\"checkedAt\":1700000000123,\"polling\":true}]"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "[{\"checkedAt\":1700000000123,\"polling\":true}]",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health array: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "[{\"checkedAt\":1700000000123,\"polling\":true}]"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "[{\"checkedAt\":1700000000123,\"polling\":true}]",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health broken: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "{" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
+      "name": "health broken: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "{" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
+      "name": "health empty: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/health.json": "" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "", "mode": "600" }
+      }
+    },
+    {
+      "name": "health empty: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/health.json": "" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "", "mode": "600" }
+      }
+    },
+    {
+      "name": "health bom: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "﻿{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "﻿{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health bom: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "﻿{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "﻿{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health invalid utf8: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": { "bytes": [123, 34, 255, 34, 58, 49, 125] }
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "{\"�\":1}", "mode": "600" }
+      }
+    },
+    {
+      "name": "health invalid utf8: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": { "bytes": [123, 34, 255, 34, 58, 49, 125] }
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": { "content": "{\"�\":1}", "mode": "600" }
+      }
+    },
+    {
+      "name": "health lone surrogate key: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"\\ud83d\":1,\"checkedAt\":1700000000123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"\\ud83d\":1,\"checkedAt\":1700000000123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health lone surrogate key: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"\\ud83d\":1,\"checkedAt\":1700000000123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"\\ud83d\":1,\"checkedAt\":1700000000123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health duplicate: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":0,\"polling\":true,\"checkedAt\":1700000000123}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":0,\"polling\":true,\"checkedAt\":1700000000123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "health duplicate: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":0,\"polling\":true,\"checkedAt\":1700000000123}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":0,\"polling\":true,\"checkedAt\":1700000000123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling true: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling true: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling false: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling false: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling one: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":1}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":1}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling one: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":1}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":1}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling zero: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":0}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":0}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling zero: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":0}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":0}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling empty string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":\"\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":\"\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling empty string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":\"\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":\"\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling text string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":\"no\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":\"no\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling text string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":\"no\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":\"no\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling empty array: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":[]}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":[]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling empty array: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":[]}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":[]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling empty object: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":{}}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":{}}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling empty object: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":{}}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":{}}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling null: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":null}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":null}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling null: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":null}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":null}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling zero string: main",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":\"0\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":\"0\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "polling zero string: secondary",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":\"0\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Secondary) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":\"0\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt inside the grace: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":1699999940124}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Main) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1699999940124}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt inside the grace: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":1699999940124}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Secondary) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1699999940124}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt exactly the grace: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":1699999940123}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1699999940123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt exactly the grace: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":1699999940123}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1699999940123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt past the grace: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":1699999940122}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1699999940122}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt past the grace: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":1699999940122}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1699999940122}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt future: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":1700000001123}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Main) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000001123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt future: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":1700000001123}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Secondary) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000001123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt numeric string: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":\"1700000000113\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Main) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":\"1700000000113\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt numeric string: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":\"1700000000113\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Secondary) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":\"1700000000113\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt text string: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":\"soon\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":\"soon\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt text string: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":\"soon\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":\"soon\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt infinity: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":\"Infinity\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Main) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":\"Infinity\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt infinity: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":\"Infinity\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Secondary) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":\"Infinity\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt single item array: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":[1700000000113]}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Main) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":[1700000000113]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt single item array: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":[1700000000113]}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Secondary) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":[1700000000113]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launchedAt null: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":null}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": { "content": "{\"launchedAt\":null}", "mode": "600" }
+      }
+    },
+    {
+      "name": "launchedAt null: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":null}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": { "content": "{\"launchedAt\":null}", "mode": "600" }
+      }
+    },
+    {
+      "name": "launchedAt true: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":true}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": { "content": "{\"launchedAt\":true}", "mode": "600" }
+      }
+    },
+    {
+      "name": "launchedAt true: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": { "content": "{\"launchedAt\":true}", "mode": "600" }
+      }
+    },
+    {
+      "name": "launchedAt object: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{\"launchedAt\":{}}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": { "content": "{\"launchedAt\":{}}", "mode": "600" }
+      }
+    },
+    {
+      "name": "launchedAt object: secondary with health down",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}",
+        "app/launch.json": "{\"launchedAt\":{}}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        },
+        "app/launch.json": { "content": "{\"launchedAt\":{}}", "mode": "600" }
+      }
+    },
+    {
+      "name": "launch broken: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "{" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
+      "name": "launch array: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "[{\"launchedAt\":1700000000123}]" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "[{\"launchedAt\":1700000000123}]",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launch null: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/launch.json": "null" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": { "content": "null", "mode": "600" }
+      }
+    },
+    {
+      "name": "launch missing: main without health",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {},
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "launch: secondary without health ignores a fresh launch",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/launch.json": "{\"launchedAt\":1700000000113}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000000113}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launch: secondary with stale health ignores a fresh launch",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999980123,\"polling\":true}",
+        "app/launch.json": "{\"launchedAt\":1700000000113}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999980123,\"polling\":true}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000000113}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launch: connected wins over a fresh launch",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}",
+        "app/launch.json": "{\"launchedAt\":1700000000113}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000000113}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "launch: pt-br connecting",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}",
+        "app/launch.json": "{\"launchedAt\":1700000000113}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[33m📱 (Principal) Telegram conectando…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000000113}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "telegram flag zero counts as secondary",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "0"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "telegram flag true word counts as secondary",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "true"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "telegram flag padded one counts as secondary",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": " 1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "telegram flag empty counts as secondary",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": ""
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "telegram flag two counts as secondary",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "2"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":false}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Secondary) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":false}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: claude config dir when the app dir is unset",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM": "1",
+        "CLAUDE_CONFIG_DIR": "{root}/cfg"
+      },
+      "files": {
+        "cfg/better-claude-code-telegram/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "cfg/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: an empty app dir falls back to the claude config dir",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "",
+        "BETTER_CC_TELEGRAM": "1",
+        "CLAUDE_CONFIG_DIR": "{root}/cfg"
+      },
+      "files": {
+        "cfg/better-claude-code-telegram/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "cfg/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: the home claude folder when nothing is set",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM": "1" },
+      "files": {
+        "home/.claude/better-claude-code-telegram/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "home/": { "mode": "750" },
+        "home/.claude/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: an empty claude config dir falls back to the home",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM": "1",
+        "CLAUDE_CONFIG_DIR": ""
+      },
+      "files": {
+        "home/.claude/better-claude-code-telegram/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "home/": { "mode": "750" },
+        "home/.claude/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: the app dir is normalized like path.join",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/x/../app/./",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[32m📱 (Main) Telegram connected\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "args [\"--other\"]",
+      "args": ["--other"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"command\":\"printf mine\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"command\":\"printf mine\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "args [\"--after-previous\",\"x\"]",
+      "args": ["--after-previous", "x"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"command\":\"printf mine\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "mine │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"command\":\"printf mine\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "args [\"x\",\"--after-previous\"]",
+      "args": ["x", "--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"command\":\"printf mine\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"command\":\"printf mine\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "args [\"--AFTER-PREVIOUS\"]",
+      "args": ["--AFTER-PREVIOUS"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"command\":\"printf mine\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"command\":\"printf mine\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: no previous file shows only ours",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {},
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "after previous: no previous file and no segment prints nothing",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "after previous: null previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/statusline-previous.json": "null" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": { "content": "null", "mode": "600" }
+      }
+    },
+    {
+      "name": "after previous: array previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/statusline-previous.json": "[\"printf x\"]" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "[\"printf x\"]",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: string previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/statusline-previous.json": "\"printf x\"" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "\"printf x\"",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: number command previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/statusline-previous.json": "{\"command\":5}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"command\":5}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: array command previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"command\":[\"printf x\"]}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"command\":[\"printf x\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: no command previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/statusline-previous.json": "{\"type\":\"command\"}" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: broken previous file runs nothing",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": { "app/statusline-previous.json": "{" },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
+      "name": "after previous: same input: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"cat; printf ' | mine'\"}"
+      },
+      "stdin": "{\"model\":\"x\"}",
+      "status": 0,
+      "stdout": "{\"model\":\"x\"} | mine │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"cat; printf ' | mine'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: same input: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"cat; printf ' | mine'\"}"
+      },
+      "stdin": "{\"model\":\"x\"}",
+      "status": 0,
+      "stdout": "{\"model\":\"x\"} | mine",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"cat; printf ' | mine'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: rows: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'one\\\\ntwo\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "one\ntwo │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'one\\\\ntwo\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: rows: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'one\\\\ntwo\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "one\ntwo",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'one\\\\ntwo\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: exit code: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"exit 3\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"exit 3\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: exit code: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"exit 3\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"exit 3\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: output then failure: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf x; printf err >&2; exit 2\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "x │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf x; printf err >&2; exit 2\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: output then failure: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf x; printf err >&2; exit 2\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "x",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf x; printf err >&2; exit 2\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: carriage return: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'a\\\\r\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "a\r │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'a\\\\r\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: carriage return: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'a\\\\r\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "a\r",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'a\\\\r\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: only newlines: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\n\\\\n\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\n\\\\n\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: only newlines: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\n\\\\n\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\n\\\\n\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: inner blank rows: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'a\\\\n\\\\nb\\\\n\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "a\n\nb │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'a\\\\n\\\\nb\\\\n\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: inner blank rows: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'a\\\\n\\\\nb\\\\n\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "a\n\nb",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'a\\\\n\\\\nb\\\\n\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: leading newline: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\na'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\na │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\na'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: leading newline: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\na'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\na",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\na'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: invalid utf8 output: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\377ok'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "�ok │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\377ok'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: invalid utf8 output: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\377ok'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "�ok",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\377ok'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: unicode output: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '😀 é │'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "😀 é │ │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '😀 é │'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: unicode output: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '😀 é │'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "😀 é │",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '😀 é │'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: blank command: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"  \"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"  \"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: blank command: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"  \"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"  \"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: ignored big input: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf ok\"}"
+      },
+      "stdin": { "repeat": "a", "count": 300000 },
+      "status": 0,
+      "stdout": "ok │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf ok\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: ignored big input: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf ok\"}"
+      },
+      "stdin": { "repeat": "a", "count": 300000 },
+      "status": 0,
+      "stdout": "ok",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf ok\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: big input counted: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"wc -c\"}"
+      },
+      "stdin": { "repeat": "b", "count": 200000 },
+      "status": 0,
+      "stdout": "200000 │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"wc -c\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: big input counted: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"wc -c\"}"
+      },
+      "stdin": { "repeat": "b", "count": 200000 },
+      "status": 0,
+      "stdout": "200000",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"wc -c\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: no output: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"true\"}"
+      },
+      "stdin": "input",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"true\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: no output: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"true\"}"
+      },
+      "stdin": "input",
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"true\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: ansi output: main",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\033[1mbold\\\\033[0m'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[1mbold\u001b[0m │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\033[1mbold\\\\033[0m'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: ansi output: secondary",
+      "args": ["--after-previous"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf '\\\\033[1mbold\\\\033[0m'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[1mbold\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf '\\\\033[1mbold\\\\033[0m'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: invalid utf8 input reaches the previous command",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"cat\"}"
+      },
+      "stdin": { "bytes": [123, 255, 125, 195] },
+      "status": 0,
+      "stdout": "{�}� │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"cat\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: connected with pt-br",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}",
+        "app/health.json": "{\"checkedAt\":1699999999123,\"polling\":true}",
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'mine\\\\n'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "mine │ \u001b[32m📱 (Principal) Telegram conectado\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        },
+        "app/health.json": {
+          "content": "{\"checkedAt\":1699999999123,\"polling\":true}",
+          "mode": "600"
+        },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'mine\\\\n'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "after previous: connecting",
+      "args": ["--after-previous"],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/launch.json": "{\"launchedAt\":1700000000113}",
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf 'mine'\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "mine │ \u001b[33m📱 (Main) Telegram connecting…\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000000113}",
+          "mode": "600"
+        },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf 'mine'\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "plain mode never runs the previous command",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"printf mine\"}"
+      },
+      "stdin": "",
+      "status": 0,
+      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/statusline-previous.json": {
+          "content": "{\"type\":\"command\",\"command\":\"printf mine\"}",
+          "mode": "600"
+        }
+      }
+    }
+  ]
+}

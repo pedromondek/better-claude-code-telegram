@@ -414,6 +414,9 @@ pub struct Messages {
     pub done_live: &'static str,
     pub question_released: fn(&str, &str) -> String,
     pub nothing_pending: fn(Option<&str>) -> String,
+    pub file_not_saved: fn(&str) -> String,
+    pub file_not_removed: fn(&str) -> String,
+    pub statusline_not_shown: &'static str,
 }
 
 pub const EN_US: Messages = en_us::MESSAGES;

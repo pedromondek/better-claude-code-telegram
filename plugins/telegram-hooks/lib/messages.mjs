@@ -461,6 +461,9 @@ const enUs = {
     sessionPrefix
       ? `No pending question from session ${sessionPrefix}.`
       : "No pending question.",
+  fileNotSaved: (file) => `Could not save ${file}.`,
+  fileNotRemoved: (file) => `Could not remove ${file}.`,
+  statuslineNotShown: "Could not show the status line.",
 };
 
 const ptBr = {
@@ -924,6 +927,9 @@ const ptBr = {
     sessionPrefix
       ? `Nenhuma pergunta pendente da sessão ${sessionPrefix}.`
       : "Nenhuma pergunta pendente.",
+  fileNotSaved: (file) => `Não foi possível gravar ${file}.`,
+  fileNotRemoved: (file) => `Não foi possível remover ${file}.`,
+  statuslineNotShown: "Não foi possível mostrar a statusline.",
 };
 
 export const MESSAGES = { "en-us": enUs, "pt-br": ptBr };

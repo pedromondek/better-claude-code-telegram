@@ -6,6 +6,7 @@ const MAX_INTEGER_KEY: u32 = u32::MAX - 1;
 const LAST_POSITIONAL_EXPONENT: i32 = 21;
 const FIRST_POSITIONAL_EXPONENT: i32 = -5;
 const ESCAPE_LENGTH: usize = 6;
+const PRETTY_GAP: &str = "  ";
 const REPLACEMENT_ESCAPE: &str = "\\ufffd";
 const HIGH_SURROGATES: std::ops::RangeInclusive<u16> = 0xd800..=0xdbff;
 const LOW_SURROGATES: std::ops::RangeInclusive<u16> = 0xdc00..=0xdfff;
@@ -230,11 +231,38 @@ fn to_count(value: i32) -> usize {
 #[must_use]
 pub fn stringify(value: &Value) -> String {
     let mut out = String::new();
-    write_value(value, &mut out);
+    write_value(value, &mut out, "", 0);
     out
 }
 
-fn write_value(value: &Value, out: &mut String) {
+#[must_use]
+pub fn stringify_pretty(value: &Value) -> String {
+    let mut out = String::new();
+    write_value(value, &mut out, PRETTY_GAP, 0);
+    out
+}
+
+fn open_entry(out: &mut String, gap: &str, depth: usize, index: usize) {
+    if index > 0 {
+        out.push(',');
+    }
+
+    if !gap.is_empty() {
+        out.push('\n');
+        out.push_str(&gap.repeat(depth + 1));
+    }
+}
+
+fn close_entries(out: &mut String, gap: &str, depth: usize, count: usize, close: char) {
+    if count > 0 && !gap.is_empty() {
+        out.push('\n');
+        out.push_str(&gap.repeat(depth));
+    }
+
+    out.push(close);
+}
+
+fn write_value(value: &Value, out: &mut String, gap: &str, depth: usize) {
     match value {
         Value::Null => out.push_str("null"),
         Value::Bool(flag) => out.push_str(&flag.to_string()),
@@ -245,24 +273,23 @@ fn write_value(value: &Value, out: &mut String) {
         Value::Array(items) => {
             out.push('[');
             for (index, item) in items.iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
-                write_value(item, out);
+                open_entry(out, gap, depth, index);
+                write_value(item, out, gap, depth + 1);
             }
-            out.push(']');
+            close_entries(out, gap, depth, items.len(), ']');
         }
         Value::Object(map) => {
             out.push('{');
             for (index, (key, item)) in ordered_entries(map).into_iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
+                open_entry(out, gap, depth, index);
                 out.push_str(&Value::String(key.clone()).to_string());
                 out.push(':');
-                write_value(item, out);
+                if !gap.is_empty() {
+                    out.push(' ');
+                }
+                write_value(item, out, gap, depth + 1);
             }
-            out.push('}');
+            close_entries(out, gap, depth, map.len(), '}');
         }
     }
 }
@@ -409,6 +436,24 @@ mod tests {
         assert_eq!(stringify(&json!(false)), "false");
         assert_eq!(stringify(&json!([1, 2])), "[1,2]");
         assert_eq!(stringify(&json!({"a": 1, "b": 2})), "{\"a\":1,\"b\":2}");
+    }
+
+    #[test]
+    fn pretty_stringify_matches_json_stringify_with_two_spaces() {
+        let value: Value = serde_json::from_str(
+            r#"{"b":1,"2":"two","a":[1.0,[],{},[1,[2]],{"x":null}],"1":{"z":[],"y":{"k":"é"}},"s":"q\"\\"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            stringify_pretty(&value),
+            "{\n  \"1\": {\n    \"z\": [],\n    \"y\": {\n      \"k\": \"é\"\n    }\n  },\n  \"2\": \"two\",\n  \"b\": 1,\n  \"a\": [\n    1,\n    [],\n    {},\n    [\n      1,\n      [\n        2\n      ]\n    ],\n    {\n      \"x\": null\n    }\n  ],\n  \"s\": \"q\\\"\\\\\"\n}"
+        );
+        assert_eq!(stringify_pretty(&json!([])), "[]");
+        assert_eq!(stringify_pretty(&json!({})), "{}");
+        assert_eq!(stringify_pretty(&json!([[]])), "[\n  []\n]");
+        assert_eq!(stringify_pretty(&json!(5)), "5");
+        assert_eq!(stringify_pretty(&json!({"a": 1})), "{\n  \"a\": 1\n}");
     }
 
     #[test]

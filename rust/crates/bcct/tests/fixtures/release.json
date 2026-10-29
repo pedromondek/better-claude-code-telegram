@@ -1,0 +1,1865 @@
+{
+  "now": 1700000000123,
+  "scenarios": [
+    {
+      "name": "nothing: no asks folder",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "nothing: no asks folder with a prefix",
+      "args": ["abc"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "status": 0,
+      "stdout": "No pending question from session abc.\n",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "nothing: no asks folder in pt-br",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}" },
+      "status": 0,
+      "stdout": "Nenhuma pergunta pendente.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "nothing: no asks folder with a prefix in pt-br",
+      "args": ["abc"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}" },
+      "status": 0,
+      "stdout": "Nenhuma pergunta pendente da sessão abc.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "nothing: empty asks folder",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/asks/": "" },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": { "app/": { "mode": "750" }, "app/asks/": { "mode": "750" } }
+    },
+    {
+      "name": "nothing: asks is a file",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/asks": "x" },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks": { "content": "x", "mode": "600" }
+      }
+    },
+    {
+      "name": "nothing: blank prefix counts as none",
+      "args": ["   "],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "nothing: empty prefix counts as none",
+      "args": [""],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "nothing: padded prefix is trimmed",
+      "args": ["  ab \n"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {},
+      "status": 0,
+      "stdout": "No pending question from session ab.\n",
+      "stderr": "",
+      "after": {}
+    },
+    {
+      "name": "release: one pending question",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "release: one pending question in pt-br",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+        "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "status": 0,
+      "stdout": "Pergunta de [proj [a]] solta: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "release: several in name order",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/c.json": "{\"id\":\"c\",\"sessionId\":\"c-session\",\"instance\":\"proj [c]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"c?\",\"header\":\"H-c\"}]}",
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+        "app/asks/B.json": "{\"id\":\"B\",\"sessionId\":\"B-session\",\"instance\":\"proj [B]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"B?\",\"header\":\"H-B\"}]}",
+        "app/asks/_.json": "{\"id\":\"_\",\"sessionId\":\"_-session\",\"instance\":\"proj [_]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"_?\",\"header\":\"H-_\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [B]]: H-B\nReleased the question from [proj [_]]: H-_\nReleased the question from [proj [a]]: H-a\nReleased the question from [proj [b]]: H-b\nReleased the question from [proj [c]]: H-c\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/B.json": {
+          "content": "{\"id\":\"B\",\"sessionId\":\"B-session\",\"instance\":\"proj [B]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"B?\",\"header\":\"H-B\"}]}",
+          "mode": "600"
+        },
+        "app/asks/_.json": {
+          "content": "{\"id\":\"_\",\"sessionId\":\"_-session\",\"instance\":\"proj [_]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"_?\",\"header\":\"H-_\"}]}",
+          "mode": "600"
+        },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        },
+        "app/asks/c.json": {
+          "content": "{\"id\":\"c\",\"sessionId\":\"c-session\",\"instance\":\"proj [c]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"c?\",\"header\":\"H-c\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "release: extra arguments are ignored",
+      "args": ["a-se", "more"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "skip: already sent, closed or answered",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/sent.json": "{\"id\":\"sent\",\"sessionId\":\"sent-session\",\"instance\":\"proj [sent]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"sent?\",\"header\":\"H-sent\"}]}",
+        "app/asks/sent.telegram.json": "{}",
+        "app/asks/closed.json": "{\"id\":\"closed\",\"sessionId\":\"closed-session\",\"instance\":\"proj [closed]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"closed?\",\"header\":\"H-closed\"}]}",
+        "app/asks/closed.closed": "",
+        "app/asks/answered.json": "{\"id\":\"answered\",\"sessionId\":\"answered-session\",\"instance\":\"proj [answered]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"answered?\",\"header\":\"H-answered\"}]}",
+        "app/asks/answered.answer.json": "{}",
+        "app/asks/open.json": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [open]]: H-open\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/answered.answer.json": { "content": "{}", "mode": "600" },
+        "app/asks/answered.json": {
+          "content": "{\"id\":\"answered\",\"sessionId\":\"answered-session\",\"instance\":\"proj [answered]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"answered?\",\"header\":\"H-answered\"}]}",
+          "mode": "600"
+        },
+        "app/asks/closed.closed": { "content": "", "mode": "600" },
+        "app/asks/closed.json": {
+          "content": "{\"id\":\"closed\",\"sessionId\":\"closed-session\",\"instance\":\"proj [closed]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"closed?\",\"header\":\"H-closed\"}]}",
+          "mode": "600"
+        },
+        "app/asks/open.json": {
+          "content": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}]}",
+          "mode": "600"
+        },
+        "app/asks/sent.json": {
+          "content": "{\"id\":\"sent\",\"sessionId\":\"sent-session\",\"instance\":\"proj [sent]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"sent?\",\"header\":\"H-sent\"}]}",
+          "mode": "600"
+        },
+        "app/asks/sent.telegram.json": { "content": "{}", "mode": "600" }
+      }
+    },
+    {
+      "name": "skip: other files and folders",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/notes.txt": "{\"id\":\"notes\",\"sessionId\":\"notes-session\",\"instance\":\"proj [notes]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"notes?\",\"header\":\"H-notes\"}]}",
+        "app/asks/folder.json/": "",
+        "app/asks/x.json.tmp": "{\"id\":\"x\",\"sessionId\":\"x-session\",\"instance\":\"proj [x]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"x?\",\"header\":\"H-x\"}]}",
+        "app/asks/.json": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+        "app/asks/y.JSON": "{\"id\":\"y\",\"sessionId\":\"y-session\",\"instance\":\"proj [y]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"y?\",\"header\":\"H-y\"}]}",
+        "app/asks/open.json": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj []]: H-\nReleased the question from [proj [open]]: H-open\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/.json": {
+          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+          "mode": "600"
+        },
+        "app/asks/folder.json/": { "mode": "750" },
+        "app/asks/notes.txt": {
+          "content": "{\"id\":\"notes\",\"sessionId\":\"notes-session\",\"instance\":\"proj [notes]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"notes?\",\"header\":\"H-notes\"}]}",
+          "mode": "600"
+        },
+        "app/asks/open.json": {
+          "content": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}]}",
+          "mode": "600"
+        },
+        "app/asks/x.json.tmp": {
+          "content": "{\"id\":\"x\",\"sessionId\":\"x-session\",\"instance\":\"proj [x]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"x?\",\"header\":\"H-x\"}]}",
+          "mode": "600"
+        },
+        "app/asks/y.JSON": {
+          "content": "{\"id\":\"y\",\"sessionId\":\"y-session\",\"instance\":\"proj [y]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"y?\",\"header\":\"H-y\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "skip: a hidden id still counts",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/.json": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj []]: H-\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/.json": {
+          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "skip: the empty id is skipped when its marker exists",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/.json": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+        "app/asks/.closed": ""
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/.closed": { "content": "", "mode": "600" },
+        "app/asks/.json": {
+          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "prefix: matching prefix",
+      "args": ["a-se"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "prefix: full session",
+      "args": ["a-session"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "prefix: longer than the session",
+      "args": ["a-session-x"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question from session a-session-x.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "prefix: other prefix",
+      "args": ["b"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question from session b.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "prefix: case differs",
+      "args": ["A"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question from session A.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "prefix: padded matching prefix",
+      "args": ["  a-se  "],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: null session uses the id",
+      "args": ["a"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":null,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":null,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: null session uses the id, other prefix",
+      "args": ["x"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":null,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question from session x.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":null,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: number session",
+      "args": ["12"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":123,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":123,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: float session",
+      "args": ["1.5"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":1.5,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":1.5,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: object session",
+      "args": ["[object"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":{\"a\":1},\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":{\"a\":1},\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: array session",
+      "args": ["ab,c"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":[\"ab\",\"c\"],\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":[\"ab\",\"c\"],\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: nested array session",
+      "args": ["x,,1"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":[[\"x\",null],1],\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":[[\"x\",null],1],\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: true session",
+      "args": ["tr"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":true,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":true,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: false session",
+      "args": ["fa"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":false,\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":false,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: empty session with empty prefix",
+      "args": [""],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: empty session with a prefix",
+      "args": ["a"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question from session a.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: unicode session",
+      "args": ["sessão-😀"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"sessão-😀\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"sessão-😀\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "session: missing session uses the id",
+      "args": ["a"],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/asks/a.json": "{\"id\":\"a\",\"dueAt\":1700000060123}" },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: exactly now",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: one ms ago",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: one ms ahead",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000124,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: half ms ahead",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123.5,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: huge",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1e+300,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: negative",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":-5,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":-5,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: string",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":\"1700000060123\",\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":\"1700000060123\",\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: null",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":null,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":null,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: array",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":[1700000060123],\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":[1700000060123],\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: bool",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":true,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":true,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "dueAt: missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/asks/a.json": "{\"id\":\"a\"}" },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": { "content": "{\"id\":\"a\"}", "mode": "600" }
+      }
+    },
+    {
+      "name": "id: number",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":5,\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":5,\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "id: null",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":null,\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":null,\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "id: array",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":[\"a\"],\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":[\"a\"],\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "id: empty string",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "id: other than the file",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"other\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"other\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "id: missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/asks/a.json": "{\"dueAt\":1700000060123}" },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"dueAt\":1700000060123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: array",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "[{\"id\":\"a\",\"dueAt\":1700000060123}]",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [b]]: H-b\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "[{\"id\":\"a\",\"dueAt\":1700000060123}]",
+          "mode": "600"
+        },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: null",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "null",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [b]]: H-b\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": { "content": "null", "mode": "600" },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: string",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "\"a\"",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [b]]: H-b\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": { "content": "\"a\"", "mode": "600" },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: broken",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [b]]: H-b\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": { "content": "{", "mode": "600" },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: empty",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [b]]: H-b\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": { "content": "", "mode": "600" },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: bom",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "﻿{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+        "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [b]]: H-b\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "﻿{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        },
+        "app/asks/b.json": {
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: invalid utf8 keeps a replacement character",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": {
+          "bytes": [
+            123, 34, 105, 100, 34, 58, 34, 97, 34, 44, 34, 100, 117, 101, 65,
+            116, 34, 58, 49, 55, 48, 48, 48, 48, 48, 48, 54, 48, 49, 50, 51, 44,
+            34, 110, 111, 116, 101, 34, 58, 34, 255, 254, 34, 125
+          ]
+        }
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"note\":\"��\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: a lone surrogate becomes the replacement character",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"dueAt\":1700000060123,\"note\":\"\\ud83d x\"}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"note\":\"\\ud83d x\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: key order, integer keys and dueAt keep their place",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"z\":1,\"dueAt\":1700000060123,\"id\":\"a\",\"2\":\"two\",\"1\":\"one\",\"b\":{\"y\":1,\"0\":2}}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"1\":\"one\",\"2\":\"two\",\"z\":1,\"dueAt\":1700000000123,\"id\":\"a\",\"b\":{\"0\":2,\"y\":1}}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: duplicate keys keep the first place and the last value",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"x\",\"dueAt\":1,\"id\":\"a\",\"q\":1,\"dueAt\":1700000060123}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"q\":1}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: numbers print like JSON.stringify",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"dueAt\":1700000060123,\"n\":[1.0,1E2,-0,0.10,1e21,1e-7,123456789012345678901234567890,5e-324]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"n\":[1,100,0,0.1,1e+21,1e-7,1.2345678901234568e+29,5e-324]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: strings print like JSON.stringify",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"dueAt\":1700000060123,\"s\":\"a\\\"b\\\\c\\n\\t\\u0001\\u007f\\u2028é😀</script>\\/\"}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"s\":\"a\\\"b\\\\c\\n\\t\\u0001\u2028é😀</script>/\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "record: whitespace and a proto key",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "\n {\"__proto__\":{\"x\":1}, \"id\" : \"a\" ,\t\"dueAt\": 1700000060123 }\n"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"__proto__\":{\"x\":1},\"id\":\"a\",\"dueAt\":1700000000123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: not an array",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":{\"header\":\"H\"}}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":{\"header\":\"H\"}}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: empty array",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: header wins",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":\"H\",\"question\":\"Q\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"H\",\"question\":\"Q\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: question without header",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"Q\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: Q\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"Q\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: null header falls back",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":null,\"question\":\"Q\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: Q\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":null,\"question\":\"Q\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: empty header is dropped",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":\"\",\"question\":\"Q\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"\",\"question\":\"Q\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: zero header is dropped",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":0,\"question\":\"Q\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":0,\"question\":\"Q\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: false header is dropped",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":false,\"question\":\"Q\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":false,\"question\":\"Q\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: true header",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":true}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: true\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":true}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: number header",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":1.5}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: 1.5\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":1.5}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: array header",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":[\"a\",[\"b\",null]]}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: a,b,\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":[\"a\",[\"b\",null]]}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: empty array header",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":[]},{\"header\":\"H\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: , H\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":[]},{\"header\":\"H\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: object header",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":{}}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: [object Object]\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":{}}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: neither header nor question",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: non object questions",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[null,\"text\",5,[\"x\"],true]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[null,\"text\",5,[\"x\"],true]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: several",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"header\":\"One\"},{\"question\":\"Two?\"},{\"header\":\"Three\",\"question\":\"ignored\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: One, Two?, Three\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"One\"},{\"question\":\"Two?\"},{\"header\":\"Three\",\"question\":\"ignored\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "headers: missing questions",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": { "app/asks/a.json": "{\"id\":\"a\",\"dueAt\":1700000060123}" },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: null",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":null,\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":null,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: empty",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from []: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: number",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":7,\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [7]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":7,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: object",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":{\"a\":1},\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [[object Object]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":{\"a\":1},\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: array",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":[\"a\",\"b\"],\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [a,b]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":[\"a\",\"b\"],\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: false",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":false,\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [false]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":false,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: unicode",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"projeto [ãé]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [projeto [ãé]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"projeto [ãé]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "instance: missing",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"dueAt\":1700000060123,\"questions\":[]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [telegram]: \n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"questions\":[]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: claude config dir when the app dir is unset",
+      "args": [],
+      "env": { "HOME": "{root}/home", "CLAUDE_CONFIG_DIR": "{root}/cfg" },
+      "files": {
+        "cfg/better-claude-code-telegram/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+        "cfg/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "status": 0,
+      "stdout": "Pergunta de [proj [a]] solta: H-a\n",
+      "stderr": "",
+      "after": {
+        "cfg/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/asks/": { "mode": "750" },
+        "cfg/better-claude-code-telegram/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        },
+        "cfg/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: the home claude folder when nothing is set",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "" },
+      "files": {
+        "home/.claude/better-claude-code-telegram/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "home/": { "mode": "750" },
+        "home/.claude/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/asks/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "folder: the app dir is normalized like path.join",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/x/../app/"
+      },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "mode: a public record becomes private",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": 420
+        }
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "locale: unknown language falls back to en-us",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+        "app/better-cc-telegram.json": "{\"language\":\"fr\"}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "mode": "600"
+        },
+        "app/better-cc-telegram.json": {
+          "content": "{\"language\":\"fr\"}",
+          "mode": "600"
+        }
+      }
+    }
+  ]
+}

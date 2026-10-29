@@ -510,4 +510,7 @@ pub(super) const MESSAGES: Messages = Messages {
         }
         _ => "No pending question.".to_owned(),
     },
+    file_not_saved: |file| format!("Could not save {file}."),
+    file_not_removed: |file| format!("Could not remove {file}."),
+    statusline_not_shown: "Could not show the status line.",
 };

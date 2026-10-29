@@ -1,15 +1,32 @@
 use std::fs;
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
 use crate::js::parse_json;
+use crate::messages::Messages;
 
 #[cfg(unix)]
 const PRIVATE_FILE_MODE: u32 = 0o600;
 #[cfg(unix)]
 const PRIVATE_DIR_MODE: u32 = 0o700;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FileFailure {
+    NotSaved(PathBuf),
+    NotRemoved(PathBuf),
+}
+
+impl FileFailure {
+    #[must_use]
+    pub fn message(&self, messages: &Messages) -> String {
+        match self {
+            Self::NotSaved(path) => (messages.file_not_saved)(&path.to_string_lossy()),
+            Self::NotRemoved(path) => (messages.file_not_removed)(&path.to_string_lossy()),
+        }
+    }
+}
 
 #[must_use]
 pub fn read_json(path: &Path) -> Option<Value> {

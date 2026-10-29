@@ -359,6 +359,9 @@ catalog! { m, a;
     "doneLive" => m.done_live.to_owned(),
     "questionReleased" => (m.question_released)(s(a, 0), s(a, 1)),
     "nothingPending" => (m.nothing_pending)(o(a, 0)),
+    "fileNotSaved" => (m.file_not_saved)(s(a, 0)),
+    "fileNotRemoved" => (m.file_not_removed)(s(a, 0)),
+    "statuslineNotShown" => m.statusline_not_shown.to_owned(),
 }
 
 fn fixture() -> Value {

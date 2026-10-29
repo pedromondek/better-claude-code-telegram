@@ -123,7 +123,7 @@ fn basename(path: &str) -> &str {
         .unwrap_or_default()
 }
 
-fn millis(now: u64) -> f64 {
+pub(crate) fn millis(now: u64) -> f64 {
     Number::from(now).as_f64().unwrap_or_default()
 }
 
@@ -646,7 +646,7 @@ pub fn run(
     }
 }
 
-fn now_ms() -> u64 {
+pub(crate) fn now_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| {
