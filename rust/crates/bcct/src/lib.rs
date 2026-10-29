@@ -1,5 +1,6 @@
 pub mod config;
 pub mod files;
+pub mod health;
 pub mod hook;
 pub mod js;
 pub mod launch;
@@ -8,7 +9,9 @@ pub mod messages;
 pub mod paths;
 pub mod release;
 pub mod setup;
+pub mod spinner;
 pub mod statusline;
+pub mod telegram;
 pub mod ui;
 
 use std::ffi::OsString;
@@ -25,6 +28,7 @@ enum Command {
     Statusline(bool),
     Release(Option<String>),
     Launch(Vec<OsString>),
+    Health(Vec<OsString>),
 }
 
 pub fn run<I, O, E>(args: I, stdout: &mut O, stderr: &mut E) -> ExitCode
@@ -48,6 +52,7 @@ where
             ExitCode::from(release::run_process(prefix.as_deref(), stdout, stderr))
         }
         Ok(Command::Launch(args)) => ExitCode::from(launch::run_process(&args, stderr)),
+        Ok(Command::Health(args)) => ExitCode::from(health::run_process(&args, stdout, stderr)),
         Err(error) => {
             let _written = writeln!(stderr, "bcct: {error}");
             ExitCode::from(USAGE_ERROR)
@@ -82,6 +87,9 @@ where
         }
         Some(lexopt::Arg::Value(word)) if word == "launch" => {
             Ok(Command::Launch(parser.raw_args()?.collect()))
+        }
+        Some(lexopt::Arg::Value(word)) if word == "health" => {
+            Ok(Command::Health(parser.raw_args()?.collect()))
         }
         Some(arg) => Err(arg.unexpected()),
         None => Err("missing subcommand".into()),
@@ -168,6 +176,10 @@ mod tests {
             Command::Launch(args(&["--", "-c", "x"]))
         );
         assert_eq!(parsed(&["bcct", "launch"]), Command::Launch(Vec::new()));
+        assert_eq!(
+            parsed(&["bcct", "health", "--json", "x"]),
+            Command::Health(args(&["--json", "x"]))
+        );
         assert_eq!(parsed(&["bcct", "--version"]), Command::Version);
     }
 

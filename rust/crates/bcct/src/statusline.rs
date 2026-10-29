@@ -27,7 +27,7 @@ fn app_dir(var: &dyn Fn(&str) -> Option<OsString>, home: &Path) -> std::path::Pa
     normalize_path(&Paths::resolve(var, home).app_dir)
 }
 
-fn time_of(data: Option<&Value>, key: &str) -> f64 {
+pub(crate) fn time_of(data: Option<&Value>, key: &str) -> f64 {
     match data {
         Some(Value::Object(map)) => map.get(key).map_or(f64::NAN, js_to_number),
         _ => f64::NAN,

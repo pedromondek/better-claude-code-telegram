@@ -8,17 +8,28 @@ use serde_json::{Map, Value};
 
 use crate::config::read_config;
 use crate::files::{FileFailure, create_private_dir, read_json, write_private};
-use crate::js::{join_path, js_trim, js_truthy, normalize_path, stringify, stringify_pretty};
+use crate::js::{
+    join_path, js_basename, js_number, js_trim, js_truthy, normalize_path, parse_json, stringify,
+    stringify_pretty,
+};
 use crate::locale::Locale;
-use crate::messages::messages_for;
+use crate::messages::{Messages, messages_for};
 use crate::paths::{CONFIG_FILE, LAUNCH_FILE, Paths};
 
 pub const SETUP_COMMAND: &str = "npm run setup";
 pub const STATUSLINE_REQUEST_FILE: &str = "statusline-customize.json";
+pub const CHANNEL_PLUGIN_ID: &str = "telegram@better-claude-code-telegram";
+pub const HOOKS_PLUGIN_ID: &str = "telegram-hooks@better-claude-code-telegram";
+pub const MINIMUM_NODE: &str = "24.11";
+pub const ENV_FILE: &str = ".env";
+pub const ACCESS_FILE: &str = "access.json";
 
 const SETTINGS_FILE: &str = "settings.json";
-const ENV_FILE: &str = ".env";
-const ACCESS_FILE: &str = "access.json";
+const MINIMUM_NODE_MAJOR: f64 = 24.0;
+const MINIMUM_NODE_MINOR: f64 = 11.0;
+const SHELL_SCRIPT: &str = "scripts/shell.sh";
+const DEFAULT_SHELL: &str = "bash";
+const WHISPER_CHECK: &str = "import importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\"";
 const BOT_PID_FILE: &str = "bot.pid";
 const TOKEN_KEY: &str = "TELEGRAM_BOT_TOKEN=";
 const JS_LINE_BREAKS: [char; 4] = ['\n', '\r', '\u{2028}', '\u{2029}'];
@@ -102,7 +113,8 @@ pub fn setup_locale(app_dir: &Path, var: &dyn Fn(&str) -> Option<OsString>) -> L
         .unwrap_or_else(|| suggested_locale(var))
 }
 
-fn read_text(path: &Path) -> Option<String> {
+#[must_use]
+pub fn read_text(path: &Path) -> Option<String> {
     fs::read(path)
         .ok()
         .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
@@ -329,6 +341,166 @@ pub fn statusline_prompt(
     ))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StatuslineState {
+    None,
+    Ours,
+    OursAfter,
+    Other,
+    Custom,
+    CustomPending,
+}
+
+#[must_use]
+pub fn statusline_state(paths: &SetupPaths, repo: &Path) -> StatuslineState {
+    let current =
+        read_json(&paths.settings_file).and_then(|settings| settings.get("statusLine").cloned());
+
+    match statusline_kind(current.as_ref(), repo) {
+        StatuslineKind::None => StatuslineState::None,
+        StatuslineKind::Ours => StatuslineState::Ours,
+        StatuslineKind::OursAfter => StatuslineState::OursAfter,
+        StatuslineKind::Other if join_path(&paths.app_dir, STATUSLINE_REQUEST_FILE).exists() => {
+            StatuslineState::CustomPending
+        }
+        StatuslineKind::Other
+            if read_config(&paths.app_dir).get(CUSTOMIZED_KEY) == Some(&Value::Bool(true)) =>
+        {
+            StatuslineState::Custom
+        }
+        StatuslineKind::Other => StatuslineState::Other,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShellRcFiles {
+    pub primary: Option<PathBuf>,
+    pub others: Vec<PathBuf>,
+    pub unsupported: Option<String>,
+}
+
+#[must_use]
+pub fn shell_file(repo: &Path) -> PathBuf {
+    join_path(repo, SHELL_SCRIPT)
+}
+
+#[must_use]
+pub fn shell_rc_files(home: &str, shell: Option<&str>, macos: bool) -> ShellRcFiles {
+    let home = Path::new(home);
+    let bashrc = join_path(home, ".bashrc");
+    let zshrc = join_path(home, ".zshrc");
+    let bash_profile = join_path(home, ".bash_profile");
+    let name = js_basename(
+        shell
+            .filter(|shell| !shell.is_empty())
+            .unwrap_or(DEFAULT_SHELL),
+    );
+    let primary = match name {
+        "zsh" => Some(zshrc.clone()),
+        "bash" if macos && bash_profile.exists() => Some(bash_profile),
+        "bash" => Some(bashrc.clone()),
+        _ => None,
+    };
+    let others = [bashrc, zshrc]
+        .into_iter()
+        .filter(|file| Some(file) != primary.as_ref() && file.exists())
+        .collect();
+    let unsupported = primary.is_none().then(|| name.to_owned());
+
+    ShellRcFiles {
+        primary,
+        others,
+        unsupported,
+    }
+}
+
+#[must_use]
+pub fn rc_loads_shell_file(rc_text: &str, shell_file: &Path) -> bool {
+    rc_text.contains(&*shell_file.to_string_lossy())
+}
+
+#[must_use]
+pub fn env_deny_rule(env_file: &Path, home: &str) -> String {
+    let env_file = env_file.to_string_lossy();
+
+    env_file.strip_prefix(&format!("{home}/")).map_or_else(
+        || format!("Read(/{env_file})"),
+        |inside| format!("Read(~/{inside})"),
+    )
+}
+
+#[must_use]
+pub fn node_version_ok(version: &str) -> bool {
+    let mut parts = version.split('.').map(js_number);
+    let major = parts.next().unwrap_or(f64::NAN);
+    let minor = parts.next().unwrap_or(f64::NAN);
+
+    major > MINIMUM_NODE_MAJOR || (major == MINIMUM_NODE_MAJOR && minor >= MINIMUM_NODE_MINOR)
+}
+
+pub fn read_settings(
+    settings_file: &Path,
+    messages: &Messages,
+) -> Result<Map<String, Value>, String> {
+    let Some(text) = read_text(settings_file) else {
+        return Ok(Map::new());
+    };
+
+    match parse_json(&text) {
+        Some(Value::Object(settings)) => Ok(settings),
+        _ => Err((messages.settings_invalid)(
+            &settings_file.to_string_lossy(),
+        )),
+    }
+}
+
+#[must_use]
+pub fn has_command(name: &str) -> bool {
+    Command::new("sh")
+        .args(["-c", &format!("command -v {name}")])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+#[must_use]
+pub fn claude_output(args: &[&str]) -> String {
+    Command::new("claude")
+        .args(args)
+        .stdin(Stdio::null())
+        .output()
+        .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
+        .unwrap_or_default()
+}
+
+#[must_use]
+pub fn node_version() -> Option<String> {
+    let output = Command::new("node")
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()
+        .filter(|output| output.status.success())?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let version = text.trim();
+
+    Some(version.strip_prefix('v').unwrap_or(version).to_owned())
+}
+
+#[must_use]
+pub fn whisper_python_works(python: &Path) -> bool {
+    Command::new(python)
+        .args(["-c", WHISPER_CHECK])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -370,5 +542,75 @@ mod tests {
             Some("y".to_owned())
         );
         assert_eq!(parse_env_token(""), None);
+    }
+
+    fn rc_files(home: &Path, shell: &str, macos: bool) -> ShellRcFiles {
+        shell_rc_files(&home.to_string_lossy(), Some(shell), macos)
+    }
+
+    #[test]
+    fn the_rc_files_list_only_the_others_that_exist() {
+        let home = tempfile::tempdir().unwrap();
+        let bashrc = home.path().join(".bashrc");
+        let zshrc = home.path().join(".zshrc");
+
+        assert_eq!(
+            rc_files(home.path(), "/bin/bash", false),
+            ShellRcFiles {
+                primary: Some(bashrc.clone()),
+                others: Vec::new(),
+                unsupported: None,
+            }
+        );
+
+        fs::write(&bashrc, "").unwrap();
+        fs::write(&zshrc, "").unwrap();
+
+        assert_eq!(
+            rc_files(home.path(), "bash", false).others,
+            vec![zshrc.clone()]
+        );
+        assert_eq!(
+            rc_files(home.path(), "zsh", false).others,
+            vec![bashrc.clone()]
+        );
+        assert_eq!(
+            rc_files(home.path(), "fish", false),
+            ShellRcFiles {
+                primary: None,
+                others: vec![bashrc, zshrc],
+                unsupported: Some("fish".to_owned()),
+            }
+        );
+    }
+
+    #[test]
+    fn bash_on_macos_prefers_an_existing_bash_profile() {
+        let home = tempfile::tempdir().unwrap();
+        let profile = home.path().join(".bash_profile");
+        let bashrc = home.path().join(".bashrc");
+
+        assert_eq!(
+            rc_files(home.path(), "bash", true).primary,
+            Some(bashrc.clone())
+        );
+
+        fs::write(&profile, "").unwrap();
+
+        assert_eq!(rc_files(home.path(), "bash", true).primary, Some(profile));
+        assert_eq!(rc_files(home.path(), "bash", false).primary, Some(bashrc));
+        assert_eq!(
+            shell_rc_files("/h", None, false).primary,
+            Some(PathBuf::from("/h/.bashrc"))
+        );
+    }
+
+    #[test]
+    fn a_missing_python_does_not_work_and_an_empty_version_is_too_old() {
+        let folder = tempfile::tempdir().unwrap();
+
+        assert!(!whisper_python_works(&folder.path().join("missing")));
+        assert!(node_version_ok("24.11.0"));
+        assert!(!node_version_ok(""));
     }
 }

@@ -1,7 +1,44 @@
 use std::ffi::OsString;
 
-const RED_OPEN: &str = "\u{1b}[31m";
-const RED_CLOSE: &str = "\u{1b}[39m";
+#[derive(Debug, Clone, Copy)]
+struct Style {
+    open: &'static str,
+    close: &'static str,
+    keep_close: bool,
+}
+
+const COLOR_CLOSE: &str = "\u{1b}[39m";
+const INTENSITY_CLOSE: &str = "\u{1b}[22m";
+const RED: Style = Style {
+    open: "\u{1b}[31m",
+    close: COLOR_CLOSE,
+    keep_close: false,
+};
+const GREEN: Style = Style {
+    open: "\u{1b}[32m",
+    close: COLOR_CLOSE,
+    keep_close: false,
+};
+const BLUE: Style = Style {
+    open: "\u{1b}[34m",
+    close: COLOR_CLOSE,
+    keep_close: false,
+};
+const CYAN: Style = Style {
+    open: "\u{1b}[36m",
+    close: COLOR_CLOSE,
+    keep_close: false,
+};
+const BOLD: Style = Style {
+    open: "\u{1b}[1m",
+    close: INTENSITY_CLOSE,
+    keep_close: true,
+};
+const DIM: Style = Style {
+    open: "\u{1b}[2m",
+    close: INTENSITY_CLOSE,
+    keep_close: true,
+};
 const FORCE_COLOR: &str = "FORCE_COLOR";
 const FORCED_COLORS: [&str; 5] = ["", "1", "true", "2", "3"];
 const CI_SERVICES: [&str; 8] = [
@@ -142,37 +179,78 @@ pub fn should_colorize(var: &dyn Fn(&str) -> Option<OsString>, is_tty: bool) -> 
     (is_tty || var(FORCE_COLOR).is_some()) && colors_available(var)
 }
 
-fn paint(text: &str, open: &str, close: &str) -> String {
-    let mut out = String::from(open);
+fn reopened(text: &str, style: Style) -> String {
+    let mut out = String::new();
     let mut rest = text;
 
-    while let Some(index) = rest.find(close) {
+    while let Some(index) = rest.find(style.close) {
         let (before, from_close) = rest.split_at(index);
-        let after = from_close.get(close.len()..).unwrap_or_default();
+        let after = from_close.get(style.close.len()..).unwrap_or_default();
 
         if after.is_empty() {
             break;
         }
 
         out.push_str(before);
-        out.push_str(open);
+
+        if style.keep_close {
+            out.push_str(style.close);
+        }
+
+        out.push_str(style.open);
         rest = after;
     }
 
     out.push_str(rest);
-    out.push_str(close);
     out
+}
+
+fn paint(text: &str, styles: &[Style], colorize: bool) -> String {
+    if !colorize {
+        return text.to_owned();
+    }
+
+    let mut open = String::new();
+    let mut close = String::new();
+    let mut body = text.to_owned();
+
+    for style in styles {
+        open.push_str(style.open);
+        close.insert_str(0, style.close);
+        body = reopened(&body, *style);
+    }
+
+    format!("{open}{body}{close}")
 }
 
 #[must_use]
 pub fn fail(text: &str, colorize: bool) -> String {
-    let line = format!("✘ {text}");
+    paint(&format!("✘ {text}"), &[RED], colorize)
+}
 
-    if colorize {
-        paint(&line, RED_OPEN, RED_CLOSE)
-    } else {
-        line
-    }
+#[must_use]
+pub fn success(text: &str, colorize: bool) -> String {
+    paint(&format!("✔ {text}"), &[GREEN], colorize)
+}
+
+#[must_use]
+pub fn skipped(text: &str, colorize: bool) -> String {
+    paint(&format!("○ {text}"), &[DIM], colorize)
+}
+
+#[must_use]
+pub fn section(text: &str, colorize: bool) -> String {
+    paint(text, &[BLUE, BOLD], colorize)
+}
+
+#[must_use]
+pub fn note(text: &str, colorize: bool) -> String {
+    paint(text, &[DIM], colorize)
+}
+
+#[must_use]
+pub fn frame(text: &str, colorize: bool) -> String {
+    paint(text, &[CYAN], colorize)
 }
 
 #[cfg(test)]
@@ -242,12 +320,54 @@ mod tests {
         ]));
     }
 
+    const ANGLE: Style = Style {
+        open: "<",
+        close: ">",
+        keep_close: false,
+    };
+    const KEPT: Style = Style {
+        open: "(",
+        close: ")",
+        keep_close: true,
+    };
+
     #[test]
     fn a_close_code_at_the_very_end_is_kept_and_the_others_reopen_the_color() {
-        assert_eq!(paint("a", "<", ">"), "<a>");
-        assert_eq!(paint("a>b", "<", ">"), "<a<b>");
-        assert_eq!(paint("a>", "<", ">"), "<a>>");
-        assert_eq!(paint(">>", "<", ">"), "<<>>");
-        assert_eq!(paint("", "<", ">"), "<>");
+        assert_eq!(paint("a", &[ANGLE], true), "<a>");
+        assert_eq!(paint("a>b", &[ANGLE], true), "<a<b>");
+        assert_eq!(paint("a>", &[ANGLE], true), "<a>>");
+        assert_eq!(paint(">>", &[ANGLE], true), "<<>>");
+        assert_eq!(paint("", &[ANGLE], true), "<>");
+        assert_eq!(paint("a>b", &[ANGLE], false), "a>b");
+    }
+
+    #[test]
+    fn a_shared_close_code_closes_and_reopens_like_node() {
+        assert_eq!(paint("a)b", &[KEPT], true), "(a)(b)");
+        assert_eq!(paint("))", &[KEPT], true), "()())");
+        assert_eq!(paint("a)", &[KEPT], true), "(a))");
+        assert_eq!(paint("x)y>z", &[ANGLE, KEPT], true), "<(x)(y<z)>");
+        assert_eq!(paint("x>", &[ANGLE, KEPT], true), "<(x>)>");
+    }
+
+    #[test]
+    fn each_mark_has_its_node_style() {
+        assert_eq!(success("x", true), "\u{1b}[32m✔ x\u{1b}[39m");
+        assert_eq!(skipped("x", true), "\u{1b}[2m○ x\u{1b}[22m");
+        assert_eq!(
+            section("Install", true),
+            "\u{1b}[34m\u{1b}[1mInstall\u{1b}[22m\u{1b}[39m"
+        );
+        assert_eq!(
+            section("a\u{1b}[22mb", true),
+            "\u{1b}[34m\u{1b}[1ma\u{1b}[22m\u{1b}[1mb\u{1b}[22m\u{1b}[39m"
+        );
+        assert_eq!(note("x", true), "\u{1b}[2mx\u{1b}[22m");
+        assert_eq!(frame("⠋", true), "\u{1b}[36m⠋\u{1b}[39m");
+        assert_eq!(success("x", false), "✔ x");
+        assert_eq!(skipped("x", false), "○ x");
+        assert_eq!(section("x", false), "x");
+        assert_eq!(note("x", false), "x");
+        assert_eq!(frame("x", false), "x");
     }
 }

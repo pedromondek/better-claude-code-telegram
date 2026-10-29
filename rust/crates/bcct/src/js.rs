@@ -55,6 +55,39 @@ pub fn js_string(value: &Value) -> String {
 }
 
 #[must_use]
+pub fn js_template(value: &Value) -> String {
+    match value {
+        Value::Null => "null".to_owned(),
+        other => js_string(other),
+    }
+}
+
+#[must_use]
+pub fn js_length(value: &Value) -> Option<usize> {
+    match value {
+        Value::String(text) => Some(text.encode_utf16().count()),
+        Value::Array(items) => Some(items.len()),
+        _ => None,
+    }
+}
+
+#[must_use]
+pub fn js_key_count(value: Option<&Value>) -> usize {
+    match value {
+        Some(Value::Object(map)) => map.len(),
+        Some(other) => js_length(other).unwrap_or_default(),
+        None => 0,
+    }
+}
+
+#[must_use]
+pub fn js_basename(path: &str) -> &str {
+    let trimmed = path.trim_end_matches('/');
+
+    trimmed.rsplit('/').next().unwrap_or_default()
+}
+
+#[must_use]
 pub fn js_number(text: &str) -> f64 {
     let trimmed = js_trim(text);
 
@@ -182,6 +215,10 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 
 #[must_use]
 pub fn join_path(base: &Path, name: &str) -> PathBuf {
+    if base.as_os_str().is_empty() {
+        return normalize_path(Path::new(name));
+    }
+
     normalize_path(Path::new(&format!("{}/{name}", base.to_string_lossy())))
 }
 
@@ -509,6 +546,35 @@ mod tests {
     }
 
     #[test]
+    fn templates_lengths_keys_and_basenames_follow_javascript() {
+        assert_eq!(js_template(&json!(null)), "null");
+        assert_eq!(js_template(&json!([null, 1, "a"])), ",1,a");
+        assert_eq!(js_template(&json!({"a": 1})), "[object Object]");
+        assert_eq!(js_template(&json!(2.5)), "2.5");
+        assert_eq!(js_length(&json!("😀a")), Some(3));
+        assert_eq!(js_length(&json!([1, 2])), Some(2));
+        assert_eq!(js_length(&json!({"length": 1})), None);
+        assert_eq!(js_length(&json!(5)), None);
+        assert_eq!(js_key_count(None), 0);
+        assert_eq!(js_key_count(Some(&json!(null))), 0);
+        assert_eq!(js_key_count(Some(&json!(7))), 0);
+        assert_eq!(js_key_count(Some(&json!({"a": 1, "b": 2}))), 2);
+        assert_eq!(js_key_count(Some(&json!([1, 2, 3]))), 3);
+        assert_eq!(js_key_count(Some(&json!("ab"))), 2);
+
+        for (path, expected) in [
+            ("/bin/zsh", "zsh"),
+            ("zsh", "zsh"),
+            ("/bin/zsh//", "zsh"),
+            ("/", ""),
+            ("", ""),
+            ("/bin/..", ".."),
+        ] {
+            assert_eq!(js_basename(path), expected, "{path}");
+        }
+    }
+
+    #[test]
     fn paths_normalize_like_node_path_join() {
         let cases = [
             ("/a/b", "c", "/a/b/c"),
@@ -525,6 +591,9 @@ mod tests {
             ("a", "...", "a/..."),
             ("/a", "/abs", "/a/abs"),
             (".", "c", "c"),
+            ("", ".bashrc", ".bashrc"),
+            ("", "../c", "../c"),
+            ("", "/c", "/c"),
         ];
 
         for (base, name, expected) in cases {
