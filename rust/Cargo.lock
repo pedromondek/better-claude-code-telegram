@@ -45,6 +45,7 @@ dependencies = [
  "assert_cmd",
  "lexopt",
  "predicates",
+ "rustix",
  "serde_json",
  "tempfile",
 ]

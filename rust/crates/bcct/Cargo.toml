@@ -13,6 +13,9 @@ lexopt.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true
+
 [dev-dependencies]
 assert_cmd.workspace = true
 predicates.workspace = true

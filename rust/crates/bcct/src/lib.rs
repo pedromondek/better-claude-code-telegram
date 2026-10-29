@@ -1,5 +1,6 @@
 pub mod config;
 pub mod files;
+pub mod hook;
 pub mod js;
 pub mod locale;
 pub mod messages;
@@ -14,6 +15,7 @@ const USAGE_ERROR: u8 = 2;
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
     Version,
+    Hook(Option<String>),
 }
 
 pub fn run<I, O, E>(args: I, stdout: &mut O, stderr: &mut E) -> ExitCode
@@ -25,6 +27,10 @@ where
     match parse(args) {
         Ok(Command::Version) => {
             print_version(stdout).map_or(ExitCode::FAILURE, |()| ExitCode::SUCCESS)
+        }
+        Ok(Command::Hook(mode)) => {
+            hook::run_process(mode.as_deref(), stdout);
+            ExitCode::SUCCESS
         }
         Err(error) => {
             let _written = writeln!(stderr, "bcct: {error}");
@@ -41,6 +47,12 @@ where
 
     match parser.next()? {
         Some(lexopt::Arg::Long("version") | lexopt::Arg::Short('V')) => Ok(Command::Version),
+        Some(lexopt::Arg::Value(word)) if word == "hook" => Ok(Command::Hook(
+            parser
+                .raw_args()?
+                .next()
+                .map(|mode| mode.to_string_lossy().into_owned()),
+        )),
         Some(arg) => Err(arg.unexpected()),
         None => Err("missing subcommand".into()),
     }
@@ -75,6 +87,22 @@ mod tests {
 
     fn args(list: &[&str]) -> Vec<OsString> {
         list.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn the_hook_subcommand_takes_the_first_following_word_as_its_mode() {
+        let mode = |list: &[&str]| parse(args(list)).unwrap();
+
+        assert_eq!(
+            mode(&["bcct", "hook", "post"]),
+            Command::Hook(Some("post".to_owned()))
+        );
+        assert_eq!(
+            mode(&["bcct", "hook", "--odd", "x"]),
+            Command::Hook(Some("--odd".to_owned()))
+        );
+        assert_eq!(mode(&["bcct", "hook"]), Command::Hook(None));
+        assert!(parse(args(&["bcct", "hooks"])).is_err());
     }
 
     #[test]

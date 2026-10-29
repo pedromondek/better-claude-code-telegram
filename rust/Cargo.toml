@@ -12,6 +12,7 @@ publish = false
 
 [workspace.dependencies]
 lexopt = "=0.3.2"
+rustix = { version = "=1.1.5", features = ["process"] }
 serde_json = { version = "=1.0.154", features = ["float_roundtrip", "preserve_order"] }
 tempfile = "=3.27.0"
 assert_cmd = "=2.2.2"
