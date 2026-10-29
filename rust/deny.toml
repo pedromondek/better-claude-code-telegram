@@ -11,3 +11,6 @@ all-features = true
 
 [advisories]
 yanked = "deny"
+ignore = [
+  { id = "RUSTSEC-2026-0441", reason = "pin-utils only comes through expectrl, a dev dependency of the PTY tests; no maintained release exists" },
+]

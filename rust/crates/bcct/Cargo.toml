@@ -9,6 +9,8 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+crossterm.workspace = true
+jsonc-parser.workspace = true
 lexopt.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
@@ -19,6 +21,7 @@ rustix.workspace = true
 
 [dev-dependencies]
 assert_cmd.workspace = true
+expectrl.workspace = true
 predicates.workspace = true
 
 [lints]
