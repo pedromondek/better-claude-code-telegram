@@ -329,6 +329,8 @@ describe("lint-staged: Rust", () => {
 
   it("runs the Rust gates through the rust:* scripts", () => {
     expect(scripts()).toMatchObject({
+      "rust:check":
+        "cargo check --manifest-path rust/Cargo.toml --all-targets --locked --quiet --message-format=short",
       "rust:fmt": "cargo fmt --manifest-path rust/Cargo.toml --all --check",
       "rust:lint":
         "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings && npm run --silent rust:fmt",
@@ -341,7 +343,9 @@ describe("lint-staged: Rust", () => {
       "rust:deny": tool(
         "cargo deny --manifest-path rust/Cargo.toml check advisories",
       ),
-      "rust:mutation": tool("cargo mutants --manifest-path rust/Cargo.toml"),
+      "rust:mutation": tool(
+        "cargo mutants --manifest-path rust/Cargo.toml --test-tool=nextest --cargo-test-arg=--max-fail=1:immediate",
+      ),
       "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
       "rust:build":
         "cargo build --manifest-path rust/Cargo.toml --release --locked",
