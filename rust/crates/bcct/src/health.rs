@@ -14,9 +14,10 @@ use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE};
 use crate::setup::{
     ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
     SetupPaths, StatuslineState, claude_output, env_deny_rule, has_command, node_version,
-    node_version_ok, parse_env_token, rc_loads_shell_file, read_settings, read_text, repo_root,
-    setup_locale, shell_file, shell_rc_files, statusline_state, whisper_python_works,
+    node_version_ok, parse_env_token, read_settings, read_text, repo_root, setup_locale,
+    shell_file, shell_rc_files, statusline_state, whisper_python_works,
 };
+use crate::shell_rc::rc_loads;
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
 use crate::statusline::{TELEGRAM_HEALTH_TTL_MS, TELEGRAM_LAUNCH_GRACE_MS, time_of};
 use crate::telegram::{api_root, call, post_json, property};
@@ -379,11 +380,12 @@ impl Checks<'_> {
         let shell = self.text_var("SHELL");
         let files = shell_rc_files(&home, shell.as_deref(), cfg!(target_os = "macos"));
         let script = shell_file(self.machine.repo);
+        let script_text = script.to_string_lossy();
         let loaded_by = files
             .primary
             .iter()
             .chain(&files.others)
-            .find(|rc| rc_loads_shell_file(&read_text(rc).unwrap_or_default(), &script));
+            .find(|rc| rc_loads(&read_text(rc).unwrap_or_default(), &script_text));
 
         if let Some(rc) = loaded_by {
             return Ok(ok(&(detail.loaded_in)(&readable(rc))));

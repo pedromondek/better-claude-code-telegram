@@ -331,7 +331,8 @@ fn write_value(value: &Value, out: &mut String, gap: &str, depth: usize) {
     }
 }
 
-fn ordered_entries(map: &serde_json::Map<String, Value>) -> Vec<(&String, &Value)> {
+#[must_use]
+pub fn ordered_entries(map: &serde_json::Map<String, Value>) -> Vec<(&String, &Value)> {
     let (mut indexed, named): (Vec<_>, Vec<_>) =
         map.iter().partition(|(key, _)| integer_key(key).is_some());
 

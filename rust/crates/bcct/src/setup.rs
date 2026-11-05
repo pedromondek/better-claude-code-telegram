@@ -1,6 +1,5 @@
 use std::ffi::OsString;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -8,13 +7,15 @@ use serde_json::{Map, Value};
 
 use crate::config::read_config;
 use crate::files::{FileFailure, create_private_dir, read_json, write_private};
+use crate::journal::Journal;
 use crate::js::{
     join_path, js_basename, js_number, js_trim, js_truthy, normalize_path, parse_json, stringify,
-    stringify_pretty,
 };
 use crate::locale::Locale;
 use crate::messages::{Messages, messages_for};
-use crate::paths::{CONFIG_FILE, LAUNCH_FILE, Paths};
+use crate::paths::{LAUNCH_FILE, Paths};
+use crate::settings::remove_if_present;
+use crate::setup_files::{CUSTOMIZED_KEY, update_config};
 
 pub const SETUP_COMMAND: &str = "npm run setup";
 pub const STATUSLINE_REQUEST_FILE: &str = "statusline-customize.json";
@@ -44,7 +45,6 @@ const BYPASS_MODE: &str = "bypassPermissions";
 const BOT_SERVER: &str = "server.ts";
 const STATUSLINE_SCRIPT: &str = "plugins/telegram-hooks/statusline.mjs";
 const AFTER_PREVIOUS_FLAG: &str = " --after-previous";
-const CUSTOMIZED_KEY: &str = "statuslineCustomized";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SetupStep {
@@ -127,7 +127,8 @@ pub fn parse_env_token(text: &str) -> Option<String> {
         .map(|token| js_trim(token).to_owned())
 }
 
-fn is_paired(access: Option<&Value>) -> bool {
+#[must_use]
+pub fn is_paired(access: Option<&Value>) -> bool {
     access
         .and_then(|access| access.get("allowFrom"))
         .and_then(Value::as_array)
@@ -287,23 +288,6 @@ pub fn statusline_kind(status_line: Option<&Value>, repo: &Path) -> StatuslineKi
     }
 }
 
-fn update_config(app_dir: &Path, key: &str, value: Value) -> Result<(), FileFailure> {
-    let mut config: Map<String, Value> = read_config(app_dir);
-    config.insert(key.to_owned(), value);
-
-    save_private(
-        &join_path(app_dir, CONFIG_FILE),
-        format!("{}\n", stringify_pretty(&Value::Object(config))).as_bytes(),
-    )
-}
-
-fn remove_if_present(path: &Path) -> io::Result<()> {
-    match fs::remove_file(path) {
-        Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
-        _ => Ok(()),
-    }
-}
-
 pub fn statusline_prompt(
     take: bool,
     paths: &SetupPaths,
@@ -328,7 +312,9 @@ pub fn statusline_prompt(
     }
 
     if take {
-        update_config(&paths.app_dir, CUSTOMIZED_KEY, Value::Bool(true))?;
+        let customized = Map::from_iter([(CUSTOMIZED_KEY.to_owned(), Value::Bool(true))]);
+
+        update_config(&paths.app_dir, &customized, &mut Journal::new())?;
     }
 
     let messages = messages_for(setup_locale(&paths.app_dir, var));
@@ -415,11 +401,6 @@ pub fn shell_rc_files(home: &str, shell: Option<&str>, macos: bool) -> ShellRcFi
 }
 
 #[must_use]
-pub fn rc_loads_shell_file(rc_text: &str, shell_file: &Path) -> bool {
-    rc_text.contains(&*shell_file.to_string_lossy())
-}
-
-#[must_use]
 pub fn env_deny_rule(env_file: &Path, home: &str) -> String {
     let env_file = env_file.to_string_lossy();
 
@@ -477,7 +458,12 @@ pub fn claude_output(args: &[&str]) -> String {
 
 #[must_use]
 pub fn node_version() -> Option<String> {
-    let output = Command::new("node")
+    node_version_from(Command::new("node"))
+}
+
+#[must_use]
+pub fn node_version_from(mut command: Command) -> Option<String> {
+    let output = command
         .arg("--version")
         .stdin(Stdio::null())
         .stderr(Stdio::null())
