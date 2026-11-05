@@ -7,6 +7,7 @@ pub mod launch;
 pub mod locale;
 pub mod messages;
 pub mod paths;
+pub mod prompt;
 pub mod release;
 pub mod setup;
 pub mod spinner;

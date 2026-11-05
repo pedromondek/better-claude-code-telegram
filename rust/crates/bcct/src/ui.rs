@@ -19,6 +19,11 @@ const GREEN: Style = Style {
     close: COLOR_CLOSE,
     keep_close: false,
 };
+const YELLOW: Style = Style {
+    open: "\u{1b}[33m",
+    close: COLOR_CLOSE,
+    keep_close: false,
+};
 const BLUE: Style = Style {
     open: "\u{1b}[34m",
     close: COLOR_CLOSE,
@@ -253,6 +258,80 @@ pub fn frame(text: &str, colorize: bool) -> String {
     paint(text, &[CYAN], colorize)
 }
 
+#[must_use]
+pub fn warn(text: &str, colorize: bool) -> String {
+    paint(&format!("⚠ {text}"), &[YELLOW], colorize)
+}
+
+#[must_use]
+pub fn info(text: &str, colorize: bool) -> String {
+    paint(text, &[BLUE], colorize)
+}
+
+#[must_use]
+pub fn bold(text: &str, colorize: bool) -> String {
+    paint(text, &[BOLD], colorize)
+}
+
+#[must_use]
+pub fn green(text: &str, colorize: bool) -> String {
+    paint(text, &[GREEN], colorize)
+}
+
+#[must_use]
+pub fn cyan_bold(text: &str, colorize: bool) -> String {
+    paint(text, &[CYAN, BOLD], colorize)
+}
+
+const DEFAULT_WORDS: [&str; 2] = ["[default", "[padrão"];
+const YES_NO_SHAPE: usize = 6;
+
+fn bracket_end(text: &str, start: usize) -> Option<usize> {
+    let rest = text.get(start..)?;
+
+    DEFAULT_WORDS
+        .iter()
+        .any(|word| rest.starts_with(word))
+        .then(|| rest.find(']'))
+        .flatten()
+        .map(|close| start + close + 1)
+}
+
+fn yes_no_prefix(text: &str, start: usize) -> bool {
+    text.get(start..)
+        .map(str::as_bytes)
+        .and_then(|rest| rest.get(..YES_NO_SHAPE))
+        .is_some_and(|shape| {
+            matches!(shape, [b'(', letter, b'/', b'n', b')', b' '] if letter.is_ascii_lowercase())
+        })
+}
+
+fn default_hint_span(text: &str) -> Option<(usize, usize)> {
+    text.char_indices()
+        .map(|(start, _)| start)
+        .find_map(|start| {
+            let with_prefix = yes_no_prefix(text, start)
+                .then(|| bracket_end(text, start + YES_NO_SHAPE))
+                .flatten();
+
+            with_prefix
+                .or_else(|| bracket_end(text, start))
+                .map(|end| (start, end))
+        })
+}
+
+#[must_use]
+pub fn question(prompt: &str, colorize: bool) -> String {
+    let Some((start, end)) = default_hint_span(prompt) else {
+        return bold(prompt, colorize);
+    };
+    let before = prompt.get(..start).unwrap_or_default();
+    let hint = prompt.get(start..end).unwrap_or_default();
+    let after = prompt.get(end..).unwrap_or_default();
+
+    format!("{}{}{after}", bold(before, colorize), note(hint, colorize))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,6 +427,16 @@ mod tests {
         assert_eq!(paint("a)", &[KEPT], true), "(a))");
         assert_eq!(paint("x)y>z", &[ANGLE, KEPT], true), "<(x)(y<z)>");
         assert_eq!(paint("x>", &[ANGLE, KEPT], true), "<(x>)>");
+    }
+
+    #[test]
+    fn the_warning_and_the_option_colors_have_their_node_style() {
+        assert_eq!(warn("x", true), "\u{1b}[33m⚠ x\u{1b}[39m");
+        assert_eq!(info("x", true), "\u{1b}[34mx\u{1b}[39m");
+        assert_eq!(green("x", true), "\u{1b}[32mx\u{1b}[39m");
+        assert_eq!(warn("x", false), "⚠ x");
+        assert_eq!(info("x", false), "x");
+        assert_eq!(green("x", false), "x");
     }
 
     #[test]
