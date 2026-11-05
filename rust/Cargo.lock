@@ -57,6 +57,7 @@ dependencies = [
  "predicates",
  "rustix",
  "serde_json",
+ "signal-hook",
  "tempfile",
  "ureq",
 ]

@@ -43,6 +43,14 @@ pub struct StdConsole {
     raw: bool,
 }
 
+impl Drop for StdConsole {
+    fn drop(&mut self) {
+        if self.raw {
+            let _restored = self.set_raw(false);
+        }
+    }
+}
+
 impl StdConsole {
     #[must_use]
     pub fn new() -> Self {

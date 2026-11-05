@@ -821,7 +821,8 @@
       { "args": ["alpha 1"], "out": "Could not remove alpha 1." }
     ],
     "statuslineNotShown": "Could not show the status line.",
-    "healthNotShown": "Could not show the result."
+    "healthNotShown": "Could not show the result.",
+    "outputNotShown": "Could not write to the output."
   },
   "pt-br": {
     "statusMain": "(Principal)",
@@ -1656,6 +1657,7 @@
       { "args": ["alpha 1"], "out": "Não foi possível remover alpha 1." }
     ],
     "statuslineNotShown": "Não foi possível mostrar a statusline.",
-    "healthNotShown": "Não foi possível mostrar o resultado."
+    "healthNotShown": "Não foi possível mostrar o resultado.",
+    "outputNotShown": "Não foi possível escrever na saída."
   }
 }

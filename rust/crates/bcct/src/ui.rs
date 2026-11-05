@@ -34,6 +34,11 @@ const CYAN: Style = Style {
     close: COLOR_CLOSE,
     keep_close: false,
 };
+const MAGENTA: Style = Style {
+    open: "\u{1b}[35m",
+    close: COLOR_CLOSE,
+    keep_close: false,
+};
 const BOLD: Style = Style {
     open: "\u{1b}[1m",
     close: INTENSITY_CLOSE,
@@ -291,6 +296,16 @@ pub fn green(text: &str, colorize: bool) -> String {
 #[must_use]
 pub fn cyan_bold(text: &str, colorize: bool) -> String {
     paint(text, &[CYAN, BOLD], colorize)
+}
+
+#[must_use]
+pub fn step_heading(index: usize, total: usize, title: &str, icon: &str, colorize: bool) -> String {
+    let rule = paint("──", &[DIM], colorize);
+    let number = paint(&index.to_string(), &[MAGENTA, BOLD], colorize);
+    let of_total = paint(&format!("/{total}"), &[DIM], colorize);
+    let shown_title = paint(title, &[MAGENTA, BOLD], colorize);
+
+    format!("\n{rule} {icon} {number}{of_total} {shown_title} {rule}")
 }
 
 const DEFAULT_WORDS: [&str; 2] = ["[default", "[padrão"];

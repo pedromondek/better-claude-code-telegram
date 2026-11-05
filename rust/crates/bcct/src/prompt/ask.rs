@@ -57,6 +57,28 @@ impl<T> ChoiceItem<T> {
     }
 
     #[must_use]
+    pub fn map_value<U>(self, wrap: impl FnOnce(T) -> U) -> ChoiceItem<U> {
+        match self {
+            Self::Heading(label) => ChoiceItem::Heading(label),
+            Self::Pick {
+                label,
+                hint,
+                previous,
+                answer,
+                aliases,
+                value,
+            } => ChoiceItem::Pick {
+                label,
+                hint,
+                previous,
+                answer,
+                aliases,
+                value: wrap(value),
+            },
+        }
+    }
+
+    #[must_use]
     pub fn label(&self) -> &str {
         match self {
             Self::Heading(label) | Self::Pick { label, .. } => label,

@@ -759,6 +759,23 @@ fn report(screen: &mut Screen<'_>, error: &str) -> u8 {
     FAILURE
 }
 
+pub fn check_all(
+    machine: &Machine<'_>,
+    screen: &mut Screen<'_>,
+    messages: &'static Messages,
+) -> Result<bool, String> {
+    let mut checks = Checks {
+        machine,
+        messages,
+        paths: SetupPaths::resolve(machine.var, machine.home),
+        token: None,
+        bot: None,
+    };
+    let results = run_groups(&HEALTH_GROUPS, &mut checks, screen, true)?;
+
+    Ok(results.iter().any(|entry| entry.status == Status::Fail))
+}
+
 pub fn run(args: &[String], machine: &Machine<'_>, screen: &mut Screen<'_>) -> u8 {
     let paths = SetupPaths::resolve(machine.var, machine.home);
     let messages = messages_for(setup_locale(&paths.app_dir, machine.var));

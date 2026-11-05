@@ -418,6 +418,7 @@ pub struct Messages {
     pub file_not_removed: fn(&str) -> String,
     pub statusline_not_shown: &'static str,
     pub health_not_shown: &'static str,
+    pub output_not_shown: &'static str,
 }
 
 pub const EN_US: Messages = en_us::MESSAGES;

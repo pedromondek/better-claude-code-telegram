@@ -14,9 +14,12 @@ pub mod prompt;
 pub mod release;
 pub mod settings;
 pub mod setup;
+pub mod setup_ask;
 pub mod setup_files;
+pub mod setup_run;
 pub mod setup_telegram;
 pub mod shell_rc;
+pub mod signals;
 pub mod spinner;
 pub mod statusline;
 pub mod telegram;
@@ -37,6 +40,8 @@ enum Command {
     Release(Option<String>),
     Launch(Vec<OsString>),
     Health(Vec<OsString>),
+    Setup(Vec<OsString>),
+    Uninstall,
 }
 
 pub fn run<I, O, E>(args: I, stdout: &mut O, stderr: &mut E) -> ExitCode
@@ -61,6 +66,8 @@ where
         }
         Ok(Command::Launch(args)) => ExitCode::from(launch::run_process(&args, stderr)),
         Ok(Command::Health(args)) => ExitCode::from(health::run_process(&args, stdout, stderr)),
+        Ok(Command::Setup(args)) => ExitCode::from(setup_run::run_process(&args, stdout, stderr)),
+        Ok(Command::Uninstall) => ExitCode::from(setup_run::run_uninstall_process(stdout, stderr)),
         Err(error) => {
             let _written = writeln!(stderr, "bcct: {error}");
             ExitCode::from(USAGE_ERROR)
@@ -99,6 +106,10 @@ where
         Some(lexopt::Arg::Value(word)) if word == "health" => {
             Ok(Command::Health(parser.raw_args()?.collect()))
         }
+        Some(lexopt::Arg::Value(word)) if word == "setup" => {
+            Ok(Command::Setup(parser.raw_args()?.collect()))
+        }
+        Some(lexopt::Arg::Value(word)) if word == "uninstall" => Ok(Command::Uninstall),
         Some(arg) => Err(arg.unexpected()),
         None => Err("missing subcommand".into()),
     }
@@ -189,6 +200,18 @@ mod tests {
             Command::Health(args(&["--json", "x"]))
         );
         assert_eq!(parsed(&["bcct", "--version"]), Command::Version);
+    }
+
+    #[test]
+    fn setup_keeps_every_argument_and_uninstall_ignores_them() {
+        let parsed = |list: &[&str]| parse(args(list)).unwrap();
+
+        assert_eq!(
+            parsed(&["bcct", "setup", "--check", "--", "x"]),
+            Command::Setup(args(&["--check", "--", "x"]))
+        );
+        assert_eq!(parsed(&["bcct", "setup"]), Command::Setup(Vec::new()));
+        assert_eq!(parsed(&["bcct", "uninstall", "x"]), Command::Uninstall);
     }
 
     #[test]

@@ -363,6 +363,7 @@ catalog! { m, a;
     "fileNotRemoved" => (m.file_not_removed)(s(a, 0)),
     "statuslineNotShown" => m.statusline_not_shown.to_owned(),
     "healthNotShown" => m.health_not_shown.to_owned(),
+    "outputNotShown" => m.output_not_shown.to_owned(),
 }
 
 fn fixture() -> Value {

@@ -153,6 +153,12 @@ pub(crate) fn snapshot(root: &Path) -> Tree {
     out
 }
 
+pub(crate) fn snapshot_under(root: &Path, folder: &str) -> Tree {
+    let mut out = Tree::new();
+    walk(root, &root.join(folder), &mut out);
+    out
+}
+
 pub(crate) fn expected_tree(after: &Value, written: Option<&Value>, default_mode: &str) -> Tree {
     let written: BTreeSet<&str> = written
         .and_then(Value::as_array)

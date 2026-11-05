@@ -465,6 +465,7 @@ const enUs = {
   fileNotRemoved: (file) => `Could not remove ${file}.`,
   statuslineNotShown: "Could not show the status line.",
   healthNotShown: "Could not show the result.",
+  outputNotShown: "Could not write to the output.",
 };
 
 const ptBr = {
@@ -932,6 +933,7 @@ const ptBr = {
   fileNotRemoved: (file) => `Não foi possível remover ${file}.`,
   statuslineNotShown: "Não foi possível mostrar a statusline.",
   healthNotShown: "Não foi possível mostrar o resultado.",
+  outputNotShown: "Não foi possível escrever na saída.",
 };
 
 export const MESSAGES = { "en-us": enUs, "pt-br": ptBr };

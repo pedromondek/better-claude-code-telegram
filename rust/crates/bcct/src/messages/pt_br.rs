@@ -520,4 +520,5 @@ pub(super) const MESSAGES: Messages = Messages {
     file_not_removed: |file| format!("Não foi possível remover {file}."),
     statusline_not_shown: "Não foi possível mostrar a statusline.",
     health_not_shown: "Não foi possível mostrar o resultado.",
+    output_not_shown: "Não foi possível escrever na saída.",
 };
