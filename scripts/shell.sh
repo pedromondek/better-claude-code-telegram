@@ -1,4 +1,4 @@
-_better_cc_telegram_launcher="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/telegram.sh"
+_better_cc_telegram_launcher="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/bcct.sh"
 
 claude() {
   local wants_telegram=0
@@ -18,5 +18,5 @@ claude() {
     return
   fi
 
-  bash "$_better_cc_telegram_launcher" "${claude_args[@]}"
+  sh "$_better_cc_telegram_launcher" launch "${claude_args[@]}"
 }

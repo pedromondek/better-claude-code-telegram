@@ -12,6 +12,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import {
+  readCalls,
+  sandboxPath,
+  writeFakeBcct,
+} from "./fixtures/fake-bcct.mjs";
+
 const SHELL_FILE = join(import.meta.dirname, "..", "shell.sh");
 
 const hasZsh =
@@ -34,7 +40,7 @@ function runInShell(shell, claudeArgs) {
   return spawnSync(shell, ["-c", `. "${SHELL_FILE}"; claude ${claudeArgs}`], {
     cwd: workDir,
     env: {
-      PATH: `${fakeBinDir}:${process.env.PATH}`,
+      PATH: sandboxPath(fakeBinDir),
       HOME: join(workDir, "home"),
       CLAUDE_CONFIG_DIR: join(workDir, "claude"),
       TELEGRAM_STATE_DIR: stateDir,
@@ -94,6 +100,26 @@ function defineShellCases(shell) {
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/Missing:\n {2}• bot token, pairing/u);
     expect(existsSync(callFile)).toBe(false);
+  });
+
+  it("claude --telegram with a binary runs bcct launch, with the arguments intact and its exit code", () => {
+    writeFakeBcct(join(fakeBinDir, "bcct"), workDir, { exit: 5 });
+
+    const result = runInShell(shell, "--telegram --continue 'two words'");
+
+    expect(result.status).toBe(5);
+    expect(readCalls(workDir).map(({ args }) => args)).toEqual([
+      ["launch", "--continue", "two words"],
+    ]);
+    expect(existsSync(callFile)).toBe(false);
+  });
+
+  it("claude without --telegram does not even look for the binary", () => {
+    writeFakeBcct(join(fakeBinDir, "bcct"), workDir);
+
+    expect(runInShell(shell, "--continue").status).toBe(0);
+    expect(existsSync(join(workDir, "probes"))).toBe(false);
+    expect(readCall().args).toEqual(["--continue"]);
   });
 
   it("claude without --telegram calls the real claude with the arguments intact", () => {
