@@ -14,6 +14,8 @@ use serde_json::{Map, Value};
 
 pub(crate) const PRIVATE_FILE_MODE: &str = "600";
 
+const FIXTURE_UMASK: u32 = 0o022;
+
 pub(crate) type Tree = BTreeMap<String, (Option<String>, String)>;
 
 pub(crate) fn parse(source: &str) -> Value {
@@ -51,11 +53,19 @@ pub(crate) fn placeholders(text: &str, root: &Path) -> String {
         .replace(&*repo_root().to_string_lossy(), "{repo}")
 }
 
+fn use_fixture_umask() {
+    let _previous = rustix::process::umask(rustix::fs::Mode::from_raw_mode(FIXTURE_UMASK));
+}
+
 pub(crate) fn sandbox() -> tempfile::TempDir {
+    use_fixture_umask();
+
     tempfile::tempdir_in(fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap()
 }
 
 pub(crate) fn default_file_mode() -> String {
+    use_fixture_umask();
+
     let folder = tempfile::tempdir().unwrap();
     let probe = folder.path().join("probe");
     fs::File::create(&probe).unwrap();

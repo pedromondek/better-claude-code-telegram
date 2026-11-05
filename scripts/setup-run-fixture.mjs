@@ -2025,6 +2025,8 @@ function previousFixture() {
 }
 
 async function main() {
+  process.umask(0o022);
+
   const only = process.argv[2];
   const existing = previousFixture();
   const wanted = (part) => only === undefined || only === part;
