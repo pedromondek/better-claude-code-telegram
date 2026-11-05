@@ -3,6 +3,7 @@ pub mod config;
 pub mod files;
 pub mod health;
 pub mod hook;
+pub mod install;
 pub mod journal;
 pub mod js;
 pub mod launch;

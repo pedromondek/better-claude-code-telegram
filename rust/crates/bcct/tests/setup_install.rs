@@ -1,0 +1,771 @@
+#![cfg(unix)]
+#![cfg(test)]
+
+mod support;
+
+use std::cell::RefCell;
+use std::collections::{HashMap, VecDeque};
+use std::ffi::OsString;
+use std::io::{self, Write};
+use std::os::unix::fs::symlink;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::rc::Rc;
+
+use bcct::health::Screen;
+use bcct::install::{
+    Asker, ClaudeUndo, CommandsChoice, Declined, Failure, Install, Installed, Journal, Kept,
+    MARKETPLACE_NAME, MERMAID_UNINSTALL_COMMAND, Machine, PLUGIN_IDS, Parsed, PluginChoice, System,
+    TRANSCRIPTION_MODELS, Tool, TranscriptionChoice, declined_report, huggingface_cache_dir,
+    installer_for, manual_uninstall_commands, parse_inbox_days, parse_transcription_model,
+    plugin_plan,
+};
+use bcct::journal::ChangeKind;
+use bcct::js::format_number;
+use bcct::locale::Locale;
+use bcct::messages::{Messages, messages_for};
+use bcct::setup::node_version_ok;
+use bcct::spinner::Terminal;
+use serde_json::{Value, json};
+use support::{
+    default_file_mode, expected_tree, list, materialize, parse, placeholders, repo_root, sandbox,
+    snapshot, strings, substitute, text,
+};
+
+const FIXTURE: &str = include_str!("fixtures/setup-install.json");
+
+#[derive(Clone, Default)]
+struct Shared(Rc<RefCell<Vec<u8>>>);
+
+impl Write for Shared {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.borrow_mut().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Shared {
+    fn text(&self) -> String {
+        String::from_utf8(self.0.borrow().clone()).unwrap()
+    }
+}
+
+struct FakeAsker {
+    answers: VecDeque<Value>,
+    asks: Vec<Value>,
+}
+
+impl FakeAsker {
+    fn next(&mut self) -> Value {
+        self.answers.pop_front().unwrap()
+    }
+}
+
+fn model(name: &str) -> &'static str {
+    TRANSCRIPTION_MODELS
+        .into_iter()
+        .find(|model| *model == name)
+        .unwrap()
+}
+
+fn plugin(name: &str) -> &'static str {
+    PLUGIN_IDS.into_iter().find(|id| *id == name).unwrap()
+}
+
+fn number(value: f64) -> Value {
+    serde_json::from_str(&format_number(value)).unwrap()
+}
+
+impl Asker for FakeAsker {
+    type Error = String;
+
+    fn yes_no(&mut self, prompt: &str, default_yes: bool) -> Result<bool, String> {
+        self.asks
+            .push(json!({"name": "askYesNo", "prompt": prompt, "defaultYes": default_yes}));
+        Ok(self.next().as_bool().unwrap())
+    }
+
+    fn installed_commands(&mut self) -> Result<CommandsChoice, String> {
+        self.asks.push(json!({"name": "askInstalledCommands"}));
+        Ok(if self.next() == json!("keep") {
+            CommandsChoice::Keep
+        } else {
+            CommandsChoice::Remove
+        })
+    }
+
+    fn transcription(
+        &mut self,
+        current: Option<&'static str>,
+        saved: bool,
+        installed: &[&'static str],
+    ) -> Result<TranscriptionChoice, String> {
+        self.asks.push(json!({
+            "name": "askTranscription",
+            "current": current,
+            "saved": saved,
+            "installed": installed,
+        }));
+        let answer = self.next();
+
+        Ok(match answer {
+            Value::Null => TranscriptionChoice::Off,
+            Value::String(name) => TranscriptionChoice::Model(model(&name)),
+            _ => TranscriptionChoice::Uninstall,
+        })
+    }
+
+    fn remove_models(
+        &mut self,
+        others: &[&'static str],
+        previous: Option<&'static str>,
+        tag: &str,
+    ) -> Result<Vec<&'static str>, String> {
+        self.asks.push(json!({
+            "name": "askRemoveModels",
+            "others": others,
+            "previous": previous,
+            "tag": tag,
+        }));
+
+        let answer = self.next();
+
+        if answer == json!({"stop": true}) {
+            return Err("stop".to_owned());
+        }
+
+        Ok(strings(&answer).iter().map(|name| model(name)).collect())
+    }
+
+    fn inbox(&mut self, current: Option<f64>, saved: bool) -> Result<Option<f64>, String> {
+        self.asks.push(json!({
+            "name": "askInbox",
+            "current": current.map_or(Value::Null, number),
+            "saved": saved,
+        }));
+
+        Ok(self.next().as_f64())
+    }
+}
+
+fn kind_name(kind: ChangeKind) -> &'static str {
+    match kind {
+        ChangeKind::ToolInstalled => "toolInstalled",
+        ChangeKind::MarketplaceAdded => "marketplaceAdded",
+        ChangeKind::PluginInstalled => "pluginInstalled",
+        ChangeKind::PluginRemoved => "pluginRemoved",
+        ChangeKind::FileCreated | ChangeKind::FileChanged | ChangeKind::DirCreated => {
+            panic!("the install step records no file change")
+        }
+    }
+}
+
+#[derive(Default)]
+struct FakeJournal {
+    calls: Vec<Value>,
+    undos: Vec<String>,
+}
+
+impl Journal for FakeJournal {
+    fn record(&mut self, kind: ChangeKind, target: String, undo: Option<ClaudeUndo>) {
+        self.calls.push(json!({
+            "call": "record",
+            "kind": kind_name(kind),
+            "target": target,
+            "undo": undo.is_some(),
+        }));
+        self.undos.extend(undo.map(|undo| undo.args.join(" ")));
+    }
+
+    fn track_dir(&mut self, dir: &Path) {
+        self.calls
+            .push(json!({"call": "trackDir", "path": dir.to_string_lossy()}));
+    }
+
+    fn track_file(&mut self, file: &Path) -> io::Result<()> {
+        self.calls
+            .push(json!({"call": "trackFile", "path": file.to_string_lossy()}));
+        Ok(())
+    }
+}
+
+fn sys_dir() -> tempfile::TempDir {
+    let sys = sandbox();
+
+    for tool in ["sh", "bash"] {
+        let found = Command::new("sh")
+            .args(["-c", &format!("command -v {tool}")])
+            .output()
+            .unwrap();
+        let found = String::from_utf8(found.stdout).unwrap();
+
+        symlink(found.trim(), sys.path().join(tool)).unwrap();
+    }
+
+    sys
+}
+
+fn failure_json(failure: Failure<String>) -> Value {
+    match failure {
+        Failure::Failed(message) => {
+            json!({"message": message, "declined": false, "hint": null, "commands": null})
+        }
+        Failure::Declined(Declined {
+            message,
+            hint,
+            commands,
+        }) => json!({"message": message, "declined": true, "hint": hint, "commands": commands}),
+        other => panic!("unexpected failure {other:?}"),
+    }
+}
+
+fn outcome<T>(result: Result<T, Failure<String>>, value: impl Fn(T) -> Value) -> (Value, Value) {
+    match result {
+        Ok(done) => (value(done), Value::Null),
+        Err(failure) => (Value::Null, failure_json(failure)),
+    }
+}
+
+fn nothing<T>(_: T) -> Value {
+    Value::Null
+}
+
+fn choice_json(
+    PluginChoice {
+        marketplaces,
+        plugins,
+        plugin_ids,
+        removed_ids,
+    }: PluginChoice,
+) -> Value {
+    json!({
+        "marketplaces": marketplaces,
+        "plugins": plugins,
+        "pluginIds": plugin_ids,
+        "removedIds": removed_ids,
+    })
+}
+
+fn choice_from(input: &Value) -> PluginChoice {
+    let ids = |key: &str| -> Vec<&'static str> {
+        strings(&input[key]).iter().map(|id| plugin(id)).collect()
+    };
+
+    PluginChoice {
+        marketplaces: text(input, "marketplaces").to_owned(),
+        plugins: text(input, "plugins").to_owned(),
+        plugin_ids: ids("pluginIds"),
+        removed_ids: ids("removedIds"),
+    }
+}
+
+fn kept_from(input: &Value) -> Kept<'_> {
+    let value = &input["value"];
+
+    match text(input, "step") {
+        "language" => Kept::Language(value.as_str().unwrap()),
+        "delay" => Kept::Delay(value.as_f64().unwrap()),
+        "quiet-hours" => Kept::QuietHours(value.as_object().map(|range| {
+            (
+                range["start"].as_str().unwrap(),
+                range["end"].as_str().unwrap(),
+            )
+        })),
+        "inbox" => Kept::Inbox(value.as_f64()),
+        _ => Kept::Transcription(value.as_str()),
+    }
+}
+
+struct Run {
+    out: String,
+    err: String,
+    value: Value,
+    error: Value,
+    path: String,
+    asks: Value,
+    journal: Value,
+    undos: Vec<String>,
+}
+
+fn messages_of(scenario: &Value) -> &'static Messages {
+    messages_for(Locale::parse(text(scenario, "locale")).unwrap())
+}
+
+fn run_op(
+    scenario: &Value,
+    install: &mut Install<'_, '_, String>,
+    app_dir: &Path,
+    out: &mut Shared,
+) -> (Value, Value) {
+    let input = &scenario["input"];
+
+    match text(scenario, "op") {
+        "requirements" => {
+            let tools: Vec<Tool> = strings(input)
+                .iter()
+                .map(|tool| Tool::parse(tool).unwrap())
+                .collect();
+            outcome(install.ensure_requirements(&tools), nothing)
+        }
+        "pluginCheck" => outcome(install.confirm_plugin_step(), choice_json),
+        "pluginEnsure" => outcome(install.ensure_plugins(&choice_from(input)), nothing),
+        "transcription" => outcome(install.ensure_transcription(app_dir), nothing),
+        "applyTranscription" => outcome(
+            install.apply_transcription(app_dir, input.as_str().map(model)),
+            nothing,
+        ),
+        "inbox" => outcome(install.ensure_inbox(app_dir), nothing),
+        "kept" => outcome(install.kept_setting(kept_from(input), app_dir), Value::Bool),
+        "uninstall" => outcome(
+            install
+                .remove_plugins()
+                .and_then(|()| install.remove_transcription(app_dir))
+                .and_then(|()| install.remove_mermaid()),
+            nothing,
+        ),
+        _ => {
+            let declined = Declined {
+                message: text(input, "message").to_owned(),
+                hint: messages_of(scenario).by_hand,
+                commands: strings(&input["commands"]),
+            };
+            out.write_all(
+                declined_report(&declined, scenario["colorize"] == json!(true)).as_bytes(),
+            )
+            .unwrap();
+            (Value::Null, Value::Null)
+        }
+    }
+}
+
+fn installer_into(out: Shared, err: Shared) -> impl Fn(&System, &str) -> Option<i32> {
+    move |system: &System, command: &str| {
+        let output = system
+            .command("sh")
+            .args(["-c", command])
+            .stdin(Stdio::null())
+            .output()
+            .unwrap();
+        out.0.borrow_mut().extend_from_slice(&output.stdout);
+        err.0.borrow_mut().extend_from_slice(&output.stderr);
+        output.status.code()
+    }
+}
+
+fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
+    let fill = |value: &str| substitute(value, root).replace("{sys}", &sys.to_string_lossy());
+    let env: HashMap<String, String> = scenario["env"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(name, value)| (name.clone(), fill(value.as_str().unwrap())))
+        .collect();
+    let var = |name: &str| env.get(name).map(OsString::from);
+    let home = PathBuf::from(&env["HOME"]);
+    let hf_cache = huggingface_cache_dir(&var, &home);
+    let settings_file = Path::new(&env["CLAUDE_CONFIG_DIR"]).join("settings.json");
+    let app_dir = PathBuf::from(&env["BETTER_CC_TELEGRAM_DIR"]);
+    let repo = repo_root();
+    let system = System::new(
+        env.iter()
+            .map(|(name, value)| (OsString::from(name), OsString::from(value)))
+            .collect(),
+    );
+    let tty = scenario["tty"].as_u64();
+    let mut out = Shared::default();
+    let mut err = if tty.is_some() {
+        out.clone()
+    } else {
+        Shared::default()
+    };
+    let run_installer = installer_into(out.clone(), err.clone());
+    let machine = Machine {
+        home: &home,
+        repo: &repo,
+        hf_cache: &hf_cache,
+        settings_file: &settings_file,
+        shell: env.get("SHELL").map(String::as_str),
+        macos: false,
+        system: &system,
+        run_installer: &run_installer,
+    };
+    let colorize = scenario["colorize"] == json!(true);
+    let mut out_writer = out.clone();
+    let mut screen = Screen {
+        out: &mut out_writer,
+        err: &mut err,
+        terminal: tty.map(|columns| Terminal {
+            columns: Some(u16::try_from(columns).unwrap()),
+        }),
+        colorize_out: colorize,
+        colorize_err: colorize,
+        spin: &|_, _| None,
+    };
+    let mut journal = FakeJournal::default();
+    let mut asker = FakeAsker {
+        answers: list(scenario, "answers").iter().cloned().collect(),
+        asks: Vec::new(),
+    };
+    let (value, error) = {
+        let mut install = Install::new(
+            &machine,
+            &mut screen,
+            &mut journal,
+            &mut asker,
+            messages_of(scenario),
+        );
+        run_op(scenario, &mut install, &app_dir, &mut out)
+    };
+    let unfill = |value: &str| placeholders(&value.replace(&*sys.to_string_lossy(), "{sys}"), root);
+    let unfilled = |value: &Value| parse(&unfill(&value.to_string()));
+
+    assert!(
+        asker.answers.is_empty(),
+        "{}: answers left",
+        text(scenario, "name")
+    );
+
+    Run {
+        out: unfill(&out.text()),
+        err: if tty.is_some() {
+            String::new()
+        } else {
+            unfill(&err.text())
+        },
+        value: unfilled(&value),
+        error: unfilled(&error),
+        path: unfill(&system.path().unwrap().to_string_lossy()),
+        asks: unfilled(&Value::Array(asker.asks)),
+        journal: unfilled(&Value::Array(journal.calls)),
+        undos: journal.undos.iter().map(|undo| unfill(undo)).collect(),
+    }
+}
+
+#[test]
+fn every_scenario_prints_asks_records_and_writes_like_setup_mjs() {
+    let fixture = parse(FIXTURE);
+    let sys = sys_dir();
+    let default_mode = default_file_mode();
+
+    for scenario in list(&fixture, "scenarios") {
+        let name = text(scenario, "name");
+        let root = sandbox();
+        materialize(root.path(), &scenario["files"]);
+
+        let run = replay(scenario, root.path(), sys.path());
+
+        assert_eq!(run.out, text(scenario, "stdout"), "{name}: stdout");
+        assert_eq!(run.err, text(scenario, "stderr"), "{name}: stderr");
+        assert_eq!(run.error, scenario["error"], "{name}: error");
+        assert_eq!(run.value, scenario["value"], "{name}: value");
+        assert_eq!(run.path, text(scenario, "path"), "{name}: path");
+        assert_eq!(run.asks, scenario["asks"], "{name}: asks");
+        assert_eq!(run.journal, scenario["journal"], "{name}: journal");
+        assert_eq!(run.undos, strings(&scenario["undoCalls"]), "{name}: undo");
+        assert_eq!(
+            snapshot(root.path()),
+            expected_tree(&scenario["after"], None, &default_mode),
+            "{name}: files"
+        );
+    }
+}
+
+struct Failing(&'static str);
+
+impl Write for Failing {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if String::from_utf8_lossy(buf).contains(self.0) {
+            Err(io::ErrorKind::BrokenPipe.into())
+        } else {
+            Ok(buf.len())
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+fn stopped_by(
+    needle: &'static str,
+    answers: &[Value],
+    prepare: impl FnOnce(&Path),
+    work: impl FnOnce(&mut Install<'_, '_, String>, &Path) -> Result<(), Failure<String>>,
+) -> Result<(), Failure<String>> {
+    let root = sandbox();
+    let sys = sys_dir();
+    let bin = root.path().join("bin");
+    std::fs::create_dir_all(&bin).unwrap();
+    std::fs::write(bin.join("claude"), "#!/bin/sh\nexit 0\n").unwrap();
+    std::fs::set_permissions(
+        bin.join("claude"),
+        std::os::unix::fs::PermissionsExt::from_mode(0o755),
+    )
+    .unwrap();
+    prepare(root.path());
+
+    let home = root.path().join("home");
+    let hub = root.path().join("hub");
+    let settings = root.path().join("settings.json");
+    let repo = repo_root();
+    let system = System::new(vec![(
+        OsString::from("PATH"),
+        OsString::from(format!("{}:{}", bin.display(), sys.path().display())),
+    )]);
+    let machine = Machine {
+        home: &home,
+        repo: &repo,
+        hf_cache: &hub,
+        settings_file: &settings,
+        shell: Some("bash"),
+        macos: false,
+        system: &system,
+        run_installer: &|system: &System, command: &str| system.run_installer(command),
+    };
+    let mut out = Failing(needle);
+    let mut err = Vec::new();
+    let mut screen = Screen {
+        out: &mut out,
+        err: &mut err,
+        terminal: Some(Terminal { columns: None }),
+        colorize_out: false,
+        colorize_err: false,
+        spin: &|_, _| None,
+    };
+    let mut journal = FakeJournal::default();
+    let mut asker = FakeAsker {
+        answers: answers.iter().cloned().collect(),
+        asks: Vec::new(),
+    };
+    let mut install = Install::new(
+        &machine,
+        &mut screen,
+        &mut journal,
+        &mut asker,
+        messages_for(Locale::EnUs),
+    );
+
+    work(&mut install, root.path())
+}
+
+#[test]
+fn a_line_or_an_answer_that_fails_stops_the_step() {
+    let everything = PluginChoice {
+        marketplaces: MARKETPLACE_NAME.to_owned(),
+        plugins: PLUGIN_IDS.join("\n"),
+        plugin_ids: PLUGIN_IDS.to_vec(),
+        removed_ids: Vec::new(),
+    };
+
+    for needle in [
+        "already registered",
+        "disabled outside",
+        "enabled in every instance",
+    ] {
+        assert_eq!(
+            stopped_by(
+                needle,
+                &[],
+                |_| {},
+                |install, _| install.ensure_plugins(&everything)
+            ),
+            Err(Failure::Screen),
+            "{needle}"
+        );
+    }
+
+    for needle in ["Checking", "Checked"] {
+        assert_eq!(
+            stopped_by(
+                needle,
+                &[],
+                |_| {},
+                |install, _| install.confirm_plugin_step().map(|_| ())
+            ),
+            Err(Failure::Screen),
+            "{needle}"
+        );
+    }
+
+    assert_eq!(
+        stopped_by(
+            "Removing mermaid",
+            &[json!(true)],
+            |root| {
+                let mmdc = root.join("bin/mmdc");
+                std::fs::write(&mmdc, "#!/bin/sh\nexit 0\n").unwrap();
+                std::fs::set_permissions(mmdc, std::os::unix::fs::PermissionsExt::from_mode(0o755))
+                    .unwrap();
+            },
+            |install, _| install.remove_mermaid()
+        ),
+        Err(Failure::Screen)
+    );
+    assert_eq!(
+        stopped_by(
+            "Deleting the transcription",
+            &[json!(true)],
+            |root| std::fs::create_dir_all(root.join("app/whisper")).unwrap(),
+            |install, root| install.remove_transcription(&root.join("app"))
+        ),
+        Err(Failure::Screen)
+    );
+
+    let installed = |root: &Path| {
+        let venv = root.join("app/whisper/venv/bin");
+        std::fs::create_dir_all(&venv).unwrap();
+        std::fs::write(venv.join("python"), "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(
+            venv.join("python"),
+            std::os::unix::fs::PermissionsExt::from_mode(0o755),
+        )
+        .unwrap();
+
+        for model in ["base", "small"] {
+            std::fs::create_dir_all(
+                root.join(format!("hub/models--Systran--faster-whisper-{model}")),
+            )
+            .unwrap();
+        }
+    };
+
+    assert_eq!(
+        stopped_by(
+            "\u{0}",
+            &[json!("small"), json!({"stop": true})],
+            installed,
+            |install, root| install.ensure_transcription(&root.join("app"))
+        ),
+        Err(Failure::Asking("stop".to_owned()))
+    );
+}
+
+#[test]
+fn the_constants_match_the_js() {
+    let fixture = parse(FIXTURE);
+    let constants = &fixture["constants"];
+
+    assert_eq!(text(constants, "marketplace"), MARKETPLACE_NAME);
+    assert_eq!(strings(&constants["pluginIds"]), PLUGIN_IDS);
+    assert_eq!(
+        text(constants, "mermaidUninstallCommand"),
+        MERMAID_UNINSTALL_COMMAND
+    );
+    assert_eq!(
+        text(constants, "manualUninstallCommands"),
+        manual_uninstall_commands()
+    );
+}
+
+#[test]
+fn node_versions_are_judged_like_node_version_ok() {
+    for case in list(&parse(FIXTURE), "nodeVersionOk") {
+        assert_eq!(
+            node_version_ok(text(case, "version")),
+            case["ok"] == json!(true),
+            "{case}"
+        );
+    }
+}
+
+#[test]
+fn installers_match_installer_for() {
+    for case in list(&parse(FIXTURE), "installerFor") {
+        let found = Tool::parse(text(case, "tool"))
+            .map(|tool| installer_for(tool, Path::new(text(case, "home"))))
+            .map_or(Value::Null, |installer| {
+                json!({"command": installer.command, "binDir": installer.bin_dir.to_string_lossy()})
+            });
+
+        assert_eq!(found, case["installer"], "{case}");
+    }
+}
+
+#[test]
+fn the_hugging_face_cache_follows_the_same_variables() {
+    for case in list(&parse(FIXTURE), "huggingFaceCacheDir") {
+        let env = case["env"].as_object().unwrap();
+        let var = |name: &str| {
+            env.get(name)
+                .map(|value| OsString::from(value.as_str().unwrap()))
+        };
+
+        assert_eq!(
+            huggingface_cache_dir(&var, Path::new(text(case, "home"))).to_string_lossy(),
+            text(case, "dir"),
+            "{case}"
+        );
+    }
+}
+
+fn parsed_json<T>(parsed: Parsed<T>, value: impl Fn(T) -> Value) -> Value {
+    match parsed {
+        Parsed::Value(found) => value(found),
+        Parsed::Off => Value::Null,
+        Parsed::Keep => json!("keep"),
+    }
+}
+
+#[test]
+fn answers_are_parsed_like_the_js() {
+    let fixture = parse(FIXTURE);
+
+    for case in list(&fixture, "parseTranscriptionModel") {
+        assert_eq!(
+            parsed_json(
+                parse_transcription_model(text(case, "answer")),
+                |model| json!(model)
+            ),
+            case["result"],
+            "{case}"
+        );
+    }
+
+    for case in list(&fixture, "parseInboxDays") {
+        assert_eq!(
+            parsed_json(parse_inbox_days(text(case, "answer")), number),
+            case["result"],
+            "{case}"
+        );
+    }
+}
+
+#[test]
+fn the_plugin_plan_matches_plugin_plan() {
+    for case in list(&parse(FIXTURE), "pluginPlan") {
+        let input = &case["input"];
+        let rc_files: Vec<PathBuf> = strings(&input["rcFiles"])
+            .iter()
+            .map(PathBuf::from)
+            .collect();
+        let plugin_ids: Vec<&'static str> = if input["pluginIds"].is_null() {
+            PLUGIN_IDS.to_vec()
+        } else {
+            strings(&input["pluginIds"])
+                .iter()
+                .map(|id| plugin(id))
+                .collect()
+        };
+        let plan = plugin_plan(
+            Installed {
+                marketplaces: text(input, "marketplaces"),
+                plugins: text(input, "plugins"),
+                rc_files: &rc_files,
+                plugin_ids: &plugin_ids,
+            },
+            messages_for(Locale::parse(text(case, "locale")).unwrap()),
+            Path::new("/repo"),
+            Path::new("/repo/shell.sh"),
+        );
+        let plan: Vec<Value> = plan
+            .into_iter()
+            .map(|step| json!({"description": step.description, "command": step.command}))
+            .collect();
+
+        assert_eq!(Value::Array(plan), case["plan"], "{case}");
+    }
+}
