@@ -51,6 +51,7 @@ dependencies = [
  "assert_cmd",
  "crossterm",
  "expectrl",
+ "getrandom 0.4.3",
  "jsonc-parser",
  "lexopt",
  "predicates",

@@ -1,5 +1,9 @@
 use std::ffi::OsString;
 use std::fmt::Write as _;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, RecvTimeoutError};
+use std::thread;
 use std::time::Duration;
 
 use serde_json::Value;
@@ -18,6 +22,7 @@ const BYTE_ORDER_MARK: char = '\u{feff}';
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_REDIRECTS: u32 = 20;
+const INTERRUPTION_CHECK: Duration = Duration::from_millis(20);
 
 pub type Fetch<'a> = &'a dyn Fn(&str, &str) -> Option<Vec<u8>>;
 
@@ -189,4 +194,47 @@ pub fn post_json(url: &str, body: &str) -> Option<Vec<u8>> {
         .limit(u64::MAX)
         .read_to_vec()
         .ok()
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Interruption(Arc<AtomicBool>);
+
+impl Interruption {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn interrupt(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+
+    #[must_use]
+    pub fn interrupted(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+
+#[must_use]
+pub fn abortable_post_json(url: &str, body: &str, interruption: &Interruption) -> Option<Vec<u8>> {
+    if interruption.interrupted() {
+        return None;
+    }
+
+    let (answered, answer) = mpsc::channel();
+    let (url, body) = (url.to_owned(), body.to_owned());
+
+    thread::Builder::new()
+        .spawn(move || {
+            let _sent = answered.send(post_json(&url, &body));
+        })
+        .ok()?;
+
+    loop {
+        match answer.recv_timeout(INTERRUPTION_CHECK) {
+            Ok(response) => return response,
+            Err(RecvTimeoutError::Timeout) if !interruption.interrupted() => {}
+            Err(_) => return None,
+        }
+    }
 }

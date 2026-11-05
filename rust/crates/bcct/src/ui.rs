@@ -44,6 +44,11 @@ const DIM: Style = Style {
     close: INTENSITY_CLOSE,
     keep_close: true,
 };
+const UNDERLINE: Style = Style {
+    open: "\u{1b}[4m",
+    close: "\u{1b}[24m",
+    keep_close: false,
+};
 const FORCE_COLOR: &str = "FORCE_COLOR";
 const FORCED_COLORS: [&str; 5] = ["", "1", "true", "2", "3"];
 const CI_SERVICES: [&str; 8] = [
@@ -266,6 +271,11 @@ pub fn warn(text: &str, colorize: bool) -> String {
 #[must_use]
 pub fn info(text: &str, colorize: bool) -> String {
     paint(text, &[BLUE], colorize)
+}
+
+#[must_use]
+pub fn link(text: &str, colorize: bool) -> String {
+    paint(text, &[BLUE, UNDERLINE], colorize)
 }
 
 #[must_use]

@@ -276,7 +276,7 @@ catalog! { m, a;
     "closeInstanceBeforePairing" => m.close_instance_before_pairing.to_owned(),
     "webhookConfigured" => (m.webhook_configured)(s(a, 0)),
     "sendPairingCode" => (m.send_pairing_code)(s(a, 0), s(a, 1), s(a, 2)),
-    "confirmPairing" => (m.confirm_pairing)(s(a, 0), n(a, 1)),
+    "confirmPairing" => (m.confirm_pairing)(s(a, 0), &n(a, 1).to_string()),
     "pairingCancelled" => m.pairing_cancelled.to_owned(),
     "pairedChatMessage" => m.paired_chat_message.to_owned(),
     "pairedWith" => (m.paired_with)(s(a, 0)),

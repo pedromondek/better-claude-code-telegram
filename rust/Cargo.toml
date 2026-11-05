@@ -12,6 +12,7 @@ publish = false
 
 [workspace.dependencies]
 crossterm = "=0.29.0"
+getrandom = "=0.4.3"
 jsonc-parser = { version = "=0.34.0", features = ["cst"] }
 lexopt = "=0.3.2"
 rustix = { version = "=1.1.5", features = ["process", "termios"] }

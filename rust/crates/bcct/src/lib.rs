@@ -14,6 +14,7 @@ pub mod release;
 pub mod settings;
 pub mod setup;
 pub mod setup_files;
+pub mod setup_telegram;
 pub mod shell_rc;
 pub mod spinner;
 pub mod statusline;

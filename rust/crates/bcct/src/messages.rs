@@ -346,7 +346,7 @@ pub struct Messages {
     pub close_instance_before_pairing: &'static str,
     pub webhook_configured: fn(&str) -> String,
     pub send_pairing_code: fn(&str, &str, &str) -> String,
-    pub confirm_pairing: fn(&str, u64) -> String,
+    pub confirm_pairing: fn(&str, &str) -> String,
     pub pairing_cancelled: &'static str,
     pub paired_chat_message: &'static str,
     pub paired_with: fn(&str) -> String,

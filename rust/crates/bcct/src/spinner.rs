@@ -103,6 +103,11 @@ pub struct Pending {
 }
 
 impl Pending {
+    #[must_use]
+    pub fn refused(&self) -> bool {
+        self.shown.is_err()
+    }
+
     pub fn finish(self, line: Option<&str>, out: &mut dyn Write) -> io::Result<()> {
         let clears = self.live;
         let shown = self.abandon();
