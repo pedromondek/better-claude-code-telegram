@@ -33,7 +33,9 @@ use bcct::setup_ask::{
 use bcct::setup_files::StatuslineChoice;
 use bcct::setup_telegram::PairingChoice;
 use serde_json::{Value, json};
-use support::{Helper, Tree, coverage_env, list, materialize, placeholders, snapshot_under, text};
+use support::{
+    Helper, Tree, coverage_env, list, materialize, placeholders, release_form, snapshot_under, text,
+};
 
 const FIXTURE: &str = include_str!("fixtures/setup-run.json");
 const BCCT: &str = env!("CARGO_BIN_EXE_bcct");
@@ -44,7 +46,7 @@ const WAIT_LIMIT: Duration = Duration::from_secs(5);
 const RUN_LIMIT: Duration = Duration::from_secs(15);
 
 fn fixture() -> Value {
-    parse_json(FIXTURE).unwrap()
+    parse_json(&release_form(FIXTURE)).unwrap()
 }
 
 fn resolved(name: &str) -> String {

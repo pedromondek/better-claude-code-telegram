@@ -143,7 +143,7 @@ pub(super) const MESSAGES: Messages = Messages {
     inbox_forever: "kept forever",
     not_settable: |step, steps| {
         format!(
-            "'{step}' cannot be set with --set, only {steps}. The token, the pairing and the plugins go through 'npm run setup' in your own terminal."
+            "'{step}' cannot be set with --set, only {steps}. The token, the pairing and the plugins go through 'npx better-claude-code-telegram' in your own terminal."
         )
     },
     unknown_health_groups: |groups, valid| {
@@ -177,23 +177,31 @@ pub(super) const MESSAGES: Messages = Messages {
         found: "found",
         missing: "missing",
         installed: "installed",
-        not_installed: |ids| format!("missing {ids}. Run 'npm run setup:plugin'."),
+        not_installed: |ids| {
+            format!("missing {ids}. Run 'npx better-claude-code-telegram plugin'.")
+        },
         loaded_in: |file| format!("loaded by {file}"),
-        not_loaded: |file| format!("not loaded by {file}. Run 'npm run setup:plugin'."),
+        not_loaded: |file| {
+            format!("not loaded by {file}. Run 'npx better-claude-code-telegram plugin'.")
+        },
         bot: |username| format!("@{username}"),
-        no_token: "no token. Run 'npm run setup:token' in your own terminal.",
+        no_token: "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
         paired: |account| format!("paired with one account ({account})"),
-        not_paired: "not paired. Run 'npm run setup:pairing'.",
+        not_paired: "not paired. Run 'npx better-claude-code-telegram pairing'.",
         not_allowlist: |policy| {
             format!(
-                "dmPolicy is {policy}, so strangers who write to the bot get a pairing code. Run 'npm run setup:pairing'."
+                "dmPolicy is {policy}, so strangers who write to the bot get a pairing code. Run 'npx better-claude-code-telegram pairing'."
             )
         },
         pending_pairings: |count| {
-            format!("{count} pairing(s) pending in access.json. Run 'npm run setup:pairing'.")
+            format!(
+                "{count} pairing(s) pending in access.json. Run 'npx better-claude-code-telegram pairing'."
+            )
         },
         groups_allowed: |count| {
-            format!("{count} group(s) can talk to the bot. Run 'npm run setup:pairing'.")
+            format!(
+                "{count} group(s) can talk to the bot. Run 'npx better-claude-code-telegram pairing'."
+            )
         },
         groups_off: "the bot cannot be added to groups",
         groups_unknown: "needs a working bot token",
@@ -282,7 +290,7 @@ pub(super) const MESSAGES: Messages = Messages {
     rc_now_loads: |rc_file| format!("{rc_file} now loads 'claude --telegram'."),
     shell_unsupported: |shell, line| {
         format!(
-            "The {shell} shell cannot load 'claude --telegram'. Use 'npm run telegram' in this repository, or load this line in bash or zsh:\n  {line}"
+            "The {shell} shell cannot load 'claude --telegram'. Load this line in bash or zsh:\n  {line}"
         )
     },
     rc_no_longer_loads: |rc_file| format!("{rc_file} no longer loads 'claude --telegram'."),
@@ -498,7 +506,7 @@ pub(super) const MESSAGES: Messages = Messages {
             "{file} is not a valid JSON object. Fix it and run the setup again; nothing was changed."
         )
     },
-    done_all: "Done. Open a new terminal and run 'claude --telegram' (or 'npm run telegram' in this repository).",
+    done_all: "Done. Open a new terminal and run 'claude --telegram'.",
     done_reopen: "Done. Reopen 'claude --telegram' for it to apply.",
     done_live: "Done. It applies to the next messages, nothing to reopen.",
     question_released: |instance, headers| {

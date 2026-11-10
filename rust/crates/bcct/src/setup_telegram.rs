@@ -366,7 +366,7 @@ pub fn load_saved_bot(
     let messages = setup.messages;
     let token = setup
         .saved_token()
-        .ok_or_else(|| (messages.no_saved_token)(&format!("{SETUP_COMMAND} -- token")))?;
+        .ok_or_else(|| (messages.no_saved_token)(&format!("{SETUP_COMMAND} token")))?;
     let mut stage = Stage {
         screen,
         refused: false,

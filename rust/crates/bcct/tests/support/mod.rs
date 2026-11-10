@@ -18,8 +18,36 @@ const FIXTURE_UMASK: u32 = 0o022;
 
 pub(crate) type Tree = BTreeMap<String, (Option<String>, String)>;
 
+const RELEASE_FORMS: [(&str, &str); 8] = [
+    (
+        "Use 'npm run telegram' in this repository, or load this line in bash or zsh:",
+        "Load this line in bash or zsh:",
+    ),
+    (
+        "Use 'npm run telegram' neste repositório, ou carregue esta linha no bash ou no zsh:",
+        "Carregue esta linha no bash ou no zsh:",
+    ),
+    (" (or 'npm run telegram' in this repository)", ""),
+    (" (ou 'npm run telegram' neste repositório)", ""),
+    (
+        "npm run setup -- token",
+        "npx better-claude-code-telegram token",
+    ),
+    ("npm run setup:", "npx better-claude-code-telegram "),
+    ("npm run setup", "npx better-claude-code-telegram"),
+    ("npm run health", "npx better-claude-code-telegram health"),
+];
+
+pub(crate) fn release_form(text: &str) -> String {
+    RELEASE_FORMS
+        .iter()
+        .fold(text.to_owned(), |out, (clone_form, release)| {
+            out.replace(clone_form, release)
+        })
+}
+
 pub(crate) fn parse(source: &str) -> Value {
-    serde_json::from_str(source).unwrap()
+    serde_json::from_str(&release_form(source)).unwrap()
 }
 
 pub(crate) fn list<'a>(fixture: &'a Value, key: &str) -> &'a Vec<Value> {

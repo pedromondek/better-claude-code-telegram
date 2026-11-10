@@ -509,7 +509,7 @@ impl Checks<'_> {
         if accounts > 1 {
             return failed(&(messages.too_many_accounts)(
                 u64::try_from(accounts).unwrap_or(u64::MAX),
-                &format!("{SETUP_COMMAND}:pairing"),
+                &format!("{SETUP_COMMAND} pairing"),
             ));
         }
 
@@ -589,7 +589,7 @@ impl Checks<'_> {
         Ok(if protected {
             ok(detail.protected)
         } else {
-            failed(&(detail.unprotected)(&format!("{SETUP_COMMAND}:token")))
+            failed(&(detail.unprotected)(&format!("{SETUP_COMMAND} token")))
         })
     }
 
@@ -625,7 +625,7 @@ impl Checks<'_> {
         if (self.machine.python_works)(&python) {
             ok(&(detail.model)(&js_template(model)))
         } else {
-            failed(&(detail.broken)(&format!("{SETUP_COMMAND}:transcription")))
+            failed(&(detail.broken)(&format!("{SETUP_COMMAND} transcription")))
         }
     }
 

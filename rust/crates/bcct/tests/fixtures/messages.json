@@ -217,7 +217,7 @@
     "notSettable": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "'alpha 1' cannot be set with --set, only beta 'two'. The token, the pairing and the plugins go through 'npm run setup' in your own terminal."
+        "out": "'alpha 1' cannot be set with --set, only beta 'two'. The token, the pairing and the plugins go through 'npx better-claude-code-telegram' in your own terminal."
       }
     ],
     "unknownHealthGroups": [
@@ -252,7 +252,7 @@
     "healthDetail.notInstalled": [
       {
         "args": ["alpha 1"],
-        "out": "missing alpha 1. Run 'npm run setup:plugin'."
+        "out": "missing alpha 1. Run 'npx better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.loadedIn": [
@@ -261,31 +261,31 @@
     "healthDetail.notLoaded": [
       {
         "args": ["alpha 1"],
-        "out": "not loaded by alpha 1. Run 'npm run setup:plugin'."
+        "out": "not loaded by alpha 1. Run 'npx better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
-    "healthDetail.noToken": "no token. Run 'npm run setup:token' in your own terminal.",
+    "healthDetail.noToken": "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
     "healthDetail.paired": [
       { "args": ["alpha 1"], "out": "paired with one account (alpha 1)" }
     ],
-    "healthDetail.notPaired": "not paired. Run 'npm run setup:pairing'.",
+    "healthDetail.notPaired": "not paired. Run 'npx better-claude-code-telegram pairing'.",
     "healthDetail.notAllowlist": [
       {
         "args": ["alpha 1"],
-        "out": "dmPolicy is alpha 1, so strangers who write to the bot get a pairing code. Run 'npm run setup:pairing'."
+        "out": "dmPolicy is alpha 1, so strangers who write to the bot get a pairing code. Run 'npx better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.pendingPairings": [
       {
         "args": [2],
-        "out": "2 pairing(s) pending in access.json. Run 'npm run setup:pairing'."
+        "out": "2 pairing(s) pending in access.json. Run 'npx better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsAllowed": [
       {
         "args": [2],
-        "out": "2 group(s) can talk to the bot. Run 'npm run setup:pairing'."
+        "out": "2 group(s) can talk to the bot. Run 'npx better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsOff": "the bot cannot be added to groups",
@@ -461,7 +461,7 @@
     "shellUnsupported": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "The alpha 1 shell cannot load 'claude --telegram'. Use 'npm run telegram' in this repository, or load this line in bash or zsh:\n  beta 'two'"
+        "out": "The alpha 1 shell cannot load 'claude --telegram'. Load this line in bash or zsh:\n  beta 'two'"
       }
     ],
     "rcNoLongerLoads": [
@@ -799,7 +799,7 @@
         "out": "alpha 1 is not a valid JSON object. Fix it and run the setup again; nothing was changed."
       }
     ],
-    "doneAll": "Done. Open a new terminal and run 'claude --telegram' (or 'npm run telegram' in this repository).",
+    "doneAll": "Done. Open a new terminal and run 'claude --telegram'.",
     "doneReopen": "Done. Reopen 'claude --telegram' for it to apply.",
     "doneLive": "Done. It applies to the next messages, nothing to reopen.",
     "questionReleased": [
@@ -1064,7 +1064,7 @@
     "notSettable": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "'alpha 1' não muda pelo --set, só beta 'two'. Token, pareamento e plugins passam pelo 'npm run setup' no seu próprio terminal."
+        "out": "'alpha 1' não muda pelo --set, só beta 'two'. Token, pareamento e plugins passam pelo 'npx better-claude-code-telegram' no seu próprio terminal."
       }
     ],
     "unknownHealthGroups": [
@@ -1099,7 +1099,7 @@
     "healthDetail.notInstalled": [
       {
         "args": ["alpha 1"],
-        "out": "faltam alpha 1. Rode 'npm run setup:plugin'."
+        "out": "faltam alpha 1. Rode 'npx better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.loadedIn": [
@@ -1108,31 +1108,31 @@
     "healthDetail.notLoaded": [
       {
         "args": ["alpha 1"],
-        "out": "não carregado por alpha 1. Rode 'npm run setup:plugin'."
+        "out": "não carregado por alpha 1. Rode 'npx better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
-    "healthDetail.noToken": "sem token. Rode 'npm run setup:token' no seu próprio terminal.",
+    "healthDetail.noToken": "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
     "healthDetail.paired": [
       { "args": ["alpha 1"], "out": "pareado com uma conta (alpha 1)" }
     ],
-    "healthDetail.notPaired": "não pareado. Rode 'npm run setup:pairing'.",
+    "healthDetail.notPaired": "não pareado. Rode 'npx better-claude-code-telegram pairing'.",
     "healthDetail.notAllowlist": [
       {
         "args": ["alpha 1"],
-        "out": "o dmPolicy é alpha 1, e quem escreve para o bot recebe um código de pareamento. Rode 'npm run setup:pairing'."
+        "out": "o dmPolicy é alpha 1, e quem escreve para o bot recebe um código de pareamento. Rode 'npx better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.pendingPairings": [
       {
         "args": [2],
-        "out": "2 pareamento(s) pendente(s) no access.json. Rode 'npm run setup:pairing'."
+        "out": "2 pareamento(s) pendente(s) no access.json. Rode 'npx better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsAllowed": [
       {
         "args": [2],
-        "out": "2 grupo(s) podem falar com o bot. Rode 'npm run setup:pairing'."
+        "out": "2 grupo(s) podem falar com o bot. Rode 'npx better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsOff": "o bot não entra em grupos",
@@ -1311,7 +1311,7 @@
     "shellUnsupported": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "O shell alpha 1 não carrega o 'claude --telegram'. Use 'npm run telegram' neste repositório, ou carregue esta linha no bash ou no zsh:\n  beta 'two'"
+        "out": "O shell alpha 1 não carrega o 'claude --telegram'. Carregue esta linha no bash ou no zsh:\n  beta 'two'"
       }
     ],
     "rcNoLongerLoads": [
@@ -1649,7 +1649,7 @@
         "out": "alpha 1 não é um objeto JSON válido. Corrija e rode o setup de novo; nada foi alterado."
       }
     ],
-    "doneAll": "Pronto. Abra um terminal novo e rode 'claude --telegram' (ou 'npm run telegram' neste repositório).",
+    "doneAll": "Pronto. Abra um terminal novo e rode 'claude --telegram'.",
     "doneReopen": "Pronto. Reabra o 'claude --telegram' para valer.",
     "doneLive": "Pronto. Já vale para as próximas mensagens, sem reabrir nada.",
     "questionReleased": [

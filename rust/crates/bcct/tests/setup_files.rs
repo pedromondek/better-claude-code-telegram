@@ -33,8 +33,8 @@ use bcct::shell_rc::{
 };
 use serde_json::{Map, Value, json};
 use support::{
-    Tree, default_file_mode, list, lookup, materialize, object, placeholders, repo_root, sandbox,
-    snapshot, substitute, text,
+    Tree, default_file_mode, list, lookup, materialize, object, placeholders, release_form,
+    repo_root, sandbox, snapshot, substitute, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/setup-files.json");
@@ -46,7 +46,7 @@ const PRIVATE_APP_FILES: [&str; 3] = [
 ];
 
 fn fixture() -> Value {
-    parse_json(FIXTURE).unwrap()
+    parse_json(&release_form(FIXTURE)).unwrap()
 }
 
 fn environment(env: &Value, root: &Path) -> HashMap<String, OsString> {

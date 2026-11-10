@@ -123,7 +123,7 @@ const enUs = {
   inboxDays: (days) => `deleted after ${days} day(s)`,
   inboxForever: "kept forever",
   notSettable: (step, steps) =>
-    `'${step}' cannot be set with --set, only ${steps}. The token, the pairing and the plugins go through 'npm run setup' in your own terminal.`,
+    `'${step}' cannot be set with --set, only ${steps}. The token, the pairing and the plugins go through 'npx better-claude-code-telegram' in your own terminal.`,
   unknownHealthGroups: (groups, valid) =>
     `Unknown group:\n  • ${groups}\nUse all, or one or more of these:\n  • ${valid}`,
   healthGroupTitles: {
@@ -154,19 +154,22 @@ const enUs = {
     found: "found",
     missing: "missing",
     installed: "installed",
-    notInstalled: (ids) => `missing ${ids}. Run 'npm run setup:plugin'.`,
+    notInstalled: (ids) =>
+      `missing ${ids}. Run 'npx better-claude-code-telegram plugin'.`,
     loadedIn: (file) => `loaded by ${file}`,
-    notLoaded: (file) => `not loaded by ${file}. Run 'npm run setup:plugin'.`,
+    notLoaded: (file) =>
+      `not loaded by ${file}. Run 'npx better-claude-code-telegram plugin'.`,
     bot: (username) => `@${username}`,
-    noToken: "no token. Run 'npm run setup:token' in your own terminal.",
+    noToken:
+      "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
     paired: (account) => `paired with one account (${account})`,
-    notPaired: "not paired. Run 'npm run setup:pairing'.",
+    notPaired: "not paired. Run 'npx better-claude-code-telegram pairing'.",
     notAllowlist: (policy) =>
-      `dmPolicy is ${policy}, so strangers who write to the bot get a pairing code. Run 'npm run setup:pairing'.`,
+      `dmPolicy is ${policy}, so strangers who write to the bot get a pairing code. Run 'npx better-claude-code-telegram pairing'.`,
     pendingPairings: (count) =>
-      `${count} pairing(s) pending in access.json. Run 'npm run setup:pairing'.`,
+      `${count} pairing(s) pending in access.json. Run 'npx better-claude-code-telegram pairing'.`,
     groupsAllowed: (count) =>
-      `${count} group(s) can talk to the bot. Run 'npm run setup:pairing'.`,
+      `${count} group(s) can talk to the bot. Run 'npx better-claude-code-telegram pairing'.`,
     groupsOff: "the bot cannot be added to groups",
     groupsUnknown: "needs a working bot token",
     regularUser: "no, runs as a regular user (as recommended)",
@@ -253,7 +256,7 @@ const enUs = {
   rcAlreadyLoads: (rcFile) => `${rcFile} already loads 'claude --telegram'.`,
   rcNowLoads: (rcFile) => `${rcFile} now loads 'claude --telegram'.`,
   shellUnsupported: (shell, line) =>
-    `The ${shell} shell cannot load 'claude --telegram'. Use 'npm run telegram' in this repository, or load this line in bash or zsh:\n  ${line}`,
+    `The ${shell} shell cannot load 'claude --telegram'. Load this line in bash or zsh:\n  ${line}`,
   rcNoLongerLoads: (rcFile) => `${rcFile} no longer loads 'claude --telegram'.`,
   statuslineRemoved: (file) => `Telegram status line removed from ${file}.`,
   envRuleRemoved: (file) =>
@@ -451,8 +454,7 @@ const enUs = {
   statuslineRestored: (file) => `Your previous status line is back in ${file}.`,
   settingsInvalid: (file) =>
     `${file} is not a valid JSON object. Fix it and run the setup again; nothing was changed.`,
-  doneAll:
-    "Done. Open a new terminal and run 'claude --telegram' (or 'npm run telegram' in this repository).",
+  doneAll: "Done. Open a new terminal and run 'claude --telegram'.",
   doneReopen: "Done. Reopen 'claude --telegram' for it to apply.",
   doneLive: "Done. It applies to the next messages, nothing to reopen.",
   questionReleased: (instance, headers) =>
@@ -602,7 +604,7 @@ const ptBr = {
   inboxDays: (days) => `apagados depois de ${days} dia(s)`,
   inboxForever: "mantidos para sempre",
   notSettable: (step, steps) =>
-    `'${step}' não muda pelo --set, só ${steps}. Token, pareamento e plugins passam pelo 'npm run setup' no seu próprio terminal.`,
+    `'${step}' não muda pelo --set, só ${steps}. Token, pareamento e plugins passam pelo 'npx better-claude-code-telegram' no seu próprio terminal.`,
   unknownHealthGroups: (groups, valid) =>
     `Grupo desconhecido:\n  • ${groups}\nUse all, ou um ou mais destes:\n  • ${valid}`,
   healthGroupTitles: {
@@ -633,20 +635,22 @@ const ptBr = {
     found: "encontrado",
     missing: "não encontrado",
     installed: "instalados",
-    notInstalled: (ids) => `faltam ${ids}. Rode 'npm run setup:plugin'.`,
+    notInstalled: (ids) =>
+      `faltam ${ids}. Rode 'npx better-claude-code-telegram plugin'.`,
     loadedIn: (file) => `carregado por ${file}`,
     notLoaded: (file) =>
-      `não carregado por ${file}. Rode 'npm run setup:plugin'.`,
+      `não carregado por ${file}. Rode 'npx better-claude-code-telegram plugin'.`,
     bot: (username) => `@${username}`,
-    noToken: "sem token. Rode 'npm run setup:token' no seu próprio terminal.",
+    noToken:
+      "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
     paired: (account) => `pareado com uma conta (${account})`,
-    notPaired: "não pareado. Rode 'npm run setup:pairing'.",
+    notPaired: "não pareado. Rode 'npx better-claude-code-telegram pairing'.",
     notAllowlist: (policy) =>
-      `o dmPolicy é ${policy}, e quem escreve para o bot recebe um código de pareamento. Rode 'npm run setup:pairing'.`,
+      `o dmPolicy é ${policy}, e quem escreve para o bot recebe um código de pareamento. Rode 'npx better-claude-code-telegram pairing'.`,
     pendingPairings: (count) =>
-      `${count} pareamento(s) pendente(s) no access.json. Rode 'npm run setup:pairing'.`,
+      `${count} pareamento(s) pendente(s) no access.json. Rode 'npx better-claude-code-telegram pairing'.`,
     groupsAllowed: (count) =>
-      `${count} grupo(s) podem falar com o bot. Rode 'npm run setup:pairing'.`,
+      `${count} grupo(s) podem falar com o bot. Rode 'npx better-claude-code-telegram pairing'.`,
     groupsOff: "o bot não entra em grupos",
     groupsUnknown: "precisa de um token de bot válido",
     regularUser: "não, roda como usuário comum (o recomendado)",
@@ -732,7 +736,7 @@ const ptBr = {
   rcAlreadyLoads: (rcFile) => `${rcFile} já carrega o 'claude --telegram'.`,
   rcNowLoads: (rcFile) => `${rcFile} passou a carregar o 'claude --telegram'.`,
   shellUnsupported: (shell, line) =>
-    `O shell ${shell} não carrega o 'claude --telegram'. Use 'npm run telegram' neste repositório, ou carregue esta linha no bash ou no zsh:\n  ${line}`,
+    `O shell ${shell} não carrega o 'claude --telegram'. Carregue esta linha no bash ou no zsh:\n  ${line}`,
   rcNoLongerLoads: (rcFile) =>
     `${rcFile} não carrega mais o 'claude --telegram'.`,
   statuslineRemoved: (file) => `Statusline do Telegram removida de ${file}.`,
@@ -930,8 +934,7 @@ const ptBr = {
   statuslineRestored: (file) => `Sua statusline anterior voltou em ${file}.`,
   settingsInvalid: (file) =>
     `${file} não é um objeto JSON válido. Corrija e rode o setup de novo; nada foi alterado.`,
-  doneAll:
-    "Pronto. Abra um terminal novo e rode 'claude --telegram' (ou 'npm run telegram' neste repositório).",
+  doneAll: "Pronto. Abra um terminal novo e rode 'claude --telegram'.",
   doneReopen: "Pronto. Reabra o 'claude --telegram' para valer.",
   doneLive: "Pronto. Já vale para as próximas mensagens, sem reabrir nada.",
   questionReleased: (instance, headers) =>
