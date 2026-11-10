@@ -466,6 +466,17 @@ const enUs = {
   statuslineNotShown: "Could not show the status line.",
   healthNotShown: "Could not show the result.",
   outputNotShown: "Could not write to the output.",
+  selfInstallDone: (version, channel) =>
+    `bcct ${version} installed (${channel}).`,
+  selfInstallUnstable: (channel) =>
+    `This is a test version (${channel}): it may change or break before the stable one.`,
+  selfInstallHashMismatch:
+    "The file does not match the expected hash; nothing was installed.",
+  selfInstallNotBcct: "The file did not answer as bcct; nothing was installed.",
+  selfInstallFailed:
+    "Could not install bcct: the file or the app folder could not be read or written.",
+  selfInstallUsage:
+    "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
 };
 
 const ptBr = {
@@ -934,6 +945,17 @@ const ptBr = {
   statuslineNotShown: "Não foi possível mostrar a statusline.",
   healthNotShown: "Não foi possível mostrar o resultado.",
   outputNotShown: "Não foi possível escrever na saída.",
+  selfInstallDone: (version, channel) =>
+    `bcct ${version} instalado (${channel}).`,
+  selfInstallUnstable: (channel) =>
+    `Esta é uma versão de teste (${channel}): ela pode mudar ou quebrar antes da estável.`,
+  selfInstallHashMismatch:
+    "O arquivo não confere com o hash esperado; nada foi instalado.",
+  selfInstallNotBcct: "O arquivo não respondeu como bcct; nada foi instalado.",
+  selfInstallFailed:
+    "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
+  selfInstallUsage:
+    "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
 };
 
 export const MESSAGES = { "en-us": enUs, "pt-br": ptBr };

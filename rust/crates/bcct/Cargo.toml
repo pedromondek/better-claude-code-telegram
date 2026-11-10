@@ -13,7 +13,9 @@ crossterm.workspace = true
 getrandom.workspace = true
 jsonc-parser.workspace = true
 lexopt.workspace = true
+semver.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 tempfile.workspace = true
 ureq.workspace = true
 

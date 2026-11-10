@@ -12,6 +12,7 @@ pub mod messages;
 pub mod paths;
 pub mod prompt;
 pub mod release;
+pub mod self_install;
 pub mod settings;
 pub mod setup;
 pub mod setup_ask;
@@ -42,6 +43,7 @@ enum Command {
     Health(Vec<OsString>),
     Setup(Vec<OsString>),
     Uninstall,
+    SelfInstall(Vec<OsString>),
 }
 
 pub fn run<I, O, E>(args: I, stdout: &mut O, stderr: &mut E) -> ExitCode
@@ -68,6 +70,9 @@ where
         Ok(Command::Health(args)) => ExitCode::from(health::run_process(&args, stdout, stderr)),
         Ok(Command::Setup(args)) => ExitCode::from(setup_run::run_process(&args, stdout, stderr)),
         Ok(Command::Uninstall) => ExitCode::from(setup_run::run_uninstall_process(stdout, stderr)),
+        Ok(Command::SelfInstall(args)) => {
+            ExitCode::from(self_install::run_process(&args, stdout, stderr))
+        }
         Err(error) => {
             let _written = writeln!(stderr, "bcct: {error}");
             ExitCode::from(USAGE_ERROR)
@@ -110,6 +115,9 @@ where
             Ok(Command::Setup(parser.raw_args()?.collect()))
         }
         Some(lexopt::Arg::Value(word)) if word == "uninstall" => Ok(Command::Uninstall),
+        Some(lexopt::Arg::Value(word)) if word == "self-install" => {
+            Ok(Command::SelfInstall(parser.raw_args()?.collect()))
+        }
         Some(arg) => Err(arg.unexpected()),
         None => Err("missing subcommand".into()),
     }

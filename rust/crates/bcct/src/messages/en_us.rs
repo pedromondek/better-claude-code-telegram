@@ -515,4 +515,12 @@ pub(super) const MESSAGES: Messages = Messages {
     statusline_not_shown: "Could not show the status line.",
     health_not_shown: "Could not show the result.",
     output_not_shown: "Could not write to the output.",
+    self_install_done: |version, channel| format!("bcct {version} installed ({channel})."),
+    self_install_unstable: |channel| {
+        format!("This is a test version ({channel}): it may change or break before the stable one.")
+    },
+    self_install_hash_mismatch: "The file does not match the expected hash; nothing was installed.",
+    self_install_not_bcct: "The file did not answer as bcct; nothing was installed.",
+    self_install_failed: "Could not install bcct: the file or the app folder could not be read or written.",
+    self_install_usage: "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
 };

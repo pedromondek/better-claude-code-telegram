@@ -364,6 +364,12 @@ catalog! { m, a;
     "statuslineNotShown" => m.statusline_not_shown.to_owned(),
     "healthNotShown" => m.health_not_shown.to_owned(),
     "outputNotShown" => m.output_not_shown.to_owned(),
+    "selfInstallDone" => (m.self_install_done)(s(a, 0), s(a, 1)),
+    "selfInstallUnstable" => (m.self_install_unstable)(s(a, 0)),
+    "selfInstallHashMismatch" => m.self_install_hash_mismatch.to_owned(),
+    "selfInstallNotBcct" => m.self_install_not_bcct.to_owned(),
+    "selfInstallFailed" => m.self_install_failed.to_owned(),
+    "selfInstallUsage" => m.self_install_usage.to_owned(),
 }
 
 fn fixture() -> Value {

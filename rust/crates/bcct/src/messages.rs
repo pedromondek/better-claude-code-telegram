@@ -419,6 +419,12 @@ pub struct Messages {
     pub statusline_not_shown: &'static str,
     pub health_not_shown: &'static str,
     pub output_not_shown: &'static str,
+    pub self_install_done: fn(&str, &str) -> String,
+    pub self_install_unstable: fn(&str) -> String,
+    pub self_install_hash_mismatch: &'static str,
+    pub self_install_not_bcct: &'static str,
+    pub self_install_failed: &'static str,
+    pub self_install_usage: &'static str,
 }
 
 pub const EN_US: Messages = en_us::MESSAGES;
