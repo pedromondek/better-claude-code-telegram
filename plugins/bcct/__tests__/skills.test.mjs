@@ -163,7 +163,9 @@ describe("bcct skills", () => {
     ];
 
     expect(flags.toSorted()).toEqual([
+      "--fix",
       "--json",
+      "--only",
       "--set",
       "--show",
       "--statusline-prompt",
