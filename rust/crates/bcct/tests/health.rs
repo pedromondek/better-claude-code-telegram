@@ -14,15 +14,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use bcct::health::{Machine, Screen, run};
-use bcct::js::{parse_json, stringify_pretty};
-use bcct::setup::{SetupPaths, whisper_python_works};
+use bcct::js::stringify;
+use bcct::setup::whisper_python_works;
 use bcct::spinner::Terminal;
 use bcct::telegram::{API_ROOT_ENV, DEFAULT_API_ROOT, api_root, post_json, request_url};
 use bcct::ui::should_colorize;
 use serde_json::{Value, json};
 use support::{
-    Tree, app_form, app_placeholder, default_file_mode, expected_tree, list, lookup, materialize,
-    parse, placeholders, sandbox, snapshot, strings, substitute, text,
+    Tree, default_file_mode, expected_tree, list, lookup, materialize, placeholders, sandbox,
+    snapshot, strings, substitute, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/health.json");
@@ -186,30 +186,10 @@ fn home_of(variables: &HashMap<String, OsString>, root: &Path) -> PathBuf {
         .map_or_else(|| root.join("passwd-home"), PathBuf::from)
 }
 
-const PATH_LABELS: [&str; 2] = ["bcct on PATH", "bcct no PATH"];
+const PATH_LABEL: &str = "bcct on PATH";
 
-fn without_path_check(output: &str) -> String {
-    if let Some(Value::Array(entries)) = parse_json(output) {
-        let kept: Vec<Value> = entries
-            .into_iter()
-            .filter(|entry| entry["check"] != json!("path"))
-            .collect();
-
-        return format!("{}\n", stringify_pretty(&Value::Array(kept)));
-    }
-
-    output
-        .split_inclusive('\n')
-        .filter(|line| !PATH_LABELS.iter().any(|label| line.contains(label)))
-        .collect()
-}
-
-fn app_scenario(scenario: &Value, root: &Path) -> Value {
-    let variables = variables_of(scenario, root, "");
-    let var = lookup(&variables);
-    let paths = SetupPaths::resolve(&var, &home_of(&variables, root));
-
-    app_form(scenario, &app_placeholder(&paths.app_dir, root))
+fn frozen(source: &str) -> Value {
+    serde_json::from_str(source).unwrap()
 }
 
 fn expected_after(scenario: &Value, root: &Path, now: u64, default_mode: &str) -> Tree {
@@ -229,9 +209,76 @@ fn expected_after(scenario: &Value, root: &Path, now: u64, default_mode: &str) -
     tree
 }
 
+struct Observed {
+    status: Value,
+    stdout: String,
+    stderr: String,
+    requests: Value,
+    after: Tree,
+}
+
+fn observe(scenario: &Value, now: u64) -> Observed {
+    let root = sandbox();
+    let telegram = FakeTelegram::start(scenario);
+    materialize(root.path(), &filled(&scenario["files"], now));
+    let variables = variables_of(scenario, root.path(), &telegram.root);
+    let var = lookup(&variables);
+    let bin = root.path().join("bin");
+    let version = text(scenario, "nodeVersion").to_owned();
+    let node_version = || Some(version.clone());
+    let has_command = |name: &str| bin.join(name).is_file();
+    let claude_output = |args: &[&str]| {
+        Command::new(bin.join("claude"))
+            .args(args)
+            .stdin(Stdio::null())
+            .output()
+            .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
+            .unwrap_or_default()
+    };
+    let machine = Machine {
+        var: &var,
+        home: &home_of(&variables, root.path()),
+        uid: Some(
+            scenario["uid"]
+                .as_u64()
+                .map_or(REGULAR_UID, |uid| u32::try_from(uid).unwrap()),
+        ),
+        now,
+        node_version: &node_version,
+        has_command: &has_command,
+        claude_output: &claude_output,
+        python_works: &whisper_python_works,
+        fetch: &post_json,
+    };
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    let colorize = should_colorize(&var, false);
+    let mut screen = Screen {
+        out: &mut out,
+        err: &mut err,
+        terminal: None,
+        colorize_out: colorize,
+        colorize_err: colorize,
+        spin: &|_, _| None,
+    };
+
+    let status = run(&strings(&scenario["args"]), &machine, &mut screen);
+
+    assert!(format!("{machine:?}").starts_with("Machine {"));
+    assert!(format!("{screen:?}").starts_with("Screen {"));
+
+    Observed {
+        status: json!(status),
+        stdout: placeholders(&String::from_utf8(out).unwrap(), root.path()),
+        stderr: placeholders(&String::from_utf8(err).unwrap(), root.path()),
+        requests: telegram.requests(),
+        after: snapshot(root.path()),
+    }
+}
+
 #[test]
-fn every_scenario_prints_what_health_mjs_prints() {
-    let fixture = parse(FIXTURE);
+fn every_scenario_prints_what_the_fixture_recorded() {
+    let fixture = frozen(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let default_mode = default_file_mode();
     let scenarios = list(&fixture, "scenarios");
@@ -240,73 +287,14 @@ fn every_scenario_prints_what_health_mjs_prints() {
 
     for scenario in scenarios {
         let name = text(scenario, "name");
-        let root = sandbox();
-        let scenario = &app_scenario(scenario, root.path());
-        let telegram = FakeTelegram::start(scenario);
-        materialize(root.path(), &filled(&scenario["files"], now));
-        let variables = variables_of(scenario, root.path(), &telegram.root);
-        let var = lookup(&variables);
-        let bin = root.path().join("bin");
-        let version = text(scenario, "nodeVersion").to_owned();
-        let node_version = || Some(version.clone());
-        let has_command = |name: &str| bin.join(name).is_file();
-        let claude_output = |args: &[&str]| {
-            Command::new(bin.join("claude"))
-                .args(args)
-                .stdin(Stdio::null())
-                .output()
-                .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
-                .unwrap_or_default()
-        };
-        let machine = Machine {
-            var: &var,
-            home: &home_of(&variables, root.path()),
-            uid: Some(
-                scenario["uid"]
-                    .as_u64()
-                    .map_or(REGULAR_UID, |uid| u32::try_from(uid).unwrap()),
-            ),
-            now,
-            node_version: &node_version,
-            has_command: &has_command,
-            claude_output: &claude_output,
-            python_works: &whisper_python_works,
-            fetch: &post_json,
-        };
-        let mut out = Vec::new();
-        let mut err = Vec::new();
-        let colorize = should_colorize(&var, false);
-        let mut screen = Screen {
-            out: &mut out,
-            err: &mut err,
-            terminal: None,
-            colorize_out: colorize,
-            colorize_err: colorize,
-            spin: &|_, _| None,
-        };
+        let observed = observe(scenario, now);
 
-        let status = run(&strings(&scenario["args"]), &machine, &mut screen);
-
-        assert!(format!("{machine:?}").starts_with("Machine {"));
-        assert!(format!("{screen:?}").starts_with("Screen {"));
-        assert_eq!(json!(status), scenario["status"], "{name}: status");
+        assert_eq!(observed.status, scenario["status"], "{name}: status");
+        assert_eq!(observed.stdout, text(scenario, "stdout"), "{name}: stdout");
+        assert_eq!(observed.stderr, text(scenario, "stderr"), "{name}: stderr");
+        assert_eq!(observed.requests, scenario["requests"], "{name}: requests");
         assert_eq!(
-            without_path_check(&placeholders(&String::from_utf8(out).unwrap(), root.path())),
-            text(scenario, "stdout"),
-            "{name}: stdout"
-        );
-        assert_eq!(
-            placeholders(&String::from_utf8(err).unwrap(), root.path()),
-            text(scenario, "stderr"),
-            "{name}: stderr"
-        );
-        assert_eq!(
-            telegram.requests(),
-            scenario["requests"],
-            "{name}: requests"
-        );
-        assert_eq!(
-            snapshot(root.path()),
+            observed.after,
             expected_tree(&scenario["after"], None, &default_mode),
             "{name}: files"
         );
@@ -314,8 +302,8 @@ fn every_scenario_prints_what_health_mjs_prints() {
 }
 
 #[test]
-fn every_scenario_of_the_binary_matches_health_mjs() {
-    let fixture = parse(FIXTURE);
+fn every_scenario_of_the_binary_matches_the_fixture() {
+    let fixture = frozen(FIXTURE);
     let default_mode = default_file_mode();
     let scenarios: Vec<&Value> = list(&fixture, "scenarios")
         .iter()
@@ -327,7 +315,6 @@ fn every_scenario_of_the_binary_matches_health_mjs() {
     for scenario in scenarios {
         let name = text(scenario, "name");
         let root = sandbox();
-        let scenario = &app_scenario(scenario, root.path());
         let telegram = FakeTelegram::start(scenario);
         let now = now_ms();
         materialize(root.path(), &filled(&scenario["files"], now));
@@ -348,10 +335,7 @@ fn every_scenario_of_the_binary_matches_health_mjs() {
             "{name}: status"
         );
         assert_eq!(
-            without_path_check(&placeholders(
-                &String::from_utf8(output.stdout).unwrap(),
-                root.path()
-            )),
+            placeholders(&String::from_utf8(output.stdout).unwrap(), root.path()),
             text(scenario, "stdout"),
             "{name}: stdout"
         );
@@ -402,61 +386,136 @@ fn quoted(text: &str) -> String {
     format!("'{}'", text.replace('\'', "'\\''"))
 }
 
+struct Painted {
+    status: Value,
+    terminal: String,
+    repainted: bool,
+    requests: Value,
+}
+
+fn observe_terminal(scenario: &Value) -> Painted {
+    let root = sandbox();
+    let telegram = FakeTelegram::start(scenario);
+    materialize(root.path(), &filled(&scenario["files"], now_ms()));
+    let columns = scenario["columns"]
+        .as_u64()
+        .map(|columns| format!("stty cols {columns}; "))
+        .unwrap_or_default();
+    let command = format!(
+        "{columns}{}",
+        [BCCT.to_owned(), "health".to_owned()]
+            .into_iter()
+            .chain(strings(&scenario["args"]))
+            .map(|arg| quoted(&arg))
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
+    let output = Command::new("script")
+        .args(["-qec", &command, "/dev/null"])
+        .env_clear()
+        .envs(support::coverage_env())
+        .envs(variables_of(scenario, root.path(), &telegram.root))
+        .current_dir(root.path())
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    let (terminal, repainted) = normalized_terminal(&placeholders(
+        &String::from_utf8(output.stdout).unwrap(),
+        root.path(),
+    ));
+
+    Painted {
+        status: json!(output.status.code()),
+        terminal,
+        repainted,
+        requests: telegram.requests(),
+    }
+}
+
 #[cfg(target_os = "linux")]
 #[test]
-fn every_terminal_scenario_spins_and_prints_like_health_mjs() {
-    let fixture = parse(FIXTURE);
+fn every_terminal_scenario_spins_and_prints_what_the_fixture_recorded() {
+    let fixture = frozen(FIXTURE);
 
     for scenario in list(&fixture, "tty") {
         let name = text(scenario, "name");
-        let root = sandbox();
-        let scenario = &app_scenario(scenario, root.path());
-        let telegram = FakeTelegram::start(scenario);
-        materialize(root.path(), &filled(&scenario["files"], now_ms()));
-        let columns = scenario["columns"]
-            .as_u64()
-            .map(|columns| format!("stty cols {columns}; "))
-            .unwrap_or_default();
-        let command = format!(
-            "{columns}{}",
-            [BCCT.to_owned(), "health".to_owned()]
-                .into_iter()
-                .chain(strings(&scenario["args"]))
-                .map(|arg| quoted(&arg))
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-        let output = Command::new("script")
-            .args(["-qec", &command, "/dev/null"])
-            .env_clear()
-            .envs(support::coverage_env())
-            .envs(variables_of(scenario, root.path(), &telegram.root))
-            .current_dir(root.path())
-            .stdin(Stdio::null())
-            .output()
-            .unwrap();
-        let (terminal, repainted) = normalized_terminal(&without_path_check(&placeholders(
-            &String::from_utf8(output.stdout).unwrap(),
-            root.path(),
-        )));
+        let painted = observe_terminal(scenario);
 
+        assert_eq!(painted.status, scenario["status"], "{name}: status");
         assert_eq!(
-            json!(output.status.code()),
-            scenario["status"],
-            "{name}: status"
+            painted.terminal,
+            text(scenario, "terminal"),
+            "{name}: terminal"
         );
-        assert_eq!(terminal, text(scenario, "terminal"), "{name}: terminal");
 
         if scenario["repainted"] == json!(true) {
-            assert!(repainted, "{name}: the spinner never turned");
+            assert!(painted.repainted, "{name}: the spinner never turned");
         }
 
-        assert_eq!(
-            telegram.requests(),
-            scenario["requests"],
-            "{name}: requests"
-        );
+        assert_eq!(painted.requests, scenario["requests"], "{name}: requests");
     }
+}
+
+fn blessing() -> bool {
+    std::env::var_os("BCCT_BLESS").is_some_and(|flag| flag == "1")
+}
+
+fn after_value(tree: &Tree) -> Value {
+    Value::Object(
+        tree.iter()
+            .map(|(path, (content, mode))| {
+                let mut entry = serde_json::Map::new();
+
+                if let Some(content) = content {
+                    entry.insert("content".to_owned(), json!(content));
+                }
+
+                entry.insert("mode".to_owned(), json!(mode));
+                (path.clone(), Value::Object(entry))
+            })
+            .collect(),
+    )
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn blessing_rewrites_the_health_fixture_from_the_binary() {
+    if !blessing() {
+        return;
+    }
+
+    let mut fixture = frozen(FIXTURE);
+    let now = fixture["now"].as_u64().unwrap();
+    let default_mode = default_file_mode();
+
+    for scenario in fixture["scenarios"].as_array_mut().unwrap() {
+        let observed = observe(scenario, now);
+
+        scenario["status"] = observed.status;
+        scenario["stdout"] = json!(observed.stdout);
+        scenario["stderr"] = json!(observed.stderr);
+        scenario["requests"] = observed.requests;
+
+        if observed.after != expected_tree(&scenario["after"], None, &default_mode) {
+            scenario["after"] = after_value(&observed.after);
+        }
+    }
+
+    for scenario in fixture["tty"].as_array_mut().unwrap() {
+        let painted = observe_terminal(scenario);
+
+        scenario["status"] = painted.status;
+        scenario["terminal"] = json!(painted.terminal);
+        scenario["requests"] = painted.requests;
+    }
+
+    std::fs::write(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/health.json"),
+        stringify(&fixture)
+            .replace('\u{2028}', "\\u2028")
+            .replace('\u{2029}', "\\u2029"),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -554,10 +613,9 @@ fn run_failing(
     terminal: Option<Terminal>,
     colorize: bool,
 ) -> (u8, String) {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let root = sandbox();
-    let scenario = &app_scenario(scenario, root.path());
     let telegram = FakeTelegram::start(scenario);
     materialize(root.path(), &filled(&scenario["files"], now));
     let variables = variables_of(scenario, root.path(), &telegram.root);
@@ -605,7 +663,7 @@ const NOT_SHOWN: &str = "✘ Could not show the result.\n";
 
 #[test]
 fn a_green_result_that_cannot_be_written_ends_with_failure_and_says_so() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let green = scenario_named(&fixture, "a healthy machine passes every check");
 
     assert_eq!(green["status"], json!(0));
@@ -624,7 +682,7 @@ fn a_green_result_that_cannot_be_written_ends_with_failure_and_says_so() {
 
 #[test]
 fn a_red_result_that_cannot_be_written_also_says_so() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let red = scenario_named(&fixture, "everything broken");
 
     assert_eq!(red["status"], json!(1));
@@ -642,7 +700,7 @@ fn a_red_result_that_cannot_be_written_also_says_so() {
 
 #[test]
 fn the_result_stops_at_the_first_line_that_cannot_be_written() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let green = scenario_named(&fixture, "a healthy machine passes every check");
     let mut out = Failing::new(|write| write == 2);
 
@@ -658,7 +716,7 @@ fn the_result_stops_at_the_first_line_that_cannot_be_written() {
 
 #[test]
 fn a_spinner_line_that_cannot_be_written_also_fails_the_result() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let green = scenario_named(&fixture, "a healthy machine passes every check");
     let terminal = Some(Terminal { columns: None });
     let mut out = Failing::new(|write| write == 2);
@@ -675,7 +733,7 @@ fn a_spinner_line_that_cannot_be_written_also_fails_the_result() {
 
 #[test]
 fn a_result_in_pt_br_that_cannot_be_written_says_so_in_pt_br() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let scenario = scenario_named(&fixture, "locale from a pt-br config");
     let mut out = Failing::new(|_| true);
 
@@ -688,7 +746,7 @@ fn a_result_in_pt_br_that_cannot_be_written_says_so_in_pt_br() {
 #[cfg(target_os = "linux")]
 #[test]
 fn the_binary_with_a_full_disk_as_stdout_ends_with_failure_and_says_so() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let green = scenario_named(&fixture, "a healthy machine passes every check");
 
     for args in [&["health"][..], &["health", "--json"][..]] {
@@ -717,7 +775,7 @@ fn the_binary_with_a_full_disk_as_stdout_ends_with_failure_and_says_so() {
 
 #[test]
 fn every_request_url_is_the_one_node_fetch_sends() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
 
     for entry in list(&fixture, "urls") {
         assert_eq!(
@@ -764,7 +822,7 @@ fn path_check_of(scenario: &Value) -> (u8, String) {
     let shown = String::from_utf8(out.accepted).unwrap();
     let line = shown
         .lines()
-        .find(|line| line.contains(PATH_LABELS[0]))
+        .find(|line| line.contains(PATH_LABEL))
         .unwrap()
         .to_owned();
 
@@ -773,7 +831,7 @@ fn path_check_of(scenario: &Value) -> (u8, String) {
 
 #[test]
 fn the_path_check_says_whether_bcct_is_on_the_path_and_never_fails() {
-    let fixture = parse(FIXTURE);
+    let fixture = frozen(FIXTURE);
     let healthy = scenario_named(&fixture, "a healthy machine passes every check").clone();
     let config = "app/better-cc-telegram.json";
     let mut turned_on = healthy.clone();

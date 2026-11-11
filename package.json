@@ -75,6 +75,7 @@
     "rust:fmt": "cargo fmt --manifest-path rust/Cargo.toml --all --check",
     "rust:lint": "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings && npm run --silent rust:fmt",
     "rust:test": "sh scripts/mise-exec.sh cargo nextest run --manifest-path rust/Cargo.toml --locked",
+    "rust:bless": "BCCT_BLESS=1 sh scripts/mise-exec.sh cargo nextest run --manifest-path rust/Cargo.toml --locked -E 'test(/^blessing_/)' && prettier --write --log-level warn rust/crates/bcct/tests/fixtures",
     "rust:cov": "sh scripts/mise-exec.sh cargo llvm-cov nextest --manifest-path rust/Cargo.toml --locked --fail-under-lines 100",
     "rust:deny": "sh scripts/mise-exec.sh cargo deny --manifest-path rust/Cargo.toml check advisories",
     "rust:mutation": "sh scripts/mise-exec.sh cargo mutants --manifest-path rust/Cargo.toml --test-tool=nextest --cargo-test-arg=--max-fail=1:immediate",
