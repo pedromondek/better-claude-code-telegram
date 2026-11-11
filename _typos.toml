@@ -4,6 +4,7 @@ extend-exclude = [".git/", "*.pt-br.md", "docs/decisions/"]
 
 [default.extend-words]
 aprove = "aprove"
+atual = "atual"
 comando = "comando"
 comandos = "comandos"
 comercial = "comercial"

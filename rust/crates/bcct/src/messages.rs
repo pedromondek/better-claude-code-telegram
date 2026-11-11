@@ -454,6 +454,25 @@ pub struct Messages {
     pub hook_write_failed: fn(&str, &str) -> String,
     pub hook_failed_often: fn(&str, u64, &str) -> String,
     pub hook_reasons: HookReasons,
+    pub fix: FixTexts,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FixTexts {
+    pub can_fix: &'static str,
+    pub only_recommend: &'static str,
+    pub question: &'static str,
+    pub nothing: &'static str,
+    pub fixed: fn(&str) -> String,
+    pub could_not: fn(&str, &str) -> String,
+    pub checking_again: &'static str,
+    pub how_to_apply: &'static str,
+    pub invalid_answer: fn(u64) -> String,
+    pub unknown: fn(&str, &str) -> String,
+    pub shell: fn(&str) -> String,
+    pub protection: fn(&str) -> String,
+    pub statusline: fn(&str) -> String,
+    pub app_dir: fn(&str) -> String,
 }
 
 #[derive(Debug, Clone, Copy)]

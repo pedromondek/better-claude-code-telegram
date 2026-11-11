@@ -2,6 +2,7 @@ pub mod changes;
 pub mod config;
 pub mod files;
 pub mod health;
+pub mod health_fix;
 pub mod hook;
 pub mod hook_failures;
 pub mod install;

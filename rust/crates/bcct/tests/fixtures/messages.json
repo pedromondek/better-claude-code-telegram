@@ -953,7 +953,54 @@
     "hookReasons.readOnly": "read-only file system",
     "hookReasons.quota": "disk quota exceeded",
     "hookReasons.busy": "file busy or changed by another instance",
-    "hookReasons.input": "unexpected input from Claude Code"
+    "hookReasons.input": "unexpected input from Claude Code",
+    "fix.canFix": "I can fix:",
+    "fix.onlyRecommend": "I only recommend:",
+    "fix.question": "Which ones? (1, 2, ... or all; Enter: none):",
+    "fix.nothing": "Nothing I can fix on my own.",
+    "fix.fixed": [{ "args": ["alpha 1"], "out": "Fixed: alpha 1" }],
+    "fix.couldNot": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Could not: alpha 1 (beta 'two')"
+      }
+    ],
+    "fix.checkingAgain": "Checking again:",
+    "fix.howToApply": "To apply, run 'bcct health --fix --yes' or pick with '--only shell,protection'.",
+    "fix.invalidAnswer": [
+      {
+        "args": [3],
+        "out": "Answer with numbers from the list (1 to 3), 'all' or Enter."
+      },
+      {
+        "args": [1],
+        "out": "Answer with numbers from the list (1 to 1), 'all' or Enter."
+      }
+    ],
+    "fix.unknown": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Unknown fixes: alpha 1. The possible ones are: beta 'two'."
+      }
+    ],
+    "fix.shell": [
+      { "args": ["alpha 1"], "out": "rewrite shell.sh and the line in alpha 1" }
+    ],
+    "fix.protection": [
+      {
+        "args": ["alpha 1"],
+        "out": "add the rule that keeps Claude from reading the token to alpha 1"
+      }
+    ],
+    "fix.statusline": [
+      {
+        "args": ["alpha 1"],
+        "out": "replace the old command (from the clone) with the current one in alpha 1"
+      }
+    ],
+    "fix.appDir": [
+      { "args": ["alpha 1"], "out": "give write permission to alpha 1" }
+    ]
   },
   "pt-br": {
     "statusMain": "(Principal)",
@@ -1920,6 +1967,53 @@
     "hookReasons.readOnly": "sistema de arquivos só de leitura",
     "hookReasons.quota": "cota de disco excedida",
     "hookReasons.busy": "arquivo ocupado ou mexido por outra instância",
-    "hookReasons.input": "entrada inesperada do Claude Code"
+    "hookReasons.input": "entrada inesperada do Claude Code",
+    "fix.canFix": "Posso consertar:",
+    "fix.onlyRecommend": "Só recomendo:",
+    "fix.question": "Quais consertar? (1, 2, ... ou todos; Enter: nenhum):",
+    "fix.nothing": "Nada para consertar sozinho.",
+    "fix.fixed": [{ "args": ["alpha 1"], "out": "Consertado: alpha 1" }],
+    "fix.couldNot": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Não consegui: alpha 1 (beta 'two')"
+      }
+    ],
+    "fix.checkingAgain": "Conferindo de novo:",
+    "fix.howToApply": "Para aplicar, rode 'bcct health --fix --yes' ou escolha com '--only shell,protection'.",
+    "fix.invalidAnswer": [
+      {
+        "args": [3],
+        "out": "Responda com números da lista (1 a 3), 'todos' ou Enter."
+      },
+      {
+        "args": [1],
+        "out": "Responda com números da lista (1 a 1), 'todos' ou Enter."
+      }
+    ],
+    "fix.unknown": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Consertos desconhecidos: alpha 1. Os possíveis são: beta 'two'."
+      }
+    ],
+    "fix.shell": [
+      { "args": ["alpha 1"], "out": "regravar o shell.sh e a linha do alpha 1" }
+    ],
+    "fix.protection": [
+      {
+        "args": ["alpha 1"],
+        "out": "adicionar a regra que impede o Claude de ler o token em alpha 1"
+      }
+    ],
+    "fix.statusline": [
+      {
+        "args": ["alpha 1"],
+        "out": "trocar o comando antigo (do clone) pelo atual em alpha 1"
+      }
+    ],
+    "fix.appDir": [
+      { "args": ["alpha 1"], "out": "dar permissão de escrita em alpha 1" }
+    ]
   }
 }

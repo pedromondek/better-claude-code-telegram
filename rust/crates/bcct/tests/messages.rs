@@ -404,6 +404,20 @@ catalog! { m, a;
     "hookReasons.quota" => m.hook_reasons.quota.to_owned(),
     "hookReasons.busy" => m.hook_reasons.busy.to_owned(),
     "hookReasons.input" => m.hook_reasons.input.to_owned(),
+    "fix.canFix" => m.fix.can_fix.to_owned(),
+    "fix.onlyRecommend" => m.fix.only_recommend.to_owned(),
+    "fix.question" => m.fix.question.to_owned(),
+    "fix.nothing" => m.fix.nothing.to_owned(),
+    "fix.fixed" => (m.fix.fixed)(s(a, 0)),
+    "fix.couldNot" => (m.fix.could_not)(s(a, 0), s(a, 1)),
+    "fix.checkingAgain" => m.fix.checking_again.to_owned(),
+    "fix.howToApply" => m.fix.how_to_apply.to_owned(),
+    "fix.invalidAnswer" => (m.fix.invalid_answer)(n(a, 0)),
+    "fix.unknown" => (m.fix.unknown)(s(a, 0), s(a, 1)),
+    "fix.shell" => (m.fix.shell)(s(a, 0)),
+    "fix.protection" => (m.fix.protection)(s(a, 0)),
+    "fix.statusline" => (m.fix.statusline)(s(a, 0)),
+    "fix.appDir" => (m.fix.app_dir)(s(a, 0)),
 }
 
 fn fixture() -> Value {

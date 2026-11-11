@@ -531,6 +531,27 @@ const enUs = {
     busy: "file busy or changed by another instance",
     input: "unexpected input from Claude Code",
   },
+  fix: {
+    canFix: "I can fix:",
+    onlyRecommend: "I only recommend:",
+    question: "Which ones? (1, 2, ... or all; Enter: none):",
+    nothing: "Nothing I can fix on my own.",
+    fixed: (action) => `Fixed: ${action}`,
+    couldNot: (action, error) => `Could not: ${action} (${error})`,
+    checkingAgain: "Checking again:",
+    howToApply:
+      "To apply, run 'bcct health --fix --yes' or pick with '--only shell,protection'.",
+    invalidAnswer: (count) =>
+      `Answer with numbers from the list (1 to ${count}), 'all' or Enter.`,
+    unknown: (ids, valid) =>
+      `Unknown fixes: ${ids}. The possible ones are: ${valid}.`,
+    shell: (rc) => `rewrite shell.sh and the line in ${rc}`,
+    protection: (settings) =>
+      `add the rule that keeps Claude from reading the token to ${settings}`,
+    statusline: (settings) =>
+      `replace the old command (from the clone) with the current one in ${settings}`,
+    appDir: (folder) => `give write permission to ${folder}`,
+  },
 };
 
 const ptBr = {
@@ -1062,6 +1083,27 @@ const ptBr = {
     quota: "cota de disco excedida",
     busy: "arquivo ocupado ou mexido por outra instância",
     input: "entrada inesperada do Claude Code",
+  },
+  fix: {
+    canFix: "Posso consertar:",
+    onlyRecommend: "Só recomendo:",
+    question: "Quais consertar? (1, 2, ... ou todos; Enter: nenhum):",
+    nothing: "Nada para consertar sozinho.",
+    fixed: (action) => `Consertado: ${action}`,
+    couldNot: (action, error) => `Não consegui: ${action} (${error})`,
+    checkingAgain: "Conferindo de novo:",
+    howToApply:
+      "Para aplicar, rode 'bcct health --fix --yes' ou escolha com '--only shell,protection'.",
+    invalidAnswer: (count) =>
+      `Responda com números da lista (1 a ${count}), 'todos' ou Enter.`,
+    unknown: (ids, valid) =>
+      `Consertos desconhecidos: ${ids}. Os possíveis são: ${valid}.`,
+    shell: (rc) => `regravar o shell.sh e a linha do ${rc}`,
+    protection: (settings) =>
+      `adicionar a regra que impede o Claude de ler o token em ${settings}`,
+    statusline: (settings) =>
+      `trocar o comando antigo (do clone) pelo atual em ${settings}`,
+    appDir: (folder) => `dar permissão de escrita em ${folder}`,
   },
 };
 

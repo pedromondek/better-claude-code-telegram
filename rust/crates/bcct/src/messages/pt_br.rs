@@ -1,5 +1,5 @@
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, HealthDetail, HealthGroupTitles, HealthLabels,
+    BcctChoices, BcctHints, ChangeKinds, FixTexts, HealthDetail, HealthGroupTitles, HealthLabels,
     HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
     StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
@@ -606,5 +606,27 @@ pub(super) const MESSAGES: Messages = Messages {
         quota: "cota de disco excedida",
         busy: "arquivo ocupado ou mexido por outra instância",
         input: "entrada inesperada do Claude Code",
+    },
+    fix: FixTexts {
+        can_fix: "Posso consertar:",
+        only_recommend: "Só recomendo:",
+        question: "Quais consertar? (1, 2, ... ou todos; Enter: nenhum):",
+        nothing: "Nada para consertar sozinho.",
+        fixed: |action| format!("Consertado: {action}"),
+        could_not: |action, error| format!("Não consegui: {action} ({error})"),
+        checking_again: "Conferindo de novo:",
+        how_to_apply: "Para aplicar, rode 'bcct health --fix --yes' ou escolha com '--only shell,protection'.",
+        invalid_answer: |count| {
+            format!("Responda com números da lista (1 a {count}), 'todos' ou Enter.")
+        },
+        unknown: |ids, valid| format!("Consertos desconhecidos: {ids}. Os possíveis são: {valid}."),
+        shell: |rc| format!("regravar o shell.sh e a linha do {rc}"),
+        protection: |settings| {
+            format!("adicionar a regra que impede o Claude de ler o token em {settings}")
+        },
+        statusline: |settings| {
+            format!("trocar o comando antigo (do clone) pelo atual em {settings}")
+        },
+        app_dir: |folder| format!("dar permissão de escrita em {folder}"),
     },
 };

@@ -313,6 +313,19 @@ pub fn open_notices(app_dir: &Path) -> Vec<Notice> {
         .collect()
 }
 
+pub fn clear_reason(app_dir: &Path, reason: Reason) {
+    let mut state = State::load(app_dir);
+    let before = state.notices.len();
+
+    state
+        .notices
+        .retain(|_, (notice, _)| notice.reason != reason);
+
+    if state.notices.len() != before {
+        state.save(app_dir);
+    }
+}
+
 #[must_use]
 pub fn succeeded(app_dir: &Path, event: Mode) -> Option<String> {
     let mut state = State::load(app_dir);

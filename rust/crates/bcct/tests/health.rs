@@ -13,8 +13,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use bcct::health::{Machine, Screen, run};
+use bcct::health::{Machine, Screen, run, run_with};
 use bcct::js::stringify;
+use bcct::prompt::{FakeCall, FakePrompter, Prompter, Reply};
 use bcct::setup::{shell_script, whisper_python_works};
 use bcct::spinner::Terminal;
 use bcct::telegram::{API_ROOT_ENV, DEFAULT_API_ROOT, api_root, post_json, request_url};
@@ -624,6 +625,30 @@ fn run_prepared(
     colorize: bool,
     prepare: &dyn Fn(&Path),
 ) -> (u8, String) {
+    let args: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
+
+    sandboxed(scenario, prepare, |machine, root| {
+        let mut err = Vec::new();
+        let mut screen = Screen {
+            out,
+            err: &mut err,
+            terminal,
+            colorize_out: false,
+            colorize_err: colorize,
+            spin: &|_, _| None,
+        };
+
+        let status = run(&args, machine, &mut screen);
+
+        (status, placeholders(&String::from_utf8(err).unwrap(), root))
+    })
+}
+
+fn sandboxed<R>(
+    scenario: &Value,
+    prepare: &dyn Fn(&Path),
+    body: impl FnOnce(&Machine<'_>, &Path) -> R,
+) -> R {
     let fixture = frozen(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let root = sandbox();
@@ -659,23 +684,56 @@ fn run_prepared(
         python_works: &whisper_python_works,
         fetch: &post_json,
     };
-    let mut err = Vec::new();
-    let mut screen = Screen {
-        out,
-        err: &mut err,
-        terminal,
-        colorize_out: false,
-        colorize_err: colorize,
-        spin: &|_, _| None,
-    };
-    let args: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
 
-    let status = run(&args, &machine, &mut screen);
-    let shown = placeholders(&String::from_utf8(err).unwrap(), root.path());
+    let result = body(&machine, root.path());
 
     writable_again(root.path());
 
-    (status, shown)
+    result
+}
+
+struct Fixed {
+    status: u8,
+    out: String,
+    err: String,
+}
+
+fn fixing(
+    scenario: &Value,
+    args: &[&str],
+    ask: Option<&mut FakePrompter>,
+    prepare: &dyn Fn(&Path),
+    inspect: &dyn Fn(&Path),
+) -> Fixed {
+    let args: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
+
+    sandboxed(scenario, prepare, |machine, root| {
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let mut screen = Screen {
+            out: &mut out,
+            err: &mut err,
+            terminal: None,
+            colorize_out: false,
+            colorize_err: false,
+            spin: &|_, _| None,
+        };
+
+        let status = run_with(
+            &args,
+            machine,
+            &mut screen,
+            ask.map(|ask| ask as &mut dyn Prompter),
+        );
+
+        inspect(root);
+
+        Fixed {
+            status,
+            out: placeholders(&String::from_utf8(out).unwrap(), root),
+            err: placeholders(&String::from_utf8(err).unwrap(), root),
+        }
+    })
 }
 
 fn writable_again(folder: &Path) {
@@ -1114,5 +1172,508 @@ fn an_active_line_in_another_rc_counts_over_a_commented_one() {
             write(&root.join("home/.zshrc"), &active, 0o600);
         }),
         (0, "✔ Shell: loaded by {root}/home/.zshrc".to_owned())
+    );
+}
+
+const SHELL_FIX: &str = "rewrite shell.sh and the line in {root}/home/.bashrc";
+const QUESTION: &str = "Which ones? (1, 2, ... or all; Enter: none):";
+
+fn without_shell_script(root: &Path) {
+    std::fs::remove_file(root.join("app/shell.sh")).unwrap();
+}
+
+fn healthy_install_out() -> String {
+    fixing(&healthy(), &["install"], None, &|_| {}, &|_| {}).out
+}
+
+fn healthy_out() -> String {
+    text(&healthy(), "stdout").to_owned()
+}
+
+fn the_script_is_current(root: &Path) {
+    let app = root.join("app");
+
+    assert_eq!(
+        std::fs::read_to_string(app.join("shell.sh")).unwrap(),
+        shell_script(&app, false)
+    );
+}
+
+fn the_script_is_missing(root: &Path) {
+    assert!(!root.join("app/shell.sh").exists());
+}
+
+fn ask(replies: Vec<Reply>) -> FakePrompter {
+    FakePrompter::new(true).with_replies(replies.into_iter().chain([Reply::End]))
+}
+
+#[test]
+fn a_healthy_machine_has_nothing_to_fix_and_asks_nothing() {
+    let mut prompter = ask(vec![]);
+    let fixed = fixing(
+        &healthy(),
+        &["--fix"],
+        Some(&mut prompter),
+        &|_| {},
+        &|_| {},
+    );
+
+    assert_eq!(fixed.status, 0);
+    assert_eq!(
+        fixed.out,
+        format!("{}\nNothing I can fix on my own.\n", healthy_out())
+    );
+    assert_eq!(prompter.calls(), &[]);
+}
+
+#[test]
+fn the_number_typed_fixes_the_shell_and_the_health_runs_again() {
+    let mut prompter = ask(vec![Reply::Text("1".to_owned())]);
+    let fixed = fixing(
+        &healthy(),
+        &["install", "--fix"],
+        Some(&mut prompter),
+        &without_shell_script,
+        &the_script_is_current,
+    );
+
+    assert_eq!(fixed.status, 0);
+    assert!(
+        fixed.out.contains(&format!(
+            "\nI can fix:\n  1. Shell: {SHELL_FIX}\n✔ Fixed: {SHELL_FIX}\n\nChecking again:\n"
+        )),
+        "{}",
+        fixed.out
+    );
+    assert!(
+        fixed
+            .out
+            .ends_with(&format!("Checking again:\n{}", healthy_install_out()))
+    );
+    assert_eq!(
+        prompter.calls(),
+        &[FakeCall::Line {
+            prompt: QUESTION.to_owned()
+        }]
+    );
+    assert_eq!(fixed.err, "");
+}
+
+#[test]
+fn an_answer_outside_the_list_is_asked_again_until_a_valid_one() {
+    let mut prompter = ask(vec![
+        Reply::Text("9".to_owned()),
+        Reply::Text("x".to_owned()),
+        Reply::Text("todos".to_owned()),
+    ]);
+    let fixed = fixing(
+        &healthy(),
+        &["install", "--fix"],
+        Some(&mut prompter),
+        &without_shell_script,
+        &the_script_is_current,
+    );
+    let invalid = "Answer with numbers from the list (1 to 1), 'all' or Enter.".to_owned();
+
+    assert_eq!(fixed.status, 0, "{}", fixed.out);
+    assert_eq!(prompter.reports(), &[invalid.clone(), invalid]);
+    assert_eq!(prompter.calls().len(), 3);
+}
+
+#[test]
+fn an_empty_or_closed_answer_fixes_nothing() {
+    for reply in [Reply::Text(String::new()), Reply::End] {
+        let mut prompter = ask(vec![reply.clone()]);
+        let fixed = fixing(
+            &healthy(),
+            &["--fix"],
+            Some(&mut prompter),
+            &without_shell_script,
+            &the_script_is_missing,
+        );
+
+        assert_eq!(fixed.status, 1, "{reply:?}");
+        assert!(
+            fixed.out.ends_with(&format!("  1. Shell: {SHELL_FIX}\n")),
+            "{reply:?}"
+        );
+    }
+}
+
+#[test]
+fn without_a_terminal_the_plan_says_how_to_apply_and_changes_nothing() {
+    let how = "To apply, run 'bcct health --fix --yes' or pick with '--only shell,protection'.\n";
+    let mut piped = FakePrompter::new(false).with_replies([Reply::End]);
+
+    for prompter in [Some(&mut piped), None] {
+        let fixed = fixing(
+            &healthy(),
+            &["--fix"],
+            prompter,
+            &without_shell_script,
+            &the_script_is_missing,
+        );
+
+        assert_eq!(fixed.status, 1);
+        assert!(
+            fixed
+                .out
+                .ends_with(&format!("  1. Shell: {SHELL_FIX}\n{how}")),
+            "{}",
+            fixed.out
+        );
+    }
+
+    assert_eq!(piped.calls(), &[]);
+}
+
+#[test]
+fn yes_fixes_everything_in_the_plan_and_only_picks_by_id() {
+    for args in [
+        &["install", "--fix", "--yes"][..],
+        &["install", "--fix", "--only", "shell"][..],
+        &["install", "--fix", "--only=shell,statusline"][..],
+    ] {
+        let fixed = fixing(
+            &healthy(),
+            args,
+            None,
+            &without_shell_script,
+            &the_script_is_current,
+        );
+
+        assert_eq!(fixed.status, 0, "{args:?}");
+        assert!(
+            fixed.out.contains(&format!("✔ Fixed: {SHELL_FIX}\n")),
+            "{args:?}"
+        );
+    }
+
+    let fixed = fixing(
+        &healthy(),
+        &["--fix", "--only", "protection"],
+        None,
+        &without_shell_script,
+        &the_script_is_missing,
+    );
+
+    assert_eq!(fixed.status, 1);
+    assert!(
+        fixed.out.ends_with(&format!("  1. Shell: {SHELL_FIX}\n")),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn an_unknown_fix_id_stops_before_any_check() {
+    let fixed = fixing(
+        &healthy(),
+        &["--fix", "--only", "nope,shell,other"],
+        None,
+        &|_| {},
+        &|_| {},
+    );
+
+    assert_eq!(fixed.status, 1);
+    assert_eq!(fixed.out, "");
+    assert_eq!(
+        fixed.err,
+        "✘ Unknown fixes: nope, other. The possible ones are: shell, protection, statusline, app.\n"
+    );
+}
+
+#[test]
+fn the_missing_token_rule_and_the_old_clone_statusline_are_fixed_in_the_settings() {
+    let mut scenario = healthy();
+    scenario["files"]["claude/settings.json"] = json!(
+        r#"{"statusLine":{"type":"command","command":"node \"{repo}/plugins/telegram-hooks/statusline.mjs\""},"permissions":{}}"#
+    );
+    let settings = "{root}/claude/settings.json";
+    let fixed = fixing(
+        &scenario,
+        &["security", "extras", "--fix", "--yes"],
+        None,
+        &|_| {},
+        &|root| {
+            let saved: Value = serde_json::from_str(
+                &std::fs::read_to_string(root.join("claude/settings.json")).unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(
+                saved["statusLine"]["command"],
+                json!(format!("\"{}/app/bin/bcct\" statusline", root.display()))
+            );
+            assert_eq!(
+                saved["permissions"]["deny"],
+                json!([format!("Read(/{}/state/.env)", root.display())])
+            );
+        },
+    );
+
+    assert_eq!(fixed.status, 0);
+    assert!(
+        fixed.out.contains(&format!(
+            "  1. Token protection: add the rule that keeps Claude from reading the token to {settings}\n  2. Status line: replace the old command (from the clone) with the current one in {settings}\n"
+        )),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn an_app_folder_of_the_user_gets_write_permission_and_its_hook_warning_goes_away() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+    let warning = json!({
+        "transient": [],
+        "notices": {"Stop": {"reason": "no-permission", "file": "/x/pings/s1.json", "count": 0, "told": false}}
+    })
+    .to_string();
+    let fixed = fixing(
+        &owned,
+        &["install", "--fix", "--yes"],
+        None,
+        &|root| {
+            write(&root.join("app/hook-failures.json"), &warning, 0o600);
+            std::fs::create_dir_all(root.join("app/pings")).unwrap();
+            set_mode(&root.join("app/pings"), 0o500);
+        },
+        &|root| {
+            let saved: Value = serde_json::from_str(
+                &std::fs::read_to_string(root.join("app/hook-failures.json")).unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(saved["notices"], json!({}));
+        },
+    );
+
+    assert_eq!(fixed.status, 0, "{}", fixed.out);
+    assert!(
+        fixed
+            .out
+            .contains("✔ Fixed: give write permission to {root}/app/pings\n")
+    );
+    assert!(
+        fixed
+            .out
+            .ends_with("✔ App folder: writable\n✔ Hooks: no recent failures\n")
+    );
+}
+
+#[test]
+fn a_fix_that_fails_says_why_and_the_others_still_run() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+    let fixed = fixing(
+        &owned,
+        &["install", "--fix", "--yes"],
+        None,
+        &|root| {
+            without_shell_script(root);
+            set_mode(&root.join("app"), 0o500);
+        },
+        &the_script_is_missing,
+    );
+
+    assert_eq!(fixed.status, 1);
+    assert!(
+        fixed.out.contains(&format!(
+            "✘ Could not: {SHELL_FIX} (permission denied)\n✔ Fixed: give write permission to {{root}}/app\n"
+        )),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn what_cannot_be_fixed_is_only_recommended() {
+    let missing =
+        "  - Launcher: no launcher in {root}/app/bin. Run 'npx better-claude-code-telegram'.\n";
+    let no_launcher = |root: &Path| std::fs::remove_file(root.join("app/bin/bcct")).unwrap();
+
+    let fixed = fixing(
+        &healthy(),
+        &["install", "--fix"],
+        None,
+        &no_launcher,
+        &|_| {},
+    );
+
+    assert_eq!(fixed.status, 1);
+    assert!(
+        fixed.out.ends_with(&format!(
+            "\nNothing I can fix on my own.\nI only recommend:\n{missing}"
+        )),
+        "{}",
+        fixed.out
+    );
+
+    let fixed = fixing(
+        &healthy(),
+        &["install", "--fix"],
+        None,
+        &|root| {
+            no_launcher(root);
+            without_shell_script(root);
+        },
+        &|_| {},
+    );
+
+    assert!(
+        fixed.out.contains(&format!(
+            "I can fix:\n  1. Shell: {SHELL_FIX}\nI only recommend:\n{missing}"
+        )),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn the_plan_follows_the_language_of_the_config() {
+    let scenario = scenario_named(&frozen(FIXTURE), "locale from a pt-br config").clone();
+    let fixed = fixing(&scenario, &["--fix"], None, &without_shell_script, &|_| {});
+
+    assert!(
+        fixed.out.ends_with(
+            "\nPosso consertar:\n  1. Shell: regravar o shell.sh e a linha do {root}/home/.bashrc\nPara aplicar, rode 'bcct health --fix --yes' ou escolha com '--only shell,protection'.\n"
+        ),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
+    let planned = fixing(
+        &healthy(),
+        &["install", "--json", "--fix"],
+        None,
+        &without_shell_script,
+        &|_| {},
+    );
+    let output: Value = serde_json::from_str(&planned.out).unwrap();
+
+    assert_eq!(planned.status, 1);
+    assert_eq!(
+        output["fixes"],
+        json!({
+            "available": [{"id": "shell", "check": "shell", "action": SHELL_FIX}],
+            "applied": [],
+            "skipped": [],
+        })
+    );
+    assert_eq!(output["results"][5]["status"], json!("fail"));
+
+    let applied = fixing(
+        &healthy(),
+        &["install", "--json", "--fix", "--only", "shell,statusline"],
+        None,
+        &without_shell_script,
+        &the_script_is_current,
+    );
+    let output: Value = serde_json::from_str(&applied.out).unwrap();
+
+    assert_eq!(applied.status, 0);
+    assert_eq!(output["fixes"]["applied"], json!(["shell"]));
+    assert_eq!(
+        output["fixes"]["skipped"],
+        json!([{"id": "statusline", "reason": "not needed"}])
+    );
+    assert_eq!(output["results"][5]["status"], json!("ok"));
+}
+
+#[test]
+fn an_rc_that_cannot_be_rewritten_fails_the_shell_fix_with_the_setup_message() {
+    let fixed = fixing(
+        &healthy(),
+        &["install", "--fix", "--yes"],
+        None,
+        &|root| {
+            write(&root.join("home/.bashrc"), "export EDITOR=vi\n", 0o400);
+            set_mode(&root.join("home"), 0o500);
+        },
+        &|root| {
+            assert_eq!(
+                std::fs::read_to_string(root.join("home/.bashrc")).unwrap(),
+                "export EDITOR=vi\n"
+            );
+        },
+    );
+
+    assert_eq!(fixed.status, 1);
+    assert!(
+        fixed.out.contains(&format!("✘ Could not: {SHELL_FIX} (")),
+        "{}",
+        fixed.out
+    );
+    assert!(!fixed.out.contains("✔ Fixed"), "{}", fixed.out);
+}
+
+#[test]
+fn a_fix_plan_that_cannot_be_written_ends_with_failure_and_says_so() {
+    let mut out = Failing::new(|_| true);
+
+    assert_eq!(
+        run_failing(
+            &healthy(),
+            &["install", "--json", "--fix"],
+            &mut out,
+            None,
+            false
+        ),
+        (1, NOT_SHOWN.to_owned())
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn the_binary_with_fix_and_no_terminal_only_says_how_to_apply() {
+    let scenario = healthy();
+    let root = sandbox();
+    let telegram = FakeTelegram::start(&scenario);
+    materialize(root.path(), &filled(&scenario["files"], now_ms()));
+    without_shell_script(root.path());
+
+    let output = Command::new(BCCT)
+        .args(["health", "install", "--fix"])
+        .env_clear()
+        .envs(support::coverage_env())
+        .envs(variables_of(&scenario, root.path(), &telegram.root))
+        .current_dir(root.path())
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8(output.stdout).unwrap().ends_with(
+        "To apply, run 'bcct health --fix --yes' or pick with '--only shell,protection'.\n"
+    ));
+    the_script_is_missing(root.path());
+}
+
+#[test]
+fn a_json_fix_that_fails_is_listed_as_skipped_with_its_error() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+    let fixed = fixing(
+        &owned,
+        &["install", "--json", "--fix", "--only", "shell"],
+        None,
+        &|root| {
+            without_shell_script(root);
+            set_mode(&root.join("app"), 0o500);
+        },
+        &|_| {},
+    );
+    let output: Value = serde_json::from_str(&fixed.out).unwrap();
+
+    assert_eq!(fixed.status, 1);
+    assert_eq!(output["fixes"]["applied"], json!([]));
+    assert_eq!(
+        output["fixes"]["skipped"],
+        json!([{"id": "shell", "reason": "permission denied"}])
     );
 }

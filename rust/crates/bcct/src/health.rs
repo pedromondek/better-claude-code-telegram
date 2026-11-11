@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use serde_json::{Map, Value, json};
 
 use crate::files::read_json;
+use crate::health_fix::{FixRequest, FixRun, parse_only, run_fix};
 use crate::hook::Abort;
 use crate::hook::{millis, now_ms};
 use crate::hook_failures::{Reason, open_notices};
@@ -13,6 +14,7 @@ use crate::js::{
 };
 use crate::messages::{Messages, messages_for};
 use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE};
+use crate::prompt::{Prompter, create_prompter};
 use crate::self_install::Store;
 use crate::setup::{
     ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
@@ -28,6 +30,10 @@ use crate::telegram::{api_root, call, post_json, property};
 use crate::ui::{fail, section, should_colorize, skipped, success};
 
 const JSON_FLAG: &str = "--json";
+const FIX_FLAG: &str = "--fix";
+const YES_FLAG: &str = "--yes";
+const ONLY_FLAG: &str = "--only";
+const ONLY_PREFIX: &str = "--only=";
 const ALL_ANSWERS: [&str; 2] = ["all", "tudo"];
 const FAILURE: u8 = 1;
 const UNDEFINED_PATH: &str = "The \"path\" argument must be of type string. Received undefined";
@@ -183,7 +189,8 @@ impl Check {
         }
     }
 
-    fn label(self, messages: &Messages) -> &'static str {
+    #[must_use]
+    pub fn label(self, messages: &Messages) -> &'static str {
         let labels = messages.health_labels;
 
         match self {
@@ -325,7 +332,20 @@ fn write_blocked(
     }
 }
 
-fn owner_of(path: &Path) -> Option<u32> {
+pub(crate) fn first_blocked(app: &Path) -> Option<(PathBuf, io::ErrorKind)> {
+    [app.to_path_buf(), app.join("asks"), app.join("pings")]
+        .into_iter()
+        .filter(|folder| folder.is_dir())
+        .find_map(|folder| {
+            tempfile::Builder::new()
+                .prefix(".bcct-probe-")
+                .tempfile_in(&folder)
+                .err()
+                .map(|error| (folder, error.kind()))
+        })
+}
+
+pub(crate) fn owner_of(path: &Path) -> Option<u32> {
     let metadata = std::fs::metadata(path).ok()?;
 
     #[cfg(unix)]
@@ -450,22 +470,10 @@ impl Checks<'_> {
     }
 
     fn app_dir(&self) -> Verdict {
-        let app = &self.paths.app_dir;
-
-        for folder in [app.clone(), app.join("asks"), app.join("pings")] {
-            if !folder.is_dir() {
-                continue;
-            }
-
-            if let Err(error) = tempfile::Builder::new()
-                .prefix(".bcct-probe-")
-                .tempfile_in(&folder)
-            {
-                return self.blocked(&folder, error.kind());
-            }
+        match first_blocked(&self.paths.app_dir) {
+            Some((folder, kind)) => self.blocked(&folder, kind),
+            None => ok(self.messages.health_detail.app_writable),
         }
-
-        ok(self.messages.health_detail.app_writable)
     }
 
     fn blocked(&self, folder: &Path, kind: io::ErrorKind) -> Verdict {
@@ -841,7 +849,7 @@ pub fn format_entry(entry: &Entry, messages: &Messages, colorize: bool) -> Strin
     }
 }
 
-fn write_all(out: &mut dyn Write, text: &str) -> io::Result<()> {
+pub(crate) fn write_all(out: &mut dyn Write, text: &str) -> io::Result<()> {
     out.write_all(text.as_bytes()).and_then(|()| out.flush())
 }
 
@@ -911,20 +919,90 @@ fn run_groups(
     Ok(results)
 }
 
-fn as_json(results: &[Entry]) -> String {
-    let entries: Vec<Value> = results
-        .iter()
-        .map(|entry| {
-            json!({
-                "group": entry.group.as_str(),
-                "check": entry.check.as_str(),
-                "status": entry.status.as_str(),
-                "detail": entry.detail,
+pub(crate) fn entries_json(results: &[Entry]) -> Value {
+    Value::Array(
+        results
+            .iter()
+            .map(|entry| {
+                json!({
+                    "group": entry.group.as_str(),
+                    "check": entry.check.as_str(),
+                    "status": entry.status.as_str(),
+                    "detail": entry.detail,
+                })
             })
-        })
-        .collect();
+            .collect(),
+    )
+}
 
-    format!("{}\n", stringify_pretty(&Value::Array(entries)))
+fn as_json(results: &[Entry]) -> String {
+    format!("{}\n", stringify_pretty(&entries_json(results)))
+}
+
+pub(crate) fn status_of(results: &[Entry]) -> u8 {
+    if results.iter().any(|entry| entry.status == Status::Fail) {
+        FAILURE
+    } else {
+        0
+    }
+}
+
+pub(crate) fn collect(
+    groups: &[Group],
+    machine: &Machine<'_>,
+    messages: &'static Messages,
+    paths: &SetupPaths,
+    screen: &mut Screen<'_>,
+    show: bool,
+) -> Result<Vec<Entry>, String> {
+    let mut checks = Checks {
+        machine,
+        messages,
+        paths: paths.clone(),
+        token: None,
+        bot: None,
+    };
+
+    run_groups(groups, &mut checks, screen, show)
+}
+
+#[derive(Debug, Default)]
+struct Options {
+    json: bool,
+    fix: bool,
+    yes: bool,
+    only: Vec<String>,
+    groups: Vec<String>,
+}
+
+fn options_of(args: &[String]) -> Options {
+    let mut options = Options::default();
+    let mut args = args.iter();
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            JSON_FLAG => options.json = true,
+            FIX_FLAG => options.fix = true,
+            YES_FLAG => options.yes = true,
+            ONLY_FLAG => options
+                .only
+                .extend(args.next().map(|ids| split_ids(ids)).unwrap_or_default()),
+            other => match other.strip_prefix(ONLY_PREFIX) {
+                Some(ids) => options.only.extend(split_ids(ids)),
+                None => options.groups.push(other.to_owned()),
+            },
+        }
+    }
+
+    options
+}
+
+fn split_ids(ids: &str) -> Vec<String> {
+    ids.split(',')
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 fn report(screen: &mut Screen<'_>, error: &str) -> u8 {
@@ -953,40 +1031,56 @@ pub fn check_all(
 }
 
 pub fn run(args: &[String], machine: &Machine<'_>, screen: &mut Screen<'_>) -> u8 {
+    run_with(args, machine, screen, None)
+}
+
+pub fn run_with(
+    args: &[String],
+    machine: &Machine<'_>,
+    screen: &mut Screen<'_>,
+    ask: Option<&mut dyn Prompter>,
+) -> u8 {
     let paths = SetupPaths::resolve(machine.var, machine.home);
     let messages = messages_for(setup_locale(&paths.app_dir, machine.var));
-    let json = args.iter().any(|arg| arg == JSON_FLAG);
-    let named: Vec<String> = args
-        .iter()
-        .filter(|arg| *arg != JSON_FLAG)
-        .cloned()
-        .collect();
-    let groups = match parse_health_groups(&named, messages) {
+    let options = options_of(args);
+    let groups = match parse_health_groups(&options.groups, messages) {
         Ok(groups) => groups,
         Err(error) => return report(screen, &error),
     };
-    let mut checks = Checks {
-        machine,
-        messages,
-        paths,
-        token: None,
-        bot: None,
+    let only = match parse_only(&options.only, messages) {
+        Ok(only) => only,
+        Err(error) => return report(screen, &error),
+    };
+    let results = match collect(&groups, machine, messages, &paths, screen, !options.json) {
+        Ok(results) => results,
+        Err(error) => return report(screen, &error),
     };
 
-    match run_groups(&groups, &mut checks, screen, !json) {
-        Ok(results) => {
-            if json && write_all(screen.out, &as_json(&results)).is_err() {
-                return report(screen, messages.health_not_shown);
-            }
+    if options.fix {
+        let run = FixRun {
+            groups: &groups,
+            machine,
+            paths: &paths,
+            messages,
+            screen,
+            json: options.json,
+        };
+        let request = FixRequest {
+            yes: options.yes,
+            only,
+        };
 
-            if results.iter().any(|entry| entry.status == Status::Fail) {
-                FAILURE
-            } else {
-                0
-            }
-        }
-        Err(error) => report(screen, &error),
+        return match run_fix(run, results, &request, ask) {
+            Ok(status) => status,
+            Err(error) => report(screen, &error),
+        };
     }
+
+    if options.json && write_all(screen.out, &as_json(&results)).is_err() {
+        return report(screen, messages.health_not_shown);
+    }
+
+    status_of(&results)
 }
 
 pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
@@ -1027,7 +1121,11 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect();
 
-    run(&args, &machine, &mut screen)
+    let mut prompter = create_prompter(&var);
+    let status = run_with(&args, &machine, &mut screen, Some(prompter.as_mut()));
+
+    prompter.close();
+    status
 }
 
 #[cfg(test)]

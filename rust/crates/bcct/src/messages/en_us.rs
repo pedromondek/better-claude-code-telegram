@@ -1,5 +1,5 @@
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, HealthDetail, HealthGroupTitles, HealthLabels,
+    BcctChoices, BcctHints, ChangeKinds, FixTexts, HealthDetail, HealthGroupTitles, HealthLabels,
     HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
     StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
@@ -596,5 +596,27 @@ pub(super) const MESSAGES: Messages = Messages {
         quota: "disk quota exceeded",
         busy: "file busy or changed by another instance",
         input: "unexpected input from Claude Code",
+    },
+    fix: FixTexts {
+        can_fix: "I can fix:",
+        only_recommend: "I only recommend:",
+        question: "Which ones? (1, 2, ... or all; Enter: none):",
+        nothing: "Nothing I can fix on my own.",
+        fixed: |action| format!("Fixed: {action}"),
+        could_not: |action, error| format!("Could not: {action} ({error})"),
+        checking_again: "Checking again:",
+        how_to_apply: "To apply, run 'bcct health --fix --yes' or pick with '--only shell,protection'.",
+        invalid_answer: |count| {
+            format!("Answer with numbers from the list (1 to {count}), 'all' or Enter.")
+        },
+        unknown: |ids, valid| format!("Unknown fixes: {ids}. The possible ones are: {valid}."),
+        shell: |rc| format!("rewrite shell.sh and the line in {rc}"),
+        protection: |settings| {
+            format!("add the rule that keeps Claude from reading the token to {settings}")
+        },
+        statusline: |settings| {
+            format!("replace the old command (from the clone) with the current one in {settings}")
+        },
+        app_dir: |folder| format!("give write permission to {folder}"),
     },
 };
