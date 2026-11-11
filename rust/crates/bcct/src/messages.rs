@@ -20,6 +20,7 @@ pub struct StepTitles {
     pub transcription: &'static str,
     pub inbox: &'static str,
     pub statusline: &'static str,
+    pub path: &'static str,
     pub health: &'static str,
 }
 
@@ -67,6 +68,7 @@ pub struct HealthLabels {
     pub bun: &'static str,
     pub plugins: &'static str,
     pub shell: &'static str,
+    pub path: &'static str,
     pub token: &'static str,
     pub groups: &'static str,
     pub pairing: &'static str,
@@ -97,6 +99,9 @@ pub struct HealthDetail {
     pub not_installed: fn(&str) -> String,
     pub loaded_in: fn(&str) -> String,
     pub not_loaded: fn(&str) -> String,
+    pub path_on: fn(&str) -> String,
+    pub path_pending: fn(&str) -> String,
+    pub path_off: &'static str,
     pub bot: fn(&str) -> String,
     pub no_token: &'static str,
     pub paired: fn(&str) -> String,
@@ -425,6 +430,11 @@ pub struct Messages {
     pub self_install_not_bcct: &'static str,
     pub self_install_failed: &'static str,
     pub self_install_usage: &'static str,
+    pub path_question: &'static str,
+    pub path_added: fn(&str) -> String,
+    pub path_already: fn(&str) -> String,
+    pub path_removed: fn(&str) -> String,
+    pub path_off: &'static str,
 }
 
 pub const EN_US: Messages = en_us::MESSAGES;

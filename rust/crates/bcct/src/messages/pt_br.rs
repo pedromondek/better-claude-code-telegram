@@ -25,6 +25,7 @@ pub(super) const MESSAGES: Messages = Messages {
         transcription: "Transcrição de áudio",
         inbox: "Arquivos recebidos",
         statusline: "Statusline",
+        path: "Comando bcct no terminal",
         health: "Verificação final",
     },
     health_has_failures: |command| {
@@ -166,6 +167,7 @@ pub(super) const MESSAGES: Messages = Messages {
         bun: "bun",
         plugins: "Plugins",
         shell: "Shell",
+        path: "bcct no PATH",
         token: "Token do bot",
         groups: "Grupos",
         pairing: "Pareamento",
@@ -188,6 +190,9 @@ pub(super) const MESSAGES: Messages = Messages {
         not_loaded: |file| {
             format!("não carregado por {file}. Rode 'npx better-claude-code-telegram plugin'.")
         },
+        path_on: str::to_owned,
+        path_pending: |file| format!("ligado em {file}; vale nos terminais novos"),
+        path_off: "fora (opcional). Rode 'npx better-claude-code-telegram path'.",
         bot: |username| format!("@{username}"),
         no_token: "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
         paired: |account| format!("pareado com uma conta ({account})"),
@@ -537,4 +542,11 @@ pub(super) const MESSAGES: Messages = Messages {
     self_install_not_bcct: "O arquivo não respondeu como bcct; nada foi instalado.",
     self_install_failed: "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
     self_install_usage: "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
+    path_question: "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
+    path_added: |file| {
+        format!("{file} passou a adicionar o bcct ao PATH. Vale nos terminais novos.")
+    },
+    path_already: |file| format!("{file} já adiciona o bcct ao PATH."),
+    path_removed: |file| format!("{file} não adiciona mais o bcct ao PATH."),
+    path_off: "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
 };

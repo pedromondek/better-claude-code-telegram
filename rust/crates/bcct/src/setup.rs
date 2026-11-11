@@ -35,6 +35,8 @@ const LAUNCHER: &str = if cfg!(windows) {
     "bin/bcct"
 };
 const SHELL_LAUNCHER: &str = "bin/bcct";
+const LAUNCHER_FOLDER: &str = "bin";
+pub const COMMAND_ON_PATH_KEY: &str = "commandOnPath";
 const DEFAULT_SHELL: &str = "bash";
 const WHISPER_CHECK: &str = "import importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\"";
 const BOT_PID_FILE: &str = "bot.pid";
@@ -417,10 +419,9 @@ fn single_quoted(text: &str) -> String {
 }
 
 #[must_use]
-pub fn shell_script(app_dir: &Path) -> String {
+pub fn shell_script(app_dir: &Path, on_path: bool) -> String {
     let launcher = single_quoted(&join_path(app_dir, SHELL_LAUNCHER).to_string_lossy());
-
-    [
+    let function = [
         "claude() {",
         "  local arg",
         "  for arg in \"$@\"; do",
@@ -433,7 +434,32 @@ pub fn shell_script(app_dir: &Path) -> String {
         "}",
         "",
     ]
-    .join("\n")
+    .join("\n");
+
+    if !on_path {
+        return function;
+    }
+
+    let bin = single_quoted(&launcher_dir(app_dir).to_string_lossy());
+
+    format!(
+        "{function}case \":${{PATH}}:\" in\n  *:{bin}:*) ;;\n  *) export PATH={bin}:\"$PATH\" ;;\nesac\n"
+    )
+}
+
+#[must_use]
+pub fn launcher_dir(app_dir: &Path) -> PathBuf {
+    join_path(app_dir, LAUNCHER_FOLDER)
+}
+
+#[must_use]
+pub fn command_on_path(app_dir: &Path) -> bool {
+    read_config(app_dir).get(COMMAND_ON_PATH_KEY) == Some(&Value::Bool(true))
+}
+
+#[must_use]
+pub fn path_lists(path: Option<OsString>, folder: &Path) -> bool {
+    path.is_some_and(|path| std::env::split_paths(&path).any(|entry| entry == folder))
 }
 
 #[must_use]
@@ -636,23 +662,67 @@ mod tests {
         assert_eq!(shell_file(Path::new("/a")), PathBuf::from("/a/shell.sh"));
     }
 
+    const SHELL_FUNCTION: &str = concat!(
+        "claude() {\n",
+        "  local arg\n",
+        "  for arg in \"$@\"; do\n",
+        "    if [ \"$arg\" = \"--telegram\" ]; then\n",
+        "      '/a/it'\\''s/bin/bcct' launch \"$@\"\n",
+        "      return\n",
+        "    fi\n",
+        "  done\n",
+        "  command claude \"$@\"\n",
+        "}\n",
+    );
+
     #[test]
     fn the_shell_script_sends_only_the_telegram_launch_to_the_launcher() {
+        assert_eq!(shell_script(Path::new("/a/it's"), false), SHELL_FUNCTION);
+    }
+
+    #[test]
+    fn the_shell_script_adds_the_launcher_folder_to_the_path_once_when_asked() {
         assert_eq!(
-            shell_script(Path::new("/a/it's")),
-            concat!(
-                "claude() {\n",
-                "  local arg\n",
-                "  for arg in \"$@\"; do\n",
-                "    if [ \"$arg\" = \"--telegram\" ]; then\n",
-                "      '/a/it'\\''s/bin/bcct' launch \"$@\"\n",
-                "      return\n",
-                "    fi\n",
-                "  done\n",
-                "  command claude \"$@\"\n",
-                "}\n",
+            shell_script(Path::new("/a/it's"), true),
+            format!(
+                "{SHELL_FUNCTION}{}",
+                concat!(
+                    "case \":${PATH}:\" in\n",
+                    "  *:'/a/it'\\''s/bin':*) ;;\n",
+                    "  *) export PATH='/a/it'\\''s/bin':\"$PATH\" ;;\n",
+                    "esac\n",
+                )
             )
         );
+    }
+
+    #[test]
+    fn the_command_is_on_the_path_only_when_the_config_says_so() {
+        let folder = tempfile::tempdir().unwrap();
+        let config = folder.path().join(crate::paths::CONFIG_FILE);
+
+        assert!(!command_on_path(folder.path()));
+
+        for (text, expected) in [
+            (r#"{"commandOnPath":true}"#, true),
+            (r#"{"commandOnPath":false}"#, false),
+            (r#"{"commandOnPath":"yes"}"#, false),
+            ("{}", false),
+        ] {
+            fs::write(&config, text).unwrap();
+            assert_eq!(command_on_path(folder.path()), expected, "{text}");
+        }
+    }
+
+    #[test]
+    fn the_launcher_folder_is_on_the_path_only_when_listed_exactly() {
+        let bin = Path::new("/a/bin");
+
+        assert!(path_lists(Some(OsString::from("/x:/a/bin:/y")), bin));
+        assert!(path_lists(Some(OsString::from("/a/bin")), bin));
+        assert!(!path_lists(Some(OsString::from("/a/bin2:/a")), bin));
+        assert!(!path_lists(Some(OsString::new()), bin));
+        assert!(!path_lists(None, bin));
     }
 
     #[test]

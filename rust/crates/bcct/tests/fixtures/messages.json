@@ -20,6 +20,7 @@
     "stepTitles.transcription": "Audio transcription",
     "stepTitles.inbox": "Received files",
     "stepTitles.statusline": "Status line",
+    "stepTitles.path": "bcct command in the terminal",
     "stepTitles.health": "Final check",
     "healthHasFailures": [
       {
@@ -236,6 +237,7 @@
     "healthLabels.bun": "bun",
     "healthLabels.plugins": "Plugins",
     "healthLabels.shell": "Shell",
+    "healthLabels.path": "bcct on PATH",
     "healthLabels.token": "Bot token",
     "healthLabels.groups": "Groups",
     "healthLabels.pairing": "Pairing",
@@ -264,6 +266,14 @@
         "out": "not loaded by alpha 1. Run 'npx better-claude-code-telegram plugin'."
       }
     ],
+    "healthDetail.pathOn": [{ "args": ["alpha 1"], "out": "alpha 1" }],
+    "healthDetail.pathPending": [
+      {
+        "args": ["alpha 1"],
+        "out": "turned on in alpha 1; it applies to new terminals"
+      }
+    ],
+    "healthDetail.pathOff": "off (optional). Run 'npx better-claude-code-telegram path'.",
     "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
     "healthDetail.noToken": "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
     "healthDetail.paired": [
@@ -838,7 +848,24 @@
     "selfInstallHashMismatch": "The file does not match the expected hash; nothing was installed.",
     "selfInstallNotBcct": "The file did not answer as bcct; nothing was installed.",
     "selfInstallFailed": "Could not install bcct: the file or the app folder could not be read or written.",
-    "selfInstallUsage": "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]"
+    "selfInstallUsage": "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+    "pathQuestion": "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
+    "pathAdded": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 now adds bcct to your PATH. It applies to new terminals."
+      }
+    ],
+    "pathAlready": [
+      { "args": ["alpha 1"], "out": "alpha 1 already adds bcct to your PATH." }
+    ],
+    "pathRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 no longer adds bcct to your PATH."
+      }
+    ],
+    "pathOff": "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'."
   },
   "pt-br": {
     "statusMain": "(Principal)",
@@ -861,6 +888,7 @@
     "stepTitles.transcription": "Transcrição de áudio",
     "stepTitles.inbox": "Arquivos recebidos",
     "stepTitles.statusline": "Statusline",
+    "stepTitles.path": "Comando bcct no terminal",
     "stepTitles.health": "Verificação final",
     "healthHasFailures": [
       {
@@ -1083,6 +1111,7 @@
     "healthLabels.bun": "bun",
     "healthLabels.plugins": "Plugins",
     "healthLabels.shell": "Shell",
+    "healthLabels.path": "bcct no PATH",
     "healthLabels.token": "Token do bot",
     "healthLabels.groups": "Grupos",
     "healthLabels.pairing": "Pareamento",
@@ -1111,6 +1140,14 @@
         "out": "não carregado por alpha 1. Rode 'npx better-claude-code-telegram plugin'."
       }
     ],
+    "healthDetail.pathOn": [{ "args": ["alpha 1"], "out": "alpha 1" }],
+    "healthDetail.pathPending": [
+      {
+        "args": ["alpha 1"],
+        "out": "ligado em alpha 1; vale nos terminais novos"
+      }
+    ],
+    "healthDetail.pathOff": "fora (opcional). Rode 'npx better-claude-code-telegram path'.",
     "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
     "healthDetail.noToken": "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
     "healthDetail.paired": [
@@ -1690,6 +1727,23 @@
     "selfInstallHashMismatch": "O arquivo não confere com o hash esperado; nada foi instalado.",
     "selfInstallNotBcct": "O arquivo não respondeu como bcct; nada foi instalado.",
     "selfInstallFailed": "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
-    "selfInstallUsage": "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]"
+    "selfInstallUsage": "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
+    "pathQuestion": "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
+    "pathAdded": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 passou a adicionar o bcct ao PATH. Vale nos terminais novos."
+      }
+    ],
+    "pathAlready": [
+      { "args": ["alpha 1"], "out": "alpha 1 já adiciona o bcct ao PATH." }
+    ],
+    "pathRemoved": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 não adiciona mais o bcct ao PATH."
+      }
+    ],
+    "pathOff": "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'."
   }
 }

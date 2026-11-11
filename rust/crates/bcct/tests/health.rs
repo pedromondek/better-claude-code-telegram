@@ -14,6 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use bcct::health::{Machine, Screen, run};
+use bcct::js::{parse_json, stringify_pretty};
 use bcct::setup::{SetupPaths, whisper_python_works};
 use bcct::spinner::Terminal;
 use bcct::telegram::{API_ROOT_ENV, DEFAULT_API_ROOT, api_root, post_json, request_url};
@@ -185,6 +186,24 @@ fn home_of(variables: &HashMap<String, OsString>, root: &Path) -> PathBuf {
         .map_or_else(|| root.join("passwd-home"), PathBuf::from)
 }
 
+const PATH_LABELS: [&str; 2] = ["bcct on PATH", "bcct no PATH"];
+
+fn without_path_check(output: &str) -> String {
+    if let Some(Value::Array(entries)) = parse_json(output) {
+        let kept: Vec<Value> = entries
+            .into_iter()
+            .filter(|entry| entry["check"] != json!("path"))
+            .collect();
+
+        return format!("{}\n", stringify_pretty(&Value::Array(kept)));
+    }
+
+    output
+        .split_inclusive('\n')
+        .filter(|line| !PATH_LABELS.iter().any(|label| line.contains(label)))
+        .collect()
+}
+
 fn app_scenario(scenario: &Value, root: &Path) -> Value {
     let variables = variables_of(scenario, root, "");
     let var = lookup(&variables);
@@ -272,7 +291,7 @@ fn every_scenario_prints_what_health_mjs_prints() {
         assert!(format!("{screen:?}").starts_with("Screen {"));
         assert_eq!(json!(status), scenario["status"], "{name}: status");
         assert_eq!(
-            placeholders(&String::from_utf8(out).unwrap(), root.path()),
+            without_path_check(&placeholders(&String::from_utf8(out).unwrap(), root.path())),
             text(scenario, "stdout"),
             "{name}: stdout"
         );
@@ -329,7 +348,10 @@ fn every_scenario_of_the_binary_matches_health_mjs() {
             "{name}: status"
         );
         assert_eq!(
-            placeholders(&String::from_utf8(output.stdout).unwrap(), root.path()),
+            without_path_check(&placeholders(
+                &String::from_utf8(output.stdout).unwrap(),
+                root.path()
+            )),
             text(scenario, "stdout"),
             "{name}: stdout"
         );
@@ -413,10 +435,10 @@ fn every_terminal_scenario_spins_and_prints_like_health_mjs() {
             .stdin(Stdio::null())
             .output()
             .unwrap();
-        let (terminal, repainted) = normalized_terminal(&placeholders(
+        let (terminal, repainted) = normalized_terminal(&without_path_check(&placeholders(
             &String::from_utf8(output.stdout).unwrap(),
             root.path(),
-        ));
+        )));
 
         assert_eq!(
             json!(output.status.code()),
@@ -734,4 +756,55 @@ fn the_terminal_normalizer_drops_only_the_repainted_frames() {
     );
     assert_eq!(normalized_terminal(""), (String::new(), false));
     assert_eq!(timed("{now}|{now-5}|{now+5}|x", 10), "10|5|15|x");
+}
+
+fn path_check_of(scenario: &Value) -> (u8, String) {
+    let mut out = Failing::new(|_| false);
+    let (status, _) = run_failing(scenario, &["install"], &mut out, None, false);
+    let shown = String::from_utf8(out.accepted).unwrap();
+    let line = shown
+        .lines()
+        .find(|line| line.contains(PATH_LABELS[0]))
+        .unwrap()
+        .to_owned();
+
+    (status, line)
+}
+
+#[test]
+fn the_path_check_says_whether_bcct_is_on_the_path_and_never_fails() {
+    let fixture = parse(FIXTURE);
+    let healthy = scenario_named(&fixture, "a healthy machine passes every check").clone();
+    let config = "app/better-cc-telegram.json";
+    let mut turned_on = healthy.clone();
+    turned_on["files"][config] =
+        json!(r#"{"language":"en-us","transcription":{"model":"small"},"commandOnPath":true}"#);
+    let mut listed = turned_on.clone();
+    listed["env"]["PATH"] = json!("{root}/bin:{root}/app/bin:/usr/bin:/bin");
+
+    assert_eq!(
+        path_check_of(&healthy),
+        (
+            0,
+            "○ bcct on PATH: off (optional). Run 'npx better-claude-code-telegram path'."
+                .to_owned()
+        )
+    );
+
+    let (status, pending) = path_check_of(&turned_on);
+
+    assert_eq!(status, 0);
+    assert!(
+        pending.starts_with("○ bcct on PATH: turned on in ")
+            && pending.ends_with("/app/shell.sh; it applies to new terminals"),
+        "{pending}"
+    );
+
+    let (status, on) = path_check_of(&listed);
+
+    assert_eq!(status, 0);
+    assert!(
+        on.starts_with("✔ bcct on PATH: ") && on.ends_with("/app/bin"),
+        "{on}"
+    );
 }

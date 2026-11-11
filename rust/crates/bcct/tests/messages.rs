@@ -56,6 +56,7 @@ catalog! { m, a;
     "stepTitles.transcription" => m.step_titles.transcription.to_owned(),
     "stepTitles.inbox" => m.step_titles.inbox.to_owned(),
     "stepTitles.statusline" => m.step_titles.statusline.to_owned(),
+    "stepTitles.path" => m.step_titles.path.to_owned(),
     "stepTitles.health" => m.step_titles.health.to_owned(),
     "healthHasFailures" => (m.health_has_failures)(s(a, 0)),
     "notConfigured" => (m.not_configured)(s(a, 0), s(a, 1)),
@@ -153,6 +154,7 @@ catalog! { m, a;
     "healthLabels.bun" => m.health_labels.bun.to_owned(),
     "healthLabels.plugins" => m.health_labels.plugins.to_owned(),
     "healthLabels.shell" => m.health_labels.shell.to_owned(),
+    "healthLabels.path" => m.health_labels.path.to_owned(),
     "healthLabels.token" => m.health_labels.token.to_owned(),
     "healthLabels.groups" => m.health_labels.groups.to_owned(),
     "healthLabels.pairing" => m.health_labels.pairing.to_owned(),
@@ -169,6 +171,9 @@ catalog! { m, a;
     "healthDetail.notInstalled" => (m.health_detail.not_installed)(s(a, 0)),
     "healthDetail.loadedIn" => (m.health_detail.loaded_in)(s(a, 0)),
     "healthDetail.notLoaded" => (m.health_detail.not_loaded)(s(a, 0)),
+    "healthDetail.pathOn" => (m.health_detail.path_on)(s(a, 0)),
+    "healthDetail.pathPending" => (m.health_detail.path_pending)(s(a, 0)),
+    "healthDetail.pathOff" => m.health_detail.path_off.to_owned(),
     "healthDetail.bot" => (m.health_detail.bot)(s(a, 0)),
     "healthDetail.noToken" => m.health_detail.no_token.to_owned(),
     "healthDetail.paired" => (m.health_detail.paired)(s(a, 0)),
@@ -370,6 +375,11 @@ catalog! { m, a;
     "selfInstallNotBcct" => m.self_install_not_bcct.to_owned(),
     "selfInstallFailed" => m.self_install_failed.to_owned(),
     "selfInstallUsage" => m.self_install_usage.to_owned(),
+    "pathQuestion" => m.path_question.to_owned(),
+    "pathAdded" => (m.path_added)(s(a, 0)),
+    "pathAlready" => (m.path_already)(s(a, 0)),
+    "pathRemoved" => (m.path_removed)(s(a, 0)),
+    "pathOff" => m.path_off.to_owned(),
 }
 
 fn fixture() -> Value {

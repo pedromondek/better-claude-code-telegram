@@ -25,6 +25,7 @@ pub(super) const MESSAGES: Messages = Messages {
         transcription: "Audio transcription",
         inbox: "Received files",
         statusline: "Status line",
+        path: "bcct command in the terminal",
         health: "Final check",
     },
     health_has_failures: |command| {
@@ -162,6 +163,7 @@ pub(super) const MESSAGES: Messages = Messages {
         bun: "bun",
         plugins: "Plugins",
         shell: "Shell",
+        path: "bcct on PATH",
         token: "Bot token",
         groups: "Groups",
         pairing: "Pairing",
@@ -184,6 +186,9 @@ pub(super) const MESSAGES: Messages = Messages {
         not_loaded: |file| {
             format!("not loaded by {file}. Run 'npx better-claude-code-telegram plugin'.")
         },
+        path_on: str::to_owned,
+        path_pending: |file| format!("turned on in {file}; it applies to new terminals"),
+        path_off: "off (optional). Run 'npx better-claude-code-telegram path'.",
         bot: |username| format!("@{username}"),
         no_token: "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
         paired: |account| format!("paired with one account ({account})"),
@@ -531,4 +536,9 @@ pub(super) const MESSAGES: Messages = Messages {
     self_install_not_bcct: "The file did not answer as bcct; nothing was installed.",
     self_install_failed: "Could not install bcct: the file or the app folder could not be read or written.",
     self_install_usage: "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+    path_question: "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
+    path_added: |file| format!("{file} now adds bcct to your PATH. It applies to new terminals."),
+    path_already: |file| format!("{file} already adds bcct to your PATH."),
+    path_removed: |file| format!("{file} no longer adds bcct to your PATH."),
+    path_off: "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'.",
 };

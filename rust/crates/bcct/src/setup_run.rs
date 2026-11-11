@@ -34,10 +34,11 @@ use crate::prompt::{
 };
 use crate::settings::{STATUS_LINE, is_our_statusline, remove_if_present, statusline_preview};
 use crate::setup::{
-    ACCESS_FILE, ENV_FILE, MINIMUM_NODE, SETUP_COMMAND, SetupPaths, StatuslineState, check_setup,
-    env_deny_rule, mark_launch, node_version_from, node_version_ok, parse_env_token, read_settings,
-    read_text, setup_locale, shell_file, shell_script, statusline_is_current, statusline_prompt,
-    statusline_state, telegram_instance_running, whisper_python_works,
+    ACCESS_FILE, COMMAND_ON_PATH_KEY, ENV_FILE, MINIMUM_NODE, SETUP_COMMAND, SetupPaths,
+    StatuslineState, check_setup, command_on_path, env_deny_rule, mark_launch, node_version_from,
+    node_version_ok, parse_env_token, read_settings, read_text, setup_locale, shell_file,
+    shell_script, statusline_is_current, statusline_prompt, statusline_state,
+    telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
     QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
@@ -68,6 +69,7 @@ const HEALTH_COMMAND: &str = "npx better-claude-code-telegram health";
 const HEALTH_ICON: &str = "🩺";
 const TOKEN_ICON: &str = "🔑";
 const PAIRING_ICON: &str = "🔗";
+const PATH_ICON: &str = "💻";
 const SETTABLE_STEPS: [&str; 6] = [
     "language",
     "delay",
@@ -97,10 +99,11 @@ pub enum Section {
     Transcription,
     Inbox,
     Statusline,
+    Path,
     Health,
 }
 
-pub const SETUP_SECTIONS: [Section; 9] = [
+pub const SETUP_SECTIONS: [Section; 10] = [
     Section::Language,
     Section::Plugin,
     Section::Token,
@@ -110,6 +113,7 @@ pub const SETUP_SECTIONS: [Section; 9] = [
     Section::Transcription,
     Section::Inbox,
     Section::Statusline,
+    Section::Path,
 ];
 
 impl Section {
@@ -125,6 +129,7 @@ impl Section {
             Self::Transcription => "transcription",
             Self::Inbox => "inbox",
             Self::Statusline => "statusline",
+            Self::Path => "path",
             Self::Health => "health",
         }
     }
@@ -142,6 +147,7 @@ impl Section {
             Self::Transcription => (TRANSCRIPTION_ICON, titles.transcription),
             Self::Inbox => (INBOX_ICON, titles.inbox),
             Self::Statusline => (STATUSLINE_ICON, titles.statusline),
+            Self::Path => (PATH_ICON, titles.path),
             Self::Health => (HEALTH_ICON, titles.health),
         }
     }
@@ -520,7 +526,7 @@ impl<'a> Setup<'a> {
     }
 
     fn save_shell_script(&mut self, script: &Path) -> Result<(), FileFailure> {
-        let contents = shell_script(&self.paths.app_dir);
+        let contents = shell_script(&self.paths.app_dir, command_on_path(&self.paths.app_dir));
 
         if read_text(script).as_deref() == Some(contents.as_str()) {
             return Ok(());
@@ -978,6 +984,10 @@ impl<'a> Setup<'a> {
             self.ensure_statusline(messages, ask)?;
         }
 
+        if self.begin(Section::Path, &steps, messages) {
+            self.ensure_path(messages, ask)?;
+        }
+
         if self.begin(Section::Health, &steps, messages) {
             self.final_check(messages)?;
         }
@@ -1015,6 +1025,10 @@ impl<'a> Setup<'a> {
 
         self.installing(messages, ask, |install| install.ensure_plugins(&choice))?;
 
+        self.install_shell(messages)
+    }
+
+    fn install_shell(&mut self, messages: &'static Messages) -> Result<(), Stop> {
         let script = shell_file(&self.paths.app_dir);
 
         self.save_shell_script(&script)
@@ -1031,6 +1045,49 @@ impl<'a> Setup<'a> {
             &mut printer,
         )
         .map_err(|error| Stop::Failed(error.message(messages)))
+    }
+
+    fn ensure_path(
+        &mut self,
+        messages: &'static Messages,
+        ask: &mut dyn Prompter,
+    ) -> Result<(), Stop> {
+        self.ready()?;
+
+        let current = command_on_path(&self.paths.app_dir);
+        let wanted = ask_yes_no(messages.path_question, messages, current, ask)?;
+        let script = shell_file(&self.paths.app_dir);
+        let shown = script.to_string_lossy().into_owned();
+
+        if wanted != current {
+            self.save_setting(COMMAND_ON_PATH_KEY, Value::Bool(wanted), messages)?;
+        }
+
+        if !wanted {
+            if current {
+                self.save_shell_script(&script)
+                    .map_err(|failure| Stop::Failed(failure.message(messages)))?;
+                self.output
+                    .printer(messages)
+                    .success(&(messages.path_removed)(&shown));
+            } else {
+                self.output.line(messages.path_off);
+            }
+
+            return Ok(());
+        }
+
+        self.install_shell(messages)?;
+
+        let mut printer = self.output.printer(messages);
+
+        if current {
+            printer.skipped(&(messages.path_already)(&shown));
+        } else {
+            printer.success(&(messages.path_added)(&shown));
+        }
+
+        Ok(())
     }
 
     fn apply_setting(

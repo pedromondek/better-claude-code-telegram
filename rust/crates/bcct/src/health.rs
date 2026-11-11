@@ -13,9 +13,9 @@ use crate::messages::{Messages, messages_for};
 use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE};
 use crate::setup::{
     ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
-    SetupPaths, StatuslineState, claude_output, env_deny_rule, has_command, node_version,
-    node_version_ok, parse_env_token, read_settings, read_text, setup_locale, shell_file,
-    shell_rc_files, statusline_state, whisper_python_works,
+    SetupPaths, StatuslineState, claude_output, command_on_path, env_deny_rule, has_command,
+    launcher_dir, node_version, node_version_ok, parse_env_token, path_lists, read_settings,
+    read_text, setup_locale, shell_file, shell_rc_files, statusline_state, whisper_python_works,
 };
 use crate::shell_rc::rc_loads;
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
@@ -118,6 +118,7 @@ impl Group {
                 Check::Bun,
                 Check::Plugins,
                 Check::Shell,
+                Check::Path,
             ],
             Self::Telegram => &[Check::Token, Check::Groups, Check::Pairing, Check::Polling],
             Self::Security => &[Check::User, Check::Protection, Check::Config],
@@ -133,6 +134,7 @@ pub enum Check {
     Bun,
     Plugins,
     Shell,
+    Path,
     Token,
     Groups,
     Pairing,
@@ -154,6 +156,7 @@ impl Check {
             Self::Bun => "bun",
             Self::Plugins => "plugins",
             Self::Shell => "shell",
+            Self::Path => "path",
             Self::Token => "token",
             Self::Groups => "groups",
             Self::Pairing => "pairing",
@@ -176,6 +179,7 @@ impl Check {
             Self::Bun => labels.bun,
             Self::Plugins => labels.plugins,
             Self::Shell => labels.shell,
+            Self::Path => labels.path,
             Self::Token => labels.token,
             Self::Groups => labels.groups,
             Self::Pairing => labels.pairing,
@@ -314,6 +318,7 @@ impl Checks<'_> {
     fn run(&mut self, check: Check) -> Outcome {
         match check {
             Check::Shell => self.shell(),
+            Check::Path => Ok(self.path()),
             Check::Token => self.token_check(),
             Check::Groups => self.groups(),
             Check::Protection => self.protection(),
@@ -368,6 +373,23 @@ impl Checks<'_> {
         } else {
             failed(&(detail.not_installed)(&missing.join(", ")))
         }
+    }
+
+    fn path(&self) -> Verdict {
+        let detail = self.messages.health_detail;
+        let bin = launcher_dir(&self.paths.app_dir);
+
+        if path_lists((self.machine.var)("PATH"), &bin) {
+            return ok(&(detail.path_on)(&readable(&bin)));
+        }
+
+        if command_on_path(&self.paths.app_dir) {
+            return off(&(detail.path_pending)(&readable(&shell_file(
+                &self.paths.app_dir,
+            ))));
+        }
+
+        off(detail.path_off)
     }
 
     fn shell(&self) -> Outcome {

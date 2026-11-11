@@ -25,7 +25,7 @@ use bcct::messages::{Messages, messages_for};
 use bcct::prompt::{
     Choice, ChoiceItem, FakeCall, FakePrompter, HIDE_CURSOR, PromptError, Reply, SHOW_CURSOR,
 };
-use bcct::setup::shell_script;
+use bcct::setup::{command_on_path, shell_script};
 use bcct::setup_ask::{
     QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
     ask_pairing_choice, ask_quiet_hours, ask_remove_models, ask_statusline_choice,
@@ -51,7 +51,92 @@ const APP_FOLDER: &str = "home/.claude/better-claude-code-telegram/";
 const SHELL_SCRIPT: &str = "home/.claude/better-claude-code-telegram/shell.sh";
 
 fn fixture() -> Value {
-    with_the_shell_script_journaled(&app_form(&parse_json(&release_form(FIXTURE)).unwrap(), APP))
+    with_the_path_step(&with_the_shell_script_journaled(&app_form(
+        &parse_json(&release_form(FIXTURE)).unwrap(),
+        APP,
+    )))
+}
+
+const JS_TOTAL: &str = "/10 ";
+const RUST_TOTAL: &str = "/11 ";
+const HEADING: &str = "── ";
+const JS_HEALTH_HEADING: &str = "── 🩺 10/10 ";
+const HEALTH_HEADING: &str = "── 🩺 11/11 ";
+const SHELL_CHECK: &str = " Shell: ";
+
+fn counted_with_the_path_step(stdout: &str) -> String {
+    stdout
+        .split_inclusive('\n')
+        .map(|line| {
+            if line.starts_with(JS_HEALTH_HEADING) {
+                line.replacen(JS_HEALTH_HEADING, HEALTH_HEADING, 1)
+            } else if line.starts_with(HEADING) {
+                line.replacen(JS_TOTAL, RUST_TOTAL, 1)
+            } else {
+                line.to_owned()
+            }
+        })
+        .collect()
+}
+
+fn path_step_shown(counted: &str) -> Option<String> {
+    let health = counted.find(HEALTH_HEADING)?;
+    let messages = messages_for(if counted.contains("Verificação final") {
+        Locale::PtBr
+    } else {
+        Locale::EnUs
+    });
+    let step = format!(
+        "── 💻 10/11 {} ──\n{} {} {}\n\n",
+        messages.step_titles.path,
+        messages.path_question,
+        (messages.yes_no_hint)(false),
+        messages.path_off
+    );
+    let (before, after) = counted.split_at(health);
+    let checked = after.find(SHELL_CHECK).map_or_else(
+        || after.to_owned(),
+        |shell| {
+            let end = after[shell..]
+                .find('\n')
+                .map_or(after.len(), |line| shell + line + 1);
+            format!(
+                "{}○ {}: {}\n{}",
+                &after[..end],
+                messages.health_labels.path,
+                messages.health_detail.path_off,
+                &after[end..]
+            )
+        },
+    );
+
+    Some(format!("{before}{step}{checked}"))
+}
+
+fn with_the_path_step(fixture: &Value) -> Value {
+    let mut fixture = fixture.clone();
+
+    for group in fixture["processes"].as_object_mut().unwrap().values_mut() {
+        for scenario in group.as_array_mut().unwrap() {
+            let runs = scenario["runs"].as_array().unwrap().len();
+
+            for index in 0..runs {
+                let counted =
+                    counted_with_the_path_step(text(&scenario["results"][index], "stdout"));
+
+                if let Some(shown) = path_step_shown(&counted) {
+                    let input = format!("{}\n", text(&scenario["runs"][index], "input"));
+
+                    scenario["results"][index]["stdout"] = Value::String(shown);
+                    scenario["runs"][index]["input"] = Value::String(input);
+                } else {
+                    scenario["results"][index]["stdout"] = Value::String(counted);
+                }
+            }
+        }
+    }
+
+    fixture
 }
 
 fn undone(change: &str) -> String {
@@ -72,6 +157,11 @@ fn journaled_text(text: &str) -> String {
     .replace(
         &format!("{}{}", undone(&folder), undone(rc)),
         &format!("{}{}{}", undone(rc), undone(&script), undone(&folder)),
+    )
+    .replace("inbox, statusline\n", "inbox, statusline, path\n")
+    .replace(
+        "inbox, statusline\u{1b}[39m",
+        "inbox, statusline, path\u{1b}[39m",
     )
 }
 
@@ -100,7 +190,7 @@ fn without_the_shell_script(mut tree: Tree, root: &Path, name: &str) -> Tree {
 
     assert_eq!(
         content.as_deref(),
-        Some(placeholders(&shell_script(&app_dir), root).as_str()),
+        Some(placeholders(&shell_script(&app_dir, command_on_path(&app_dir)), root).as_str()),
         "{name}: shell.sh"
     );
     assert_eq!(mode, "600", "{name}: shell.sh");
@@ -1084,6 +1174,90 @@ fn with_full_output(root: &Path, args: &[&str], input: &str) -> (Option<i32>, St
         output.status.code(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
     )
+}
+
+fn path_run(root: &Path, input: &str, facts: &mut Facts) -> RunResult {
+    run_once(
+        &json!({"args": ["path"], "input": input, "env": {}}),
+        root,
+        None,
+        facts,
+    )
+}
+
+#[test]
+fn the_path_step_adds_keeps_and_removes_the_launcher_folder() {
+    let fixture = fixture();
+    let folder = support::sandbox();
+    let root = folder.path();
+    let mut facts = Facts {
+        code: None,
+        pid: None,
+    };
+    let en = messages_for(Locale::EnUs);
+    let shell = format!("{APP}/shell.sh");
+    let config = root.join(APP_FOLDER).join("better-cc-telegram.json");
+    let script = root.join(SHELL_SCRIPT);
+    let block = "case \":${PATH}:\" in";
+    let read = |path: &Path| fs::read_to_string(path).unwrap_or_default();
+
+    prepared(root, &json!({}), text(&fixture, "fakeClaude"));
+
+    let off = path_run(root, "\n", &mut facts);
+
+    assert_eq!(off.status, Some(0), "{}", off.stdout);
+    assert!(
+        off.stdout
+            .contains("── 💻 1/1 bcct command in the terminal ──")
+    );
+    assert!(off.stdout.contains(en.path_off), "{}", off.stdout);
+    assert!(!config.exists());
+
+    let added = path_run(root, "y\n", &mut facts);
+
+    assert_eq!(added.status, Some(0), "{}", added.stdout);
+    assert!(
+        added.stdout.contains(&(en.path_added)(&shell)),
+        "{}",
+        added.stdout
+    );
+    assert!(read(&config).contains("\"commandOnPath\": true"));
+    assert!(read(&script).contains(block));
+    assert!(read(&root.join("home/.zshrc")).contains("/shell.sh\" ] && ."));
+
+    let kept = path_run(root, "\n", &mut facts);
+
+    assert!(
+        kept.stdout.contains(&(en.path_already)(&shell)),
+        "{}",
+        kept.stdout
+    );
+    assert!(read(&script).contains(block));
+
+    let removed = path_run(root, "n\n", &mut facts);
+
+    assert!(
+        removed.stdout.contains(&(en.path_removed)(&shell)),
+        "{}",
+        removed.stdout
+    );
+    assert!(read(&config).contains("\"commandOnPath\": false"));
+    assert!(!read(&script).contains(block));
+    assert!(read(&script).contains("claude() {"));
+
+    path_run(root, "y\n", &mut facts);
+    fs::remove_file(&script).unwrap();
+    fs::create_dir(&script).unwrap();
+
+    let refused = path_run(root, "n\n", &mut facts);
+
+    assert_eq!(refused.status, Some(1), "{}", refused.stdout);
+    assert!(
+        format!("{}{}", refused.stdout, refused.stderr).contains(&(en.file_not_saved)(&shell)),
+        "{}{}",
+        refused.stdout,
+        refused.stderr
+    );
 }
 
 #[test]

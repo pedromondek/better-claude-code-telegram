@@ -17,6 +17,7 @@ const enUs = {
     transcription: "Audio transcription",
     inbox: "Received files",
     statusline: "Status line",
+    path: "bcct command in the terminal",
     health: "Final check",
   },
   healthHasFailures: (command) =>
@@ -139,6 +140,7 @@ const enUs = {
     bun: "bun",
     plugins: "Plugins",
     shell: "Shell",
+    path: "bcct on PATH",
     token: "Bot token",
     groups: "Groups",
     pairing: "Pairing",
@@ -159,6 +161,9 @@ const enUs = {
     loadedIn: (file) => `loaded by ${file}`,
     notLoaded: (file) =>
       `not loaded by ${file}. Run 'npx better-claude-code-telegram plugin'.`,
+    pathOn: (dir) => dir,
+    pathPending: (file) => `turned on in ${file}; it applies to new terminals`,
+    pathOff: "off (optional). Run 'npx better-claude-code-telegram path'.",
     bot: (username) => `@${username}`,
     noToken:
       "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
@@ -479,6 +484,14 @@ const enUs = {
     "Could not install bcct: the file or the app folder could not be read or written.",
   selfInstallUsage:
     "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+  pathQuestion:
+    "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
+  pathAdded: (file) =>
+    `${file} now adds bcct to your PATH. It applies to new terminals.`,
+  pathAlready: (file) => `${file} already adds bcct to your PATH.`,
+  pathRemoved: (file) => `${file} no longer adds bcct to your PATH.`,
+  pathOff:
+    "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'.",
 };
 
 const ptBr = {
@@ -498,6 +511,7 @@ const ptBr = {
     transcription: "Transcrição de áudio",
     inbox: "Arquivos recebidos",
     statusline: "Statusline",
+    path: "Comando bcct no terminal",
     health: "Verificação final",
   },
   healthHasFailures: (command) =>
@@ -620,6 +634,7 @@ const ptBr = {
     bun: "bun",
     plugins: "Plugins",
     shell: "Shell",
+    path: "bcct no PATH",
     token: "Token do bot",
     groups: "Grupos",
     pairing: "Pareamento",
@@ -640,6 +655,9 @@ const ptBr = {
     loadedIn: (file) => `carregado por ${file}`,
     notLoaded: (file) =>
       `não carregado por ${file}. Rode 'npx better-claude-code-telegram plugin'.`,
+    pathOn: (dir) => dir,
+    pathPending: (file) => `ligado em ${file}; vale nos terminais novos`,
+    pathOff: "fora (opcional). Rode 'npx better-claude-code-telegram path'.",
     bot: (username) => `@${username}`,
     noToken:
       "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
@@ -959,6 +977,14 @@ const ptBr = {
     "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
   selfInstallUsage:
     "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
+  pathQuestion:
+    "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
+  pathAdded: (file) =>
+    `${file} passou a adicionar o bcct ao PATH. Vale nos terminais novos.`,
+  pathAlready: (file) => `${file} já adiciona o bcct ao PATH.`,
+  pathRemoved: (file) => `${file} não adiciona mais o bcct ao PATH.`,
+  pathOff:
+    "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
 };
 
 export const MESSAGES = { "en-us": enUs, "pt-br": ptBr };
