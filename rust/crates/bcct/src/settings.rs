@@ -54,9 +54,9 @@ pub fn status_line_value(command: &str) -> Value {
 }
 
 #[must_use]
-pub fn is_our_statusline(status_line: Option<&Value>, repo: &Path) -> bool {
+pub fn is_our_statusline(status_line: Option<&Value>, app_dir: &Path) -> bool {
     matches!(
-        statusline_kind(status_line, repo),
+        statusline_kind(status_line, app_dir),
         StatuslineKind::Ours | StatuslineKind::OursAfter
     )
 }
@@ -101,9 +101,8 @@ pub fn with_statusline(settings: &Map<String, Value>, command: &str) -> Option<M
 pub fn without_our_statusline(
     settings: &Map<String, Value>,
     app_dir: &Path,
-    repo: &Path,
 ) -> Result<Option<Removal>, FileFailure> {
-    if !is_our_statusline(settings.get(STATUS_LINE), repo) {
+    if !is_our_statusline(settings.get(STATUS_LINE), app_dir) {
         return Ok(None);
     }
 

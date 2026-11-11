@@ -50,6 +50,35 @@ pub(crate) fn parse(source: &str) -> Value {
     serde_json::from_str(&release_form(source)).unwrap()
 }
 
+const CLONE_STATUSLINE: &str = "node \"{repo}/plugins/telegram-hooks/statusline.mjs\"";
+const CLONE_STATUSLINE_ESCAPED: &str = "node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"";
+const CLONE_SHELL_FILE: &str = "{repo}/scripts/shell.sh";
+
+pub(crate) fn app_text(text: &str, app: &str) -> String {
+    text.replace(
+        CLONE_STATUSLINE_ESCAPED,
+        &format!("\\\"{app}/bin/bcct\\\" statusline"),
+    )
+    .replace(CLONE_STATUSLINE, &format!("\"{app}/bin/bcct\" statusline"))
+    .replace(CLONE_SHELL_FILE, &format!("{app}/shell.sh"))
+}
+
+pub(crate) fn app_form(value: &Value, app: &str) -> Value {
+    match value {
+        Value::String(text) => Value::String(app_text(text, app)),
+        Value::Array(items) => items.iter().map(|item| app_form(item, app)).collect(),
+        Value::Object(map) => map
+            .iter()
+            .map(|(key, item)| (app_text(key, app), app_form(item, app)))
+            .collect(),
+        other => other.clone(),
+    }
+}
+
+pub(crate) fn app_placeholder(app_dir: &Path, root: &Path) -> String {
+    placeholders(&app_dir.to_string_lossy(), root)
+}
+
 pub(crate) fn list<'a>(fixture: &'a Value, key: &str) -> &'a Vec<Value> {
     fixture[key].as_array().unwrap()
 }

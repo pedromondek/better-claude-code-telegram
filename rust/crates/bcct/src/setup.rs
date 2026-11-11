@@ -28,7 +28,13 @@ pub const ACCESS_FILE: &str = "access.json";
 const SETTINGS_FILE: &str = "settings.json";
 const MINIMUM_NODE_MAJOR: f64 = 24.0;
 const MINIMUM_NODE_MINOR: f64 = 11.0;
-const SHELL_SCRIPT: &str = "scripts/shell.sh";
+const SHELL_SCRIPT: &str = "shell.sh";
+const LAUNCHER: &str = if cfg!(windows) {
+    "bin/bcct.cmd"
+} else {
+    "bin/bcct"
+};
+const SHELL_LAUNCHER: &str = "bin/bcct";
 const DEFAULT_SHELL: &str = "bash";
 const WHISPER_CHECK: &str = "import importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\"";
 const BOT_PID_FILE: &str = "bot.pid";
@@ -43,7 +49,9 @@ const SKIP_PERMISSION_FLAGS: [&str; 3] = [
 const PERMISSION_MODE_FLAG: &str = "--permission-mode";
 const BYPASS_MODE: &str = "bypassPermissions";
 const BOT_SERVER: &str = "server.ts";
-const STATUSLINE_SCRIPT: &str = "plugins/telegram-hooks/statusline.mjs";
+const STATUSLINE_SUBCOMMAND: &str = " statusline";
+const CLONE_STATUSLINE_SCRIPT: &str = "/plugins/telegram-hooks/statusline.mjs";
+const CLONE_STATUSLINE_PREFIX: &str = "node \"";
 const AFTER_PREVIOUS_FLAG: &str = " --after-previous";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -263,36 +271,75 @@ pub fn repo_root() -> PathBuf {
 }
 
 #[must_use]
-pub fn statusline_command(repo: &Path) -> String {
-    format!("node \"{}\"", join_path(repo, STATUSLINE_SCRIPT).display())
+pub fn launcher_file(app_dir: &Path) -> PathBuf {
+    join_path(app_dir, LAUNCHER)
 }
 
 #[must_use]
-pub fn statusline_after_command(repo: &Path) -> String {
-    format!("{}{AFTER_PREVIOUS_FLAG}", statusline_command(repo))
+pub fn statusline_command(app_dir: &Path) -> String {
+    format!(
+        "\"{}\"{STATUSLINE_SUBCOMMAND}",
+        launcher_file(app_dir).display()
+    )
 }
 
 #[must_use]
-pub fn statusline_kind(status_line: Option<&Value>, repo: &Path) -> StatuslineKind {
-    let Some(status_line) = status_line.filter(|value| js_truthy(value)) else {
+pub fn statusline_after_command(app_dir: &Path) -> String {
+    format!("{}{AFTER_PREVIOUS_FLAG}", statusline_command(app_dir))
+}
+
+fn is_clone_statusline(command: &str) -> bool {
+    command
+        .strip_prefix(CLONE_STATUSLINE_PREFIX)
+        .and_then(|rest| rest.strip_suffix('"'))
+        .is_some_and(|script| {
+            script.len() > CLONE_STATUSLINE_SCRIPT.len()
+                && !script.contains('"')
+                && script.replace('\\', "/").ends_with(CLONE_STATUSLINE_SCRIPT)
+        })
+}
+
+fn statusline_command_of(status_line: Option<&Value>) -> Option<&str> {
+    status_line
+        .filter(|value| js_truthy(value))
+        .and_then(|value| value.get("command"))
+        .and_then(Value::as_str)
+}
+
+#[must_use]
+pub fn statusline_kind(status_line: Option<&Value>, app_dir: &Path) -> StatuslineKind {
+    if !status_line.is_some_and(js_truthy) {
         return StatuslineKind::None;
-    };
-    let command = status_line.get("command").and_then(Value::as_str);
+    }
 
-    if command == Some(statusline_command(repo).as_str()) {
+    let Some(command) = statusline_command_of(status_line) else {
+        return StatuslineKind::Other;
+    };
+
+    if command == statusline_command(app_dir) || is_clone_statusline(command) {
         StatuslineKind::Ours
-    } else if command == Some(statusline_after_command(repo).as_str()) {
+    } else if command == statusline_after_command(app_dir)
+        || command
+            .strip_suffix(AFTER_PREVIOUS_FLAG)
+            .is_some_and(is_clone_statusline)
+    {
         StatuslineKind::OursAfter
     } else {
         StatuslineKind::Other
     }
 }
 
+#[must_use]
+pub fn statusline_is_current(status_line: Option<&Value>, app_dir: &Path) -> bool {
+    statusline_command_of(status_line).is_some_and(|command| {
+        command == statusline_command(app_dir) || command == statusline_after_command(app_dir)
+    })
+}
+
 pub fn statusline_prompt(
     take: bool,
     paths: &SetupPaths,
     var: &dyn Fn(&str) -> Option<OsString>,
-    repo: &Path,
 ) -> Result<String, FileFailure> {
     let request_file = join_path(&paths.app_dir, STATUSLINE_REQUEST_FILE);
 
@@ -307,7 +354,7 @@ pub fn statusline_prompt(
     let current =
         read_json(&paths.settings_file).and_then(|settings| settings.get("statusLine").cloned());
 
-    if statusline_kind(current.as_ref(), repo) != StatuslineKind::Other {
+    if statusline_kind(current.as_ref(), &paths.app_dir) != StatuslineKind::Other {
         return Ok(String::new());
     }
 
@@ -322,7 +369,7 @@ pub fn statusline_prompt(
     Ok((messages.statusline_custom_prompt)(
         &paths.settings_file.to_string_lossy(),
         &stringify(&current.unwrap_or_default()),
-        &statusline_command(repo),
+        &statusline_command(&paths.app_dir),
         &(messages.status_connected)(messages.status_main),
     ))
 }
@@ -338,11 +385,11 @@ pub enum StatuslineState {
 }
 
 #[must_use]
-pub fn statusline_state(paths: &SetupPaths, repo: &Path) -> StatuslineState {
+pub fn statusline_state(paths: &SetupPaths) -> StatuslineState {
     let current =
         read_json(&paths.settings_file).and_then(|settings| settings.get("statusLine").cloned());
 
-    match statusline_kind(current.as_ref(), repo) {
+    match statusline_kind(current.as_ref(), &paths.app_dir) {
         StatuslineKind::None => StatuslineState::None,
         StatuslineKind::Ours => StatuslineState::Ours,
         StatuslineKind::OursAfter => StatuslineState::OursAfter,
@@ -366,8 +413,32 @@ pub struct ShellRcFiles {
 }
 
 #[must_use]
-pub fn shell_file(repo: &Path) -> PathBuf {
-    join_path(repo, SHELL_SCRIPT)
+pub fn shell_file(app_dir: &Path) -> PathBuf {
+    join_path(app_dir, SHELL_SCRIPT)
+}
+
+fn single_quoted(text: &str) -> String {
+    format!("'{}'", text.replace('\'', "'\\''"))
+}
+
+#[must_use]
+pub fn shell_script(app_dir: &Path) -> String {
+    let launcher = single_quoted(&join_path(app_dir, SHELL_LAUNCHER).to_string_lossy());
+
+    [
+        "claude() {",
+        "  local arg",
+        "  for arg in \"$@\"; do",
+        "    if [ \"$arg\" = \"--telegram\" ]; then",
+        &format!("      {launcher} launch \"$@\""),
+        "      return",
+        "    fi",
+        "  done",
+        "  command claude \"$@\"",
+        "}",
+        "",
+    ]
+    .join("\n")
 }
 
 #[must_use]
@@ -492,16 +563,100 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_statusline_commands_quote_the_script_of_the_repo() {
-        let repo = Path::new("/r/x/..");
+    fn the_statusline_commands_quote_the_launcher_of_the_app_folder() {
+        let app_dir = Path::new("/a/x/..");
 
+        assert_eq!(statusline_command(app_dir), "\"/a/bin/bcct\" statusline");
         assert_eq!(
-            statusline_command(repo),
-            "node \"/r/plugins/telegram-hooks/statusline.mjs\""
+            statusline_after_command(app_dir),
+            "\"/a/bin/bcct\" statusline --after-previous"
+        );
+    }
+
+    fn kind_of(command: &str) -> StatuslineKind {
+        statusline_kind(
+            Some(&serde_json::json!({"type": "command", "command": command})),
+            Path::new("/a"),
+        )
+    }
+
+    #[test]
+    fn the_statusline_of_the_clone_still_counts_as_ours() {
+        assert_eq!(
+            kind_of("node \"/r/plugins/telegram-hooks/statusline.mjs\""),
+            StatuslineKind::Ours
         );
         assert_eq!(
-            statusline_after_command(repo),
-            "node \"/r/plugins/telegram-hooks/statusline.mjs\" --after-previous"
+            kind_of("node \"C:\\r\\plugins\\telegram-hooks\\statusline.mjs\""),
+            StatuslineKind::Ours
+        );
+        assert_eq!(
+            kind_of("node \"/r/plugins/telegram-hooks/statusline.mjs\" --after-previous"),
+            StatuslineKind::OursAfter
+        );
+        assert_eq!(kind_of("\"/a/bin/bcct\" statusline"), StatuslineKind::Ours);
+        assert_eq!(
+            kind_of("\"/a/bin/bcct\" statusline --after-previous"),
+            StatuslineKind::OursAfter
+        );
+    }
+
+    #[test]
+    fn only_the_exact_statusline_of_the_clone_counts_as_ours() {
+        for command in [
+            "node \"/r/plugins/other/statusline.mjs\"",
+            "node \"/r/plugins/telegram-hooks/statusline.mjs\" --other",
+            "node \"/r/plugins/telegram-hooks/statusline.mjs",
+            "node /r/plugins/telegram-hooks/statusline.mjs",
+            "bun \"/r/plugins/telegram-hooks/statusline.mjs\"",
+            "node \"plugins/telegram-hooks/statusline.mjs\"",
+            "\"/b/bin/bcct\" statusline",
+            "",
+        ] {
+            assert_eq!(kind_of(command), StatuslineKind::Other, "{command}");
+        }
+    }
+
+    #[test]
+    fn the_current_statusline_is_only_the_one_of_this_app_folder() {
+        let app_dir = Path::new("/a");
+        let current = |command: &str| {
+            statusline_is_current(
+                Some(&serde_json::json!({"type": "command", "command": command})),
+                app_dir,
+            )
+        };
+
+        assert!(current("\"/a/bin/bcct\" statusline"));
+        assert!(current("\"/a/bin/bcct\" statusline --after-previous"));
+        assert!(!current(
+            "node \"/r/plugins/telegram-hooks/statusline.mjs\""
+        ));
+        assert!(!current("mine.sh"));
+        assert!(!statusline_is_current(None, app_dir));
+    }
+
+    #[test]
+    fn the_shell_file_lives_in_the_app_folder() {
+        assert_eq!(shell_file(Path::new("/a")), PathBuf::from("/a/shell.sh"));
+    }
+
+    #[test]
+    fn the_shell_script_sends_only_the_telegram_launch_to_the_launcher() {
+        assert_eq!(
+            shell_script(Path::new("/a/it's")),
+            concat!(
+                "claude() {\n",
+                "  local arg\n",
+                "  for arg in \"$@\"; do\n",
+                "    if [ \"$arg\" = \"--telegram\" ]; then\n",
+                "      '/a/it'\\''s/bin/bcct' launch \"$@\"\n",
+                "      return\n",
+                "    fi\n",
+                "  done\n",
+                "  command claude \"$@\"\n",
+                "}\n",
+            )
         );
     }
 

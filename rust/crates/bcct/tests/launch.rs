@@ -18,8 +18,9 @@ use bcct::setup::{
 use bcct::ui::{colors_available, fail, should_colorize};
 use serde_json::{Value, json};
 use support::{
-    Helper, Tree, dead_pid, default_file_mode, environment, expected_tree, home, list, lookup,
-    materialize, parse, placeholders, repo_root, sandbox, snapshot, strings, text,
+    Helper, Tree, app_form, app_placeholder, dead_pid, default_file_mode, environment,
+    expected_tree, home, list, lookup, materialize, parse, placeholders, sandbox, snapshot,
+    strings, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/launch.json");
@@ -114,6 +115,14 @@ fn variables_of(entry: &Value, root: &Path) -> HashMap<String, OsString> {
     environment(&entry["env"], root)
 }
 
+fn app_entry(entry: &Value, root: &Path) -> Value {
+    let variables = variables_of(entry, root);
+    let var = lookup(&variables);
+    let paths = SetupPaths::resolve(&var, &home(&variables));
+
+    app_form(entry, &app_placeholder(&paths.app_dir, root))
+}
+
 #[test]
 fn every_check_refuses_with_the_same_message_as_check_setup() {
     let fixture = parse(FIXTURE);
@@ -176,17 +185,17 @@ fn every_mark_leaves_the_same_launch_file_as_mark_launch() {
 fn every_prompt_and_its_files_match_statusline_prompt() {
     let fixture = parse(FIXTURE);
     let default_mode = default_file_mode();
-    let repo = repo_root();
 
     for entry in list(&fixture, "prompts") {
         let name = text(entry, "name");
         let root = sandbox();
+        let entry = &app_entry(entry, root.path());
         materialize(root.path(), &entry["files"]);
         let variables = variables_of(entry, root.path());
         let var = lookup(&variables);
         let paths = SetupPaths::resolve(&var, &home(&variables));
 
-        let result = statusline_prompt(entry["take"].as_bool().unwrap(), &paths, &var, &repo);
+        let result = statusline_prompt(entry["take"].as_bool().unwrap(), &paths, &var);
 
         assert_eq!(
             result.is_err(),
@@ -284,12 +293,12 @@ fn every_launch_builds_the_same_claude_call_as_telegram_sh() {
     let fixture = parse(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let default_mode = default_file_mode();
-    let repo = repo_root();
     let pids = Pids::start();
 
     for entry in list(&fixture, "launches") {
         let name = text(entry, "name");
         let root = sandbox();
+        let entry = &app_entry(entry, root.path());
         prepared(entry, root.path(), &pids);
         let variables = variables_of(entry, root.path());
         let var = lookup(&variables);
@@ -302,7 +311,6 @@ fn every_launch_builds_the_same_claude_call_as_telegram_sh() {
             home: &home(&variables),
             now,
             is_running: &telegram_instance_running,
-            repo: &repo,
             colorize: should_colorize(&var, false),
         };
         let mut stderr = Vec::new();
@@ -378,6 +386,7 @@ fn every_launch_of_the_binary_runs_claude_like_telegram_sh() {
     for entry in list(&fixture, "launches") {
         let name = text(entry, "name");
         let root = sandbox();
+        let entry = &app_entry(entry, root.path());
         prepared(entry, root.path(), &pids);
         let mut command = cargo_bin_cmd!("bcct");
         command
@@ -481,6 +490,10 @@ fn a_claude_that_cannot_run_ends_with_code_126() {
 }
 
 fn launch_with(root: &Path, colorize: bool) -> (Option<Vec<OsString>>, String) {
+    launch_args(root, colorize, &[])
+}
+
+fn launch_args(root: &Path, colorize: bool, args: &[&str]) -> (Option<Vec<OsString>>, String) {
     let variables = HashMap::from([
         ("HOME".to_owned(), root.join("home").into_os_string()),
         (
@@ -493,18 +506,17 @@ fn launch_with(root: &Path, colorize: bool) -> (Option<Vec<OsString>>, String) {
         ),
     ]);
     let var = lookup(&variables);
-    let repo = repo_root();
     let launch = Launch {
         var: &var,
         home: &root.join("home"),
         now: 1,
         is_running: &|_| None,
-        repo: &repo,
         colorize,
     };
     let mut stderr = Vec::new();
+    let args: Vec<OsString> = args.iter().map(OsString::from).collect();
 
-    let call = claude_args(&[], &launch, &mut stderr);
+    let call = claude_args(&args, &launch, &mut stderr);
 
     assert!(format!("{launch:?}").starts_with("Launch {"));
     (
@@ -527,6 +539,48 @@ fn plain_call() -> Vec<OsString> {
 }
 
 const APP: &str = "claude/better-claude-code-telegram";
+
+#[test]
+fn the_telegram_flag_of_the_shell_function_never_reaches_claude() {
+    let root = sandbox();
+    ready(root.path());
+
+    let mut expected = plain_call();
+    expected.extend(["-c", "--model", "opus"].map(OsString::from));
+
+    assert_eq!(
+        launch_args(
+            root.path(),
+            false,
+            &["--telegram", "-c", "--telegram", "--model", "opus"]
+        ),
+        (Some(expected), String::new())
+    );
+}
+
+#[test]
+fn a_launch_with_only_the_telegram_flag_still_asks_for_the_custom_statusline() {
+    let root = sandbox();
+    with_request(root.path());
+    fs::write(
+        root.path().join(APP).join("statusline-customize.json"),
+        "{}",
+    )
+    .unwrap();
+
+    let (call, stderr) = launch_args(root.path(), false, &["--telegram"]);
+    let call = call.unwrap();
+
+    assert_eq!(stderr, "");
+    assert_eq!(call.len(), plain_call().len() + 1);
+    assert!(
+        call[2].to_string_lossy().contains(&format!(
+            "\"{}/{APP}/bin/bcct\" statusline",
+            root.path().display()
+        )),
+        "{call:?}"
+    );
+}
 
 #[test]
 fn a_launch_file_that_cannot_be_written_is_named_and_does_not_stop_claude() {
@@ -628,13 +682,11 @@ fn a_refusal_that_cannot_be_written_still_refuses() {
     let root = sandbox();
     let variables = HashMap::new();
     let var = lookup(&variables);
-    let repo = repo_root();
     let launch = Launch {
         var: &var,
         home: root.path(),
         now: 1,
         is_running: &|_| None,
-        repo: &repo,
         colorize: false,
     };
 

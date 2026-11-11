@@ -14,14 +14,14 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use bcct::health::{Machine, Screen, run};
-use bcct::setup::whisper_python_works;
+use bcct::setup::{SetupPaths, whisper_python_works};
 use bcct::spinner::Terminal;
 use bcct::telegram::{API_ROOT_ENV, DEFAULT_API_ROOT, api_root, post_json, request_url};
 use bcct::ui::should_colorize;
 use serde_json::{Value, json};
 use support::{
-    Tree, default_file_mode, expected_tree, list, lookup, materialize, parse, placeholders,
-    repo_root, sandbox, snapshot, strings, substitute, text,
+    Tree, app_form, app_placeholder, default_file_mode, expected_tree, list, lookup, materialize,
+    parse, placeholders, sandbox, snapshot, strings, substitute, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/health.json");
@@ -185,6 +185,14 @@ fn home_of(variables: &HashMap<String, OsString>, root: &Path) -> PathBuf {
         .map_or_else(|| root.join("passwd-home"), PathBuf::from)
 }
 
+fn app_scenario(scenario: &Value, root: &Path) -> Value {
+    let variables = variables_of(scenario, root, "");
+    let var = lookup(&variables);
+    let paths = SetupPaths::resolve(&var, &home_of(&variables, root));
+
+    app_form(scenario, &app_placeholder(&paths.app_dir, root))
+}
+
 fn expected_after(scenario: &Value, root: &Path, now: u64, default_mode: &str) -> Tree {
     let mut tree = expected_tree(&scenario["after"], None, default_mode);
 
@@ -207,7 +215,6 @@ fn every_scenario_prints_what_health_mjs_prints() {
     let fixture = parse(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let default_mode = default_file_mode();
-    let repo = repo_root();
     let scenarios = list(&fixture, "scenarios");
 
     assert!(scenarios.len() > 300);
@@ -215,6 +222,7 @@ fn every_scenario_prints_what_health_mjs_prints() {
     for scenario in scenarios {
         let name = text(scenario, "name");
         let root = sandbox();
+        let scenario = &app_scenario(scenario, root.path());
         let telegram = FakeTelegram::start(scenario);
         materialize(root.path(), &filled(&scenario["files"], now));
         let variables = variables_of(scenario, root.path(), &telegram.root);
@@ -234,7 +242,6 @@ fn every_scenario_prints_what_health_mjs_prints() {
         let machine = Machine {
             var: &var,
             home: &home_of(&variables, root.path()),
-            repo: &repo,
             uid: Some(
                 scenario["uid"]
                     .as_u64()
@@ -301,6 +308,7 @@ fn every_scenario_of_the_binary_matches_health_mjs() {
     for scenario in scenarios {
         let name = text(scenario, "name");
         let root = sandbox();
+        let scenario = &app_scenario(scenario, root.path());
         let telegram = FakeTelegram::start(scenario);
         let now = now_ms();
         materialize(root.path(), &filled(&scenario["files"], now));
@@ -380,6 +388,7 @@ fn every_terminal_scenario_spins_and_prints_like_health_mjs() {
     for scenario in list(&fixture, "tty") {
         let name = text(scenario, "name");
         let root = sandbox();
+        let scenario = &app_scenario(scenario, root.path());
         let telegram = FakeTelegram::start(scenario);
         materialize(root.path(), &filled(&scenario["files"], now_ms()));
         let columns = scenario["columns"]
@@ -442,7 +451,6 @@ fn a_node_that_cannot_be_found_fails_the_node_check() {
     let machine = Machine {
         var: &var,
         home: root.path(),
-        repo: root.path(),
         uid: None,
         now: 0,
         node_version: &|| None,
@@ -526,8 +534,8 @@ fn run_failing(
 ) -> (u8, String) {
     let fixture = parse(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
-    let repo = repo_root();
     let root = sandbox();
+    let scenario = &app_scenario(scenario, root.path());
     let telegram = FakeTelegram::start(scenario);
     materialize(root.path(), &filled(&scenario["files"], now));
     let variables = variables_of(scenario, root.path(), &telegram.root);
@@ -547,7 +555,6 @@ fn run_failing(
     let machine = Machine {
         var: &var,
         home: &home_of(&variables, root.path()),
-        repo: &repo,
         uid: Some(REGULAR_UID),
         now,
         node_version: &node_version,

@@ -28,8 +28,8 @@ use bcct::setup::node_version_ok;
 use bcct::spinner::Terminal;
 use serde_json::{Value, json};
 use support::{
-    default_file_mode, expected_tree, list, materialize, parse, placeholders, repo_root, sandbox,
-    snapshot, strings, substitute, text,
+    app_form, default_file_mode, expected_tree, list, materialize, parse, placeholders, repo_root,
+    sandbox, snapshot, strings, substitute, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/setup-install.json");
@@ -385,6 +385,7 @@ fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
     let run_installer = installer_into(out.clone(), err.clone());
     let machine = Machine {
         home: &home,
+        app_dir: &app_dir,
         repo: &repo,
         hf_cache: &hf_cache,
         settings_file: &settings_file,
@@ -454,6 +455,7 @@ fn every_scenario_prints_asks_records_and_writes_like_setup_mjs() {
     for scenario in list(&fixture, "scenarios") {
         let name = text(scenario, "name");
         let root = sandbox();
+        let scenario = &app_form(scenario, text(&scenario["env"], "BETTER_CC_TELEGRAM_DIR"));
         materialize(root.path(), &scenario["files"]);
 
         let run = replay(scenario, root.path(), sys.path());
@@ -511,6 +513,7 @@ fn stopped_by(
     let home = root.path().join("home");
     let hub = root.path().join("hub");
     let settings = root.path().join("settings.json");
+    let app_dir = root.path().join("app");
     let repo = repo_root();
     let system = System::new(vec![(
         OsString::from("PATH"),
@@ -518,6 +521,7 @@ fn stopped_by(
     )]);
     let machine = Machine {
         home: &home,
+        app_dir: &app_dir,
         repo: &repo,
         hf_cache: &hub,
         settings_file: &settings,

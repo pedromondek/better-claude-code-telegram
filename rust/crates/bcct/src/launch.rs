@@ -7,7 +7,7 @@ use crate::files::FileFailure;
 use crate::hook::now_ms;
 use crate::messages::messages_for;
 use crate::setup::{
-    SetupPaths, check_setup, mark_launch, repo_root, setup_locale, statusline_prompt,
+    SetupPaths, check_setup, mark_launch, setup_locale, statusline_prompt,
     telegram_instance_running,
 };
 use crate::ui::{fail, should_colorize};
@@ -19,6 +19,7 @@ pub const CHANNEL: &str = "plugin:telegram@better-claude-code-telegram";
 const CLAUDE: &str = "claude";
 const INSTANCE_NAME: [&str; 2] = ["--name", "telegram"];
 const TELEGRAM_FLAG: &str = "BETTER_CC_TELEGRAM";
+const TELEGRAM_ARG: &str = "--telegram";
 const REFUSED: u8 = 1;
 #[cfg(unix)]
 const COMMAND_NOT_FOUND: u8 = 127;
@@ -30,7 +31,6 @@ pub struct Launch<'a> {
     pub home: &'a Path,
     pub now: u64,
     pub is_running: &'a dyn Fn(&Path) -> Option<String>,
-    pub repo: &'a Path,
     pub colorize: bool,
 }
 
@@ -40,7 +40,6 @@ impl std::fmt::Debug for Launch<'_> {
             .debug_struct("Launch")
             .field("home", &self.home)
             .field("now", &self.now)
-            .field("repo", &self.repo)
             .field("colorize", &self.colorize)
             .finish_non_exhaustive()
     }
@@ -56,6 +55,12 @@ pub fn claude_args(
     launch: &Launch<'_>,
     stderr: &mut dyn Write,
 ) -> Option<Vec<OsString>> {
+    let args: Vec<OsString> = args
+        .iter()
+        .filter(|arg| *arg != TELEGRAM_ARG)
+        .cloned()
+        .collect();
+    let args = args.as_slice();
     let paths = SetupPaths::resolve(launch.var, launch.home);
     let text_args: Vec<String> = args
         .iter()
@@ -84,7 +89,7 @@ pub fn claude_args(
     let mut call: Vec<OsString> = INSTANCE_NAME.map(OsString::from).to_vec();
 
     if only_flags(args) {
-        match statusline_prompt(true, &paths, launch.var, launch.repo) {
+        match statusline_prompt(true, &paths, launch.var) {
             Ok(request) if !request.trim_end_matches('\n').is_empty() => {
                 call.push(OsString::from(request.trim_end_matches('\n')));
             }
@@ -140,13 +145,11 @@ fn replace_process(command: &mut Command, stderr: &mut dyn Write) -> u8 {
 pub fn run_process(args: &[OsString], stderr: &mut dyn Write) -> u8 {
     let home = std::env::home_dir().unwrap_or_default();
     let var = |name: &str| std::env::var_os(name);
-    let repo = repo_root();
     let launch = Launch {
         var: &var,
         home: &home,
         now: now_ms(),
         is_running: &telegram_instance_running,
-        repo: &repo,
         colorize: should_colorize(&var, io::stderr().is_terminal()),
     };
     let Some(call) = claude_args(args, &launch, stderr) else {

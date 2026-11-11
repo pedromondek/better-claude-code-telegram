@@ -14,8 +14,8 @@ use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE};
 use crate::setup::{
     ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
     SetupPaths, StatuslineState, claude_output, env_deny_rule, has_command, node_version,
-    node_version_ok, parse_env_token, read_settings, read_text, repo_root, setup_locale,
-    shell_file, shell_rc_files, statusline_state, whisper_python_works,
+    node_version_ok, parse_env_token, read_settings, read_text, setup_locale, shell_file,
+    shell_rc_files, statusline_state, whisper_python_works,
 };
 use crate::shell_rc::rc_loads;
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
@@ -33,7 +33,6 @@ const WHISPER_PYTHON: &str = "whisper/venv/bin/python";
 pub struct Machine<'a> {
     pub var: &'a dyn Fn(&str) -> Option<OsString>,
     pub home: &'a Path,
-    pub repo: &'a Path,
     pub uid: Option<u32>,
     pub now: u64,
     pub node_version: &'a dyn Fn() -> Option<String>,
@@ -48,7 +47,6 @@ impl std::fmt::Debug for Machine<'_> {
         formatter
             .debug_struct("Machine")
             .field("home", &self.home)
-            .field("repo", &self.repo)
             .field("uid", &self.uid)
             .field("now", &self.now)
             .finish_non_exhaustive()
@@ -379,7 +377,7 @@ impl Checks<'_> {
             .ok_or_else(|| UNDEFINED_PATH.to_owned())?;
         let shell = self.text_var("SHELL");
         let files = shell_rc_files(&home, shell.as_deref(), cfg!(target_os = "macos"));
-        let script = shell_file(self.machine.repo);
+        let script = shell_file(&self.paths.app_dir);
         let script_text = script.to_string_lossy();
         let loaded_by = files
             .primary
@@ -641,7 +639,7 @@ impl Checks<'_> {
 
     fn statusline(&self) -> Verdict {
         let shown = self.messages.health_detail.statusline;
-        let (status, detail) = match statusline_state(&self.paths, self.machine.repo) {
+        let (status, detail) = match statusline_state(&self.paths) {
             StatuslineState::Ours => (Status::Ok, shown.ours),
             StatuslineState::OursAfter => (Status::Ok, shown.ours_after),
             StatuslineState::Custom => (Status::Ok, shown.custom),
@@ -816,7 +814,6 @@ pub fn run(args: &[String], machine: &Machine<'_>, screen: &mut Screen<'_>) -> u
 pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
     let home = std::env::home_dir().unwrap_or_default();
     let var = |name: &str| std::env::var_os(name);
-    let repo = repo_root();
     #[cfg(unix)]
     let uid = Some(rustix::process::getuid().as_raw());
     #[cfg(not(unix))]
@@ -830,7 +827,6 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
     let machine = Machine {
         var: &var,
         home: &home,
-        repo: &repo,
         uid,
         now: now_ms(),
         node_version: &node_version,

@@ -33,8 +33,8 @@ use bcct::shell_rc::{
 };
 use serde_json::{Map, Value, json};
 use support::{
-    Tree, default_file_mode, list, lookup, materialize, object, placeholders, release_form,
-    repo_root, sandbox, snapshot, substitute, text,
+    Tree, app_form, default_file_mode, list, lookup, materialize, object, placeholders,
+    release_form, repo_root, sandbox, snapshot, substitute, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/setup-files.json");
@@ -216,36 +216,43 @@ fn kind_text(kind: StatuslineKind) -> &'static str {
 #[test]
 fn the_status_line_helpers_match_the_js() {
     let repo = repo_root();
+    let app_dir = Path::new("/app");
 
-    for entry in list(&fixture(), "statuslines") {
-        let status_line = optional(&deep_substitute(&entry["statusLine"], &repo));
-        let mut settings = Map::new();
-        settings.insert("theme".to_owned(), json!("dark"));
+    for original in list(&fixture(), "statuslines") {
+        for (entry, of_the_clone) in [
+            (original.clone(), true),
+            (app_form(original, "/app"), false),
+        ] {
+            let entry = &entry;
+            let status_line = optional(&deep_substitute(&entry["statusLine"], &repo));
+            let mut settings = Map::new();
+            settings.insert("theme".to_owned(), json!("dark"));
 
-        if let Some(status_line) = &status_line {
-            settings.insert("statusLine".to_owned(), status_line.clone());
+            if let Some(status_line) = &status_line {
+                settings.insert("statusLine".to_owned(), status_line.clone());
+            }
+
+            let expected = deep_substitute(&entry["withStatusline"], &repo);
+
+            if let Some(preview) = entry["preview"].as_str().filter(|_| of_the_clone) {
+                assert_eq!(statusline_preview(status_line.as_ref()), preview, "{entry}");
+            }
+            assert_eq!(
+                is_our_statusline(status_line.as_ref(), app_dir),
+                entry["ours"].as_bool().unwrap(),
+                "{entry}"
+            );
+            assert_eq!(
+                kind_text(statusline_kind(status_line.as_ref(), app_dir)),
+                text(entry, "kind"),
+                "{entry}"
+            );
+            assert_eq!(
+                with_statusline(&settings, "node x").map_or(Value::Null, Value::Object),
+                expected,
+                "{entry}"
+            );
         }
-
-        let expected = deep_substitute(&entry["withStatusline"], &repo);
-
-        if let Some(preview) = entry["preview"].as_str() {
-            assert_eq!(statusline_preview(status_line.as_ref()), preview, "{entry}");
-        }
-        assert_eq!(
-            is_our_statusline(status_line.as_ref(), &repo),
-            entry["ours"].as_bool().unwrap(),
-            "{entry}"
-        );
-        assert_eq!(
-            kind_text(statusline_kind(status_line.as_ref(), &repo)),
-            text(entry, "kind"),
-            "{entry}"
-        );
-        assert_eq!(
-            with_statusline(&settings, "node x").map_or(Value::Null, Value::Object),
-            expected,
-            "{entry}"
-        );
     }
 }
 
@@ -426,17 +433,15 @@ fn run_operation(
     let paths = SetupPaths::resolve(&var, Path::new(&home));
     let app_dir = PathBuf::from(&variables["BETTER_CC_TELEGRAM_DIR"]);
     let state_dir = PathBuf::from(&variables["TELEGRAM_STATE_DIR"]);
-    let repo = repo_root();
     let files = SetupFiles {
         app_dir: &app_dir,
         state_dir: &state_dir,
         settings_file: &paths.settings_file,
         home: &home,
-        repo: &repo,
     };
     let now = 1_700_000_000_123;
     let mut printer = Printer::new(out, entry["colorize"].as_bool().unwrap(), messages);
-    let default_shell = shell_file(&repo);
+    let default_shell = shell_file(&app_dir);
     let shell_path = args["shellFile"]
         .as_str()
         .map_or(default_shell, PathBuf::from);
@@ -578,10 +583,18 @@ fn every_file_operation_matches_the_js_and_undoes_like_it() {
     });
 }
 
+fn app_entry(entry: &Value) -> Value {
+    entry["env"]
+        .get("BETTER_CC_TELEGRAM_DIR")
+        .and_then(Value::as_str)
+        .map_or_else(|| entry.clone(), |app| app_form(entry, app))
+}
+
 fn check_operation(entry: &Value, default_mode: &str) {
     {
         let name = text(entry, "name");
         let root = sandbox();
+        let entry = &app_entry(entry);
         materialize(root.path(), &entry["files"]);
         make_links(root.path(), &entry["links"]);
 
@@ -596,10 +609,10 @@ fn check_operation(entry: &Value, default_mode: &str) {
             &PathBuf::from(&variables["TELEGRAM_STATE_DIR"]).join(".env"),
             &home,
         );
-        let repo = repo_root();
+        let app_dir = PathBuf::from(&variables["BETTER_CC_TELEGRAM_DIR"]);
         let context = ChangeContext {
             env_rule: &rule,
-            repo: &repo,
+            app_dir: &app_dir,
             messages,
             colorize: entry["colorize"].as_bool().unwrap(),
         };
@@ -679,7 +692,7 @@ fn a_closed_output_never_stops_a_file_operation_halfway() {
     let default_mode = default_file_mode();
 
     for entry in list(&fixture(), "operations") {
-        check_operation_with_a_closed_output(entry, &default_mode);
+        check_operation_with_a_closed_output(&app_entry(entry), &default_mode);
     }
 }
 
@@ -747,6 +760,7 @@ fn every_journal_script_matches_the_js() {
     for entry in list(&fixture(), "journals") {
         let name = text(entry, "name");
         let root = sandbox();
+        let entry = &app_entry(entry);
         materialize(root.path(), &entry["files"]);
         make_links(root.path(), &entry["links"]);
 
@@ -761,10 +775,12 @@ fn every_journal_script_matches_the_js() {
             &PathBuf::from(var("TELEGRAM_STATE_DIR").unwrap()).join(".env"),
             &home,
         );
-        let repo = repo_root();
+        let app_dir = var("BETTER_CC_TELEGRAM_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_default();
         let context = ChangeContext {
             env_rule: &rule,
-            repo: &repo,
+            app_dir: &app_dir,
             messages,
             colorize: entry["colorize"].as_bool().unwrap(),
         };
@@ -834,15 +850,13 @@ fn a_closed_output_is_kept_for_the_flow_to_ask_and_the_settings_are_written_anyw
     let app_dir = root.path().join("app");
     let state_dir = root.path().join("state");
     let settings_file = root.path().join("settings.json");
-    let repo = repo_root();
-    let ours = json!({"statusLine": {"type": "command", "command": bcct::setup::statusline_command(&repo)}});
+    let ours = json!({"statusLine": {"type": "command", "command": bcct::setup::statusline_command(&app_dir)}});
     fs::write(&settings_file, format!("{}\n", stringify_pretty(&ours))).unwrap();
     let files = SetupFiles {
         app_dir: &app_dir,
         state_dir: &state_dir,
         settings_file: &settings_file,
         home: "/nowhere",
-        repo: &repo,
     };
     let mut closed = ClosedOutput;
     let mut printer = Printer::new(&mut closed, false, messages_for(Locale::EnUs));
@@ -913,12 +927,11 @@ fn a_file_failure_reads_as_the_catalog_line() {
 #[test]
 fn warns_that_the_status_line_claude_customized_still_calls_the_indicator() {
     let root = sandbox();
-    let repo = repo_root();
     let en = messages_for(Locale::EnUs);
-    let command = bcct::setup::statusline_command(&repo);
+    let command = bcct::setup::statusline_command(root.path());
 
     assert_eq!(
-        bcct::setup_files::statusline_custom_left(root.path(), &repo, en, false),
+        bcct::setup_files::statusline_custom_left(root.path(), en, false),
         None
     );
 
@@ -928,7 +941,7 @@ fn warns_that_the_status_line_claude_customized_still_calls_the_indicator() {
     )
     .unwrap();
     assert_eq!(
-        bcct::setup_files::statusline_custom_left(root.path(), &repo, en, false),
+        bcct::setup_files::statusline_custom_left(root.path(), en, false),
         None
     );
 
@@ -938,11 +951,175 @@ fn warns_that_the_status_line_claude_customized_still_calls_the_indicator() {
     )
     .unwrap();
     assert_eq!(
-        bcct::setup_files::statusline_custom_left(root.path(), &repo, en, true),
+        bcct::setup_files::statusline_custom_left(root.path(), en, true),
         Some(bcct::ui::warn(&(en.statusline_custom_left)(&command), true))
     );
     assert_eq!(
         (messages_for(Locale::PtBr).statusline_custom_left)("node \"/s.mjs\""),
         "A sua statusline ainda chama o indicador do Telegram, que o Claude juntou a ela. Peça ao Claude para tirar esta chamada:\n  node \"/s.mjs\""
+    );
+}
+
+const CLONE_STATUSLINE: &str = "node \"/r/plugins/telegram-hooks/statusline.mjs\"";
+
+fn with_statusline_command(root: &Path, command: &str) -> PathBuf {
+    let settings_file = root.join("settings.json");
+    let settings = json!({"theme": "dark", "statusLine": {"type": "command", "command": command}});
+
+    fs::write(&settings_file, format!("{}\n", stringify_pretty(&settings))).unwrap();
+    settings_file
+}
+
+fn statusline_applied(root: &Path, command: &str, choice: StatuslineChoice) -> (Value, String) {
+    let app_dir = root.join("app");
+    let state_dir = root.join("state");
+    let settings_file = with_statusline_command(root, command);
+    let files = SetupFiles {
+        app_dir: &app_dir,
+        state_dir: &state_dir,
+        settings_file: &settings_file,
+        home: "/nowhere",
+    };
+    let mut out = Vec::new();
+    let mut printer = Printer::new(&mut out, false, messages_for(Locale::EnUs));
+    let mut journal = Journal::new();
+
+    apply_statusline(&files, choice, 1, &mut journal, &mut printer).unwrap();
+
+    (
+        parse_json(&fs::read_to_string(&settings_file).unwrap()).unwrap()["statusLine"].clone(),
+        placeholders(&String::from_utf8(out).unwrap(), root),
+    )
+}
+
+#[test]
+fn the_setup_moves_the_statusline_of_the_clone_to_the_launcher_of_the_app() {
+    let root = sandbox();
+    let app_dir = root.path().join("app");
+    let en = messages_for(Locale::EnUs);
+    let name = "{root}/settings.json";
+
+    for choice in [StatuslineChoice::On, StatuslineChoice::After] {
+        assert_eq!(
+            statusline_applied(root.path(), CLONE_STATUSLINE, choice),
+            (
+                json!({"type": "command", "command": bcct::setup::statusline_command(&app_dir)}),
+                format!("✔ {}\n", (en.statusline_installed)(name))
+            )
+        );
+        assert_eq!(
+            statusline_applied(
+                root.path(),
+                &format!("{CLONE_STATUSLINE} --after-previous"),
+                choice
+            ),
+            (
+                json!({"type": "command", "command": bcct::setup::statusline_after_command(&app_dir)}),
+                format!("✔ {}\n", (en.statusline_chained)(name))
+            )
+        );
+    }
+
+    let current = bcct::setup::statusline_after_command(&app_dir);
+
+    assert_eq!(
+        statusline_applied(root.path(), &current, StatuslineChoice::On),
+        (
+            json!({"type": "command", "command": current}),
+            format!("○ {}\n", en.statusline_already)
+        )
+    );
+}
+
+#[test]
+fn a_statusline_of_the_clone_that_cannot_be_moved_stops_with_the_settings_untouched() {
+    let root = sandbox();
+    let folder = root.path().join("claude");
+    fs::create_dir(&folder).unwrap();
+    let settings_file = with_statusline_command(&folder, CLONE_STATUSLINE);
+    let before = fs::read_to_string(&settings_file).unwrap();
+    let app_dir = root.path().join("app");
+    let state_dir = root.path().join("state");
+    let files = SetupFiles {
+        app_dir: &app_dir,
+        state_dir: &state_dir,
+        settings_file: &settings_file,
+        home: "/nowhere",
+    };
+    let mut out = Vec::new();
+    let mut printer = Printer::new(&mut out, false, messages_for(Locale::EnUs));
+    let mut journal = Journal::new();
+    set_mode(&folder, 0o555);
+
+    let result = apply_statusline(&files, StatuslineChoice::On, 1, &mut journal, &mut printer);
+
+    set_mode(&folder, 0o755);
+    assert!(result.is_err(), "{result:?}");
+    assert_eq!(fs::read_to_string(&settings_file).unwrap(), before);
+    assert_eq!(out, Vec::<u8>::new());
+}
+
+#[test]
+fn the_setup_swaps_the_rc_line_of_the_clone_and_the_uninstall_removes_the_new_one() {
+    let root = sandbox();
+    let home = root.path().join("home");
+    let rc = home.join(".zshrc");
+    let shell = root.path().join("app/shell.sh");
+    let clone = "[ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\"";
+    let marker = bcct::shell_rc::SHELL_MARKER;
+    let home_text = home.to_string_lossy().into_owned();
+    let en = messages_for(Locale::EnUs);
+    fs::create_dir_all(&home).unwrap();
+    fs::write(&rc, format!("a\n\n{marker}\n{clone}\n")).unwrap();
+    let mut out = Vec::new();
+    let mut journal = Journal::new();
+
+    {
+        let mut printer = Printer::new(&mut out, false, en);
+
+        install_shell_function(
+            &home_text,
+            Some("/bin/zsh"),
+            false,
+            &shell,
+            &mut journal,
+            &mut printer,
+        )
+        .unwrap();
+    }
+
+    assert_eq!(
+        fs::read_to_string(&rc).unwrap(),
+        format!("a\n\n{marker}\n{}\n", source_line(&shell.to_string_lossy()))
+    );
+
+    {
+        let mut printer = Printer::new(&mut out, false, en);
+
+        remove_shell_lines(&home_text, &shell, &mut printer).unwrap();
+    }
+
+    assert_eq!(fs::read_to_string(&rc).unwrap(), "a\n");
+    assert_eq!(
+        placeholders(&String::from_utf8(out).unwrap(), root.path()),
+        format!(
+            "✔ {}\n✔ {}\n",
+            (en.rc_now_loads)("{root}/home/.zshrc"),
+            (en.rc_no_longer_loads)("{root}/home/.zshrc")
+        )
+    );
+}
+
+#[test]
+fn the_uninstall_removes_the_statusline_of_the_clone() {
+    let root = sandbox();
+    let en = messages_for(Locale::EnUs);
+
+    assert_eq!(
+        statusline_applied(root.path(), CLONE_STATUSLINE, StatuslineChoice::Off),
+        (
+            Value::Null,
+            format!("✔ {}\n", (en.statusline_removed)("{root}/settings.json"))
+        )
     );
 }

@@ -25,6 +25,7 @@ use bcct::messages::{Messages, messages_for};
 use bcct::prompt::{
     Choice, ChoiceItem, FakeCall, FakePrompter, HIDE_CURSOR, PromptError, Reply, SHOW_CURSOR,
 };
+use bcct::setup::shell_script;
 use bcct::setup_ask::{
     QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
     ask_pairing_choice, ask_quiet_hours, ask_remove_models, ask_statusline_choice,
@@ -34,7 +35,8 @@ use bcct::setup_files::StatuslineChoice;
 use bcct::setup_telegram::PairingChoice;
 use serde_json::{Value, json};
 use support::{
-    Helper, Tree, coverage_env, list, materialize, placeholders, release_form, snapshot_under, text,
+    Helper, Tree, app_form, coverage_env, list, materialize, placeholders, release_form,
+    snapshot_under, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/setup-run.json");
@@ -44,9 +46,73 @@ const UNREACHABLE_API: &str = "http://127.0.0.1:1";
 const DIGITS: &str = "0123456789";
 const WAIT_LIMIT: Duration = Duration::from_secs(5);
 const RUN_LIMIT: Duration = Duration::from_secs(15);
+const APP: &str = "{root}/home/.claude/better-claude-code-telegram";
+const APP_FOLDER: &str = "home/.claude/better-claude-code-telegram/";
+const SHELL_SCRIPT: &str = "home/.claude/better-claude-code-telegram/shell.sh";
 
 fn fixture() -> Value {
-    parse_json(&release_form(FIXTURE)).unwrap()
+    with_the_shell_script_journaled(&app_form(&parse_json(&release_form(FIXTURE)).unwrap(), APP))
+}
+
+fn undone(change: &str) -> String {
+    format!(
+        "\u{1b}[36m⠋\u{1b}[39m \u{1b}[2mUndoing: {change}…\u{1b}[22m\r\u{1b}[2K\u{1b}[32m✔ Undone:\r\n  • {change}\u{1b}[39m\r\n"
+    )
+}
+
+fn journaled_text(text: &str) -> String {
+    let folder = format!("created the folder {APP}");
+    let script = format!("created {APP}/shell.sh");
+    let rc = "created {root}/home/.zshrc";
+
+    text.replace(
+        &format!("  • {rc}\r\n  • {folder}\r\n"),
+        &format!("  • {folder}\r\n  • {script}\r\n  • {rc}\r\n"),
+    )
+    .replace(
+        &format!("{}{}", undone(&folder), undone(rc)),
+        &format!("{}{}{}", undone(rc), undone(&script), undone(&folder)),
+    )
+}
+
+fn with_the_shell_script_journaled(value: &Value) -> Value {
+    match value {
+        Value::String(text) => Value::String(journaled_text(text)),
+        Value::Array(items) => items.iter().map(with_the_shell_script_journaled).collect(),
+        Value::Object(map) => map
+            .iter()
+            .map(|(key, item)| (key.clone(), with_the_shell_script_journaled(item)))
+            .collect(),
+        other => other.clone(),
+    }
+}
+
+fn without_the_shell_script(mut tree: Tree, root: &Path, name: &str) -> Tree {
+    let loads = tree
+        .values()
+        .filter_map(|(content, _)| content.as_deref())
+        .any(|content| content.contains(&format!("{APP}/shell.sh\" ] && .")));
+    let Some((content, mode)) = tree.remove(SHELL_SCRIPT) else {
+        assert!(!loads, "{name}: the rc loads a shell.sh that is missing");
+        return tree;
+    };
+    let app_dir = root.join(APP_FOLDER.trim_end_matches('/'));
+
+    assert_eq!(
+        content.as_deref(),
+        Some(placeholders(&shell_script(&app_dir), root).as_str()),
+        "{name}: shell.sh"
+    );
+    assert_eq!(mode, "600", "{name}: shell.sh");
+
+    if !tree
+        .keys()
+        .any(|path| path.starts_with(APP_FOLDER) && path != APP_FOLDER)
+    {
+        tree.remove(APP_FOLDER);
+    }
+
+    tree
 }
 
 fn resolved(name: &str) -> String {
@@ -622,7 +688,7 @@ fn replay_scenario(scenario: &Value, fake_claude: &str) {
     }
 
     assert_eq!(
-        home_tree(root, &facts),
+        without_the_shell_script(home_tree(root, &facts), root, name),
         expected_home(&scenario["after"]),
         "{name}: files"
     );
@@ -679,6 +745,33 @@ fn the_steps_do_what_the_js_does() {
 #[test]
 fn the_status_line_does_what_the_js_does() {
     replay_group("statusline");
+}
+
+#[test]
+fn keeping_the_statusline_of_the_clone_moves_it_to_the_launcher_of_the_app() {
+    let name = "ours kept with Enter, nothing to restore";
+    let scenario_of = |fixture: &Value| {
+        list(&fixture["processes"], "statusline")
+            .iter()
+            .find(|scenario| text(scenario, "name") == name)
+            .unwrap()
+            .clone()
+    };
+    let fixture = fixture();
+    let en = messages_for(Locale::EnUs);
+    let mut scenario = scenario_of(&fixture);
+    let kept = format!("○ {}", en.statusline_ours_kept);
+    let moved = format!(
+        "✔ {}",
+        (en.statusline_installed)("{root}/home/.claude/settings.json")
+    );
+    let stdout = text(&scenario["results"][0], "stdout").replace(&kept, &moved);
+
+    assert_ne!(stdout, text(&scenario["results"][0], "stdout"));
+    scenario["files"] = scenario_of(&parse_json(&release_form(FIXTURE)).unwrap())["files"].clone();
+    scenario["results"][0]["stdout"] = Value::String(stdout);
+
+    replay_scenario(&scenario, text(&fixture, "fakeClaude"));
 }
 
 #[test]
@@ -991,6 +1084,72 @@ fn with_full_output(root: &Path, args: &[&str], input: &str) -> (Option<i32>, St
         output.status.code(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
     )
+}
+
+#[test]
+fn a_shell_script_that_cannot_be_saved_stops_the_plugin_step_with_its_name() {
+    let fixture = fixture();
+    let scenario = list(&fixture["processes"], "plugins")
+        .iter()
+        .find(|scenario| text(scenario, "name") == "a fresh machine")
+        .unwrap();
+    let folder = support::sandbox();
+    let root = folder.path();
+    let mut facts = Facts {
+        code: None,
+        pid: None,
+    };
+
+    prepared(root, scenario, text(&fixture, "fakeClaude"));
+    materialize(root, &with_pid(&scenario["files"], ""));
+    fs::create_dir_all(root.join(SHELL_SCRIPT)).unwrap();
+
+    let result = run_once(&list(scenario, "runs")[0], root, None, &mut facts);
+    let shown = format!("{}{}", result.stdout, result.stderr);
+
+    assert_eq!(result.status, Some(1), "{shown}");
+    assert!(
+        shown.contains(&(messages_for(Locale::EnUs).file_not_saved)(&format!(
+            "{APP}/shell.sh"
+        ))),
+        "{shown}"
+    );
+    assert!(!root.join("home/.zshrc").exists());
+}
+
+#[test]
+fn an_uninstall_that_cannot_remove_the_shell_script_names_it_and_stops() {
+    let folder = support::sandbox();
+    let root = folder.path();
+
+    prepared(root, &json!({}), text(&fixture(), "fakeClaude"));
+    fs::create_dir_all(root.join(SHELL_SCRIPT).join("inside")).unwrap();
+
+    let mut child = closed_output_command(root, &["--uninstall"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let _written = child.stdin.take().unwrap().write_all(b"\n");
+    let output = ended_in_time(child);
+    let shown = placeholders(
+        &format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        ),
+        root,
+    );
+
+    assert_eq!(output.status.code(), Some(1), "{shown}");
+    assert!(
+        shown.contains(&(messages_for(Locale::EnUs).file_not_removed)(&format!(
+            "{APP}/shell.sh"
+        ))),
+        "{shown}"
+    );
+    assert!(root.join(SHELL_SCRIPT).join("inside").is_dir());
 }
 
 fn full_output_sandbox() -> tempfile::TempDir {
@@ -1617,7 +1776,7 @@ fn the_terminal_shows_what_the_js_shows() {
             "{name}"
         );
         assert_eq!(
-            home_tree(root, &facts),
+            without_the_shell_script(home_tree(root, &facts), root, name),
             expected_home(&scenario["after"]),
             "{name}: files"
         );

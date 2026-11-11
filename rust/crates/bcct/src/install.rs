@@ -454,6 +454,7 @@ impl System {
 
 pub struct Machine<'a> {
     pub home: &'a Path,
+    pub app_dir: &'a Path,
     pub repo: &'a Path,
     pub hf_cache: &'a Path,
     pub settings_file: &'a Path,
@@ -468,6 +469,7 @@ impl std::fmt::Debug for Machine<'_> {
         formatter
             .debug_struct("Machine")
             .field("home", &self.home)
+            .field("app_dir", &self.app_dir)
             .field("repo", &self.repo)
             .field("hf_cache", &self.hf_cache)
             .field("settings_file", &self.settings_file)
@@ -805,7 +807,7 @@ impl<'r, 's, E> Install<'r, 's, E> {
             &self.machine.home.to_string_lossy(),
             self.machine.shell,
             self.machine.macos,
-            &shell_file(self.machine.repo),
+            &shell_file(self.machine.app_dir),
         )
     }
 
@@ -873,7 +875,7 @@ impl<'r, 's, E> Install<'r, 's, E> {
             },
             messages,
             self.machine.repo,
-            &shell_file(self.machine.repo),
+            &shell_file(self.machine.app_dir),
         );
 
         if !plan.is_empty() {
@@ -1695,11 +1697,13 @@ mod tests {
             let hub = self.path("hub");
             let settings = self.path("settings.json");
             let repo = self.path("repo");
+            let app_dir = self.path("app");
             let installer = |system: &System, command: &str| {
                 system.run_installer(self.installer.as_deref().unwrap_or(command))
             };
             let machine = Machine {
                 home: &home,
+                app_dir: &app_dir,
                 repo: &repo,
                 hf_cache: &hub,
                 settings_file: &settings,

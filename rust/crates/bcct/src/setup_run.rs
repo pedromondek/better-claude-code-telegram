@@ -15,7 +15,7 @@ use crate::changes::{
     STATUSLINE_ICON, TRANSCRIPTION_ICON, describe_changes, quiet_hours_text,
 };
 use crate::config::{DEFAULT_DELAY_MINUTES, read_config};
-use crate::files::{FileFailure, read_json};
+use crate::files::{FileFailure, create_private_dir, read_json, write_private};
 use crate::health::{self, Screen};
 use crate::hook::now_ms;
 use crate::install::{
@@ -32,12 +32,12 @@ use crate::prompt::ask_hidden;
 use crate::prompt::{
     Choice, Colors, GuardCancel, PromptError, Prompter, ask_yes_no, create_prompter,
 };
-use crate::settings::{STATUS_LINE, is_our_statusline, statusline_preview};
+use crate::settings::{STATUS_LINE, is_our_statusline, remove_if_present, statusline_preview};
 use crate::setup::{
     ACCESS_FILE, ENV_FILE, MINIMUM_NODE, SETUP_COMMAND, SetupPaths, StatuslineState, check_setup,
     env_deny_rule, mark_launch, node_version_from, node_version_ok, parse_env_token, read_settings,
-    read_text, repo_root, setup_locale, shell_file, statusline_prompt, statusline_state,
-    telegram_instance_running, whisper_python_works,
+    read_text, repo_root, setup_locale, shell_file, shell_script, statusline_is_current,
+    statusline_prompt, statusline_state, telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
     QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
@@ -444,13 +444,12 @@ fn kept_quiet(range: Option<&QuietRange>) -> Kept<'_> {
     )
 }
 
-fn setup_files<'f>(paths: &'f SetupPaths, home: &'f str, repo: &'f Path) -> SetupFiles<'f> {
+fn setup_files<'f>(paths: &'f SetupPaths, home: &'f str) -> SetupFiles<'f> {
     SetupFiles {
         app_dir: &paths.app_dir,
         state_dir: &paths.state_dir,
         settings_file: &paths.settings_file,
         home,
-        repo,
     }
 }
 
@@ -520,6 +519,21 @@ impl<'a> Setup<'a> {
         messages_for(setup_locale(&self.paths.app_dir, self.var))
     }
 
+    fn save_shell_script(&mut self, script: &Path) -> Result<(), FileFailure> {
+        let contents = shell_script(&self.paths.app_dir);
+
+        if read_text(script).as_deref() == Some(contents.as_str()) {
+            return Ok(());
+        }
+
+        let not_saved = |_| FileFailure::NotSaved(script.to_path_buf());
+
+        self.journal.track_dir(&self.paths.app_dir);
+        create_private_dir(&self.paths.app_dir).map_err(not_saved)?;
+        self.journal.track_file(script).map_err(not_saved)?;
+        write_private(script, contents.as_bytes()).map_err(not_saved)
+    }
+
     fn ready(&self) -> Result<(), Stop> {
         if self.output.out.failed {
             Err(Stop::Output)
@@ -538,6 +552,7 @@ impl<'a> Setup<'a> {
 
         let machine = install::Machine {
             home: &self.home,
+            app_dir: &self.paths.app_dir,
             repo: &self.repo,
             hf_cache: &self.hf_cache,
             settings_file: &self.paths.settings_file,
@@ -737,7 +752,7 @@ impl<'a> Setup<'a> {
         choice: StatuslineChoice,
         messages: &Messages,
     ) -> Result<(), Stop> {
-        let files = setup_files(&self.paths, &self.home_text, &self.repo);
+        let files = setup_files(&self.paths, &self.home_text);
         let mut printer = self.output.printer(messages);
 
         apply_statusline(&files, choice, now_ms(), &mut self.journal, &mut printer)
@@ -754,11 +769,15 @@ impl<'a> Setup<'a> {
 
         self.ready()?;
 
-        if is_our_statusline(current, &self.repo) {
+        if is_our_statusline(current, &self.paths.app_dir) {
             let restores = join_path(&self.paths.app_dir, PREVIOUS_STATUSLINE_FILE).exists();
 
             if ask_our_statusline(restores, messages, ask)? == CommandsChoice::Remove {
                 return self.apply_statusline(StatuslineChoice::Off, messages);
+            }
+
+            if !statusline_is_current(current, &self.paths.app_dir) {
+                return self.apply_statusline(StatuslineChoice::On, messages);
             }
 
             self.output
@@ -838,7 +857,7 @@ impl<'a> Setup<'a> {
         };
 
         if wants_token {
-            let files = setup_files(&self.paths, &self.home_text, &self.repo);
+            let files = setup_files(&self.paths, &self.home_text);
             let mut printer = self.output.printer(messages);
 
             ensure_env_denied(&files, &mut self.journal, &mut printer)
@@ -879,7 +898,6 @@ impl<'a> Setup<'a> {
         let machine = health::Machine {
             var: self.var,
             home: &self.home,
-            repo: &self.repo,
             uid: self.uid,
             now: now_ms(),
             node_version: &node_version,
@@ -997,7 +1015,11 @@ impl<'a> Setup<'a> {
 
         self.installing(messages, ask, |install| install.ensure_plugins(&choice))?;
 
-        let script = shell_file(&self.repo);
+        let script = shell_file(&self.paths.app_dir);
+
+        self.save_shell_script(&script)
+            .map_err(|failure| Stop::Failed(failure.message(messages)))?;
+
         let mut printer = self.output.printer(messages);
 
         install_shell_function(
@@ -1107,24 +1129,25 @@ impl<'a> Setup<'a> {
         }
 
         let settings = read_settings(&self.paths.settings_file, messages).map_err(Stop::Failed)?;
-        let script = shell_file(&self.repo);
+        let script = shell_file(&self.paths.app_dir);
         let colorize = self.output.colors.out;
 
         {
-            let files = setup_files(&self.paths, &self.home_text, &self.repo);
+            let files = setup_files(&self.paths, &self.home_text);
             let mut printer = self.output.printer(messages);
             let failed = |error: ConfigError| Stop::Failed(error.message(messages));
 
             remove_shell_lines(&self.home_text, &script, &mut printer).map_err(failed)?;
+            remove_if_present(&script).map_err(|_| {
+                Stop::Failed(FileFailure::NotRemoved(script.clone()).message(messages))
+            })?;
             remove_our_settings(&settings, &files, &mut self.journal, &mut printer)
                 .map_err(failed)?;
         }
 
         self.installing(messages, ask, |install| install.remove_plugins())?;
 
-        if let Some(left) =
-            statusline_custom_left(&self.paths.app_dir, &self.repo, messages, colorize)
-        {
+        if let Some(left) = statusline_custom_left(&self.paths.app_dir, messages, colorize) {
             self.output.line(&left);
         }
 
@@ -1209,7 +1232,7 @@ impl<'a> Setup<'a> {
         let rule = self.change_context_rule();
         let context = ChangeContext {
             env_rule: &rule,
-            repo: &self.repo,
+            app_dir: &self.paths.app_dir,
             messages,
             colorize: self.output.colors.out,
         };
@@ -1379,7 +1402,7 @@ impl<'a> Setup<'a> {
     }
 
     fn statusline_request(&mut self, take: bool) -> u8 {
-        match statusline_prompt(take, &self.paths, self.var, &self.repo) {
+        match statusline_prompt(take, &self.paths, self.var) {
             Ok(request) => {
                 if !request.is_empty() {
                     self.output.line(&request);
@@ -1411,7 +1434,7 @@ impl<'a> Setup<'a> {
     }
 
     fn show(&mut self) -> u8 {
-        let state = current_state(&self.paths, self.var, &self.repo);
+        let state = current_state(&self.paths, self.var);
 
         self.output.line(&stringify_pretty(&state));
         self.finish(OK)
@@ -1430,11 +1453,7 @@ fn statusline_state_name(state: StatuslineState) -> &'static str {
 }
 
 #[must_use]
-pub fn current_state(
-    paths: &SetupPaths,
-    var: &dyn Fn(&str) -> Option<OsString>,
-    repo: &Path,
-) -> Value {
+pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>) -> Value {
     let config = read_config(&paths.app_dir);
     let delay = config
         .get("delayMinutes")
@@ -1463,7 +1482,7 @@ pub fn current_state(
             .cloned()
             .unwrap_or(Value::Null),
         "inboxRetentionDays": current_inbox_days(&paths.app_dir).map_or(Value::Null, number),
-        "statusline": statusline_state_name(statusline_state(paths, repo)),
+        "statusline": statusline_state_name(statusline_state(paths)),
         "token": token,
         "pairedAccounts": accounts,
     })

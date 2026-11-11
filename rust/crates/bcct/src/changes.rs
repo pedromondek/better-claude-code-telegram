@@ -30,7 +30,7 @@ const LONE_SURROGATE_TAG: char = '\u{fffd}';
 #[derive(Debug, Clone, Copy)]
 pub struct ChangeContext<'a> {
     pub env_rule: &'a str,
-    pub repo: &'a Path,
+    pub app_dir: &'a Path,
     pub messages: &'a Messages,
     pub colorize: bool,
 }
@@ -124,7 +124,7 @@ fn option_change(
 fn statusline_label(settings: &Map<String, Value>, context: &ChangeContext<'_>) -> &'static str {
     let detail = &context.messages.health_detail.statusline;
 
-    match statusline_kind(settings.get(STATUS_LINE), context.repo) {
+    match statusline_kind(settings.get(STATUS_LINE), context.app_dir) {
         StatuslineKind::None => detail.none,
         StatuslineKind::Ours => detail.ours,
         StatuslineKind::OursAfter => detail.ours_after,

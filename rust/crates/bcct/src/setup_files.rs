@@ -15,8 +15,8 @@ use crate::settings::{
     with_status_line, without_env_denied, without_our_statusline, write_json_atomic,
 };
 use crate::setup::{
-    ENV_FILE, STATUSLINE_REQUEST_FILE, env_deny_rule, read_settings, statusline_after_command,
-    statusline_command,
+    ENV_FILE, STATUSLINE_REQUEST_FILE, StatuslineKind, env_deny_rule, read_settings,
+    statusline_after_command, statusline_command, statusline_is_current, statusline_kind,
 };
 use crate::ui::{skipped, success, warn};
 
@@ -120,7 +120,6 @@ pub struct SetupFiles<'a> {
     pub state_dir: &'a Path,
     pub settings_file: &'a Path,
     pub home: &'a str,
-    pub repo: &'a Path,
 }
 
 impl SetupFiles<'_> {
@@ -266,13 +265,12 @@ fn customized(app_dir: &Path) -> bool {
 #[must_use]
 pub fn statusline_custom_left(
     app_dir: &Path,
-    repo: &Path,
     messages: &Messages,
     colorize: bool,
 ) -> Option<String> {
     customized(app_dir).then(|| {
         warn(
-            &(messages.statusline_custom_left)(&statusline_command(repo)),
+            &(messages.statusline_custom_left)(&statusline_command(app_dir)),
             colorize,
         )
     })
@@ -285,7 +283,7 @@ pub fn request_statusline_custom(
     journal: &mut Journal,
     printer: &mut Printer<'_>,
 ) -> Result<(), ConfigError> {
-    if !current.is_some_and(js_truthy) || is_our_statusline(current, files.repo) {
+    if !current.is_some_and(js_truthy) || is_our_statusline(current, files.app_dir) {
         return Err(ConfigError::Refused(
             printer.messages.statusline_custom_needs_own.to_owned(),
         ));
@@ -393,7 +391,7 @@ pub fn apply_statusline(
 ) -> Result<(), ConfigError> {
     let messages = printer.messages;
     let settings = read_settings_or_refuse(files, messages)?;
-    let command = statusline_command(files.repo);
+    let command = statusline_command(files.app_dir);
     let current = settings.get(STATUS_LINE);
     let name = files.settings_name();
 
@@ -404,7 +402,7 @@ pub fn apply_statusline(
     forget_statusline_request(files.app_dir, journal)?;
 
     if choice == StatuslineChoice::Off {
-        let Some(removed) = without_our_statusline(&settings, files.app_dir, files.repo)? else {
+        let Some(removed) = without_our_statusline(&settings, files.app_dir)? else {
             printer.line(messages.statusline_skipped);
             return Ok(());
         };
@@ -415,8 +413,28 @@ pub fn apply_statusline(
         return Ok(());
     }
 
-    if is_our_statusline(current, files.repo) {
+    if statusline_is_current(current, files.app_dir) {
         printer.skipped(messages.statusline_already);
+        return Ok(());
+    }
+
+    if is_our_statusline(current, files.app_dir) {
+        let after = statusline_kind(current, files.app_dir) == StatuslineKind::OursAfter;
+        let (updated, text) = if after {
+            (
+                statusline_after_command(files.app_dir),
+                messages.statusline_chained,
+            )
+        } else {
+            (command, messages.statusline_installed)
+        };
+
+        write_json_atomic(
+            files.settings_file,
+            &with_status_line(&settings, &updated),
+            journal,
+        )?;
+        printer.success(&text(&name));
         return Ok(());
     }
 
@@ -434,7 +452,7 @@ pub fn apply_statusline(
     let previous = current.cloned().unwrap_or_default();
 
     if choice == StatuslineChoice::After {
-        let chained = with_status_line(&settings, &statusline_after_command(files.repo));
+        let chained = with_status_line(&settings, &statusline_after_command(files.app_dir));
 
         forget_statusline_customized(files.app_dir, journal)?;
         save_previous_statusline(files.app_dir, &previous, journal)?;
@@ -498,7 +516,7 @@ pub fn remove_our_settings(
     let name = files.settings_name();
     let mut cleaned = None;
 
-    if let Some(removed) = without_our_statusline(settings, files.app_dir, files.repo)? {
+    if let Some(removed) = without_our_statusline(settings, files.app_dir)? {
         let text = removal_text(removed.restored, &name, messages);
 
         cleaned = Some(removed.settings);
