@@ -397,6 +397,14 @@
         "out": "the PostToolUse hook failed 4 times in 24 h (disk full)"
       }
     ],
+    "healthDetail.noHome": "HOME is not set, so the shell rc cannot be found.",
+    "healthDetail.botAnswerUnexpected": "Telegram answered getMe without the bot data. Try again in a moment.",
+    "healthDetail.denyNotAList": [
+      {
+        "args": ["alpha 1"],
+        "out": "permissions.deny in alpha 1 is not a list. Fix the file and run 'npx better-claude-code-telegram token'."
+      }
+    ],
     "installToolPrompt": [
       {
         "args": ["alpha 1", "beta 'two'"],
@@ -1404,6 +1412,14 @@
       {
         "args": ["PostToolUse", 4, "disk full"],
         "out": "o hook PostToolUse falhou 4 vezes em 24 h (disk full)"
+      }
+    ],
+    "healthDetail.noHome": "a variável HOME não está definida; não dá para achar o rc do shell.",
+    "healthDetail.botAnswerUnexpected": "o Telegram respondeu ao getMe sem os dados do bot. Tente de novo daqui a pouco.",
+    "healthDetail.denyNotAList": [
+      {
+        "args": ["alpha 1"],
+        "out": "o permissions.deny de alpha 1 não é uma lista. Corrija o arquivo e rode 'npx better-claude-code-telegram token'."
       }
     ],
     "installToolPrompt": [

@@ -271,6 +271,13 @@ pub(super) const MESSAGES: Messages = Messages {
         hook_failed_often: |event, count, reason| {
             format!("the {event} hook failed {count} times in 24 h ({reason})")
         },
+        no_home: "HOME is not set, so the shell rc cannot be found.",
+        bot_answer_unexpected: "Telegram answered getMe without the bot data. Try again in a moment.",
+        deny_not_a_list: |settings| {
+            format!(
+                "permissions.deny in {settings} is not a list. Fix the file and run 'npx better-claude-code-telegram token'."
+            )
+        },
     },
     install_tool_prompt: |tool, command| {
         format!("'{tool}' is missing. Install it now with the official installer ({command})?")

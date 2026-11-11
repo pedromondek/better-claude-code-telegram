@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
-use crate::files::{create_private_dir, write_private};
+use crate::files::{create_private_dir, read_json, write_private};
 use crate::health::{
     Check, Entry, Group, Machine, Screen, Status, collect, entries_json, first_blocked, owner_of,
     status_of, write_all,
@@ -171,6 +171,20 @@ fn text_var(machine: &Machine<'_>, name: &str) -> Option<String> {
     (machine.var)(name).map(|value| value.to_string_lossy().into_owned())
 }
 
+fn deny_is_usable(paths: &SetupPaths) -> bool {
+    let deny = read_json(&paths.settings_file).and_then(|settings| {
+        settings
+            .get("permissions")
+            .and_then(|permissions| permissions.get("deny"))
+            .cloned()
+    });
+
+    !matches!(
+        deny,
+        Some(Value::Bool(_) | Value::Number(_) | Value::Object(_))
+    )
+}
+
 fn statusline_is_old(paths: &SetupPaths, messages: &Messages) -> bool {
     let Ok(settings) = read_settings(&paths.settings_file, messages) else {
         return false;
@@ -204,7 +218,10 @@ pub fn plan(
         }
     }
 
-    if failed(results, Check::Protection) && !failed(results, Check::Config) {
+    if failed(results, Check::Protection)
+        && !failed(results, Check::Config)
+        && deny_is_usable(paths)
+    {
         fixes.push(Fix {
             id: FixId::Protection,
             target: paths.settings_file.clone(),

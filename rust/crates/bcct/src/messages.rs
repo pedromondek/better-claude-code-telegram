@@ -141,6 +141,9 @@ pub struct HealthDetail {
     pub no_hook_failures: &'static str,
     pub hook_write_failed: fn(&str, &str, &str) -> String,
     pub hook_failed_often: fn(&str, u64, &str) -> String,
+    pub no_home: &'static str,
+    pub bot_answer_unexpected: &'static str,
+    pub deny_not_a_list: fn(&str) -> String,
 }
 
 #[derive(Debug, Clone, Copy)]

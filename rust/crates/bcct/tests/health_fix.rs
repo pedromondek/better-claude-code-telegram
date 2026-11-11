@@ -82,6 +82,34 @@ fn the_token_rule_is_only_recommended_while_the_settings_are_invalid() {
 }
 
 #[test]
+fn the_token_rule_is_only_recommended_while_deny_is_not_a_list() {
+    let protection = [
+        entry(Check::Protection, Status::Fail),
+        entry(Check::Config, Status::Ok),
+    ];
+
+    for deny in ["{}", "5", "true"] {
+        let settings = format!(r#"{{"permissions":{{"deny":{deny}}}}}"#);
+
+        assert_eq!(
+            planned(&protection, "/bin/bash", None, Some(&settings)),
+            vec![],
+            "{deny}"
+        );
+    }
+
+    for deny in ["[]", "\"Read(x)\"", "null"] {
+        let settings = format!(r#"{{"permissions":{{"deny":{deny}}}}}"#);
+
+        assert_eq!(
+            planned(&protection, "/bin/bash", None, Some(&settings)),
+            vec![FixId::Protection],
+            "{deny}"
+        );
+    }
+}
+
+#[test]
 fn the_shell_is_fixed_only_for_a_shell_with_a_known_rc() {
     let shell = entry(Check::Shell, Status::Fail);
 

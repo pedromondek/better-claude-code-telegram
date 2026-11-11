@@ -9839,8 +9839,8 @@
       "nodeVersion": "24.20.0",
       "process": false,
       "status": 1,
-      "stdout": "Install\n✔ Node: Node 24.20.0\n✔ claude: found\n✔ bun: found\n✔ Plugins: installed\n✔ Launcher: version 0.1.0 active (stable)\n",
-      "stderr": "✘ The \"path\" argument must be of type string. Received undefined\n",
+      "stdout": "Install\n✔ Node: Node 24.20.0\n✔ claude: found\n✔ bun: found\n✔ Plugins: installed\n✔ Launcher: version 0.1.0 active (stable)\n✘ Shell: HOME is not set, so the shell rc cannot be found.\n○ bcct on PATH: off (optional). Run 'npx better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [],
       "after": {
@@ -9973,10 +9973,23 @@
       "nodeVersion": "24.20.0",
       "process": false,
       "status": 1,
-      "stdout": "",
-      "stderr": "✘ The \"path\" argument must be of type string. Received undefined\n",
+      "stdout": "[\n  {\n    \"group\": \"install\",\n    \"check\": \"node\",\n    \"status\": \"ok\",\n    \"detail\": \"Node 24.20.0\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"claude\",\n    \"status\": \"ok\",\n    \"detail\": \"found\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"bun\",\n    \"status\": \"ok\",\n    \"detail\": \"found\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"plugins\",\n    \"status\": \"ok\",\n    \"detail\": \"installed\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"launcher\",\n    \"status\": \"ok\",\n    \"detail\": \"version 0.1.0 active (stable)\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"shell\",\n    \"status\": \"fail\",\n    \"detail\": \"HOME is not set, so the shell rc cannot be found.\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"path\",\n    \"status\": \"off\",\n    \"detail\": \"off (optional). Run 'npx better-claude-code-telegram path'.\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"app\",\n    \"status\": \"ok\",\n    \"detail\": \"writable\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"hooks\",\n    \"status\": \"ok\",\n    \"detail\": \"no recent failures\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"token\",\n    \"status\": \"ok\",\n    \"detail\": \"@e2e_bot\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"groups\",\n    \"status\": \"ok\",\n    \"detail\": \"the bot cannot be added to groups\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"pairing\",\n    \"status\": \"ok\",\n    \"detail\": \"paired with one account (@dev (id 42))\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"polling\",\n    \"status\": \"ok\",\n    \"detail\": \"connected\"\n  },\n  {\n    \"group\": \"security\",\n    \"check\": \"user\",\n    \"status\": \"ok\",\n    \"detail\": \"no, runs as a regular user (as recommended)\"\n  },\n  {\n    \"group\": \"security\",\n    \"check\": \"protection\",\n    \"status\": \"ok\",\n    \"detail\": \"Claude cannot read the bot token\"\n  },\n  {\n    \"group\": \"security\",\n    \"check\": \"config\",\n    \"status\": \"ok\",\n    \"detail\": \"valid\"\n  },\n  {\n    \"group\": \"extras\",\n    \"check\": \"transcription\",\n    \"status\": \"ok\",\n    \"detail\": \"model small\"\n  },\n  {\n    \"group\": \"extras\",\n    \"check\": \"mermaid\",\n    \"status\": \"ok\",\n    \"detail\": \"found\"\n  },\n  {\n    \"group\": \"extras\",\n    \"check\": \"statusline\",\n    \"status\": \"ok\",\n    \"detail\": \"Telegram indicator on\"\n  }\n]\n",
+      "stderr": "",
       "nodeWarning": null,
-      "requests": [],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getMe",
+          "contentType": "application/json",
+          "body": "{}"
+        },
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getChat",
+          "contentType": "application/json",
+          "body": "{\"chat_id\":\"42\"}"
+        }
+      ],
       "after": {
         "app/": { "mode": "750" },
         "app/better-cc-telegram.json": {
@@ -10010,6 +10023,10 @@
         "app/whisper/venv/bin/python": {
           "content": "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$0-args\"\nexit 0\n",
           "mode": "755"
+        },
+        "app/whisper/venv/bin/python-args": {
+          "content": "-c\nimport importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\"\n",
+          "mode": "644"
         },
         "bin/": { "mode": "750" },
         "bin/bun": { "content": "#!/bin/sh\nexit 0\n", "mode": "755" },
@@ -18150,8 +18167,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "Telegram\n",
-      "stderr": "✘ Cannot read properties of undefined (reading 'username')\n",
+      "stdout": "Telegram\n✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\n○ Groups: needs a working bot token\n✔ Pairing: paired with one account (@dev (id 42))\n✔ Connection: connected\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [
         {
@@ -18159,6 +18176,12 @@
           "path": "/bot123:FAKE/getMe",
           "contentType": "application/json",
           "body": "{}"
+        },
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getChat",
+          "contentType": "application/json",
+          "body": "{\"chat_id\":\"42\"}"
         }
       ],
       "after": {
@@ -18288,8 +18311,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "Telegram\n",
-      "stderr": "✘ Cannot read properties of null (reading 'username')\n",
+      "stdout": "Telegram\n✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\n○ Groups: needs a working bot token\n✔ Pairing: paired with one account (@dev (id 42))\n✔ Connection: connected\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [
         {
@@ -18297,6 +18320,12 @@
           "path": "/bot123:FAKE/getMe",
           "contentType": "application/json",
           "body": "{}"
+        },
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getChat",
+          "contentType": "application/json",
+          "body": "{\"chat_id\":\"42\"}"
         }
       ],
       "after": {
@@ -18574,8 +18603,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "",
-      "stderr": "✘ Cannot read properties of undefined (reading 'username')\n",
+      "stdout": "[\n  {\n    \"group\": \"telegram\",\n    \"check\": \"token\",\n    \"status\": \"fail\",\n    \"detail\": \"o Telegram respondeu ao getMe sem os dados do bot. Tente de novo daqui a pouco.\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"groups\",\n    \"status\": \"off\",\n    \"detail\": \"precisa de um token de bot válido\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"pairing\",\n    \"status\": \"ok\",\n    \"detail\": \"pareado com uma conta (@dev (id 42))\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"polling\",\n    \"status\": \"ok\",\n    \"detail\": \"conectado\"\n  }\n]\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [
         {
@@ -18583,6 +18612,12 @@
           "path": "/bot123:FAKE/getMe",
           "contentType": "application/json",
           "body": "{}"
+        },
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getChat",
+          "contentType": "application/json",
+          "body": "{\"chat_id\":\"42\"}"
         }
       ],
       "after": {
@@ -18713,8 +18748,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "\u001b[34m\u001b[1mTelegram\u001b[22m\u001b[39m\n",
-      "stderr": "\u001b[31m✘ Cannot read properties of undefined (reading 'username')\u001b[39m\n",
+      "stdout": "\u001b[34m\u001b[1mTelegram\u001b[22m\u001b[39m\n\u001b[31m✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\u001b[39m\n\u001b[2m○ Groups: needs a working bot token\u001b[22m\n\u001b[32m✔ Pairing: paired with one account (@dev (id 42))\u001b[39m\n\u001b[32m✔ Connection: connected\u001b[39m\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [
         {
@@ -18722,6 +18757,12 @@
           "path": "/bot123:FAKE/getMe",
           "contentType": "application/json",
           "body": "{}"
+        },
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getChat",
+          "contentType": "application/json",
+          "body": "{\"chat_id\":\"42\"}"
         }
       ],
       "after": {
@@ -32913,8 +32954,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "Security\n✔ Running as root: no, runs as a regular user (as recommended)\n",
-      "stderr": "✘ deny.includes is not a function\n",
+      "stdout": "Security\n✔ Running as root: no, runs as a regular user (as recommended)\n✘ Token protection: permissions.deny in {root}/claude/settings.json is not a list. Fix the file and run 'npx better-claude-code-telegram token'.\n✔ Settings: valid\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [],
       "after": {
@@ -33047,8 +33088,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "Security\n✔ Running as root: no, runs as a regular user (as recommended)\n",
-      "stderr": "✘ deny.includes is not a function\n",
+      "stdout": "Security\n✔ Running as root: no, runs as a regular user (as recommended)\n✘ Token protection: permissions.deny in {root}/claude/settings.json is not a list. Fix the file and run 'npx better-claude-code-telegram token'.\n✔ Settings: valid\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [],
       "after": {
@@ -33181,8 +33222,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "Security\n✔ Running as root: no, runs as a regular user (as recommended)\n",
-      "stderr": "✘ deny.includes is not a function\n",
+      "stdout": "Security\n✔ Running as root: no, runs as a regular user (as recommended)\n✘ Token protection: permissions.deny in {root}/claude/settings.json is not a list. Fix the file and run 'npx better-claude-code-telegram token'.\n✔ Settings: valid\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [],
       "after": {
@@ -33315,8 +33356,8 @@
       "nodeVersion": "24.20.0",
       "process": true,
       "status": 1,
-      "stdout": "",
-      "stderr": "✘ deny.includes is not a function\n",
+      "stdout": "[\n  {\n    \"group\": \"install\",\n    \"check\": \"node\",\n    \"status\": \"ok\",\n    \"detail\": \"Node 24.20.0\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"claude\",\n    \"status\": \"ok\",\n    \"detail\": \"found\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"bun\",\n    \"status\": \"ok\",\n    \"detail\": \"found\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"plugins\",\n    \"status\": \"ok\",\n    \"detail\": \"installed\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"launcher\",\n    \"status\": \"ok\",\n    \"detail\": \"version 0.1.0 active (stable)\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"shell\",\n    \"status\": \"ok\",\n    \"detail\": \"loaded by {root}/home/.bashrc\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"path\",\n    \"status\": \"off\",\n    \"detail\": \"off (optional). Run 'npx better-claude-code-telegram path'.\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"app\",\n    \"status\": \"ok\",\n    \"detail\": \"writable\"\n  },\n  {\n    \"group\": \"install\",\n    \"check\": \"hooks\",\n    \"status\": \"ok\",\n    \"detail\": \"no recent failures\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"token\",\n    \"status\": \"ok\",\n    \"detail\": \"@e2e_bot\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"groups\",\n    \"status\": \"ok\",\n    \"detail\": \"the bot cannot be added to groups\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"pairing\",\n    \"status\": \"ok\",\n    \"detail\": \"paired with one account (@dev (id 42))\"\n  },\n  {\n    \"group\": \"telegram\",\n    \"check\": \"polling\",\n    \"status\": \"ok\",\n    \"detail\": \"connected\"\n  },\n  {\n    \"group\": \"security\",\n    \"check\": \"user\",\n    \"status\": \"ok\",\n    \"detail\": \"no, runs as a regular user (as recommended)\"\n  },\n  {\n    \"group\": \"security\",\n    \"check\": \"protection\",\n    \"status\": \"fail\",\n    \"detail\": \"permissions.deny in {root}/claude/settings.json is not a list. Fix the file and run 'npx better-claude-code-telegram token'.\"\n  },\n  {\n    \"group\": \"security\",\n    \"check\": \"config\",\n    \"status\": \"ok\",\n    \"detail\": \"valid\"\n  },\n  {\n    \"group\": \"extras\",\n    \"check\": \"transcription\",\n    \"status\": \"ok\",\n    \"detail\": \"model small\"\n  },\n  {\n    \"group\": \"extras\",\n    \"check\": \"mermaid\",\n    \"status\": \"ok\",\n    \"detail\": \"found\"\n  },\n  {\n    \"group\": \"extras\",\n    \"check\": \"statusline\",\n    \"status\": \"ok\",\n    \"detail\": \"Telegram indicator on\"\n  }\n]\n",
+      "stderr": "",
       "nodeWarning": null,
       "requests": [
         {
@@ -33365,6 +33406,10 @@
         "app/whisper/venv/bin/python": {
           "content": "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$0-args\"\nexit 0\n",
           "mode": "755"
+        },
+        "app/whisper/venv/bin/python-args": {
+          "content": "-c\nimport importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\"\n",
+          "mode": "644"
         },
         "bin/": { "mode": "750" },
         "bin/bun": { "content": "#!/bin/sh\nexit 0\n", "mode": "755" },
@@ -43842,7 +43887,7 @@
         }
       ],
       "status": 1,
-      "terminal": "\u001b[34m\u001b[1mTelegram\u001b[22m\u001b[39m\n\u001b[36m⠋\u001b[39m \u001b[2mBot token…\u001b[22m\u001b[31m✘ Cannot read properties of undefined (reading 'username')\u001b[39m\n",
+      "terminal": "\u001b[34m\u001b[1mTelegram\u001b[22m\u001b[39m\n\u001b[36m⠋\u001b[39m \u001b[2mBot token…\u001b[22m\r\u001b[2K\u001b[31m✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\u001b[39m\n\u001b[36m⠋\u001b[39m \u001b[2mGroups…\u001b[22m\r\u001b[2K\u001b[2m○ Groups: needs a working bot token\u001b[22m\n\u001b[36m⠋\u001b[39m \u001b[2mPairing…\u001b[22m\r\u001b[2K\u001b[32m✔ Pairing: paired with one account (@dev (id 42))\u001b[39m\n\u001b[36m⠋\u001b[39m \u001b[2mConnection…\u001b[22m\r\u001b[2K\u001b[32m✔ Connection: connected\u001b[39m\n",
       "repainted": false,
       "requests": [
         {
@@ -43850,6 +43895,12 @@
           "path": "/bot123:FAKE/getMe",
           "contentType": "application/json",
           "body": "{}"
+        },
+        {
+          "method": "POST",
+          "path": "/bot123:FAKE/getChat",
+          "contentType": "application/json",
+          "body": "{\"chat_id\":\"42\"}"
         }
       ]
     },

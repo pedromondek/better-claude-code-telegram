@@ -277,6 +277,13 @@ pub(super) const MESSAGES: Messages = Messages {
         hook_failed_often: |event, count, reason| {
             format!("o hook {event} falhou {count} vezes em 24 h ({reason})")
         },
+        no_home: "a variável HOME não está definida; não dá para achar o rc do shell.",
+        bot_answer_unexpected: "o Telegram respondeu ao getMe sem os dados do bot. Tente de novo daqui a pouco.",
+        deny_not_a_list: |settings| {
+            format!(
+                "o permissions.deny de {settings} não é uma lista. Corrija o arquivo e rode 'npx better-claude-code-telegram token'."
+            )
+        },
     },
     install_tool_prompt: |tool, command| {
         format!(

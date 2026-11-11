@@ -228,6 +228,11 @@ const enUs = {
       `the ${event} hook could not write ${file} (${reason})`,
     hookFailedOften: (event, count, reason) =>
       `the ${event} hook failed ${count} times in 24 h (${reason})`,
+    noHome: "HOME is not set, so the shell rc cannot be found.",
+    botAnswerUnexpected:
+      "Telegram answered getMe without the bot data. Try again in a moment.",
+    denyNotAList: (settings) =>
+      `permissions.deny in ${settings} is not a list. Fix the file and run 'npx better-claude-code-telegram token'.`,
   },
   installToolPrompt: (tool, command) =>
     `'${tool}' is missing. Install it now with the official installer (${command})?`,
@@ -781,6 +786,12 @@ const ptBr = {
       `o hook ${event} não conseguiu gravar ${file} (${reason})`,
     hookFailedOften: (event, count, reason) =>
       `o hook ${event} falhou ${count} vezes em 24 h (${reason})`,
+    noHome:
+      "a variável HOME não está definida; não dá para achar o rc do shell.",
+    botAnswerUnexpected:
+      "o Telegram respondeu ao getMe sem os dados do bot. Tente de novo daqui a pouco.",
+    denyNotAList: (settings) =>
+      `o permissions.deny de ${settings} não é uma lista. Corrija o arquivo e rode 'npx better-claude-code-telegram token'.`,
   },
   installToolPrompt: (tool, command) =>
     `O '${tool}' não está instalado. Instalar agora com o instalador do próprio projeto (${command})?`,

@@ -36,8 +36,6 @@ const ONLY_FLAG: &str = "--only";
 const ONLY_PREFIX: &str = "--only=";
 const ALL_ANSWERS: [&str; 2] = ["all", "tudo"];
 const FAILURE: u8 = 1;
-const UNDEFINED_PATH: &str = "The \"path\" argument must be of type string. Received undefined";
-const DENY_NOT_A_LIST: &str = "deny.includes is not a function";
 const WHISPER_PYTHON: &str = "whisper/venv/bin/python";
 
 pub struct Machine<'a> {
@@ -244,7 +242,6 @@ pub struct Entry {
 }
 
 type Verdict = (Status, String);
-type Outcome = Result<Verdict, String>;
 
 fn ok(detail: &str) -> Verdict {
     (Status::Ok, detail.to_owned())
@@ -390,27 +387,27 @@ impl Checks<'_> {
         }
     }
 
-    fn run(&mut self, check: Check) -> Outcome {
+    fn run(&mut self, check: Check) -> Verdict {
         match check {
             Check::Shell => self.shell(),
-            Check::Path => Ok(self.path()),
-            Check::Launcher => Ok(self.launcher()),
-            Check::AppDir => Ok(self.app_dir()),
-            Check::Hooks => Ok(self.hooks()),
+            Check::Path => self.path(),
+            Check::Launcher => self.launcher(),
+            Check::AppDir => self.app_dir(),
+            Check::Hooks => self.hooks(),
             Check::Token => self.token_check(),
             Check::Groups => self.groups(),
             Check::Protection => self.protection(),
-            Check::Node => Ok(self.node()),
-            Check::Claude => Ok(self.tool("claude")),
-            Check::Bun => Ok(self.tool("bun")),
-            Check::Plugins => Ok(self.plugins()),
-            Check::Pairing => Ok(self.pairing()),
-            Check::Polling => Ok(self.polling()),
-            Check::User => Ok(self.user()),
-            Check::Config => Ok(self.config()),
-            Check::Transcription => Ok(self.transcription()),
-            Check::Mermaid => Ok(self.mermaid()),
-            Check::Statusline => Ok(self.statusline()),
+            Check::Node => self.node(),
+            Check::Claude => self.tool("claude"),
+            Check::Bun => self.tool("bun"),
+            Check::Plugins => self.plugins(),
+            Check::Pairing => self.pairing(),
+            Check::Polling => self.polling(),
+            Check::User => self.user(),
+            Check::Config => self.config(),
+            Check::Transcription => self.transcription(),
+            Check::Mermaid => self.mermaid(),
+            Check::Statusline => self.statusline(),
         }
     }
 
@@ -534,11 +531,11 @@ impl Checks<'_> {
         off(detail.path_off)
     }
 
-    fn shell(&self) -> Outcome {
+    fn shell(&self) -> Verdict {
         let detail = self.messages.health_detail;
-        let home = self
-            .text_var("HOME")
-            .ok_or_else(|| UNDEFINED_PATH.to_owned())?;
+        let Some(home) = self.text_var("HOME") else {
+            return failed(detail.no_home);
+        };
         let shell = self.text_var("SHELL");
         let files = shell_rc_files(&home, shell.as_deref(), cfg!(target_os = "macos"));
         let script = shell_file(&self.paths.app_dir);
@@ -556,7 +553,7 @@ impl Checks<'_> {
         if let Some((rc, _)) = active {
             let expected = shell_script(&self.paths.app_dir, command_on_path(&self.paths.app_dir));
 
-            return Ok(match read_text(&script) {
+            return match read_text(&script) {
                 None => failed(&(detail.shell_script_missing)(
                     &readable(rc),
                     &readable(&script),
@@ -565,17 +562,17 @@ impl Checks<'_> {
                     failed(&(detail.shell_script_outdated)(&readable(&script)))
                 }
                 Some(_) => ok(&(detail.loaded_in)(&readable(rc))),
-            });
+            };
         }
 
         if let Some((rc, _)) = candidates
             .iter()
             .find(|(_, text)| rc_loads(text, &script_text))
         {
-            return Ok(failed(&(detail.shell_commented)(&readable(rc))));
+            return failed(&(detail.shell_commented)(&readable(rc)));
         }
 
-        Ok(match files.unsupported.filter(|name| !name.is_empty()) {
+        match files.unsupported.filter(|name| !name.is_empty()) {
             Some(name) => off(&(self.messages.shell_unsupported)(
                 &name,
                 &readable(&script),
@@ -586,7 +583,7 @@ impl Checks<'_> {
                     .as_deref()
                     .map_or_else(|| "null".to_owned(), readable),
             )),
-        })
+        }
     }
 
     fn bot(&mut self) -> &Bot {
@@ -611,35 +608,34 @@ impl Checks<'_> {
         })
     }
 
-    fn token_check(&mut self) -> Outcome {
+    fn token_check(&mut self) -> Verdict {
         let detail = self.messages.health_detail;
 
-        Ok(match self.bot() {
+        match self.bot() {
             Bot::Missing => failed(detail.no_token),
             Bot::Failed(error) => failed(error),
-            Bot::Found(found) => {
-                let username = property(found.as_ref(), "username")?;
-                ok(&(detail.bot)(&undefined_or(username)))
-            }
-        })
+            Bot::Found(found) => match property(found.as_ref(), "username") {
+                Ok(username) => ok(&(detail.bot)(&undefined_or(username))),
+                Err(_) => failed(detail.bot_answer_unexpected),
+            },
+        }
     }
 
-    fn groups(&mut self) -> Outcome {
+    fn groups(&mut self) -> Verdict {
         let messages = self.messages;
         let detail = messages.health_detail;
 
         let Bot::Found(found) = self.bot() else {
-            return Ok(off(detail.groups_unknown));
+            return off(detail.groups_unknown);
         };
 
-        Ok(
-            if property(found.as_ref(), "can_join_groups")?.is_some_and(js_truthy) {
-                let username = property(found.as_ref(), "username")?;
-                failed(&(messages.groups_warning)(&undefined_or(username)))
-            } else {
-                ok(detail.groups_off)
-            },
-        )
+        match property(found.as_ref(), "can_join_groups") {
+            Err(_) => off(detail.groups_unknown),
+            Ok(joins) if joins.is_some_and(js_truthy) => failed(&(messages.groups_warning)(
+                &undefined_or(property(found.as_ref(), "username").unwrap_or_default()),
+            )),
+            Ok(_) => ok(detail.groups_off),
+        }
     }
 
     fn describe_account(&self, token: &str, user_id: &Value) -> String {
@@ -751,7 +747,7 @@ impl Checks<'_> {
         }
     }
 
-    fn protection(&self) -> Outcome {
+    fn protection(&self) -> Verdict {
         let detail = self.messages.health_detail;
         let home = self
             .text_var("HOME")
@@ -767,14 +763,18 @@ impl Checks<'_> {
             None => false,
             Some(Value::Array(rules)) => rules.iter().any(|item| item.as_str() == Some(&rule)),
             Some(Value::String(rules)) => rules.contains(&rule),
-            Some(_) => return Err(DENY_NOT_A_LIST.to_owned()),
+            Some(_) => {
+                return failed(&(detail.deny_not_a_list)(&readable(
+                    &self.paths.settings_file,
+                )));
+            }
         };
 
-        Ok(if protected {
+        if protected {
             ok(detail.protected)
         } else {
             failed(&(detail.unprotected)(&format!("{SETUP_COMMAND} token")))
-        })
+        }
     }
 
     fn config(&self) -> Verdict {
@@ -886,16 +886,7 @@ fn run_groups(
                 )
             });
 
-            let (status, detail) = match checks.run(*check) {
-                Ok(outcome) => outcome,
-                Err(error) => {
-                    if let Some(waiting) = waiting {
-                        let _shown = waiting.abandon();
-                    }
-
-                    return Err(error);
-                }
-            };
+            let (status, detail) = checks.run(*check);
             let entry = Entry {
                 group: *group,
                 check: *check,

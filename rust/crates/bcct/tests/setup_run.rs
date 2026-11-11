@@ -757,7 +757,35 @@ fn expected_home(after: &Value) -> Tree {
         .collect()
 }
 
+fn as_recorded(name: &str, run: &Value, expected: &Value, result: &RunResult) {
+    assert_eq!(
+        result.stdout,
+        text(expected, "stdout"),
+        "{name}: stdout of {run}"
+    );
+    assert_eq!(
+        result.stderr,
+        text(expected, "stderr"),
+        "{name}: stderr of {run}"
+    );
+    assert_eq!(
+        result.status,
+        expected["status"]
+            .as_i64()
+            .map(|code| i32::try_from(code).unwrap()),
+        "{name}: status of {run}"
+    );
+}
+
 fn replay_scenario(scenario: &Value, fake_claude: &str) {
+    replay_checked(scenario, fake_claude, &as_recorded);
+}
+
+fn replay_checked(
+    scenario: &Value,
+    fake_claude: &str,
+    check: &dyn Fn(&str, &Value, &Value, &RunResult),
+) {
     let folder = support::sandbox();
     let root = folder.path();
     let name = text(scenario, "name");
@@ -785,23 +813,7 @@ fn replay_scenario(scenario: &Value, fake_claude: &str) {
 
         let result = run_once(run, root, telegram.as_ref(), &mut facts);
 
-        assert_eq!(
-            result.stdout,
-            text(expected, "stdout"),
-            "{name}: stdout of {run}"
-        );
-        assert_eq!(
-            result.stderr,
-            text(expected, "stderr"),
-            "{name}: stderr of {run}"
-        );
-        assert_eq!(
-            result.status,
-            expected["status"]
-                .as_i64()
-                .map(|code| i32::try_from(code).unwrap()),
-            "{name}: status of {run}"
-        );
+        check(name, run, expected, &result);
     }
 
     assert_eq!(
@@ -845,13 +857,73 @@ fn replay_scenario(scenario: &Value, fake_claude: &str) {
     assert_eq!(&calls, list(scenario, "telegramCalls"), "{name}: telegram");
 }
 
+const HEALTH_KEEPS_GOING: &str = "the health stops when the bot answers nothing";
+
 fn replay_group(group: &str) {
     let fixture = fixture();
     let fake_claude = text(&fixture, "fakeClaude");
 
     for scenario in list(&fixture["processes"], group) {
-        replay_scenario(scenario, fake_claude);
+        if text(scenario, "name") != HEALTH_KEEPS_GOING {
+            replay_scenario(scenario, fake_claude);
+        }
     }
+}
+
+#[test]
+fn a_bot_answer_without_data_fails_only_its_check_and_the_setup_finishes() {
+    let fixture = fixture();
+    let mut scenario = list(&fixture["processes"], "telegram")
+        .iter()
+        .find(|scenario| text(scenario, "name") == HEALTH_KEEPS_GOING)
+        .unwrap()
+        .clone();
+    scenario["telegramCalls"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"method": "getChat", "params": {"chat_id": "42"}}));
+    let scenario = &scenario;
+    let recorded = |expected: &Value| {
+        let stdout = text(expected, "stdout");
+        stdout[..stdout.rfind("Telegram\n").unwrap()].to_owned()
+    };
+
+    replay_checked(
+        scenario,
+        text(&fixture, "fakeClaude"),
+        &|name, run, expected, result| {
+            assert!(
+                result.stdout.starts_with(&recorded(expected)),
+                "{name}: stdout of {run}"
+            );
+            assert!(
+                result.stdout.contains(
+                    "\nTelegram\n✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\n○ Groups: needs a working bot token\n"
+                ),
+                "{name}: {}",
+                result.stdout
+            );
+            assert!(
+                result.stdout.contains("\nSecurity\n"),
+                "{name}: {}",
+                result.stdout
+            );
+            assert!(
+                result.stdout.contains("\nExtras\n"),
+                "{name}: {}",
+                result.stdout
+            );
+            assert!(
+                result.stdout.ends_with(&format!(
+                    "⚠ Some checks failed. Fix what is marked with ✘ and run '{HEALTH_COMMAND}' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n"
+                )),
+                "{name}: {}",
+                result.stdout
+            );
+            assert_eq!(result.stderr, "", "{name}: stderr of {run}");
+            assert_eq!(result.status, Some(0), "{name}: status of {run}");
+        },
+    );
 }
 
 #[test]
