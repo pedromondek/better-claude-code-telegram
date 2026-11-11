@@ -3,6 +3,7 @@ pub mod config;
 pub mod files;
 pub mod health;
 pub mod hook;
+pub mod hook_failures;
 pub mod install;
 pub mod journal;
 pub mod js;

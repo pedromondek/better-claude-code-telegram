@@ -435,6 +435,19 @@ pub struct Messages {
     pub path_already: fn(&str) -> String,
     pub path_removed: fn(&str) -> String,
     pub path_off: &'static str,
+    pub hook_write_failed: fn(&str, &str) -> String,
+    pub hook_failed_often: fn(&str, u64, &str) -> String,
+    pub hook_reasons: HookReasons,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct HookReasons {
+    pub no_permission: &'static str,
+    pub disk_full: &'static str,
+    pub read_only: &'static str,
+    pub quota: &'static str,
+    pub busy: &'static str,
+    pub input: &'static str,
 }
 
 pub const EN_US: Messages = en_us::MESSAGES;

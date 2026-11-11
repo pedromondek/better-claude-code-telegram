@@ -380,6 +380,14 @@ catalog! { m, a;
     "pathAlready" => (m.path_already)(s(a, 0)),
     "pathRemoved" => (m.path_removed)(s(a, 0)),
     "pathOff" => m.path_off.to_owned(),
+    "hookWriteFailed" => (m.hook_write_failed)(s(a, 0), s(a, 1)),
+    "hookFailedOften" => (m.hook_failed_often)(s(a, 0), n(a, 1), s(a, 2)),
+    "hookReasons.noPermission" => m.hook_reasons.no_permission.to_owned(),
+    "hookReasons.diskFull" => m.hook_reasons.disk_full.to_owned(),
+    "hookReasons.readOnly" => m.hook_reasons.read_only.to_owned(),
+    "hookReasons.quota" => m.hook_reasons.quota.to_owned(),
+    "hookReasons.busy" => m.hook_reasons.busy.to_owned(),
+    "hookReasons.input" => m.hook_reasons.input.to_owned(),
 }
 
 fn fixture() -> Value {

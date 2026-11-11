@@ -865,7 +865,29 @@
         "out": "alpha 1 no longer adds bcct to your PATH."
       }
     ],
-    "pathOff": "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'."
+    "pathOff": "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'.",
+    "hookWriteFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "bcct: could not write alpha 1 (beta 'two'). Telegram messages may not arrive. Run /bcct:health."
+      }
+    ],
+    "hookFailedOften": [
+      {
+        "args": ["Stop", 3, "disk full"],
+        "out": "bcct: the Stop hook failed 3 times in 24 h (disk full). Run /bcct:health."
+      },
+      {
+        "args": ["UserPromptSubmit", 12, "unexpected input from Claude Code"],
+        "out": "bcct: the UserPromptSubmit hook failed 12 times in 24 h (unexpected input from Claude Code). Run /bcct:health."
+      }
+    ],
+    "hookReasons.noPermission": "no write permission",
+    "hookReasons.diskFull": "disk full",
+    "hookReasons.readOnly": "read-only file system",
+    "hookReasons.quota": "disk quota exceeded",
+    "hookReasons.busy": "file busy or changed by another instance",
+    "hookReasons.input": "unexpected input from Claude Code"
   },
   "pt-br": {
     "statusMain": "(Principal)",
@@ -1744,6 +1766,28 @@
         "out": "alpha 1 não adiciona mais o bcct ao PATH."
       }
     ],
-    "pathOff": "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'."
+    "pathOff": "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
+    "hookWriteFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "bcct: não consegui gravar alpha 1 (beta 'two'). As mensagens do Telegram podem não chegar. Rode /bcct:health."
+      }
+    ],
+    "hookFailedOften": [
+      {
+        "args": ["Stop", 3, "disk full"],
+        "out": "bcct: o hook Stop falhou 3 vezes em 24 h (disk full). Rode /bcct:health."
+      },
+      {
+        "args": ["UserPromptSubmit", 12, "unexpected input from Claude Code"],
+        "out": "bcct: o hook UserPromptSubmit falhou 12 vezes em 24 h (unexpected input from Claude Code). Rode /bcct:health."
+      }
+    ],
+    "hookReasons.noPermission": "sem permissão de escrita",
+    "hookReasons.diskFull": "disco cheio",
+    "hookReasons.readOnly": "sistema de arquivos só de leitura",
+    "hookReasons.quota": "cota de disco excedida",
+    "hookReasons.busy": "arquivo ocupado ou mexido por outra instância",
+    "hookReasons.input": "entrada inesperada do Claude Code"
   }
 }

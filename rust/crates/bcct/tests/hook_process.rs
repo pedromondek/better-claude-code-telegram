@@ -438,6 +438,182 @@ fn post_closes_the_asks_of_the_session() {
     assert!(sandbox.asks().join("a.closed").exists());
 }
 
+fn set_mode(folder: &Path, mode: u32) {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::set_permissions(folder, fs::Permissions::from_mode(mode)).unwrap();
+}
+
+fn failures(sandbox: &Sandbox) -> Value {
+    serde_json::from_str(&fs::read_to_string(sandbox.app().join("hook-failures.json")).unwrap())
+        .unwrap()
+}
+
+fn stdout_json(assert: &assert_cmd::assert::Assert) -> Value {
+    serde_json::from_slice(&assert.get_output().stdout).unwrap()
+}
+
+#[test]
+fn a_stop_that_cannot_write_warns_the_user_then_the_next_prompt_tells_claude_once() {
+    let sandbox = Sandbox::new();
+    let stop_input = json!({"session_id": "s1", "last_assistant_message": "done"}).to_string();
+    let ping_file = sandbox.pings().join("s1.json");
+    fs::create_dir_all(sandbox.pings()).unwrap();
+    set_mode(&sandbox.pings(), 0o500);
+
+    let stop = sandbox
+        .command("stop", true)
+        .write_stdin(stop_input.clone())
+        .assert()
+        .success()
+        .stderr("");
+
+    set_mode(&sandbox.pings(), 0o700);
+    let warning = format!(
+        "bcct: could not write {} (no write permission). Telegram messages may not arrive. Run /bcct:health.",
+        ping_file.display()
+    );
+
+    assert_eq!(stdout_json(&stop), json!({ "systemMessage": warning }));
+
+    let prompt = sandbox
+        .command("prompt", true)
+        .write_stdin(json!({"session_id": "s1"}).to_string())
+        .assert()
+        .success()
+        .stderr("");
+
+    assert_eq!(
+        stdout_json(&prompt),
+        json!({
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": format!(
+                    "better-claude-code-telegram: the Stop hook failed: {}. Tell the user and recommend running /bcct:health.",
+                    warning.trim_end_matches('.')
+                )
+            }
+        })
+    );
+
+    sandbox
+        .command("prompt", true)
+        .write_stdin(json!({"session_id": "s1"}).to_string())
+        .assert()
+        .success()
+        .stdout("");
+    sandbox
+        .command("stop", true)
+        .write_stdin(stop_input)
+        .assert()
+        .success()
+        .stdout("");
+
+    assert!(ping_file.exists());
+    assert_eq!(failures(&sandbox)["notices"], json!({}));
+}
+
+#[test]
+fn a_prompt_that_cannot_write_warns_the_user_and_claude_in_the_same_reply() {
+    let sandbox = Sandbox::new();
+    fs::create_dir_all(sandbox.pings()).unwrap();
+    fs::write(
+        sandbox.app().join(bcct::paths::CONFIG_FILE),
+        json!({"language": "pt-br"}).to_string(),
+    )
+    .unwrap();
+    set_mode(&sandbox.pings(), 0o500);
+
+    let prompt = sandbox
+        .command("prompt", true)
+        .write_stdin(json!({"session_id": "s1"}).to_string())
+        .assert()
+        .success()
+        .stderr("");
+
+    set_mode(&sandbox.pings(), 0o700);
+    let file = sandbox.pings().join("last-prompt");
+
+    assert_eq!(
+        stdout_json(&prompt),
+        json!({
+            "systemMessage": format!(
+                "bcct: não consegui gravar {} (sem permissão de escrita). As mensagens do Telegram podem não chegar. Rode /bcct:health.",
+                file.display()
+            ),
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": format!(
+                    "better-claude-code-telegram: the UserPromptSubmit hook failed: bcct: could not write {} (no write permission). Telegram messages may not arrive. Run /bcct:health. Tell the user and recommend running /bcct:health.",
+                    file.display()
+                )
+            }
+        })
+    );
+}
+
+#[test]
+fn a_question_that_cannot_be_saved_warns_without_a_decision_and_without_waiting() {
+    let sandbox = Sandbox::new();
+    fs::create_dir_all(sandbox.asks()).unwrap();
+    set_mode(&sandbox.asks(), 0o500);
+
+    let permission = sandbox
+        .command("permission", true)
+        .write_stdin(ask_input().to_string())
+        .assert()
+        .success()
+        .stderr("");
+
+    set_mode(&sandbox.asks(), 0o700);
+    let output = stdout_json(&permission);
+
+    assert_eq!(output.as_object().unwrap().len(), 1);
+    assert!(
+        output["systemMessage"]
+            .as_str()
+            .unwrap()
+            .starts_with(&format!(
+                "bcct: could not write {}/",
+                sandbox.asks().display()
+            ))
+    );
+    assert_eq!(
+        failures(&sandbox)["notices"]["PermissionRequest"]["reason"],
+        json!("no-permission")
+    );
+}
+
+#[test]
+fn an_input_that_is_not_from_claude_code_warns_only_on_the_third_time() {
+    let sandbox = Sandbox::new();
+    let broken = json!({"session_id": 5}).to_string();
+
+    for _ in 0..2 {
+        sandbox
+            .command("post", true)
+            .write_stdin(broken.clone())
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    }
+
+    let third = sandbox
+        .command("post", true)
+        .write_stdin(broken)
+        .assert()
+        .success()
+        .stderr("");
+
+    assert_eq!(
+        stdout_json(&third),
+        json!({
+            "systemMessage": "bcct: the PostToolUse hook failed 3 times in 24 h (unexpected input from Claude Code). Run /bcct:health."
+        })
+    );
+}
+
 #[test]
 fn a_closed_stdin_is_read_as_an_empty_input() {
     let sandbox = Sandbox::new();

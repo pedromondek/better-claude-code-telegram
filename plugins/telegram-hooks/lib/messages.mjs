@@ -492,6 +492,18 @@ const enUs = {
   pathRemoved: (file) => `${file} no longer adds bcct to your PATH.`,
   pathOff:
     "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'.",
+  hookWriteFailed: (file, reason) =>
+    `bcct: could not write ${file} (${reason}). Telegram messages may not arrive. Run /bcct:health.`,
+  hookFailedOften: (event, count, reason) =>
+    `bcct: the ${event} hook failed ${count} times in 24 h (${reason}). Run /bcct:health.`,
+  hookReasons: {
+    noPermission: "no write permission",
+    diskFull: "disk full",
+    readOnly: "read-only file system",
+    quota: "disk quota exceeded",
+    busy: "file busy or changed by another instance",
+    input: "unexpected input from Claude Code",
+  },
 };
 
 const ptBr = {
@@ -985,6 +997,18 @@ const ptBr = {
   pathRemoved: (file) => `${file} não adiciona mais o bcct ao PATH.`,
   pathOff:
     "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
+  hookWriteFailed: (file, reason) =>
+    `bcct: não consegui gravar ${file} (${reason}). As mensagens do Telegram podem não chegar. Rode /bcct:health.`,
+  hookFailedOften: (event, count, reason) =>
+    `bcct: o hook ${event} falhou ${count} vezes em 24 h (${reason}). Rode /bcct:health.`,
+  hookReasons: {
+    noPermission: "sem permissão de escrita",
+    diskFull: "disco cheio",
+    readOnly: "sistema de arquivos só de leitura",
+    quota: "cota de disco excedida",
+    busy: "arquivo ocupado ou mexido por outra instância",
+    input: "entrada inesperada do Claude Code",
+  },
 };
 
 export const MESSAGES = { "en-us": enUs, "pt-br": ptBr };

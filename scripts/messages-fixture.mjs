@@ -43,6 +43,10 @@ const OVERRIDES = {
   sendPairingCode: [["my_bot", "A1B2C3", "https://t.me/my_bot?start=A1B2C3"]],
   unknownSteps: [["foo, bar", "language, token, pairing"]],
   invalidAnswer: [["x", "y or n"]],
+  hookFailedOften: [
+    ["Stop", 3, "disk full"],
+    ["UserPromptSubmit", 12, "unexpected input from Claude Code"],
+  ],
 };
 
 function stringArgs(arity) {

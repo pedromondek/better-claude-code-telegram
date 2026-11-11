@@ -1,8 +1,8 @@
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, HealthDetail, HealthGroupTitles, HealthLabels, Messages,
-    PairingChoices, QuietPresets, SettingHints, SettingsKeys, StatuslineChoiceHints,
-    StatuslineChoices, StatuslineDetail, StatuslineOursChoices, StatuslineOursHints, StepLabels,
-    StepTitles, TranscriptionModels,
+    BcctChoices, BcctHints, ChangeKinds, HealthDetail, HealthGroupTitles, HealthLabels,
+    HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
+    StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
+    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
 };
 
 pub(super) const MESSAGES: Messages = Messages {
@@ -549,4 +549,20 @@ pub(super) const MESSAGES: Messages = Messages {
     path_already: |file| format!("{file} já adiciona o bcct ao PATH."),
     path_removed: |file| format!("{file} não adiciona mais o bcct ao PATH."),
     path_off: "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
+    hook_write_failed: |file, reason| {
+        format!(
+            "bcct: não consegui gravar {file} ({reason}). As mensagens do Telegram podem não chegar. Rode /bcct:health."
+        )
+    },
+    hook_failed_often: |event, count, reason| {
+        format!("bcct: o hook {event} falhou {count} vezes em 24 h ({reason}). Rode /bcct:health.")
+    },
+    hook_reasons: HookReasons {
+        no_permission: "sem permissão de escrita",
+        disk_full: "disco cheio",
+        read_only: "sistema de arquivos só de leitura",
+        quota: "cota de disco excedida",
+        busy: "arquivo ocupado ou mexido por outra instância",
+        input: "entrada inesperada do Claude Code",
+    },
 };

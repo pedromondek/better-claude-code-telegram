@@ -8,6 +8,7 @@ use serde_json::{Map, Number, Value, json};
 
 use crate::config::{DELAY_ENV, delay_ms, read_config};
 use crate::files::{create_private_dir, read_json, write_private};
+use crate::hook_failures;
 use crate::js::{
     is_js_whitespace, join_path, js_number, js_string, js_trim, js_truthy, normalize_path,
     parse_json, stringify,
@@ -31,16 +32,22 @@ const NOT_TYPED_PROMPT_PREFIXES: [&str; 3] = [
     "<channel source=\"plugin:telegram",
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Abort;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Abort {
+    Input,
+    Io { kind: io::ErrorKind, path: PathBuf },
+}
 
-impl From<io::Error> for Abort {
-    fn from(_: io::Error) -> Self {
-        Self
+impl Abort {
+    fn at(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
+        move |error| Self::Io {
+            kind: error.kind(),
+            path: path.to_path_buf(),
+        }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Mode {
     Permission,
     Prompt,
@@ -49,6 +56,8 @@ pub enum Mode {
 }
 
 impl Mode {
+    pub const ALL: [Self; 4] = [Self::Permission, Self::Prompt, Self::Post, Self::Stop];
+
     #[must_use]
     pub fn parse(name: &str) -> Option<Self> {
         match name {
@@ -58,6 +67,21 @@ impl Mode {
             "stop" => Some(Self::Stop),
             _ => None,
         }
+    }
+
+    #[must_use]
+    pub fn event_name(self) -> &'static str {
+        match self {
+            Self::Permission => "PermissionRequest",
+            Self::Prompt => "UserPromptSubmit",
+            Self::Post => "PostToolUse",
+            Self::Stop => "Stop",
+        }
+    }
+
+    #[must_use]
+    pub fn from_event_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|mode| mode.event_name() == name)
     }
 }
 
@@ -185,7 +209,7 @@ fn parse_entries(text: &str) -> Vec<Value> {
 
 fn block_text(block: &Value) -> Result<Option<String>, Abort> {
     if block.is_null() {
-        return Err(Abort);
+        return Err(Abort::Input);
     }
 
     if entry_type(block) != Some("text") {
@@ -198,7 +222,7 @@ fn block_text(block: &Value) -> Result<Option<String>, Abort> {
             let trimmed = js_trim(text);
             Ok((!trimmed.is_empty()).then(|| trimmed.to_owned()))
         }
-        Some(_) => Err(Abort),
+        Some(_) => Err(Abort::Input),
     }
 }
 
@@ -265,7 +289,7 @@ fn instance_from(
     }
 
     let folder = match input.get("cwd") {
-        Some(cwd) if js_truthy(cwd) => basename(cwd.as_str().ok_or(Abort)?),
+        Some(cwd) if js_truthy(cwd) => basename(cwd.as_str().ok_or(Abort::Input)?),
         _ => DEFAULT_FOLDER_LABEL,
     };
     let session = input.get("session_id").map(js_string).unwrap_or_default();
@@ -295,7 +319,7 @@ pub fn instance_label(
 
 fn option_value(option: &Value) -> Result<Value, Abort> {
     if option.is_null() {
-        return Err(Abort);
+        return Err(Abort::Input);
     }
 
     let mut out = Map::new();
@@ -317,7 +341,7 @@ fn copy_present(source: &Value, key: &str, target: &mut Map<String, Value>) {
 
 fn question_value(question: &Value) -> Result<Value, Abort> {
     if question.is_null() {
-        return Err(Abort);
+        return Err(Abort::Input);
     }
 
     let options = match question.get("options") {
@@ -326,7 +350,7 @@ fn question_value(question: &Value) -> Result<Value, Abort> {
             .iter()
             .map(option_value)
             .collect::<Result<Vec<_>, _>>()?,
-        Some(_) => return Err(Abort),
+        Some(_) => return Err(Abort::Input),
     };
     let mut out = Map::new();
     out.insert(
@@ -402,12 +426,11 @@ fn permission(
         return Ok(None);
     };
     let asks_dir = ctx.app_dir.join("asks");
+    let record_file = join_path(&asks_dir, &format!("{}.json", ask.id));
 
-    create_private_dir(&asks_dir)?;
-    write_private(
-        &join_path(&asks_dir, &format!("{}.json", ask.id)),
-        stringify(&ask.record).as_bytes(),
-    )?;
+    create_private_dir(&asks_dir).map_err(Abort::at(&asks_dir))?;
+    write_private(&record_file, stringify(&ask.record).as_bytes())
+        .map_err(Abort::at(&record_file))?;
 
     Ok(Some(ask))
 }
@@ -441,27 +464,31 @@ fn stop(
     ping.insert("text".to_owned(), Value::String(text.to_owned()));
     ping.insert("instance".to_owned(), instance.unwrap_or(Value::Null));
 
-    create_private_dir(&ctx.app_dir.join("pings"))?;
-    write_private(ping_file, stringify(&Value::Object(ping)).as_bytes())?;
+    let pings_dir = ctx.app_dir.join("pings");
+
+    create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
+    write_private(ping_file, stringify(&Value::Object(ping)).as_bytes())
+        .map_err(Abort::at(ping_file))?;
 
     Ok(())
 }
 
 fn prompt(ctx: &Context, now: u64, ping_file: &Path) -> Result<(), Abort> {
     let pings_dir = ctx.app_dir.join("pings");
+    let last_prompt_file = pings_dir.join(LAST_PROMPT_FILE);
 
-    create_private_dir(&pings_dir)?;
+    create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
 
     match fs::remove_file(ping_file) {
-        Err(error) if error.kind() != io::ErrorKind::NotFound => return Err(Abort),
+        Err(error) if error.kind() != io::ErrorKind::NotFound => {
+            return Err(Abort::at(ping_file)(error));
+        }
         _ => {}
     }
 
     if ctx.telegram_instance {
-        write_private(
-            &pings_dir.join(LAST_PROMPT_FILE),
-            now.to_string().as_bytes(),
-        )?;
+        write_private(&last_prompt_file, now.to_string().as_bytes())
+            .map_err(Abort::at(&last_prompt_file))?;
     }
 
     Ok(())
@@ -513,7 +540,9 @@ fn closable_ids(asks_dir: &Path, session: Option<&str>) -> Vec<String> {
 
 fn close_asks(asks_dir: &Path, session: Option<&str>) -> Result<(), Abort> {
     for id in closable_ids(asks_dir, session) {
-        write_private(&join_path(asks_dir, &format!("{id}.closed")), b"")?;
+        let closed_file = join_path(asks_dir, &format!("{id}.closed"));
+
+        write_private(&closed_file, b"").map_err(Abort::at(&closed_file))?;
     }
 
     Ok(())
@@ -521,13 +550,13 @@ fn close_asks(asks_dir: &Path, session: Option<&str>) -> Result<(), Abort> {
 
 fn session_of(input: &Value) -> Result<Option<&str>, Abort> {
     if input.is_null() {
-        return Err(Abort);
+        return Err(Abort::Input);
     }
 
     match input.get("session_id") {
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(session)) => Ok(Some(session)),
-        Some(_) => Err(Abort),
+        Some(_) => Err(Abort::Input),
     }
 }
 
@@ -542,6 +571,10 @@ pub fn handle_event(
         return Ok(None);
     }
 
+    dispatch(mode, input, ctx, now)
+}
+
+fn dispatch(mode: Mode, input: &Value, ctx: &Context, now: u64) -> Result<Option<Ask>, Abort> {
     let session = session_of(input)?;
     let asks_dir = ctx.app_dir.join("asks");
     let ping_file = join_path(
@@ -634,14 +667,38 @@ pub fn run(
     let Some(mode) = mode.and_then(Mode::parse) else {
         return;
     };
-    let Ok(Some(ask)) = handle_event(mode, &input, ctx, now, is_alive) else {
+
+    if !is_active(ctx, is_alive) {
+        return;
+    }
+
+    let ask = match dispatch(mode, &input, ctx, now) {
+        Ok(ask) => ask,
+        Err(abort) => {
+            write_output(
+                stdout,
+                hook_failures::failed(&ctx.app_dir, mode, &abort, now),
+            );
+            return;
+        }
+    };
+
+    write_output(stdout, hook_failures::succeeded(&ctx.app_dir, mode));
+
+    let Some(ask) = ask else {
         return;
     };
     let tool_input = input.get("tool_input").unwrap_or(&Value::Null);
 
     if let Some(answers) = wait_for_answer(&ctx.app_dir.join("asks"), &ask.id, pause) {
+        write_output(stdout, Some(decision_output(tool_input, &answers)));
+    }
+}
+
+fn write_output(stdout: &mut dyn Write, output: Option<String>) {
+    if let Some(output) = output {
         let _written = stdout
-            .write_all(decision_output(tool_input, &answers).as_bytes())
+            .write_all(output.as_bytes())
             .and_then(|()| stdout.flush());
     }
 }
