@@ -5,19 +5,23 @@ use std::path::{Path, PathBuf};
 use serde_json::{Map, Value, json};
 
 use crate::files::read_json;
+use crate::hook::Abort;
 use crate::hook::{millis, now_ms};
+use crate::hook_failures::{Reason, open_notices};
 use crate::js::{
     join_path, js_key_count, js_length, js_template, js_trim, js_truthy, stringify_pretty,
 };
 use crate::messages::{Messages, messages_for};
 use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE};
+use crate::self_install::Store;
 use crate::setup::{
     ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
     SetupPaths, StatuslineState, claude_output, command_on_path, env_deny_rule, has_command,
     launcher_dir, node_version, node_version_ok, parse_env_token, path_lists, read_settings,
-    read_text, setup_locale, shell_file, shell_rc_files, statusline_state, whisper_python_works,
+    read_text, setup_locale, shell_file, shell_rc_files, shell_script, statusline_state,
+    whisper_python_works,
 };
-use crate::shell_rc::rc_loads;
+use crate::shell_rc::{rc_line_active, rc_loads};
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
 use crate::statusline::{TELEGRAM_HEALTH_TTL_MS, TELEGRAM_LAUNCH_GRACE_MS, time_of};
 use crate::telegram::{api_root, call, post_json, property};
@@ -117,8 +121,11 @@ impl Group {
                 Check::Claude,
                 Check::Bun,
                 Check::Plugins,
+                Check::Launcher,
                 Check::Shell,
                 Check::Path,
+                Check::AppDir,
+                Check::Hooks,
             ],
             Self::Telegram => &[Check::Token, Check::Groups, Check::Pairing, Check::Polling],
             Self::Security => &[Check::User, Check::Protection, Check::Config],
@@ -133,8 +140,11 @@ pub enum Check {
     Claude,
     Bun,
     Plugins,
+    Launcher,
     Shell,
     Path,
+    AppDir,
+    Hooks,
     Token,
     Groups,
     Pairing,
@@ -155,8 +165,11 @@ impl Check {
             Self::Claude => "claude",
             Self::Bun => "bun",
             Self::Plugins => "plugins",
+            Self::Launcher => "launcher",
             Self::Shell => "shell",
             Self::Path => "path",
+            Self::AppDir => "app",
+            Self::Hooks => "hooks",
             Self::Token => "token",
             Self::Groups => "groups",
             Self::Pairing => "pairing",
@@ -178,8 +191,11 @@ impl Check {
             Self::Claude => labels.claude,
             Self::Bun => labels.bun,
             Self::Plugins => labels.plugins,
+            Self::Launcher => labels.launcher,
             Self::Shell => labels.shell,
             Self::Path => labels.path,
+            Self::AppDir => labels.app_dir,
+            Self::Hooks => labels.hooks,
             Self::Token => labels.token,
             Self::Groups => labels.groups,
             Self::Pairing => labels.pairing,
@@ -287,6 +303,45 @@ fn readable(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+fn write_blocked(
+    messages: &Messages,
+    folder: &str,
+    reason: Reason,
+    (owner, uid): (Option<u32>, Option<u32>),
+    user: Option<String>,
+) -> Verdict {
+    let detail = messages.health_detail;
+
+    if reason != Reason::NoPermission {
+        return failed(&(detail.app_blocked)(folder, reason.text(messages)));
+    }
+
+    match (owner, uid) {
+        (Some(owner), Some(uid)) if owner != uid => failed(&(detail.app_other_owner)(
+            folder,
+            &user.unwrap_or_else(|| "$USER".to_owned()),
+        )),
+        _ => failed(&(detail.app_no_permission)(folder)),
+    }
+}
+
+fn owner_of(path: &Path) -> Option<u32> {
+    let metadata = std::fs::metadata(path).ok()?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+
+        Some(metadata.uid())
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = metadata;
+        None
+    }
+}
+
 enum Bot {
     Missing,
     Found(Option<Value>),
@@ -319,6 +374,9 @@ impl Checks<'_> {
         match check {
             Check::Shell => self.shell(),
             Check::Path => Ok(self.path()),
+            Check::Launcher => Ok(self.launcher()),
+            Check::AppDir => Ok(self.app_dir()),
+            Check::Hooks => Ok(self.hooks()),
             Check::Token => self.token_check(),
             Check::Groups => self.groups(),
             Check::Protection => self.protection(),
@@ -375,6 +433,82 @@ impl Checks<'_> {
         }
     }
 
+    fn launcher(&self) -> Verdict {
+        let detail = self.messages.health_detail;
+        let store = Store::new(&self.paths.app_dir);
+
+        if !store.has_launcher() {
+            return failed(&(detail.launcher_missing)(&readable(&launcher_dir(
+                &self.paths.app_dir,
+            ))));
+        }
+
+        match store.active() {
+            Some(active) => ok(&(detail.launcher_active)(&active.version, &active.channel)),
+            None => failed(detail.launcher_no_version),
+        }
+    }
+
+    fn app_dir(&self) -> Verdict {
+        let app = &self.paths.app_dir;
+
+        for folder in [app.clone(), app.join("asks"), app.join("pings")] {
+            if !folder.is_dir() {
+                continue;
+            }
+
+            if let Err(error) = tempfile::Builder::new()
+                .prefix(".bcct-probe-")
+                .tempfile_in(&folder)
+            {
+                return self.blocked(&folder, error.kind());
+            }
+        }
+
+        ok(self.messages.health_detail.app_writable)
+    }
+
+    fn blocked(&self, folder: &Path, kind: io::ErrorKind) -> Verdict {
+        let reason = Reason::of(&Abort::Io {
+            kind,
+            path: folder.to_path_buf(),
+        });
+
+        write_blocked(
+            self.messages,
+            &readable(folder),
+            reason,
+            (owner_of(folder), self.machine.uid),
+            self.text_var("USER"),
+        )
+    }
+
+    fn hooks(&self) -> Verdict {
+        let detail = self.messages.health_detail;
+        let shown: Vec<String> = open_notices(&self.paths.app_dir)
+            .iter()
+            .map(|notice| {
+                let reason = notice.reason.text(self.messages);
+                let event = notice.event.event_name();
+
+                match &notice.file {
+                    Some(file) => (detail.hook_write_failed)(event, file, reason),
+                    None => (detail.hook_failed_often)(
+                        event,
+                        u64::try_from(notice.count).unwrap_or(u64::MAX),
+                        reason,
+                    ),
+                }
+            })
+            .collect();
+
+        if shown.is_empty() {
+            ok(detail.no_hook_failures)
+        } else {
+            failed(&shown.join("; "))
+        }
+    }
+
     fn path(&self) -> Verdict {
         let detail = self.messages.health_detail;
         let bin = launcher_dir(&self.paths.app_dir);
@@ -401,14 +535,36 @@ impl Checks<'_> {
         let files = shell_rc_files(&home, shell.as_deref(), cfg!(target_os = "macos"));
         let script = shell_file(&self.paths.app_dir);
         let script_text = script.to_string_lossy();
-        let loaded_by = files
+        let candidates: Vec<(&PathBuf, String)> = files
             .primary
             .iter()
             .chain(&files.others)
-            .find(|rc| rc_loads(&read_text(rc).unwrap_or_default(), &script_text));
+            .map(|rc| (rc, read_text(rc).unwrap_or_default()))
+            .collect();
+        let active = candidates
+            .iter()
+            .find(|(_, text)| rc_line_active(text, &script_text));
 
-        if let Some(rc) = loaded_by {
-            return Ok(ok(&(detail.loaded_in)(&readable(rc))));
+        if let Some((rc, _)) = active {
+            let expected = shell_script(&self.paths.app_dir, command_on_path(&self.paths.app_dir));
+
+            return Ok(match read_text(&script) {
+                None => failed(&(detail.shell_script_missing)(
+                    &readable(rc),
+                    &readable(&script),
+                )),
+                Some(current) if current != expected => {
+                    failed(&(detail.shell_script_outdated)(&readable(&script)))
+                }
+                Some(_) => ok(&(detail.loaded_in)(&readable(rc))),
+            });
+        }
+
+        if let Some((rc, _)) = candidates
+            .iter()
+            .find(|(_, text)| rc_loads(text, &script_text))
+        {
+            return Ok(failed(&(detail.shell_commented)(&readable(rc))));
         }
 
         Ok(match files.unsupported.filter(|name| !name.is_empty()) {
@@ -872,4 +1028,72 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         .collect();
 
     run(&args, &machine, &mut screen)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::messages::{EN_US, PT_BR};
+
+    const FOLDER: &str = "/app/pings";
+
+    #[test]
+    fn a_folder_without_write_permission_of_the_same_user_asks_for_chmod() {
+        for owners in [
+            (Some(7), Some(7)),
+            (None, Some(7)),
+            (Some(7), None),
+            (None, None),
+        ] {
+            assert_eq!(
+                write_blocked(&EN_US, FOLDER, Reason::NoPermission, owners, None),
+                failed(
+                    "cannot write to /app/pings (no write permission). Run 'chmod u+rwx /app/pings'."
+                ),
+                "{owners:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_folder_of_another_user_asks_for_chown_with_the_user_name() {
+        assert_eq!(
+            write_blocked(
+                &EN_US,
+                FOLDER,
+                Reason::NoPermission,
+                (Some(0), Some(1000)),
+                Some("ana".to_owned())
+            ),
+            failed("/app/pings belongs to another user. Run 'sudo chown -R ana /app/pings'.")
+        );
+        assert_eq!(
+            write_blocked(
+                &PT_BR,
+                FOLDER,
+                Reason::NoPermission,
+                (Some(0), Some(1000)),
+                None
+            ),
+            failed("/app/pings é de outro usuário. Rode 'sudo chown -R $USER /app/pings'.")
+        );
+    }
+
+    #[test]
+    fn a_full_or_read_only_disk_asks_to_free_space_or_mount_it_read_write() {
+        for (reason, shown) in [
+            (Reason::DiskFull, "disk full"),
+            (Reason::ReadOnly, "read-only file system"),
+            (Reason::Quota, "disk quota exceeded"),
+            (Reason::Busy, "file busy or changed by another instance"),
+        ] {
+            assert_eq!(
+                write_blocked(&EN_US, FOLDER, reason, (Some(0), Some(1000)), None),
+                failed(&format!(
+                    "cannot write to /app/pings ({shown}). Free some space or mount the disk read-write."
+                )),
+                "{reason:?}"
+            );
+        }
+    }
 }

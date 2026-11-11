@@ -173,6 +173,9 @@ pub(super) const MESSAGES: Messages = Messages {
         transcription: "Transcription",
         mermaid: "Diagrams (mmdc)",
         statusline: "Status line",
+        launcher: "Launcher",
+        app_dir: "App folder",
+        hooks: "Hooks",
     },
     health_detail: HealthDetail {
         version: |version| format!("Node {version}"),
@@ -230,6 +233,43 @@ pub(super) const MESSAGES: Messages = Messages {
             none: "no status line",
             custom: "yours, with the indicator Claude added",
             custom_pending: "Claude fits the indicator into yours on the next 'claude --telegram'",
+        },
+        shell_commented: |rc| {
+            format!(
+                "the line in {rc} is commented out. Run 'npx better-claude-code-telegram plugin'."
+            )
+        },
+        shell_script_missing: |rc, script| {
+            format!(
+                "{rc} loads {script}, which does not exist. Run 'npx better-claude-code-telegram plugin'."
+            )
+        },
+        shell_script_outdated: |script| {
+            format!("{script} is out of date. Run 'npx better-claude-code-telegram plugin'.")
+        },
+        launcher_active: |version, channel| format!("version {version} active ({channel})"),
+        launcher_missing: |folder| {
+            format!("no launcher in {folder}. Run 'npx better-claude-code-telegram'.")
+        },
+        launcher_no_version: "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+        app_writable: "writable",
+        app_no_permission: |folder| {
+            format!("cannot write to {folder} (no write permission). Run 'chmod u+rwx {folder}'.")
+        },
+        app_other_owner: |folder, user| {
+            format!("{folder} belongs to another user. Run 'sudo chown -R {user} {folder}'.")
+        },
+        app_blocked: |folder, reason| {
+            format!(
+                "cannot write to {folder} ({reason}). Free some space or mount the disk read-write."
+            )
+        },
+        no_hook_failures: "no recent failures",
+        hook_write_failed: |event, file, reason| {
+            format!("the {event} hook could not write {file} ({reason})")
+        },
+        hook_failed_often: |event, count, reason| {
+            format!("the {event} hook failed {count} times in 24 h ({reason})")
         },
     },
     install_tool_prompt: |tool, command| {

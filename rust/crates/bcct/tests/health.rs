@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use assert_cmd::cargo::cargo_bin_cmd;
 use bcct::health::{Machine, Screen, run};
 use bcct::js::stringify;
-use bcct::setup::whisper_python_works;
+use bcct::setup::{shell_script, whisper_python_works};
 use bcct::spinner::Terminal;
 use bcct::telegram::{API_ROOT_ENV, DEFAULT_API_ROOT, api_root, post_json, request_url};
 use bcct::ui::should_colorize;
@@ -613,11 +613,23 @@ fn run_failing(
     terminal: Option<Terminal>,
     colorize: bool,
 ) -> (u8, String) {
+    run_prepared(scenario, args, out, terminal, colorize, &|_| {})
+}
+
+fn run_prepared(
+    scenario: &Value,
+    args: &[&str],
+    out: &mut Failing,
+    terminal: Option<Terminal>,
+    colorize: bool,
+    prepare: &dyn Fn(&Path),
+) -> (u8, String) {
     let fixture = frozen(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let root = sandbox();
     let telegram = FakeTelegram::start(scenario);
     materialize(root.path(), &filled(&scenario["files"], now));
+    prepare(root.path());
     let variables = variables_of(scenario, root.path(), &telegram.root);
     let var = lookup(&variables);
     let bin = root.path().join("bin");
@@ -635,7 +647,11 @@ fn run_failing(
     let machine = Machine {
         var: &var,
         home: &home_of(&variables, root.path()),
-        uid: Some(REGULAR_UID),
+        uid: Some(
+            scenario["uid"]
+                .as_u64()
+                .map_or(REGULAR_UID, |uid| u32::try_from(uid).unwrap()),
+        ),
         now,
         node_version: &node_version,
         has_command: &has_command,
@@ -655,8 +671,24 @@ fn run_failing(
     let args: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
 
     let status = run(&args, &machine, &mut screen);
+    let shown = placeholders(&String::from_utf8(err).unwrap(), root.path());
 
-    (status, String::from_utf8(err).unwrap())
+    writable_again(root.path());
+
+    (status, shown)
+}
+
+fn writable_again(folder: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    for entry in std::fs::read_dir(folder).unwrap().flatten() {
+        let path = entry.path();
+
+        if path.is_dir() && !path.is_symlink() {
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o750)).unwrap();
+            writable_again(&path);
+        }
+    }
 }
 
 const NOT_SHOWN: &str = "✘ Could not show the result.\n";
@@ -837,6 +869,7 @@ fn the_path_check_says_whether_bcct_is_on_the_path_and_never_fails() {
     let mut turned_on = healthy.clone();
     turned_on["files"][config] =
         json!(r#"{"language":"en-us","transcription":{"model":"small"},"commandOnPath":true}"#);
+    turned_on["files"]["app/shell.sh"] = json!(shell_script(Path::new("{root}/app"), true));
     let mut listed = turned_on.clone();
     listed["env"]["PATH"] = json!("{root}/bin:{root}/app/bin:/usr/bin:/bin");
 
@@ -864,5 +897,222 @@ fn the_path_check_says_whether_bcct_is_on_the_path_and_never_fails() {
     assert!(
         on.starts_with("✔ bcct on PATH: ") && on.ends_with("/app/bin"),
         "{on}"
+    );
+}
+
+fn install_row(scenario: &Value, label: &str, prepare: &dyn Fn(&Path)) -> (u8, String) {
+    let root = std::cell::RefCell::new(PathBuf::new());
+    let mut out = Failing::new(|_| false);
+    let (status, _) = run_prepared(scenario, &["install"], &mut out, None, false, &|folder| {
+        *root.borrow_mut() = folder.to_path_buf();
+        prepare(folder);
+    });
+    let shown = placeholders(&String::from_utf8(out.accepted).unwrap(), &root.borrow());
+    let line = shown
+        .lines()
+        .find(|line| line.contains(&format!(" {label}: ")))
+        .unwrap()
+        .to_owned();
+
+    (status, line)
+}
+
+fn healthy() -> Value {
+    scenario_named(&frozen(FIXTURE), "a healthy machine passes every check").clone()
+}
+
+fn set_mode(path: &Path, mode: u32) {
+    use std::os::unix::fs::PermissionsExt;
+
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).unwrap();
+}
+
+fn write(path: &Path, content: &str, mode: u32) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, content).unwrap();
+    set_mode(path, mode);
+}
+
+const RUN_SETUP: &str = "Run 'npx better-claude-code-telegram'.";
+
+#[test]
+fn the_launcher_check_names_the_active_version_and_its_channel() {
+    assert_eq!(
+        install_row(&healthy(), "Launcher", &|_| {}),
+        (0, "✔ Launcher: version 0.1.0 active (stable)".to_owned())
+    );
+    assert_eq!(
+        install_row(&healthy(), "Launcher", &|root| {
+            let bin = root.join("app/bin");
+            write(&bin.join("current"), "unstable/beta/0.2.0-beta.1\n", 0o600);
+            write(
+                &bin.join("versions/unstable/beta/0.2.0-beta.1/bcct"),
+                "#!/bin/sh\n",
+                0o755,
+            );
+        }),
+        (
+            0,
+            "✔ Launcher: version 0.2.0-beta.1 active (beta)".to_owned()
+        )
+    );
+}
+
+#[test]
+fn a_missing_or_not_executable_launcher_fails_and_says_to_run_the_setup() {
+    let missing = format!("✘ Launcher: no launcher in {{root}}/app/bin. {RUN_SETUP}");
+
+    assert_eq!(
+        install_row(&healthy(), "Launcher", &|root| {
+            std::fs::remove_file(root.join("app/bin/bcct")).unwrap();
+        }),
+        (1, missing.clone())
+    );
+    assert_eq!(
+        install_row(&healthy(), "Launcher", &|root| {
+            set_mode(&root.join("app/bin/bcct"), 0o644);
+        }),
+        (1, missing)
+    );
+}
+
+#[test]
+fn a_launcher_without_a_usable_version_fails_and_says_to_run_the_setup() {
+    let no_version = format!("✘ Launcher: the launcher has no active version. {RUN_SETUP}");
+
+    for current in [
+        None,
+        Some("stable/9.9.9\n"),
+        Some("0.1.0\n"),
+        Some("stable/\n"),
+        Some("/0.1.0\n"),
+    ] {
+        assert_eq!(
+            install_row(&healthy(), "Launcher", &|root| {
+                let file = root.join("app/bin/current");
+
+                match current {
+                    Some(text) => write(&file, text, 0o600),
+                    None => std::fs::remove_file(&file).unwrap(),
+                }
+            }),
+            (1, no_version.clone()),
+            "{current:?}"
+        );
+    }
+
+    assert_eq!(
+        install_row(&healthy(), "Launcher", &|root| {
+            set_mode(&root.join("app/bin/versions/stable/0.1.0/bcct"), 0o644);
+        }),
+        (1, no_version)
+    );
+}
+
+#[test]
+fn an_app_folder_that_cannot_be_written_fails_with_the_chmod_to_run() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+
+    for folder in ["app", "app/asks", "app/pings"] {
+        assert_eq!(
+            install_row(&owned, "App folder", &|root| {
+                std::fs::create_dir_all(root.join(folder)).unwrap();
+                set_mode(&root.join(folder), 0o500);
+            }),
+            (
+                1,
+                format!(
+                    "✘ App folder: cannot write to {{root}}/{folder} (no write permission). Run 'chmod u+rwx {{root}}/{folder}'."
+                )
+            ),
+            "{folder}"
+        );
+    }
+}
+
+#[test]
+fn an_app_folder_of_another_user_fails_with_the_chown_to_run() {
+    let mut stranger = healthy();
+    stranger["uid"] = json!(rustix::process::getuid().as_raw() + 1);
+    stranger["env"]["USER"] = json!("ana");
+
+    assert_eq!(
+        install_row(&stranger, "App folder", &|root| {
+            std::fs::create_dir_all(root.join("app/pings")).unwrap();
+            set_mode(&root.join("app/pings"), 0o500);
+        }),
+        (
+            1,
+            "✘ App folder: {root}/app/pings belongs to another user. Run 'sudo chown -R ana {root}/app/pings'."
+                .to_owned()
+        )
+    );
+}
+
+#[test]
+fn the_hooks_check_lists_every_open_warning_of_the_hooks() {
+    let failures = json!({
+        "transient": [],
+        "notices": {
+            "Stop": {"reason": "disk-full", "file": "/x/pings/s1.json", "count": 0, "told": false},
+            "PostToolUse": {"reason": "busy", "file": null, "count": 3, "told": true},
+        }
+    })
+    .to_string();
+
+    assert_eq!(
+        install_row(&healthy(), "Hooks", &|_| {}),
+        (0, "✔ Hooks: no recent failures".to_owned())
+    );
+    assert_eq!(
+        install_row(&healthy(), "Hooks", &|root| {
+            write(&root.join("app/hook-failures.json"), &failures, 0o600);
+        }),
+        (
+            1,
+            "✘ Hooks: the PostToolUse hook failed 3 times in 24 h (file busy or changed by another instance); the Stop hook could not write /x/pings/s1.json (disk full)"
+                .to_owned()
+        )
+    );
+}
+
+#[test]
+fn a_missing_or_old_shell_script_fails_the_shell_check() {
+    let plugin = "Run 'npx better-claude-code-telegram plugin'.";
+
+    assert_eq!(
+        install_row(&healthy(), "Shell", &|root| {
+            std::fs::remove_file(root.join("app/shell.sh")).unwrap();
+        }),
+        (
+            1,
+            format!(
+                "✘ Shell: {{root}}/home/.bashrc loads {{root}}/app/shell.sh, which does not exist. {plugin}"
+            )
+        )
+    );
+    assert_eq!(
+        install_row(&healthy(), "Shell", &|root| {
+            write(&root.join("app/shell.sh"), "claude() { :; }\n", 0o600);
+        }),
+        (
+            1,
+            format!("✘ Shell: {{root}}/app/shell.sh is out of date. {plugin}")
+        )
+    );
+}
+
+#[test]
+fn an_active_line_in_another_rc_counts_over_a_commented_one() {
+    let line = "[ -f \"{root}/app/shell.sh\" ] && . \"{root}/app/shell.sh\"\n";
+
+    assert_eq!(
+        install_row(&healthy(), "Shell", &|root| {
+            let active = line.replace("{root}", &root.to_string_lossy());
+            write(&root.join("home/.bashrc"), &format!("# {active}"), 0o600);
+            write(&root.join("home/.zshrc"), &active, 0o600);
+        }),
+        (0, "✔ Shell: loaded by {root}/home/.zshrc".to_owned())
     );
 }

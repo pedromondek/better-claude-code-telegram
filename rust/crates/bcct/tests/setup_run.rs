@@ -63,6 +63,7 @@ const HEADING: &str = "── ";
 const JS_HEALTH_HEADING: &str = "── 🩺 10/10 ";
 const HEALTH_HEADING: &str = "── 🩺 11/11 ";
 const SHELL_CHECK: &str = " Shell: ";
+const HEALTH_COMMAND: &str = "npx better-claude-code-telegram health";
 
 fn counted_with_the_path_step(stdout: &str) -> String {
     stdout
@@ -96,21 +97,47 @@ fn path_step_shown(counted: &str) -> Option<String> {
     let (before, after) = counted.split_at(health);
     let checked = after.find(SHELL_CHECK).map_or_else(
         || after.to_owned(),
-        |shell| {
-            let end = after[shell..]
-                .find('\n')
-                .map_or(after.len(), |line| shell + line + 1);
-            format!(
-                "{}○ {}: {}\n{}",
-                &after[..end],
-                messages.health_labels.path,
-                messages.health_detail.path_off,
-                &after[end..]
-            )
-        },
+        |shell| with_the_new_checks(after, shell, messages),
     );
 
     Some(format!("{before}{step}{checked}"))
+}
+
+fn with_the_new_checks(after: &str, shell: usize, messages: &Messages) -> String {
+    let labels = messages.health_labels;
+    let detail = messages.health_detail;
+    let line_start = after[..shell].rfind('\n').map_or(0, |line| line + 1);
+    let shell_end = after[shell..]
+        .find('\n')
+        .map_or(after.len(), |line| shell + line + 1);
+    let launcher = format!(
+        "✘ {}: {}\n",
+        labels.launcher,
+        (detail.launcher_missing)(&format!("{APP}/bin"))
+    );
+    let rows = format!(
+        "○ {}: {}\n✔ {}: {}\n✔ {}: {}\n",
+        labels.path,
+        detail.path_off,
+        labels.app_dir,
+        detail.app_writable,
+        labels.hooks,
+        detail.no_hook_failures
+    );
+    let rest = &after[shell_end..];
+    let warning = format!("⚠ {}\n", (messages.health_has_failures)(HEALTH_COMMAND));
+    let rest = match rest.find("\n\n") {
+        Some(end) if !rest[..end].contains(warning.trim_end()) => {
+            format!("{}{warning}{}", &rest[..=end], &rest[end + 1..])
+        }
+        _ => rest.to_owned(),
+    };
+
+    format!(
+        "{}{launcher}{}{rows}{rest}",
+        &after[..line_start],
+        &after[line_start..shell_end]
+    )
 }
 
 fn with_the_path_step(fixture: &Value) -> Value {

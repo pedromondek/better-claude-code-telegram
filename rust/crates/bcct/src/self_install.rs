@@ -50,6 +50,11 @@ const VERIFIED_FILE: &str = ".verified";
 const LAUNCHER_SH_FILE: &str = "bcct";
 const LAUNCHER_CMD_FILE: &str = "bcct.cmd";
 const BINARY_FILE: &str = if cfg!(windows) { "bcct.exe" } else { "bcct" };
+const LAUNCHER_FILE: &str = if cfg!(windows) {
+    LAUNCHER_CMD_FILE
+} else {
+    LAUNCHER_SH_FILE
+};
 const KEPT_PER_FOLDER: usize = 2;
 const EXECUTABLE_MODE: u32 = 0o755;
 const PRIVATE_MODE: u32 = 0o600;
@@ -143,6 +148,30 @@ pub struct Installed {
     pub channel: Channel,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveVersion {
+    pub channel: String,
+    pub version: String,
+}
+
+fn is_executable(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    }
+
+    #[cfg(not(unix))]
+    {
+        metadata.is_file()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Store {
     bin: PathBuf,
@@ -208,6 +237,31 @@ impl Store {
         prune(&channel_dir, &version)?;
 
         Ok(Installed { version, channel })
+    }
+
+    #[must_use]
+    pub fn active(&self) -> Option<ActiveVersion> {
+        let text = fs::read_to_string(self.bin.join(CURRENT_FILE)).ok()?;
+        let (folder, version) = text.trim().rsplit_once('/')?;
+        let channel = folder.rsplit('/').next().unwrap_or(folder);
+        let binary = self
+            .bin
+            .join(VERSIONS_FOLDER)
+            .join(folder)
+            .join(version)
+            .join(BINARY_FILE);
+
+        (!channel.is_empty() && !version.is_empty() && is_executable(&binary)).then(|| {
+            ActiveVersion {
+                channel: channel.to_owned(),
+                version: version.to_owned(),
+            }
+        })
+    }
+
+    #[must_use]
+    pub fn has_launcher(&self) -> bool {
+        is_executable(&self.bin.join(LAUNCHER_FILE))
     }
 
     #[must_use]

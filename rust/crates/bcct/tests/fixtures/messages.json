@@ -247,6 +247,9 @@
     "healthLabels.transcription": "Transcription",
     "healthLabels.mermaid": "Diagrams (mmdc)",
     "healthLabels.statusline": "Status line",
+    "healthLabels.launcher": "Launcher",
+    "healthLabels.appDir": "App folder",
+    "healthLabels.hooks": "Hooks",
     "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
     "healthDetail.found": "found",
     "healthDetail.missing": "missing",
@@ -331,6 +334,69 @@
     "healthDetail.statusline.none": "no status line",
     "healthDetail.statusline.custom": "yours, with the indicator Claude added",
     "healthDetail.statusline.custom-pending": "Claude fits the indicator into yours on the next 'claude --telegram'",
+    "healthDetail.shellCommented": [
+      {
+        "args": ["alpha 1"],
+        "out": "the line in alpha 1 is commented out. Run 'npx better-claude-code-telegram plugin'."
+      }
+    ],
+    "healthDetail.shellScriptMissing": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "alpha 1 loads beta 'two', which does not exist. Run 'npx better-claude-code-telegram plugin'."
+      }
+    ],
+    "healthDetail.shellScriptOutdated": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 is out of date. Run 'npx better-claude-code-telegram plugin'."
+      }
+    ],
+    "healthDetail.launcherActive": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "version alpha 1 active (beta 'two')"
+      }
+    ],
+    "healthDetail.launcherMissing": [
+      {
+        "args": ["alpha 1"],
+        "out": "no launcher in alpha 1. Run 'npx better-claude-code-telegram'."
+      }
+    ],
+    "healthDetail.launcherNoVersion": "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+    "healthDetail.appWritable": "writable",
+    "healthDetail.appNoPermission": [
+      {
+        "args": ["alpha 1"],
+        "out": "cannot write to alpha 1 (no write permission). Run 'chmod u+rwx alpha 1'."
+      }
+    ],
+    "healthDetail.appOtherOwner": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "alpha 1 belongs to another user. Run 'sudo chown -R beta 'two' alpha 1'."
+      }
+    ],
+    "healthDetail.appBlocked": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "cannot write to alpha 1 (beta 'two'). Free some space or mount the disk read-write."
+      }
+    ],
+    "healthDetail.noHookFailures": "no recent failures",
+    "healthDetail.hookWriteFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'", "gamma/3"],
+        "out": "the alpha 1 hook could not write beta 'two' (gamma/3)"
+      }
+    ],
+    "healthDetail.hookFailedOften": [
+      {
+        "args": ["PostToolUse", 4, "disk full"],
+        "out": "the PostToolUse hook failed 4 times in 24 h (disk full)"
+      }
+    ],
     "installToolPrompt": [
       {
         "args": ["alpha 1", "beta 'two'"],
@@ -1143,6 +1209,9 @@
     "healthLabels.transcription": "Transcrição",
     "healthLabels.mermaid": "Mermaid (mmdc)",
     "healthLabels.statusline": "Statusline",
+    "healthLabels.launcher": "Launcher",
+    "healthLabels.appDir": "Pasta do app",
+    "healthLabels.hooks": "Hooks",
     "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
     "healthDetail.found": "encontrado",
     "healthDetail.missing": "não encontrado",
@@ -1227,6 +1296,69 @@
     "healthDetail.statusline.none": "sem statusline",
     "healthDetail.statusline.custom": "a sua, com o indicador que o Claude juntou",
     "healthDetail.statusline.custom-pending": "o Claude junta o indicador à sua no próximo 'claude --telegram'",
+    "healthDetail.shellCommented": [
+      {
+        "args": ["alpha 1"],
+        "out": "a linha de alpha 1 está comentada. Rode 'npx better-claude-code-telegram plugin'."
+      }
+    ],
+    "healthDetail.shellScriptMissing": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "alpha 1 carrega beta 'two', que não existe. Rode 'npx better-claude-code-telegram plugin'."
+      }
+    ],
+    "healthDetail.shellScriptOutdated": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 está desatualizado. Rode 'npx better-claude-code-telegram plugin'."
+      }
+    ],
+    "healthDetail.launcherActive": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "versão alpha 1 ativa (beta 'two')"
+      }
+    ],
+    "healthDetail.launcherMissing": [
+      {
+        "args": ["alpha 1"],
+        "out": "sem launcher em alpha 1. Rode 'npx better-claude-code-telegram'."
+      }
+    ],
+    "healthDetail.launcherNoVersion": "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+    "healthDetail.appWritable": "gravável",
+    "healthDetail.appNoPermission": [
+      {
+        "args": ["alpha 1"],
+        "out": "não dá para gravar em alpha 1 (sem permissão de escrita). Rode 'chmod u+rwx alpha 1'."
+      }
+    ],
+    "healthDetail.appOtherOwner": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "alpha 1 é de outro usuário. Rode 'sudo chown -R beta 'two' alpha 1'."
+      }
+    ],
+    "healthDetail.appBlocked": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "não dá para gravar em alpha 1 (beta 'two'). Libere espaço ou monte o disco com escrita."
+      }
+    ],
+    "healthDetail.noHookFailures": "sem falhas recentes",
+    "healthDetail.hookWriteFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'", "gamma/3"],
+        "out": "o hook alpha 1 não conseguiu gravar beta 'two' (gamma/3)"
+      }
+    ],
+    "healthDetail.hookFailedOften": [
+      {
+        "args": ["PostToolUse", 4, "disk full"],
+        "out": "o hook PostToolUse falhou 4 vezes em 24 h (disk full)"
+      }
+    ],
     "installToolPrompt": [
       {
         "args": ["alpha 1", "beta 'two'"],

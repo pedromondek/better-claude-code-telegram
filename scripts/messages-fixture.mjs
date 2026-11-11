@@ -47,6 +47,7 @@ const OVERRIDES = {
     ["Stop", 3, "disk full"],
     ["UserPromptSubmit", 12, "unexpected input from Claude Code"],
   ],
+  "healthDetail.hookFailedOften": [["PostToolUse", 4, "disk full"]],
 };
 
 function stringArgs(arity) {

@@ -150,6 +150,9 @@ const enUs = {
     transcription: "Transcription",
     mermaid: "Diagrams (mmdc)",
     statusline: "Status line",
+    launcher: "Launcher",
+    appDir: "App folder",
+    hooks: "Hooks",
   },
   healthDetail: {
     version: (version) => `Node ${version}`,
@@ -201,6 +204,30 @@ const enUs = {
       "custom-pending":
         "Claude fits the indicator into yours on the next 'claude --telegram'",
     },
+    shellCommented: (rc) =>
+      `the line in ${rc} is commented out. Run 'npx better-claude-code-telegram plugin'.`,
+    shellScriptMissing: (rc, script) =>
+      `${rc} loads ${script}, which does not exist. Run 'npx better-claude-code-telegram plugin'.`,
+    shellScriptOutdated: (script) =>
+      `${script} is out of date. Run 'npx better-claude-code-telegram plugin'.`,
+    launcherActive: (version, channel) =>
+      `version ${version} active (${channel})`,
+    launcherMissing: (folder) =>
+      `no launcher in ${folder}. Run 'npx better-claude-code-telegram'.`,
+    launcherNoVersion:
+      "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+    appWritable: "writable",
+    appNoPermission: (folder) =>
+      `cannot write to ${folder} (no write permission). Run 'chmod u+rwx ${folder}'.`,
+    appOtherOwner: (folder, user) =>
+      `${folder} belongs to another user. Run 'sudo chown -R ${user} ${folder}'.`,
+    appBlocked: (folder, reason) =>
+      `cannot write to ${folder} (${reason}). Free some space or mount the disk read-write.`,
+    noHookFailures: "no recent failures",
+    hookWriteFailed: (event, file, reason) =>
+      `the ${event} hook could not write ${file} (${reason})`,
+    hookFailedOften: (event, count, reason) =>
+      `the ${event} hook failed ${count} times in 24 h (${reason})`,
   },
   installToolPrompt: (tool, command) =>
     `'${tool}' is missing. Install it now with the official installer (${command})?`,
@@ -656,6 +683,9 @@ const ptBr = {
     transcription: "Transcrição",
     mermaid: "Mermaid (mmdc)",
     statusline: "Statusline",
+    launcher: "Launcher",
+    appDir: "Pasta do app",
+    hooks: "Hooks",
   },
   healthDetail: {
     version: (version) => `Node ${version}`,
@@ -706,6 +736,30 @@ const ptBr = {
       "custom-pending":
         "o Claude junta o indicador à sua no próximo 'claude --telegram'",
     },
+    shellCommented: (rc) =>
+      `a linha de ${rc} está comentada. Rode 'npx better-claude-code-telegram plugin'.`,
+    shellScriptMissing: (rc, script) =>
+      `${rc} carrega ${script}, que não existe. Rode 'npx better-claude-code-telegram plugin'.`,
+    shellScriptOutdated: (script) =>
+      `${script} está desatualizado. Rode 'npx better-claude-code-telegram plugin'.`,
+    launcherActive: (version, channel) =>
+      `versão ${version} ativa (${channel})`,
+    launcherMissing: (folder) =>
+      `sem launcher em ${folder}. Rode 'npx better-claude-code-telegram'.`,
+    launcherNoVersion:
+      "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+    appWritable: "gravável",
+    appNoPermission: (folder) =>
+      `não dá para gravar em ${folder} (sem permissão de escrita). Rode 'chmod u+rwx ${folder}'.`,
+    appOtherOwner: (folder, user) =>
+      `${folder} é de outro usuário. Rode 'sudo chown -R ${user} ${folder}'.`,
+    appBlocked: (folder, reason) =>
+      `não dá para gravar em ${folder} (${reason}). Libere espaço ou monte o disco com escrita.`,
+    noHookFailures: "sem falhas recentes",
+    hookWriteFailed: (event, file, reason) =>
+      `o hook ${event} não conseguiu gravar ${file} (${reason})`,
+    hookFailedOften: (event, count, reason) =>
+      `o hook ${event} falhou ${count} vezes em 24 h (${reason})`,
   },
   installToolPrompt: (tool, command) =>
     `O '${tool}' não está instalado. Instalar agora com o instalador do próprio projeto (${command})?`,

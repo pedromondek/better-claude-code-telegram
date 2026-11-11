@@ -177,6 +177,9 @@ pub(super) const MESSAGES: Messages = Messages {
         transcription: "Transcrição",
         mermaid: "Mermaid (mmdc)",
         statusline: "Statusline",
+        launcher: "Launcher",
+        app_dir: "Pasta do app",
+        hooks: "Hooks",
     },
     health_detail: HealthDetail {
         version: |version| format!("Node {version}"),
@@ -234,6 +237,45 @@ pub(super) const MESSAGES: Messages = Messages {
             none: "sem statusline",
             custom: "a sua, com o indicador que o Claude juntou",
             custom_pending: "o Claude junta o indicador à sua no próximo 'claude --telegram'",
+        },
+        shell_commented: |rc| {
+            format!(
+                "a linha de {rc} está comentada. Rode 'npx better-claude-code-telegram plugin'."
+            )
+        },
+        shell_script_missing: |rc, script| {
+            format!(
+                "{rc} carrega {script}, que não existe. Rode 'npx better-claude-code-telegram plugin'."
+            )
+        },
+        shell_script_outdated: |script| {
+            format!("{script} está desatualizado. Rode 'npx better-claude-code-telegram plugin'.")
+        },
+        launcher_active: |version, channel| format!("versão {version} ativa ({channel})"),
+        launcher_missing: |folder| {
+            format!("sem launcher em {folder}. Rode 'npx better-claude-code-telegram'.")
+        },
+        launcher_no_version: "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+        app_writable: "gravável",
+        app_no_permission: |folder| {
+            format!(
+                "não dá para gravar em {folder} (sem permissão de escrita). Rode 'chmod u+rwx {folder}'."
+            )
+        },
+        app_other_owner: |folder, user| {
+            format!("{folder} é de outro usuário. Rode 'sudo chown -R {user} {folder}'.")
+        },
+        app_blocked: |folder, reason| {
+            format!(
+                "não dá para gravar em {folder} ({reason}). Libere espaço ou monte o disco com escrita."
+            )
+        },
+        no_hook_failures: "sem falhas recentes",
+        hook_write_failed: |event, file, reason| {
+            format!("o hook {event} não conseguiu gravar {file} ({reason})")
+        },
+        hook_failed_often: |event, count, reason| {
+            format!("o hook {event} falhou {count} vezes em 24 h ({reason})")
         },
     },
     install_tool_prompt: |tool, command| {

@@ -78,6 +78,9 @@ pub struct HealthLabels {
     pub transcription: &'static str,
     pub mermaid: &'static str,
     pub statusline: &'static str,
+    pub launcher: &'static str,
+    pub app_dir: &'static str,
+    pub hooks: &'static str,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -125,6 +128,19 @@ pub struct HealthDetail {
     pub model: fn(&str) -> String,
     pub broken: fn(&str) -> String,
     pub statusline: StatuslineDetail,
+    pub shell_commented: fn(&str) -> String,
+    pub shell_script_missing: fn(&str, &str) -> String,
+    pub shell_script_outdated: fn(&str) -> String,
+    pub launcher_active: fn(&str, &str) -> String,
+    pub launcher_missing: fn(&str) -> String,
+    pub launcher_no_version: &'static str,
+    pub app_writable: &'static str,
+    pub app_no_permission: fn(&str) -> String,
+    pub app_other_owner: fn(&str, &str) -> String,
+    pub app_blocked: fn(&str, &str) -> String,
+    pub no_hook_failures: &'static str,
+    pub hook_write_failed: fn(&str, &str, &str) -> String,
+    pub hook_failed_often: fn(&str, u64, &str) -> String,
 }
 
 #[derive(Debug, Clone, Copy)]

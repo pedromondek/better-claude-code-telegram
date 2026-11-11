@@ -25,6 +25,13 @@ pub fn rc_loads(rc_text: &str, shell_file: &str) -> bool {
     rc_text.contains(shell_file)
 }
 
+#[must_use]
+pub fn rc_line_active(rc_text: &str, shell_file: &str) -> bool {
+    rc_text
+        .lines()
+        .any(|line| line.contains(shell_file) && !line.trim_start().starts_with('#'))
+}
+
 fn block(line: &str) -> String {
     format!("{SHELL_MARKER}\n{line}\n")
 }

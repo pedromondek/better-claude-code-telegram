@@ -69,7 +69,8 @@ impl Reason {
         Self::ALL.into_iter().find(|reason| reason.code() == code)
     }
 
-    fn text(self, messages: &Messages) -> &'static str {
+    #[must_use]
+    pub fn text(self, messages: &Messages) -> &'static str {
         let reasons = &messages.hook_reasons;
 
         match self {
@@ -301,6 +302,15 @@ pub fn failed(app_dir: &Path, event: Mode, abort: &Abort, now: u64) -> Option<St
     state.save(app_dir);
 
     notice.map(|notice| failure_output(&notice, messages_for(read_locale(&read_config(app_dir)))))
+}
+
+#[must_use]
+pub fn open_notices(app_dir: &Path) -> Vec<Notice> {
+    State::load(app_dir)
+        .notices
+        .into_values()
+        .map(|(notice, _)| notice)
+        .collect()
 }
 
 #[must_use]
