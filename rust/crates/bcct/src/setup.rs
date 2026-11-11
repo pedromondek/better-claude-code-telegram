@@ -266,11 +266,6 @@ pub fn mark_launch(app_dir: &Path, now: u64) -> Result<(), FileFailure> {
 }
 
 #[must_use]
-pub fn repo_root() -> PathBuf {
-    normalize_path(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.."))
-}
-
-#[must_use]
 pub fn launcher_file(app_dir: &Path) -> PathBuf {
     join_path(app_dir, LAUNCHER)
 }

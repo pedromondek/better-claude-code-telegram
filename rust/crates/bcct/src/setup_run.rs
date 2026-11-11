@@ -20,8 +20,8 @@ use crate::health::{self, Screen};
 use crate::hook::now_ms;
 use crate::install::{
     self, ClaudeUndo, CommandsChoice, Declined, Install, Kept, Parsed, System, Tool,
-    TranscriptionChoice, declined_report, huggingface_cache_dir, kept_message, parse_inbox_days,
-    parse_transcription_model, remove_path,
+    TranscriptionChoice, declined_report, huggingface_cache_dir, kept_message, marketplace_source,
+    parse_inbox_days, parse_transcription_model, remove_path,
 };
 use crate::journal::{Change, ChangeKind, Journal, UndoAction};
 use crate::js::{join_path, js_length, js_string, js_trim, js_truthy, stringify_pretty};
@@ -36,8 +36,8 @@ use crate::settings::{STATUS_LINE, is_our_statusline, remove_if_present, statusl
 use crate::setup::{
     ACCESS_FILE, ENV_FILE, MINIMUM_NODE, SETUP_COMMAND, SetupPaths, StatuslineState, check_setup,
     env_deny_rule, mark_launch, node_version_from, node_version_ok, parse_env_token, read_settings,
-    read_text, repo_root, setup_locale, shell_file, shell_script, statusline_is_current,
-    statusline_prompt, statusline_state, telegram_instance_running, whisper_python_works,
+    read_text, setup_locale, shell_file, shell_script, statusline_is_current, statusline_prompt,
+    statusline_state, telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
     QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
@@ -457,7 +457,7 @@ struct Setup<'a> {
     var: &'a dyn Fn(&str) -> Option<OsString>,
     home: PathBuf,
     home_text: String,
-    repo: PathBuf,
+    marketplace: String,
     shell: Option<String>,
     macos: bool,
     flags: bool,
@@ -488,7 +488,7 @@ impl<'a> Setup<'a> {
         Self {
             var,
             home_text: home.to_string_lossy().into_owned(),
-            repo: repo_root(),
+            marketplace: marketplace_source(env!("CARGO_PKG_VERSION")),
             shell: var("SHELL").map(|shell| shell.to_string_lossy().into_owned()),
             macos: cfg!(target_os = "macos"),
             flags: !cfg!(windows) && !filled("WSL_DISTRO_NAME") && !filled("WT_SESSION"),
@@ -553,7 +553,7 @@ impl<'a> Setup<'a> {
         let machine = install::Machine {
             home: &self.home,
             app_dir: &self.paths.app_dir,
-            repo: &self.repo,
+            marketplace: &self.marketplace,
             hf_cache: &self.hf_cache,
             settings_file: &self.paths.settings_file,
             shell: self.shell.as_deref(),

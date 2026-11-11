@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 
 use serde_json::{Map, Number, Value};
 
@@ -17,6 +17,7 @@ use crate::js::{
 use crate::locale::Locale;
 use crate::messages::Messages;
 use crate::paths::CONFIG_FILE;
+use crate::self_install::Channel;
 use crate::setup::{
     CHANNEL_PLUGIN_ID, HOOKS_PLUGIN_ID, read_settings, shell_file, whisper_python_works,
 };
@@ -38,7 +39,11 @@ pub const DEFAULT_TRANSCRIPTION_MODEL: &str = "base";
 const REQUIRED_PLUGIN_IDS: [&str; 2] = [CHANNEL_PLUGIN_ID, HOOKS_PLUGIN_ID];
 pub const DISABLE_ANSWERS: [&str; 8] = ["não", "nao", "n", "nenhum", "no", "none", "off", "0"];
 const WHISPER_PACKAGES: [&str; 2] = ["faster-whisper==1.2.1", "av==18.1.0"];
-const TRANSCRIBE_SCRIPT: &str = "plugins/telegram/extensions/transcribe.py";
+pub const MARKETPLACE_REPO: &str = "pedromondek/better-claude-code-telegram";
+pub const TRANSCRIBE_SOURCE: &str =
+    include_str!("../../../../plugins/telegram/extensions/transcribe.py");
+const STABLE_REF: &str = "stable";
+const STDIN_SCRIPT: &str = "-";
 const WHISPER_FOLDER: &str = "whisper";
 const VENV_FOLDER: &str = "whisper/venv";
 const VENV_PYTHON: &str = "bin/python";
@@ -200,15 +205,24 @@ pub struct Installed<'a> {
 }
 
 #[must_use]
+pub fn marketplace_source(version: &str) -> String {
+    if Channel::of(version).is_unstable() {
+        format!("{MARKETPLACE_REPO}#v{version}")
+    } else {
+        format!("{MARKETPLACE_REPO}#{STABLE_REF}")
+    }
+}
+
+#[must_use]
 pub fn plugin_plan(
     installed: Installed<'_>,
     messages: &Messages,
-    repo: &Path,
+    source: &str,
     shell_file: &Path,
 ) -> Vec<PlanStep> {
     let marketplace = (!installed.marketplaces.contains(MARKETPLACE_NAME)).then(|| PlanStep {
         description: (messages.plan_marketplace)(MARKETPLACE_NAME),
-        command: format!("claude plugin marketplace add {}", repo.display()),
+        command: format!("claude plugin marketplace add {source}"),
     });
     let plugins = installed
         .plugin_ids
@@ -414,7 +428,44 @@ impl System {
             .args(args)
             .stdin(Stdio::null())
             .output();
-        let said = match &output {
+
+        Self::succeeded_or_said(&output, description, messages)
+    }
+
+    fn run_script_or_fail(
+        &self,
+        python: impl AsRef<OsStr>,
+        script: &str,
+        args: &[&str],
+        description: &str,
+        messages: &Messages,
+    ) -> Result<(), String> {
+        let output = self
+            .command(python)
+            .arg(STDIN_SCRIPT)
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .and_then(|mut child| {
+                let _written = child
+                    .stdin
+                    .take()
+                    .map(|mut stdin| stdin.write_all(script.as_bytes()));
+
+                child.wait_with_output()
+            });
+
+        Self::succeeded_or_said(&output, description, messages)
+    }
+
+    fn succeeded_or_said(
+        output: &io::Result<Output>,
+        description: &str,
+        messages: &Messages,
+    ) -> Result<(), String> {
+        let said = match output {
             Ok(output) if output.status.success() => return Ok(()),
             Ok(output) => format!(
                 "{}{}",
@@ -455,7 +506,7 @@ impl System {
 pub struct Machine<'a> {
     pub home: &'a Path,
     pub app_dir: &'a Path,
-    pub repo: &'a Path,
+    pub marketplace: &'a str,
     pub hf_cache: &'a Path,
     pub settings_file: &'a Path,
     pub shell: Option<&'a str>,
@@ -470,7 +521,7 @@ impl std::fmt::Debug for Machine<'_> {
             .debug_struct("Machine")
             .field("home", &self.home)
             .field("app_dir", &self.app_dir)
-            .field("repo", &self.repo)
+            .field("marketplace", &self.marketplace)
             .field("hf_cache", &self.hf_cache)
             .field("settings_file", &self.settings_file)
             .field("shell", &self.shell)
@@ -874,7 +925,7 @@ impl<'r, 's, E> Install<'r, 's, E> {
                 plugin_ids: &REQUIRED_PLUGIN_IDS,
             },
             messages,
-            self.machine.repo,
+            self.machine.marketplace,
             &shell_file(self.machine.app_dir),
         );
 
@@ -969,11 +1020,9 @@ impl<'r, 's, E> Install<'r, 's, E> {
                 colorize,
             ));
         } else {
-            let repo = self.machine.repo.to_string_lossy();
-
             self.claude_step(
                 &(messages.marketplace_adding)(MARKETPLACE_NAME),
-                &["plugin", "marketplace", "add", &repo],
+                &["plugin", "marketplace", "add", self.machine.marketplace],
                 &(messages.marketplace_added)(MARKETPLACE_NAME),
             )?;
             self.journal.record(
@@ -1395,14 +1444,12 @@ impl<'r, 's, E> Install<'r, 's, E> {
 
         self.journal.track_dir(&model_dir(hf_cache, model));
 
-        let script = join_path(self.machine.repo, TRANSCRIBE_SCRIPT);
-        let script = script.to_string_lossy();
-
         self.while_pending(&(messages.downloading_model)(model), |this| {
             system
-                .run_or_fail(
+                .run_script_or_fail(
                     &python,
-                    &[&script, "--download-only", "--model", model],
+                    TRANSCRIBE_SOURCE,
+                    &["--download-only", "--model", model],
                     messages.model_download,
                     messages,
                 )
@@ -1526,6 +1573,38 @@ mod tests {
     use crate::messages::EN_US;
 
     const STOP: &str = "stop";
+
+    #[test]
+    fn a_stable_binary_follows_the_stable_branch_and_a_test_version_stays_on_its_tag() {
+        assert_eq!(
+            marketplace_source("0.1.0"),
+            "pedromondek/better-claude-code-telegram#stable"
+        );
+        assert_eq!(
+            marketplace_source("1.12.3"),
+            "pedromondek/better-claude-code-telegram#stable"
+        );
+
+        for version in ["0.0.1-alpha.1", "0.2.0-beta.3", "0.2.0-rc.1"] {
+            assert_eq!(
+                marketplace_source(version),
+                format!("pedromondek/better-claude-code-telegram#v{version}")
+            );
+        }
+    }
+
+    #[test]
+    fn the_transcription_script_is_the_one_of_the_plugin() {
+        assert_eq!(
+            TRANSCRIBE_SOURCE,
+            std::fs::read_to_string(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../../plugins/telegram/extensions/transcribe.py")
+            )
+            .unwrap()
+        );
+        assert!(TRANSCRIBE_SOURCE.contains("--download-only"));
+    }
 
     type StepWork<'a> =
         dyn FnOnce(&mut Install<'_, '_, String>) -> Result<(), Failure<String>> + 'a;
@@ -1696,7 +1775,6 @@ mod tests {
             let home = self.path("home");
             let hub = self.path("hub");
             let settings = self.path("settings.json");
-            let repo = self.path("repo");
             let app_dir = self.path("app");
             let installer = |system: &System, command: &str| {
                 system.run_installer(self.installer.as_deref().unwrap_or(command))
@@ -1704,7 +1782,7 @@ mod tests {
             let machine = Machine {
                 home: &home,
                 app_dir: &app_dir,
-                repo: &repo,
+                marketplace: MARKETPLACE_REPO,
                 hf_cache: &hub,
                 settings_file: &settings,
                 shell: Some("bash"),
@@ -1766,6 +1844,40 @@ mod tests {
         assert_eq!(empty.path(), Some(OsString::from("/b:")));
         empty.prepend_path(Path::new("/a"));
         assert_eq!(empty.path(), Some(OsString::from("/a:/b:")));
+    }
+
+    #[test]
+    fn the_script_reaches_the_interpreter_through_its_input_with_the_arguments() {
+        let world = World::new(&[(
+            "python",
+            "[ \"$1\" = - ] || exit 9\nshift\nexec /bin/sh -s -- \"$@\"",
+        )]);
+        let out = world.root.path().join("out");
+        let script = format!("printf '%s|%s' \"$1\" \"$2\" > '{}'", out.display());
+
+        assert_eq!(
+            world
+                .system
+                .run_script_or_fail("python", &script, &["a b", "c"], "describe", &EN_US),
+            Ok(())
+        );
+        assert_eq!(fs::read_to_string(&out).unwrap(), "a b|c");
+        assert_eq!(
+            world.system.run_script_or_fail(
+                "python",
+                "echo said; echo also >&2; exit 3",
+                &[],
+                "describe",
+                &EN_US
+            ),
+            Err(format!("{}\nsaid\nalso", (EN_US.failed)("describe")))
+        );
+        assert_eq!(
+            world
+                .system
+                .run_script_or_fail("/nonexistent/x", "", &[], "describe", &EN_US),
+            Err((EN_US.failed)("describe"))
+        );
     }
 
     #[test]

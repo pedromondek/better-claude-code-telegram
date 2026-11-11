@@ -53,6 +53,13 @@ pub(crate) fn parse(source: &str) -> Value {
 const CLONE_STATUSLINE: &str = "node \"{repo}/plugins/telegram-hooks/statusline.mjs\"";
 const CLONE_STATUSLINE_ESCAPED: &str = "node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"";
 const CLONE_SHELL_FILE: &str = "{repo}/scripts/shell.sh";
+const CLONE_MARKETPLACE: &str = "marketplace add {repo}";
+const CLONE_REPO: &str = "{repo}";
+const CLONE_TRANSCRIBE: &str = "{repo}/plugins/telegram/extensions/transcribe.py";
+
+pub(crate) fn marketplace() -> String {
+    bcct::install::marketplace_source(env!("CARGO_PKG_VERSION"))
+}
 
 pub(crate) fn app_text(text: &str, app: &str) -> String {
     text.replace(
@@ -61,10 +68,16 @@ pub(crate) fn app_text(text: &str, app: &str) -> String {
     )
     .replace(CLONE_STATUSLINE, &format!("\"{app}/bin/bcct\" statusline"))
     .replace(CLONE_SHELL_FILE, &format!("{app}/shell.sh"))
+    .replace(
+        CLONE_MARKETPLACE,
+        &format!("marketplace add {}", marketplace()),
+    )
+    .replace(CLONE_TRANSCRIBE, "-")
 }
 
 pub(crate) fn app_form(value: &Value, app: &str) -> Value {
     match value {
+        Value::String(text) if text == CLONE_REPO => Value::String(marketplace()),
         Value::String(text) => Value::String(app_text(text, app)),
         Value::Array(items) => items.iter().map(|item| app_form(item, app)).collect(),
         Value::Object(map) => map

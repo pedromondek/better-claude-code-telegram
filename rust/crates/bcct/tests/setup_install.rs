@@ -28,8 +28,8 @@ use bcct::setup::node_version_ok;
 use bcct::spinner::Terminal;
 use serde_json::{Value, json};
 use support::{
-    app_form, default_file_mode, expected_tree, list, materialize, parse, placeholders, repo_root,
-    sandbox, snapshot, strings, substitute, text,
+    app_form, default_file_mode, expected_tree, list, marketplace, materialize, parse,
+    placeholders, sandbox, snapshot, strings, substitute, text,
 };
 
 const FIXTURE: &str = include_str!("fixtures/setup-install.json");
@@ -369,7 +369,7 @@ fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
     let hf_cache = huggingface_cache_dir(&var, &home);
     let settings_file = Path::new(&env["CLAUDE_CONFIG_DIR"]).join("settings.json");
     let app_dir = PathBuf::from(&env["BETTER_CC_TELEGRAM_DIR"]);
-    let repo = repo_root();
+    let source = marketplace();
     let system = System::new(
         env.iter()
             .map(|(name, value)| (OsString::from(name), OsString::from(value)))
@@ -386,7 +386,7 @@ fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
     let machine = Machine {
         home: &home,
         app_dir: &app_dir,
-        repo: &repo,
+        marketplace: &source,
         hf_cache: &hf_cache,
         settings_file: &settings_file,
         shell: env.get("SHELL").map(String::as_str),
@@ -514,7 +514,7 @@ fn stopped_by(
     let hub = root.path().join("hub");
     let settings = root.path().join("settings.json");
     let app_dir = root.path().join("app");
-    let repo = repo_root();
+    let source = marketplace();
     let system = System::new(vec![(
         OsString::from("PATH"),
         OsString::from(format!("{}:{}", bin.display(), sys.path().display())),
@@ -522,7 +522,7 @@ fn stopped_by(
     let machine = Machine {
         home: &home,
         app_dir: &app_dir,
-        repo: &repo,
+        marketplace: &source,
         hf_cache: &hub,
         settings_file: &settings,
         shell: Some("bash"),
@@ -762,7 +762,7 @@ fn the_plugin_plan_matches_plugin_plan() {
                 plugin_ids: &plugin_ids,
             },
             messages_for(Locale::parse(text(case, "locale")).unwrap()),
-            Path::new("/repo"),
+            "/repo",
             Path::new("/repo/shell.sh"),
         );
         let plan: Vec<Value> = plan
