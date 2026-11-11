@@ -29,7 +29,7 @@ pub mod telegram;
 pub mod ui;
 
 use std::ffi::OsString;
-use std::io::{self, Write};
+use std::io::Write;
 use std::process::ExitCode;
 
 const USAGE_ERROR: u8 = 2;
@@ -45,8 +45,11 @@ enum Command {
     Health(Vec<OsString>),
     Setup(Vec<OsString>),
     Uninstall,
+    UninstallVersion(String),
     SelfInstall(Vec<OsString>),
 }
+
+const VERSION_FLAGS: [&str; 5] = ["-v", "-V", "-version", "--version", "--v"];
 
 pub fn run<I, O, E>(args: I, stdout: &mut O, stderr: &mut E) -> ExitCode
 where
@@ -55,9 +58,8 @@ where
     E: Write,
 {
     match parse(args) {
-        Ok(Command::Version) => {
-            print_version(stdout).map_or(ExitCode::FAILURE, |()| ExitCode::SUCCESS)
-        }
+        Ok(Command::Version) => self_install::run_version_process(stdout, stderr)
+            .map_or(ExitCode::FAILURE, |()| ExitCode::SUCCESS),
         Ok(Command::Hook(mode)) => {
             hook::run_process(mode.as_deref(), stdout);
             ExitCode::SUCCESS
@@ -72,6 +74,9 @@ where
         Ok(Command::Health(args)) => ExitCode::from(health::run_process(&args, stdout, stderr)),
         Ok(Command::Setup(args)) => ExitCode::from(setup_run::run_process(&args, stdout, stderr)),
         Ok(Command::Uninstall) => ExitCode::from(setup_run::run_uninstall_process(stdout, stderr)),
+        Ok(Command::UninstallVersion(version)) => {
+            ExitCode::from(self_install::run_remove_process(&version, stdout, stderr))
+        }
         Ok(Command::SelfInstall(args)) => {
             ExitCode::from(self_install::run_process(&args, stdout, stderr))
         }
@@ -91,6 +96,7 @@ where
     let word = args.next();
 
     match word.as_ref().and_then(|word| word.to_str()) {
+        Some(flag) if VERSION_FLAGS.contains(&flag) => return Ok(Command::Version),
         Some("hook") => return Ok(Command::Hook(first_word(args.next()))),
         Some("statusline") => {
             return Ok(Command::Statusline(
@@ -103,7 +109,6 @@ where
     let mut parser = lexopt::Parser::from_iter(program.into_iter().chain(word).chain(args));
 
     match parser.next()? {
-        Some(lexopt::Arg::Long("version") | lexopt::Arg::Short('V')) => Ok(Command::Version),
         Some(lexopt::Arg::Value(word)) if word == "release" => {
             Ok(Command::Release(first_word(parser.raw_args()?.next())))
         }
@@ -116,7 +121,12 @@ where
         Some(lexopt::Arg::Value(word)) if word == "setup" => {
             Ok(Command::Setup(parser.raw_args()?.collect()))
         }
-        Some(lexopt::Arg::Value(word)) if word == "uninstall" => Ok(Command::Uninstall),
+        Some(lexopt::Arg::Value(word)) if word == "uninstall" => {
+            let version = first_word(parser.raw_args()?.next())
+                .filter(|version| semver::Version::parse(version).is_ok());
+
+            Ok(version.map_or(Command::Uninstall, Command::UninstallVersion))
+        }
         Some(lexopt::Arg::Value(word)) if word == "self-install" => {
             Ok(Command::SelfInstall(parser.raw_args()?.collect()))
         }
@@ -129,32 +139,9 @@ fn first_word(word: Option<OsString>) -> Option<String> {
     word.map(|word| word.to_string_lossy().into_owned())
 }
 
-fn print_version<O: Write>(stdout: &mut O) -> io::Result<()> {
-    writeln!(stdout, "bcct {}", env!("CARGO_PKG_VERSION"))?;
-    stdout.flush()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    struct BrokenPipe {
-        accepts_writes: bool,
-    }
-
-    impl Write for BrokenPipe {
-        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-            if self.accepts_writes {
-                Ok(buf.len())
-            } else {
-                Err(io::ErrorKind::BrokenPipe.into())
-            }
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            Err(io::ErrorKind::BrokenPipe.into())
-        }
-    }
 
     fn args(list: &[&str]) -> Vec<OsString> {
         list.iter().map(OsString::from).collect()
@@ -222,45 +209,20 @@ mod tests {
         );
         assert_eq!(parsed(&["bcct", "setup"]), Command::Setup(Vec::new()));
         assert_eq!(parsed(&["bcct", "uninstall", "x"]), Command::Uninstall);
-    }
-
-    #[test]
-    fn short_version_flag_prints_the_same_as_the_long_one() {
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-
-        let code = run(args(&["bcct", "-V"]), &mut stdout, &mut stderr);
-
-        assert_eq!(code, ExitCode::SUCCESS);
+        assert_eq!(parsed(&["bcct", "uninstall"]), Command::Uninstall);
         assert_eq!(
-            String::from_utf8(stdout).unwrap(),
-            format!("bcct {}\n", env!("CARGO_PKG_VERSION"))
+            parsed(&["bcct", "uninstall", "0.3.0-beta.1", "x"]),
+            Command::UninstallVersion("0.3.0-beta.1".to_owned())
         );
-        assert_eq!(stderr, Vec::<u8>::new());
     }
 
     #[test]
-    fn a_closed_stdout_ends_with_failure_instead_of_a_panic() {
-        let mut stderr = Vec::new();
-        let mut closed = BrokenPipe {
-            accepts_writes: false,
-        };
+    fn every_version_flag_is_the_same_command() {
+        for flag in VERSION_FLAGS {
+            assert_eq!(parse(args(&["bcct", flag])).unwrap(), Command::Version);
+        }
 
-        let code = run(args(&["bcct", "--version"]), &mut closed, &mut stderr);
-
-        assert_eq!(code, ExitCode::FAILURE);
-    }
-
-    #[test]
-    fn a_stdout_that_fails_on_flush_also_ends_with_failure() {
-        let mut stderr = Vec::new();
-        let mut unflushable = BrokenPipe {
-            accepts_writes: true,
-        };
-
-        let code = run(args(&["bcct", "--version"]), &mut unflushable, &mut stderr);
-
-        assert_eq!(code, ExitCode::FAILURE);
+        assert!(parse(args(&["bcct", "-x"])).is_err());
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, FixTexts, HealthDetail, HealthGroupTitles, HealthLabels,
-    HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
+    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
+    HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
     StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
 };
@@ -583,6 +583,23 @@ pub(super) const MESSAGES: Messages = Messages {
     self_install_not_bcct: "The file did not answer as bcct; nothing was installed.",
     self_install_failed: "Could not install bcct: the file or the app folder could not be read or written.",
     self_install_usage: "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+    version_installed: "Installed:",
+    version_active: "active",
+    version_channels: ChannelNames {
+        stable: "stable",
+        beta: "beta",
+        alpha: "alpha",
+    },
+    version_remove_hint: "To delete a kept one: npx better-claude-code-telegram uninstall <version>",
+    version_uninstall_hint: "To uninstall everything: npx better-claude-code-telegram uninstall",
+    version_unstable: |channel| {
+        format!("Test version ({channel}). For the stable one: 'bcct update stable'.")
+    },
+    uninstall_version_removed: |version| format!("Deleted {version}."),
+    uninstall_version_active: |version| {
+        format!("{version} is in use. Switch first with 'bcct update'.")
+    },
+    uninstall_version_missing: |version| format!("{version} is not installed."),
     path_question: "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
     path_added: |file| format!("{file} now adds bcct to your PATH. It applies to new terminals."),
     path_already: |file| format!("{file} already adds bcct to your PATH."),

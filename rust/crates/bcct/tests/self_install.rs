@@ -10,7 +10,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use bcct::self_install::{Channel, InstallError, LAUNCHER_CMD, LAUNCHER_SH, Origin, Store};
+use bcct::self_install::{
+    Channel, InstallError, Kept, LAUNCHER_CMD, LAUNCHER_SH, Origin, RemoveError, Store,
+};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use support::sandbox;
@@ -241,6 +243,111 @@ fn the_unstable_folders_are_kept_apart_and_counted_together() {
         vec!["0.2.0-alpha.1", "0.2.0-rc.1", "0.2.0-rc.2"]
     );
     assert_eq!(entries(&app_dir.join("bin/versions/stable")), vec!["0.1.0"]);
+}
+
+#[test]
+fn the_kept_versions_come_by_channel_with_the_newest_first() {
+    let folder = sandbox();
+    let root = folder.path();
+    let store = Store::new(&root.join("app"));
+
+    assert_eq!(store.kept(), Vec::<Kept>::new());
+
+    for version in [
+        "0.2.0",
+        "0.2.1",
+        "0.3.0-beta.1",
+        "0.4.0-alpha.1",
+        "0.3.0-beta.2",
+    ] {
+        install(&store, root, version);
+    }
+
+    assert_eq!(
+        store.kept(),
+        vec![
+            Kept {
+                channel: Channel::Stable,
+                versions: vec!["0.2.1".to_owned(), "0.2.0".to_owned()],
+            },
+            Kept {
+                channel: Channel::Beta,
+                versions: vec!["0.3.0-beta.2".to_owned(), "0.3.0-beta.1".to_owned()],
+            },
+            Kept {
+                channel: Channel::Alpha,
+                versions: vec!["0.4.0-alpha.1".to_owned()],
+            },
+        ]
+    );
+}
+
+#[test]
+fn removing_a_kept_version_deletes_only_its_folder() {
+    let folder = sandbox();
+    let root = folder.path();
+    let app_dir = root.join("app");
+    let store = Store::new(&app_dir);
+
+    install(&store, root, "0.3.0-beta.1");
+    install(&store, root, "0.2.1");
+
+    store.remove("0.3.0-beta.1").unwrap();
+
+    assert_eq!(
+        entries(&app_dir.join("bin/versions/unstable/beta")),
+        Vec::<String>::new()
+    );
+    assert_eq!(entries(&app_dir.join("bin/versions/stable")), vec!["0.2.1"]);
+    assert_eq!(store.current().as_deref(), Some("0.2.1"));
+}
+
+#[test]
+fn removing_the_active_or_a_missing_version_is_refused() {
+    let folder = sandbox();
+    let root = folder.path();
+    let app_dir = root.join("app");
+    let store = Store::new(&app_dir);
+
+    install(&store, root, "0.2.1");
+
+    assert!(matches!(store.remove("0.2.1"), Err(RemoveError::Active)));
+    assert!(matches!(store.remove("9.9.9"), Err(RemoveError::Missing)));
+    assert!(matches!(
+        store.remove("0.2.1-rc.1"),
+        Err(RemoveError::Missing)
+    ));
+    assert_eq!(entries(&app_dir.join("bin/versions/stable")), vec!["0.2.1"]);
+}
+
+#[test]
+fn a_version_that_cannot_be_deleted_reports_the_file_error() {
+    let folder = sandbox();
+    let root = folder.path();
+    let app_dir = root.join("app");
+    let store = Store::new(&app_dir);
+    let beta = app_dir.join("bin/versions/unstable/beta");
+
+    install(&store, root, "0.3.0-beta.1");
+    install(&store, root, "0.2.1");
+    fs::set_permissions(&beta, fs::Permissions::from_mode(0o555)).unwrap();
+
+    let removed = store.remove("0.3.0-beta.1");
+    fs::set_permissions(&beta, fs::Permissions::from_mode(0o755)).unwrap();
+
+    assert!(matches!(removed, Err(RemoveError::Io(_))));
+}
+
+#[test]
+fn a_binary_that_answers_more_lines_after_its_version_is_still_accepted() {
+    let folder = sandbox();
+    let root = folder.path();
+    let store = Store::new(&root.join("app"));
+    let (binary, hash) = fake_binary(root, "bcct 0.5.0\nInstalled:");
+
+    let installed = store.install(&binary, &hash, Origin::Release).unwrap();
+
+    assert_eq!(installed.version, "0.5.0");
 }
 
 #[test]

@@ -25,6 +25,13 @@ pub struct StepTitles {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct ChannelNames {
+    pub stable: &'static str,
+    pub beta: &'static str,
+    pub alpha: &'static str,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct SettingsKeys {
     pub status_line: &'static str,
     pub permissions: &'static str,
@@ -449,6 +456,15 @@ pub struct Messages {
     pub self_install_not_bcct: &'static str,
     pub self_install_failed: &'static str,
     pub self_install_usage: &'static str,
+    pub version_installed: &'static str,
+    pub version_active: &'static str,
+    pub version_channels: ChannelNames,
+    pub version_remove_hint: &'static str,
+    pub version_uninstall_hint: &'static str,
+    pub version_unstable: fn(&str) -> String,
+    pub uninstall_version_removed: fn(&str) -> String,
+    pub uninstall_version_active: fn(&str) -> String,
+    pub uninstall_version_missing: fn(&str) -> String,
     pub path_question: &'static str,
     pub path_added: fn(&str) -> String,
     pub path_already: fn(&str) -> String,

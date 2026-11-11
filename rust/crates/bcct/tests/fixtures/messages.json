@@ -923,6 +923,31 @@
     "selfInstallNotBcct": "The file did not answer as bcct; nothing was installed.",
     "selfInstallFailed": "Could not install bcct: the file or the app folder could not be read or written.",
     "selfInstallUsage": "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+    "versionInstalled": "Installed:",
+    "versionActive": "active",
+    "versionChannels.stable": "stable",
+    "versionChannels.beta": "beta",
+    "versionChannels.alpha": "alpha",
+    "versionRemoveHint": "To delete a kept one: npx better-claude-code-telegram uninstall <version>",
+    "versionUninstallHint": "To uninstall everything: npx better-claude-code-telegram uninstall",
+    "versionUnstable": [
+      {
+        "args": ["alpha 1"],
+        "out": "Test version (alpha 1). For the stable one: 'bcct update stable'."
+      }
+    ],
+    "uninstallVersionRemoved": [
+      { "args": ["alpha 1"], "out": "Deleted alpha 1." }
+    ],
+    "uninstallVersionActive": [
+      {
+        "args": ["alpha 1"],
+        "out": "alpha 1 is in use. Switch first with 'bcct update'."
+      }
+    ],
+    "uninstallVersionMissing": [
+      { "args": ["alpha 1"], "out": "alpha 1 is not installed." }
+    ],
     "pathQuestion": "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
     "pathAdded": [
       {
@@ -1945,6 +1970,31 @@
     "selfInstallNotBcct": "O arquivo não respondeu como bcct; nada foi instalado.",
     "selfInstallFailed": "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
     "selfInstallUsage": "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
+    "versionInstalled": "Instaladas:",
+    "versionActive": "ativa",
+    "versionChannels.stable": "estável",
+    "versionChannels.beta": "beta",
+    "versionChannels.alpha": "alpha",
+    "versionRemoveHint": "Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>",
+    "versionUninstallHint": "Para desinstalar tudo: npx better-claude-code-telegram uninstall",
+    "versionUnstable": [
+      {
+        "args": ["alpha 1"],
+        "out": "Versão de teste (alpha 1). Para a estável: 'bcct update stable'."
+      }
+    ],
+    "uninstallVersionRemoved": [
+      { "args": ["alpha 1"], "out": "Apaguei a alpha 1." }
+    ],
+    "uninstallVersionActive": [
+      {
+        "args": ["alpha 1"],
+        "out": "A alpha 1 está em uso. Troque antes com 'bcct update'."
+      }
+    ],
+    "uninstallVersionMissing": [
+      { "args": ["alpha 1"], "out": "A alpha 1 não está instalada." }
+    ],
     "pathQuestion": "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
     "pathAdded": [
       {

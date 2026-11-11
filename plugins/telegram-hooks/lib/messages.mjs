@@ -516,6 +516,23 @@ const enUs = {
     "Could not install bcct: the file or the app folder could not be read or written.",
   selfInstallUsage:
     "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+  versionInstalled: "Installed:",
+  versionActive: "active",
+  versionChannels: {
+    stable: "stable",
+    beta: "beta",
+    alpha: "alpha",
+  },
+  versionRemoveHint:
+    "To delete a kept one: npx better-claude-code-telegram uninstall <version>",
+  versionUninstallHint:
+    "To uninstall everything: npx better-claude-code-telegram uninstall",
+  versionUnstable: (channel) =>
+    `Test version (${channel}). For the stable one: 'bcct update stable'.`,
+  uninstallVersionRemoved: (version) => `Deleted ${version}.`,
+  uninstallVersionActive: (version) =>
+    `${version} is in use. Switch first with 'bcct update'.`,
+  uninstallVersionMissing: (version) => `${version} is not installed.`,
   pathQuestion:
     "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
   pathAdded: (file) =>
@@ -1075,6 +1092,23 @@ const ptBr = {
     "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
   selfInstallUsage:
     "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
+  versionInstalled: "Instaladas:",
+  versionActive: "ativa",
+  versionChannels: {
+    stable: "estável",
+    beta: "beta",
+    alpha: "alpha",
+  },
+  versionRemoveHint:
+    "Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>",
+  versionUninstallHint:
+    "Para desinstalar tudo: npx better-claude-code-telegram uninstall",
+  versionUnstable: (channel) =>
+    `Versão de teste (${channel}). Para a estável: 'bcct update stable'.`,
+  uninstallVersionRemoved: (version) => `Apaguei a ${version}.`,
+  uninstallVersionActive: (version) =>
+    `A ${version} está em uso. Troque antes com 'bcct update'.`,
+  uninstallVersionMissing: (version) => `A ${version} não está instalada.`,
   pathQuestion:
     "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
   pathAdded: (file) =>

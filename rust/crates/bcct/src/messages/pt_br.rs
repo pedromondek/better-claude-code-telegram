@@ -1,6 +1,6 @@
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, FixTexts, HealthDetail, HealthGroupTitles, HealthLabels,
-    HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
+    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
+    HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
     StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
 };
@@ -591,6 +591,23 @@ pub(super) const MESSAGES: Messages = Messages {
     self_install_not_bcct: "O arquivo não respondeu como bcct; nada foi instalado.",
     self_install_failed: "Não foi possível instalar o bcct: falha ao ler ou gravar o arquivo ou a pasta do app.",
     self_install_usage: "Uso: bcct self-install <arquivo> --sha256 <hash> [--from npm|release|manual]",
+    version_installed: "Instaladas:",
+    version_active: "ativa",
+    version_channels: ChannelNames {
+        stable: "estável",
+        beta: "beta",
+        alpha: "alpha",
+    },
+    version_remove_hint: "Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>",
+    version_uninstall_hint: "Para desinstalar tudo: npx better-claude-code-telegram uninstall",
+    version_unstable: |channel| {
+        format!("Versão de teste ({channel}). Para a estável: 'bcct update stable'.")
+    },
+    uninstall_version_removed: |version| format!("Apaguei a {version}."),
+    uninstall_version_active: |version| {
+        format!("A {version} está em uso. Troque antes com 'bcct update'.")
+    },
+    uninstall_version_missing: |version| format!("A {version} não está instalada."),
     path_question: "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
     path_added: |file| {
         format!("{file} passou a adicionar o bcct ao PATH. Vale nos terminais novos.")

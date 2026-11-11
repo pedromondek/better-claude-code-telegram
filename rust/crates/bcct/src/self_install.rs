@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::fmt::Write as _;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -13,6 +13,7 @@ use crate::js::stringify_pretty;
 use crate::messages::{Messages, messages_for};
 use crate::paths::Paths;
 use crate::setup::setup_locale;
+use crate::ui::{fail, should_colorize, success, warn};
 
 pub const LAUNCHER_SH: &str = r#"#!/bin/sh
 bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
@@ -154,6 +155,19 @@ pub struct ActiveVersion {
     pub version: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Kept {
+    pub channel: Channel,
+    pub versions: Vec<String>,
+}
+
+#[derive(Debug)]
+pub enum RemoveError {
+    Active,
+    Missing,
+    Io(io::Error),
+}
+
 fn is_executable(path: &Path) -> bool {
     let Ok(metadata) = fs::metadata(path) else {
         return false;
@@ -288,6 +302,45 @@ impl Store {
 
         versions.iter().map(Version::to_string).collect()
     }
+
+    #[must_use]
+    pub fn kept(&self) -> Vec<Kept> {
+        Channel::ALL
+            .into_iter()
+            .filter_map(|channel| {
+                let mut versions =
+                    installed_versions(&self.bin.join(VERSIONS_FOLDER).join(channel.folder()));
+                versions.sort_by(|left, right| right.cmp(left));
+
+                (!versions.is_empty()).then(|| Kept {
+                    channel,
+                    versions: versions.iter().map(Version::to_string).collect(),
+                })
+            })
+            .collect()
+    }
+
+    pub fn remove(&self, version: &str) -> Result<(), RemoveError> {
+        let folder = self.version_dir(version);
+
+        if Version::parse(version).is_err() || !folder.is_dir() {
+            return Err(RemoveError::Missing);
+        }
+
+        if self.current().as_deref() == Some(version) {
+            return Err(RemoveError::Active);
+        }
+
+        fs::remove_dir_all(&folder).map_err(RemoveError::Io)
+    }
+
+    #[must_use]
+    pub fn version_dir(&self, version: &str) -> PathBuf {
+        self.bin
+            .join(VERSIONS_FOLDER)
+            .join(Channel::of(version).folder())
+            .join(version)
+    }
 }
 
 fn hex_digest(bytes: &[u8]) -> String {
@@ -308,7 +361,7 @@ fn answered_version(binary: &Path) -> Option<String> {
         .ok()
         .filter(|output| output.status.success())?;
     let text = String::from_utf8_lossy(&output.stdout);
-    let version = text.trim().strip_prefix(VERSION_PREFIX)?;
+    let version = text.lines().next()?.trim().strip_prefix(VERSION_PREFIX)?;
 
     Version::parse(version)
         .ok()
@@ -440,11 +493,130 @@ fn parse_request(args: &[OsString]) -> Option<Request> {
     })
 }
 
+fn process_messages(app_dir: &Path) -> &'static Messages {
+    messages_for(setup_locale(app_dir, &|name| std::env::var_os(name)))
+}
+
+pub fn write_version(
+    version: &str,
+    store: &Store,
+    messages: &Messages,
+    colorize: bool,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> io::Result<()> {
+    let mut text = format!("{VERSION_PREFIX}{version}\n");
+    let kept = store.kept();
+    let channels = messages.version_channels;
+    let label = |channel: Channel| match channel {
+        Channel::Stable => channels.stable,
+        Channel::Beta => channels.beta,
+        Channel::Alpha => channels.alpha,
+    };
+
+    if !kept.is_empty() {
+        let width = kept
+            .iter()
+            .map(|entry| label(entry.channel).chars().count())
+            .max()
+            .unwrap_or_default();
+        let active = store.current();
+
+        let _written = writeln!(text, "{}", messages.version_installed);
+
+        for entry in &kept {
+            let versions: Vec<String> = entry
+                .versions
+                .iter()
+                .map(|kept_version| {
+                    if active.as_deref() == Some(kept_version.as_str()) {
+                        format!("{kept_version} ({})", messages.version_active)
+                    } else {
+                        kept_version.clone()
+                    }
+                })
+                .collect();
+
+            let _written = writeln!(
+                text,
+                "  {:<width$}  {}",
+                label(entry.channel),
+                versions.join(", ")
+            );
+        }
+
+        let _written = writeln!(text, "{}", messages.version_remove_hint);
+        let _written = writeln!(text, "{}", messages.version_uninstall_hint);
+    }
+
+    stdout.write_all(text.as_bytes())?;
+    stdout.flush()?;
+
+    let channel = Channel::of(version);
+
+    if channel.is_unstable() {
+        let _warned = writeln!(
+            stderr,
+            "{}",
+            warn(&(messages.version_unstable)(channel.name()), colorize)
+        );
+    }
+
+    Ok(())
+}
+
+pub fn run_version_process(stdout: &mut dyn Write, stderr: &mut dyn Write) -> io::Result<()> {
+    let paths = Paths::from_process();
+    let var = |name: &str| std::env::var_os(name);
+
+    write_version(
+        env!("CARGO_PKG_VERSION"),
+        &Store::new(&paths.app_dir),
+        process_messages(&paths.app_dir),
+        should_colorize(&var, io::stderr().is_terminal()),
+        stdout,
+        stderr,
+    )
+}
+
+pub fn run_remove_process(version: &str, stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
+    let paths = Paths::from_process();
+    let var = |name: &str| std::env::var_os(name);
+    let messages = process_messages(&paths.app_dir);
+    let store = Store::new(&paths.app_dir);
+
+    let failure = match store.remove(version) {
+        Ok(()) => {
+            let colorize = should_colorize(&var, io::stdout().is_terminal());
+            let _shown = writeln!(
+                stdout,
+                "{}",
+                success(&(messages.uninstall_version_removed)(version), colorize)
+            );
+            return SUCCESS;
+        }
+        Err(RemoveError::Active) => (messages.uninstall_version_active)(version),
+        Err(RemoveError::Missing) => (messages.uninstall_version_missing)(version),
+        Err(RemoveError::Io(_)) => {
+            (messages.file_not_removed)(&store.version_dir(version).display().to_string())
+        }
+    };
+    let colorize = should_colorize(&var, io::stderr().is_terminal());
+    let _shown = writeln!(stderr, "{}", fail(&failure, colorize));
+
+    FAILURE
+}
+
 pub fn run_process<O: Write, E: Write>(args: &[OsString], stdout: &mut O, stderr: &mut E) -> u8 {
     let paths = Paths::from_process();
-    let messages = messages_for(setup_locale(&paths.app_dir, &|name| std::env::var_os(name)));
 
-    run(args, &paths.app_dir, messages, stdout, stderr)
+    run(
+        args,
+        &paths.app_dir,
+        process_messages(&paths.app_dir),
+        stdout,
+        stderr,
+    )
 }
 
 fn run<O: Write, E: Write>(
