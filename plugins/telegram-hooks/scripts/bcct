@@ -1,0 +1,16 @@
+#!/bin/sh
+app=${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}
+
+for candidate in "${BETTER_CC_TELEGRAM_BIN:-}" "$app/bin/bcct"; do
+  if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then
+    exec "$candidate" "$@"
+  fi
+done
+
+if command -v bcct >/dev/null 2>&1; then
+  exec bcct "$@"
+fi
+
+echo "bcct: not installed (no launcher in $app/bin). Run: npx better-claude-code-telegram" >&2
+echo "bcct: não instalado (sem launcher em $app/bin). Rode: npx better-claude-code-telegram" >&2
+exit 1

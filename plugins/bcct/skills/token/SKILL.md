@@ -8,6 +8,6 @@ disable-model-invocation: true
 
 Do not run anything and never ask for the token. Tell the user, in their language:
 
-- The token is set only in their own terminal, outside Claude Code, so it never enters this conversation: `npm run setup:token` in the repository folder, `${CLAUDE_PLUGIN_ROOT}/../..` (show that path resolved, without the `/plugins/bcct/../..` part). The token is typed hidden and saved readable only by them, and Claude Code is blocked from reading that file.
+- The token is set only in their own terminal, outside Claude Code, so it never enters this conversation: `npx better-claude-code-telegram token`. The token is typed hidden and saved readable only by them, and Claude Code is blocked from reading that file.
 - After changing it, reopen `claude --telegram`.
 - If they already pasted a token in this conversation, that token is exposed: revoke it in @BotFather (`/revoke`), then set the new one with the command above.

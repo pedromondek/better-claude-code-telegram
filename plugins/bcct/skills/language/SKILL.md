@@ -5,14 +5,14 @@ argument-hint: "[en-us | pt-br]"
 disable-model-invocation: true
 allowed-tools:
   - AskUserQuestion
-  - Bash(sh "${CLAUDE_PLUGIN_ROOT}/../../scripts/bcct.sh" setup *)
+  - Bash("${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup *)
 ---
 
 # /bcct:language
 
-Current setup: !`sh "${CLAUDE_PLUGIN_ROOT}/../../scripts/bcct.sh" setup --show`
+Current setup: !`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --show`
 
 Arguments: `$ARGUMENTS`
 
 1. If the arguments name `en-us` or `pt-br`, use it. Otherwise call AskUserQuestion once, header "Language", with the options "English / Inglês (en-us)" and "Português Brasileiro / Brazilian Portuguese (pt-br)", the current one first and marked as current.
-2. Run `sh "${CLAUDE_PLUGIN_ROOT}/../../scripts/bcct.sh" setup --set language <value>` and show its output. It applies to the next messages; nothing to reopen.
+2. Run `"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set language <value>` and show its output. It applies to the next messages; nothing to reopen.

@@ -16,9 +16,9 @@ const RUST_SOURCE = join(
   "bcct",
   "src",
 );
-const SHIM_PATH = "${CLAUDE_PLUGIN_ROOT}/../../scripts/bcct.sh";
-const SHIM_RUN =
-  /sh "\$\{CLAUDE_PLUGIN_ROOT\}\/\.\.\/\.\.\/scripts\/bcct\.sh" (\w+)/g;
+const SHIM_PATH = "${CLAUDE_PLUGIN_ROOT}/scripts/bcct";
+const SHIM_RUN = /"\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/bcct" (\w+)/g;
+const SETUP_COMMAND = "npx better-claude-code-telegram";
 const SKILL_SUBCOMMANDS = {
   delay: "setup",
   health: "health",
@@ -71,20 +71,47 @@ describe("bcct skills", () => {
     }
   });
 
-  it("points only to scripts that exist in the repository", () => {
+  it("points only to files inside the plugin, which is all the plugin cache keeps", () => {
     for (const { text } of skills()) {
-      for (const [, script] of text.matchAll(
-        /\$\{CLAUDE_PLUGIN_ROOT\}\/(\.\.\/\.\.\/scripts\/[\w-]+\.\w+)/g,
+      expect(text).not.toContain("../");
+
+      for (const [, file] of text.matchAll(
+        /\$\{CLAUDE_PLUGIN_ROOT\}\/([\w./-]+)/g,
       )) {
-        expect(existsSync(resolve(PLUGIN_ROOT, script))).toBe(true);
+        expect(existsSync(resolve(PLUGIN_ROOT, file))).toBe(true);
       }
     }
   });
 
-  it("runs every command through the shim, never node directly", () => {
+  it("runs every command through the script of the plugin, never node, sh or npm run", () => {
     for (const { text } of skills()) {
       expect(text).not.toMatch(/\bnode "/);
+      expect(text).not.toMatch(/\bsh "/);
+      expect(text).not.toContain("npm run");
+      expect(text).not.toContain("repository folder");
     }
+  });
+
+  it("sends the steps that need the terminal to npx better-claude-code-telegram", () => {
+    const steps = {
+      pairing: `${SETUP_COMMAND} pairing`,
+      setup: SETUP_COMMAND,
+      token: `${SETUP_COMMAND} token`,
+      uninstall: `${SETUP_COMMAND} uninstall`,
+    };
+
+    const texts = Object.fromEntries(
+      skills().map(({ name, text }) => [name, text]),
+    );
+
+    expect(
+      Object.fromEntries(
+        Object.entries(steps).map(([name, command]) => [
+          name,
+          (texts[name] ?? "").includes(`\`${command}\``),
+        ]),
+      ),
+    ).toEqual({ pairing: true, setup: true, token: true, uninstall: true });
   });
 
   it("allows exactly the subcommand each skill runs, and nothing else", () => {
@@ -110,7 +137,7 @@ describe("bcct skills", () => {
         name,
         SKILL_SUBCOMMANDS[name]
           ? {
-              tools: [`Bash(sh "${SHIM_PATH}" ${SKILL_SUBCOMMANDS[name]} *)`],
+              tools: [`Bash("${SHIM_PATH}" ${SKILL_SUBCOMMANDS[name]} *)`],
               runs: [SKILL_SUBCOMMANDS[name]],
             }
           : { tools: [], runs: [] },
@@ -127,8 +154,9 @@ describe("bcct skills", () => {
     const flags = [
       ...new Set(
         skills().flatMap(({ text }) =>
-          [...text.matchAll(/`sh "[^`]*`/g)].flatMap(([command]) =>
-            [...command.matchAll(/ (--[a-z-]+)/g)].map(([, flag]) => flag),
+          [...text.matchAll(/`"\$\{CLAUDE_PLUGIN_ROOT\}[^`]*`/g)].flatMap(
+            ([command]) =>
+              [...command.matchAll(/ (--[a-z-]+)/g)].map(([, flag]) => flag),
           ),
         ),
       ),

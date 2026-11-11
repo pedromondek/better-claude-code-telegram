@@ -1,228 +1,250 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import {
+  readCalls,
+  readLog,
+  sandboxPath,
+  writeFakeBcct,
+} from "../../../scripts/__tests__/fixtures/fake-bcct.mjs";
+
 const PLUGIN_ROOT = join(import.meta.dirname, "..");
-const HOOKS_JSON = join(PLUGIN_ROOT, "hooks", "hooks.json");
-const HOOK_CALL = /node "\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/telegram\.mjs" (\w+)/;
+const ROOT_DIR = join(PLUGIN_ROOT, "..", "..");
+const HOOKS = join(PLUGIN_ROOT, "hooks", "hooks.json");
+const MODES = ["permission", "prompt", "post", "stop"];
+const GUARD =
+  '[ "$BETTER_CC_TELEGRAM" = 1 ] || [ -f "${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid" ]';
+const ACTIVITY =
+  '[ "$BETTER_CC_TELEGRAM" = 1 ] && d="${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings" && mkdir -p "$d" && date +%s%3N > "$d/last-activity" 2>/dev/null || true';
 
+let workDir;
 let stateDir;
-let homeDir;
+let logDir;
+let binDir;
 let appDir;
+let appBin;
 
-function loadHooks() {
-  return JSON.parse(readFileSync(HOOKS_JSON, "utf8")).hooks;
+function telegramHook(mode) {
+  return `if { ${GUARD}; }; then "\${CLAUDE_PLUGIN_ROOT}/scripts/bcct" hook ${mode}; fi`;
 }
 
-function commandsOf(event) {
-  return loadHooks()[event].flatMap((group) =>
-    group.hooks.map((hook) => hook.command),
-  );
+function hooks() {
+  return JSON.parse(readFileSync(HOOKS, "utf8")).hooks;
 }
 
-function telegramCommand(event, mode) {
-  return commandsOf(event).find((command) =>
-    command.includes(`telegram.mjs" ${mode}`),
-  );
-}
-
-function activityCommand(event) {
-  return commandsOf(event).find((command) => command.includes("last-activity"));
-}
-
-function runCommand(command, { telegram, input = "{}", extraEnv = {} }) {
-  const env = {
-    ...process.env,
-    HOME: homeDir,
-    CLAUDE_CONFIG_DIR: join(homeDir, ".claude"),
+function env({ telegram = true, extra = {} } = {}) {
+  return {
+    PATH: sandboxPath(binDir),
+    HOME: join(workDir, "home"),
+    CLAUDE_CONFIG_DIR: join(workDir, "config"),
     CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT,
     TELEGRAM_STATE_DIR: stateDir,
+    ...(telegram ? { BETTER_CC_TELEGRAM: "1" } : {}),
+    ...extra,
   };
+}
 
-  delete env.BETTER_CC_TELEGRAM;
-  delete env.BETTER_CC_TELEGRAM_DIR;
-  Object.assign(env, extraEnv);
-
-  if (telegram) env.BETTER_CC_TELEGRAM = "1";
-
-  return spawnSync("bash", ["-c", command], { env, input, encoding: "utf8" });
+function run(shell, command, options = {}) {
+  return spawnSync(shell, ["-c", command], {
+    env: env(options),
+    input: options.input ?? '{"session_id":"s1"}',
+    encoding: "utf8",
+  });
 }
 
 beforeEach(() => {
-  stateDir = mkdtempSync(join(tmpdir(), "bcct-state-"));
-  homeDir = mkdtempSync(join(tmpdir(), "bcct-home-"));
-  appDir = join(homeDir, ".claude", "better-claude-code-telegram");
+  workDir = mkdtempSync(join(tmpdir(), "bcct-hooks-json-"));
+  stateDir = join(workDir, "state");
+  logDir = join(workDir, "log");
+  binDir = join(workDir, "bin");
+  appDir = join(workDir, "config", "better-claude-code-telegram");
+  appBin = join(appDir, "bin", "bcct");
+
+  for (const folder of [stateDir, logDir, binDir, join(workDir, "home")]) {
+    mkdirSync(folder, { recursive: true });
+  }
 });
 
 afterEach(() => {
-  rmSync(stateDir, { recursive: true, force: true });
-  rmSync(homeDir, { recursive: true, force: true });
+  rmSync(workDir, { recursive: true, force: true });
 });
 
-describe("hooks.json structure", () => {
-  it("is valid JSON with a hooks object", () => {
-    expect(typeof loadHooks()).toBe("object");
+describe("hooks.json", () => {
+  it("is the only hooks file Claude Code loads, since no manifest names another", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(PLUGIN_ROOT, ".claude-plugin", "plugin.json"), "utf8"),
+    );
+    const marketplace = JSON.parse(
+      readFileSync(
+        join(ROOT_DIR, ".claude-plugin", "marketplace.json"),
+        "utf8",
+      ),
+    );
+
+    expect(manifest.hooks).toBeUndefined();
+    expect(
+      marketplace.plugins.find(({ name }) => name === "telegram-hooks").hooks,
+    ).toBeUndefined();
+    expect(existsSync(join(PLUGIN_ROOT, "hooks", "hooks.bcct.json"))).toBe(
+      false,
+    );
   });
 
-  it("covers PermissionRequest, UserPromptSubmit, PostToolUse and Stop", () => {
-    expect(Object.keys(loadHooks()).toSorted()).toEqual([
-      "PermissionRequest",
-      "PostToolUse",
-      "Stop",
-      "UserPromptSubmit",
+  it("runs the binary through the script of the plugin, behind the Telegram guard", () => {
+    expect(hooks()).toEqual({
+      PermissionRequest: [
+        {
+          matcher: "AskUserQuestion",
+          hooks: [
+            {
+              type: "command",
+              command: telegramHook("permission"),
+              timeout: 86400,
+            },
+          ],
+        },
+      ],
+      UserPromptSubmit: [
+        { hooks: [{ type: "command", command: telegramHook("prompt") }] },
+      ],
+      PostToolUse: [
+        {
+          matcher: "AskUserQuestion",
+          hooks: [{ type: "command", command: telegramHook("post") }],
+        },
+        { hooks: [{ type: "command", command: ACTIVITY }] },
+      ],
+      Stop: [
+        {
+          hooks: [
+            { type: "command", command: telegramHook("stop") },
+            { type: "command", command: ACTIVITY },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("never runs node nor hides a failure of the binary", () => {
+    const raw = readFileSync(HOOKS, "utf8");
+
+    expect(raw).not.toContain("node ");
+    expect(raw).not.toContain("telegram.mjs");
+    expect(raw).not.toContain("../");
+    expect(raw).not.toContain("CLAUDE_PROJECT_DIR");
+
+    for (const mode of MODES) {
+      expect(telegramHook(mode)).not.toContain("2>/dev/null");
+      expect(telegramHook(mode)).not.toContain("|| true");
+    }
+  });
+
+  it("only calls modes that the bcct of this repository has", () => {
+    const rust = join(ROOT_DIR, "rust", "crates", "bcct", "src");
+
+    for (const mode of MODES) {
+      expect(readFileSync(join(rust, "hook.rs"), "utf8")).toContain(
+        `"${mode}" => Some(Self::`,
+      );
+    }
+
+    expect(readFileSync(join(rust, "lib.rs"), "utf8")).toContain(
+      'Some("hook") =>',
+    );
+  });
+});
+
+describe.each(["sh", "bash"])("the Telegram hooks under %s", (shell) => {
+  it.each(MODES)(
+    "%s does nothing and ends with 0 when Telegram is off",
+    (mode) => {
+      writeFakeBcct(appBin, logDir);
+
+      const result = run(shell, telegramHook(mode), { telegram: false });
+
+      expect([result.status, result.stdout, result.stderr]).toEqual([
+        0,
+        "",
+        "",
+      ]);
+      expect(readCalls(logDir)).toEqual([]);
+    },
+  );
+
+  it.each(MODES)(
+    "%s runs bcct hook with the stdin, its output and its exit code",
+    (mode) => {
+      writeFakeBcct(appBin, logDir, { exit: 3, stdout: '{"ok":1}' });
+
+      const result = run(shell, telegramHook(mode), {
+        input: '{"session_id":"s9"}',
+      });
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).toBe('{"ok":1}');
+      expect(result.stderr).toBe("bcct-stderr\n");
+      expect(
+        readCalls(logDir).map(({ program, args }) => [program, args]),
+      ).toEqual([[appBin, ["hook", mode]]]);
+      expect(readLog(logDir, "stdin")).toBe('{"session_id":"s9"}');
+    },
+  );
+
+  it("opens the guard with a bot.pid even without the variable", () => {
+    writeFakeBcct(appBin, logDir);
+    writeFileSync(join(stateDir, "bot.pid"), String(process.pid));
+
+    const result = run(shell, telegramHook("stop"), { telegram: false });
+
+    expect(result.status).toBe(0);
+    expect(readCalls(logDir).map(({ args }) => args)).toEqual([
+      ["hook", "stop"],
     ]);
   });
 
-  it("registers PermissionRequest for AskUserQuestion in permission mode with a 86400 timeout", () => {
-    const [group, ...others] = loadHooks().PermissionRequest;
+  it.each(MODES)(
+    "%s says how to install when bcct is missing, with 1 so it never blocks the session",
+    (mode) => {
+      const result = run(shell, telegramHook(mode));
 
-    expect(others).toEqual([]);
-    expect(group.matcher).toBe("AskUserQuestion");
-    expect(group.hooks).toHaveLength(1);
-    expect(group.hooks[0].type).toBe("command");
-    expect(group.hooks[0].timeout).toBe(86400);
-    expect(group.hooks[0].command).toMatch(HOOK_CALL);
-    expect(group.hooks[0].command.match(HOOK_CALL)[1]).toBe("permission");
-  });
-
-  it("registers UserPromptSubmit in prompt mode", () => {
-    expect(commandsOf("UserPromptSubmit")).toHaveLength(1);
-    expect(telegramCommand("UserPromptSubmit", "prompt")).toBeDefined();
-  });
-
-  it("registers PostToolUse for AskUserQuestion in post mode and an activity marker for every tool", () => {
-    const [askGroup, activityGroup, ...others] = loadHooks().PostToolUse;
-
-    expect(others).toEqual([]);
-    expect(askGroup.matcher).toBe("AskUserQuestion");
-    expect(askGroup.hooks[0].command.match(HOOK_CALL)[1]).toBe("post");
-    expect(activityGroup.matcher).toBeUndefined();
-    expect(activityGroup.hooks[0].command).toContain("last-activity");
-    expect(activityGroup.hooks[0].command).not.toContain("telegram.mjs");
-  });
-
-  it("registers Stop in stop mode followed by the activity marker", () => {
-    const commands = commandsOf("Stop");
-
-    expect(commands).toHaveLength(2);
-    expect(commands[0].match(HOOK_CALL)[1]).toBe("stop");
-    expect(commands[1]).toContain("last-activity");
-  });
-
-  it("makes every command that calls telegram.mjs use CLAUDE_PLUGIN_ROOT with a known mode", () => {
-    const modes = [];
-
-    for (const event of Object.keys(loadHooks())) {
-      for (const command of commandsOf(event)) {
-        if (!command.includes("telegram.mjs")) continue;
-
-        const match = command.match(HOOK_CALL);
-
-        expect(match).not.toBeNull();
-        modes.push(match[1]);
-      }
-    }
-
-    expect(modes.toSorted()).toEqual(["permission", "post", "prompt", "stop"]);
-  });
-
-  it("gates every telegram.mjs command on BETTER_CC_TELEGRAM or a bot.pid and never fails", () => {
-    for (const event of Object.keys(loadHooks())) {
-      for (const command of commandsOf(event)) {
-        if (!command.includes("telegram.mjs")) continue;
-
-        expect(command).toContain('[ "$BETTER_CC_TELEGRAM" = 1 ]');
-        expect(command).toContain("bot.pid");
-        expect(command.endsWith("|| true")).toBe(true);
-      }
-    }
-  });
-
-  it("resolves scripts through the plugin root, never through the project directory", () => {
-    const raw = readFileSync(HOOKS_JSON, "utf8");
-
-    expect(raw).not.toContain("CLAUDE_PROJECT_DIR");
-    expect(raw).not.toContain(".claude/hooks");
-  });
-});
-
-describe("hooks.json commands run with bash -c", () => {
-  it("exits 0 without creating anything when BETTER_CC_TELEGRAM is unset and there is no bot.pid", () => {
-    const result = runCommand(telegramCommand("Stop", "stop"), {
-      telegram: false,
-      input: JSON.stringify({
-        session_id: "s1",
-        last_assistant_message: "waiting",
-      }),
-    });
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).toBe("");
-    expect(readdirSync(stateDir)).toEqual([]);
-  });
-
-  it("exits 0 for the permission command too when the gate is closed", () => {
-    const result = runCommand(
-      telegramCommand("PermissionRequest", "permission"),
-      {
-        telegram: false,
-      },
-    );
-
-    expect(result.status).toBe(0);
-    expect(readdirSync(stateDir)).toEqual([]);
-  });
-
-  it("writes the waiting ping to the pings of the app folder, out of the channel folder, when BETTER_CC_TELEGRAM is 1", () => {
-    const result = runCommand(telegramCommand("Stop", "stop"), {
-      telegram: true,
-      input: JSON.stringify({
-        session_id: "s1",
-        last_assistant_message: "  waiting for you  ",
-      }),
-    });
-
-    expect(result.status).toBe(0);
-    expect(readdirSync(stateDir)).toEqual([]);
-
-    const ping = JSON.parse(
-      readFileSync(join(appDir, "pings", "s1.json"), "utf8"),
-    );
-
-    expect(ping.sessionId).toBe("s1");
-    expect(ping.text).toBe("waiting for you");
-  });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toBe(
+        [
+          `bcct: not installed (no launcher in ${appDir}/bin). Run: npx better-claude-code-telegram`,
+          `bcct: não instalado (sem launcher em ${appDir}/bin). Rode: npx better-claude-code-telegram`,
+          "",
+        ].join("\n"),
+      );
+    },
+  );
 
   it("writes the last-activity marker to the app folder only when BETTER_CC_TELEGRAM is 1", () => {
-    const command = activityCommand("PostToolUse");
-
-    expect(runCommand(command, { telegram: false }).status).toBe(0);
+    expect(run(shell, ACTIVITY, { telegram: false }).status).toBe(0);
     expect(existsSync(appDir)).toBe(false);
 
-    expect(runCommand(command, { telegram: true }).status).toBe(0);
-    expect(readdirSync(stateDir)).toEqual([]);
-
-    const marker = readFileSync(join(appDir, "pings", "last-activity"), "utf8");
-
-    expect(marker.trim()).toMatch(/^\d{13}$/);
+    expect(run(shell, ACTIVITY).status).toBe(0);
+    expect(
+      readFileSync(join(appDir, "pings", "last-activity"), "utf8").trim(),
+    ).toMatch(/^\d{13}$/);
   });
 
   it("follows BETTER_CC_TELEGRAM_DIR for the last-activity marker", () => {
-    const customDir = join(homeDir, "custom-app");
+    const customDir = join(workDir, "custom-app");
 
     expect(
-      runCommand(activityCommand("Stop"), {
-        telegram: true,
-        extraEnv: { BETTER_CC_TELEGRAM_DIR: customDir },
-      }).status,
+      run(shell, ACTIVITY, { extra: { BETTER_CC_TELEGRAM_DIR: customDir } })
+        .status,
     ).toBe(0);
     expect(existsSync(join(customDir, "pings", "last-activity"))).toBe(true);
   });

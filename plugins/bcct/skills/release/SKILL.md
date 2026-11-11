@@ -4,11 +4,11 @@ description: Send to Telegram right away the AskUserQuestion questions still wai
 argument-hint: "[session id prefix]"
 disable-model-invocation: true
 allowed-tools:
-  - Bash(sh "${CLAUDE_PLUGIN_ROOT}/../../scripts/bcct.sh" release *)
+  - Bash("${CLAUDE_PLUGIN_ROOT}/scripts/bcct" release *)
 ---
 
 # /bcct:release
 
 Arguments: `$ARGUMENTS`
 
-Run `sh "${CLAUDE_PLUGIN_ROOT}/../../scripts/bcct.sh" release $ARGUMENTS` and show its output: the questions it released, or that nothing was pending.
+Run `"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" release $ARGUMENTS` and show its output: the questions it released, or that nothing was pending.
