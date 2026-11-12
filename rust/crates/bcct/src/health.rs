@@ -18,10 +18,10 @@ use crate::prompt::{Prompter, create_prompter};
 use crate::self_install::Store;
 use crate::setup::{
     ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
-    SetupPaths, StatuslineState, claude_output, command_on_path, env_deny_rule, has_command,
-    launcher_dir, node_version, node_version_ok, parse_env_token, path_lists, read_settings,
-    read_text, setup_locale, shell_file, shell_rc_files, shell_script, statusline_state,
-    whisper_python_works,
+    SetupPaths, StatuslineState, claude_output, command_on_path, env_deny_rule, git_version_from,
+    has_command, launcher_dir, node_version, node_version_ok, parse_env_token, path_lists,
+    read_settings, read_text, setup_locale, shell_file, shell_rc_files, shell_script,
+    statusline_state, whisper_python_works,
 };
 use crate::shell_rc::{rc_line_active, rc_loads};
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
@@ -44,6 +44,7 @@ pub struct Machine<'a> {
     pub uid: Option<u32>,
     pub now: u64,
     pub node_version: &'a dyn Fn() -> Option<String>,
+    pub git_version: &'a dyn Fn() -> Option<String>,
     pub has_command: &'a dyn Fn(&str) -> bool,
     pub claude_output: &'a dyn Fn(&[&str]) -> String,
     pub python_works: &'a dyn Fn(&Path) -> bool,
@@ -124,6 +125,7 @@ impl Group {
                 Check::Node,
                 Check::Claude,
                 Check::Bun,
+                Check::Git,
                 Check::Plugins,
                 Check::Launcher,
                 Check::Shell,
@@ -143,6 +145,7 @@ pub enum Check {
     Node,
     Claude,
     Bun,
+    Git,
     Plugins,
     Launcher,
     Shell,
@@ -168,6 +171,7 @@ impl Check {
             Self::Node => "node",
             Self::Claude => "claude",
             Self::Bun => "bun",
+            Self::Git => "git",
             Self::Plugins => "plugins",
             Self::Launcher => "launcher",
             Self::Shell => "shell",
@@ -195,6 +199,7 @@ impl Check {
             Self::Node => labels.node,
             Self::Claude => labels.claude,
             Self::Bun => labels.bun,
+            Self::Git => labels.git,
             Self::Plugins => labels.plugins,
             Self::Launcher => labels.launcher,
             Self::Shell => labels.shell,
@@ -400,6 +405,10 @@ impl Checks<'_> {
             Check::Node => self.node(),
             Check::Claude => self.tool("claude"),
             Check::Bun => self.tool("bun"),
+            Check::Git => (self.machine.git_version)().map_or_else(
+                || failed(self.messages.health_detail.git_missing),
+                |version| ok(&version),
+            ),
             Check::Plugins => self.plugins(),
             Check::Pairing => self.pairing(),
             Check::Polling => self.polling(),
@@ -1093,6 +1102,7 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         uid,
         now: now_ms(),
         node_version: &node_version,
+        git_version: &|| git_version_from(std::process::Command::new("git")),
         has_command: &has_command,
         claude_output: &claude_output,
         python_works: &whisper_python_works,

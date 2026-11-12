@@ -161,6 +161,7 @@ pub(super) const MESSAGES: Messages = Messages {
         user: "Running as root",
         claude: "claude",
         bun: "bun",
+        git: "Git",
         plugins: "Plugins",
         shell: "Shell",
         path: "bcct on PATH",
@@ -181,6 +182,7 @@ pub(super) const MESSAGES: Messages = Messages {
         version: |version| format!("Node {version}"),
         found: "found",
         missing: "missing",
+        git_missing: "not installed. Claude Code needs it to download and update the plugins.",
         installed: "installed",
         not_installed: |ids| {
             format!("missing {ids}. Run 'npx better-claude-code-telegram plugin'.")
@@ -469,6 +471,7 @@ pub(super) const MESSAGES: Messages = Messages {
     },
     transcription_disabled: "Transcription off:\n  • voice messages reach Claude as attachments",
     python_env_failed: "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+    git_missing_setup: "git is not installed, and Claude Code needs it to download the plugins. Install it and run the setup again:\n  • Debian and Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     install_whisper: "install faster-whisper",
     downloading_model: |model| {
         format!("Downloading the {model} transcription model (first time only)…")

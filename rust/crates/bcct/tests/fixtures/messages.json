@@ -235,6 +235,7 @@
     "healthLabels.user": "Running as root",
     "healthLabels.claude": "claude",
     "healthLabels.bun": "bun",
+    "healthLabels.git": "Git",
     "healthLabels.plugins": "Plugins",
     "healthLabels.shell": "Shell",
     "healthLabels.path": "bcct on PATH",
@@ -253,6 +254,7 @@
     "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
     "healthDetail.found": "found",
     "healthDetail.missing": "missing",
+    "healthDetail.gitMissing": "not installed. Claude Code needs it to download and update the plugins.",
     "healthDetail.installed": "installed",
     "healthDetail.notInstalled": [
       {
@@ -768,6 +770,7 @@
     "transcriptionModels.medium": "most accurate, much slower, uses much more RAM, ~1.5 GB of storage",
     "transcriptionDisabled": "Transcription off:\n  • voice messages reach Claude as attachments",
     "pythonEnvFailed": "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+    "gitMissingSetup": "git is not installed, and Claude Code needs it to download the plugins. Install it and run the setup again:\n  • Debian and Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     "installWhisper": "install faster-whisper",
     "downloadingModel": [
       {
@@ -1277,6 +1280,7 @@
     "healthLabels.user": "Execução como root",
     "healthLabels.claude": "claude",
     "healthLabels.bun": "bun",
+    "healthLabels.git": "Git",
     "healthLabels.plugins": "Plugins",
     "healthLabels.shell": "Shell",
     "healthLabels.path": "bcct no PATH",
@@ -1295,6 +1299,7 @@
     "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
     "healthDetail.found": "encontrado",
     "healthDetail.missing": "não encontrado",
+    "healthDetail.gitMissing": "não instalado. O Claude Code precisa dele para baixar e atualizar os plugins.",
     "healthDetail.installed": "instalados",
     "healthDetail.notInstalled": [
       {
@@ -1813,6 +1818,7 @@
     "transcriptionModels.medium": "a mais precisa, bem mais lenta, usa muito mais RAM, ~1,5 GB de armazenamento",
     "transcriptionDisabled": "Transcrição desligada:\n  • o áudio chega ao Claude como anexo",
     "pythonEnvFailed": "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • o venv do Python (no Debian e no Ubuntu, sudo apt install python3-venv)",
+    "gitMissingSetup": "O git não está instalado, e o Claude Code precisa dele para baixar os plugins. Instale e rode o setup de novo:\n  • Debian e Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     "installWhisper": "instalar o faster-whisper",
     "downloadingModel": [
       {

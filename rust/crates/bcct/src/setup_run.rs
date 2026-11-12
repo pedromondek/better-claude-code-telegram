@@ -35,9 +35,9 @@ use crate::prompt::{
 use crate::settings::{STATUS_LINE, is_our_statusline, remove_if_present, statusline_preview};
 use crate::setup::{
     ACCESS_FILE, COMMAND_ON_PATH_KEY, ENV_FILE, MINIMUM_NODE, SETUP_COMMAND, SetupPaths,
-    StatuslineState, check_setup, command_on_path, env_deny_rule, mark_launch, node_version_from,
-    node_version_ok, parse_env_token, read_settings, read_text, setup_locale, shell_file,
-    shell_script, statusline_is_current, statusline_prompt, statusline_state,
+    StatuslineState, check_setup, command_on_path, env_deny_rule, git_version_from, mark_launch,
+    node_version_from, node_version_ok, parse_env_token, read_settings, read_text, setup_locale,
+    shell_file, shell_script, statusline_is_current, statusline_prompt, statusline_state,
     telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
@@ -896,10 +896,12 @@ impl<'a> Setup<'a> {
         let interruption = self.interruption.clone();
         let system = Rc::clone(&self.system);
         let node_system = Rc::clone(&self.system);
+        let git_system = Rc::clone(&self.system);
         let claude_system = Rc::clone(&self.system);
         let has_command = move |name: &str| system.has_command(name);
         let claude_output = move |args: &[&str]| claude_system.claude_output(args);
         let node_version = move || node_version_from(node_system.command("node"));
+        let git_version = move || git_version_from(git_system.command("git"));
         let fetch = move |url: &str, body: &str| abortable_post_json(url, body, &interruption);
         let machine = health::Machine {
             var: self.var,
@@ -907,6 +909,7 @@ impl<'a> Setup<'a> {
             uid: self.uid,
             now: now_ms(),
             node_version: &node_version,
+            git_version: &git_version,
             has_command: &has_command,
             claude_output: &claude_output,
             python_works: &whisper_python_works,
@@ -1017,6 +1020,10 @@ impl<'a> Setup<'a> {
         messages: &'static Messages,
         ask: &mut dyn Prompter,
     ) -> Result<(), Stop> {
+        if !self.system.has_command("git") {
+            return Err(Stop::Failed(messages.git_missing_setup.to_owned()));
+        }
+
         self.installing(messages, ask, |install| {
             install.ensure_requirements(&Tool::REQUIRED)
         })?;

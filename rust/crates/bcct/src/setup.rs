@@ -569,6 +569,20 @@ pub fn node_version_from(mut command: Command) -> Option<String> {
 }
 
 #[must_use]
+pub fn git_version_from(mut command: Command) -> Option<String> {
+    let output = command
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()
+        .filter(|output| output.status.success())?;
+    let text = String::from_utf8_lossy(&output.stdout);
+
+    text.split_whitespace().nth(2).map(str::to_owned)
+}
+
+#[must_use]
 pub fn whisper_python_works(python: &Path) -> bool {
     Command::new(python)
         .args(["-c", WHISPER_CHECK])

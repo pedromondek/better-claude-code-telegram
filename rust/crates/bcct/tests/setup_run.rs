@@ -43,6 +43,8 @@ const FIXTURE: &str = include_str!("fixtures/setup-run.json");
 const BCCT: &str = env!("CARGO_BIN_EXE_bcct");
 const TOOLS: [&str; 8] = ["sh", "ps", "mkdir", "chmod", "cat", "rm", "sleep", "node"];
 const UNREACHABLE_API: &str = "http://127.0.0.1:1";
+const GIT_VERSION: &str = "2.43.0";
+const FAKE_GIT: &str = "#!/bin/sh\necho 'git version 2.43.0'\n";
 const DIGITS: &str = "0123456789";
 const WAIT_LIMIT: Duration = Duration::from_secs(5);
 const RUN_LIMIT: Duration = Duration::from_secs(15);
@@ -133,10 +135,31 @@ fn with_the_new_checks(after: &str, shell: usize, messages: &Messages) -> String
         _ => rest.to_owned(),
     };
 
-    format!(
+    let checked = format!(
         "{}{launcher}{}{rows}{rest}",
         &after[..line_start],
         &after[line_start..shell_end]
+    );
+
+    with_the_git_row(&checked, messages)
+}
+
+fn with_the_git_row(checked: &str, messages: &Messages) -> String {
+    let labels = messages.health_labels;
+    let plugins = format!(" {}: ", labels.plugins);
+
+    checked.find(&plugins).map_or_else(
+        || checked.to_owned(),
+        |found| {
+            let line_start = checked[..found].rfind('\n').map_or(0, |line| line + 1);
+
+            format!(
+                "{}✔ {}: {GIT_VERSION}\n{}",
+                &checked[..line_start],
+                labels.git,
+                &checked[line_start..]
+            )
+        },
     )
 }
 
@@ -562,6 +585,13 @@ fn prepared(root: &Path, scenario: &Value, fake_claude: &str) {
         files.insert(
             "bin/bun".to_owned(),
             json!({ "content": "#!/bin/sh\nexit 0\n", "mode": 0o755 }),
+        );
+    }
+
+    if scenario["noGit"].as_bool() != Some(true) {
+        files.insert(
+            "bin/git".to_owned(),
+            json!({ "content": FAKE_GIT, "mode": 0o755 }),
         );
     }
 
@@ -1187,6 +1217,27 @@ fn a_heading_keeps_its_label_when_the_values_change_type() {
     assert_eq!(heading.map_value(u16::from), ChoiceItem::heading("title"));
     assert_eq!(pick.value(), Some(&1_u16));
     assert_eq!(pick.label(), "label");
+}
+
+#[test]
+fn the_plugin_step_stops_with_the_install_commands_when_git_is_missing() {
+    let folder = support::sandbox();
+    let root = folder.path();
+
+    prepared(root, &json!({ "noGit": true }), "");
+
+    let output = closed_output_command(root, &["plugin"])
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    let messages = messages_for(Locale::EnUs);
+
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(messages.git_missing_setup),
+        "{output:?}"
+    );
+    assert!(!root.join("work/claude.log").exists(), "{output:?}");
 }
 
 #[test]

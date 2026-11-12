@@ -39,6 +39,7 @@ fn planned(results: &[Entry], shell: &str, uid: Option<u32>, settings: Option<&s
         uid,
         now: 0,
         node_version: &|| None,
+        git_version: &|| None,
         has_command: &|_| false,
         claude_output: &|_| String::new(),
         python_works: &|_| false,

@@ -138,6 +138,7 @@ const enUs = {
     user: "Running as root",
     claude: "claude",
     bun: "bun",
+    git: "Git",
     plugins: "Plugins",
     shell: "Shell",
     path: "bcct on PATH",
@@ -158,6 +159,8 @@ const enUs = {
     version: (version) => `Node ${version}`,
     found: "found",
     missing: "missing",
+    gitMissing:
+      "not installed. Claude Code needs it to download and update the plugins.",
     installed: "installed",
     notInstalled: (ids) =>
       `missing ${ids}. Run 'npx better-claude-code-telegram plugin'.`,
@@ -404,6 +407,8 @@ const enUs = {
     "Transcription off:\n  • voice messages reach Claude as attachments",
   pythonEnvFailed:
     "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+  gitMissingSetup:
+    "git is not installed, and Claude Code needs it to download the plugins. Install it and run the setup again:\n  • Debian and Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
   installWhisper: "install faster-whisper",
   downloadingModel: (model) =>
     `Downloading the ${model} transcription model (first time only)…`,
@@ -714,6 +719,7 @@ const ptBr = {
     user: "Execução como root",
     claude: "claude",
     bun: "bun",
+    git: "Git",
     plugins: "Plugins",
     shell: "Shell",
     path: "bcct no PATH",
@@ -734,6 +740,8 @@ const ptBr = {
     version: (version) => `Node ${version}`,
     found: "encontrado",
     missing: "não encontrado",
+    gitMissing:
+      "não instalado. O Claude Code precisa dele para baixar e atualizar os plugins.",
     installed: "instalados",
     notInstalled: (ids) =>
       `faltam ${ids}. Rode 'npx better-claude-code-telegram plugin'.`,
@@ -980,6 +988,8 @@ const ptBr = {
     "Transcrição desligada:\n  • o áudio chega ao Claude como anexo",
   pythonEnvFailed:
     "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • o venv do Python (no Debian e no Ubuntu, sudo apt install python3-venv)",
+  gitMissingSetup:
+    "O git não está instalado, e o Claude Code precisa dele para baixar os plugins. Instale e rode o setup de novo:\n  • Debian e Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
   installWhisper: "instalar o faster-whisper",
   downloadingModel: (model) =>
     `Baixando o modelo ${model} da transcrição (só na primeira vez)…`,

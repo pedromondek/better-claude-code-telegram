@@ -24,7 +24,7 @@ use bcct::journal::ChangeKind;
 use bcct::js::format_number;
 use bcct::locale::Locale;
 use bcct::messages::{Messages, messages_for};
-use bcct::setup::node_version_ok;
+use bcct::setup::{git_version_from, node_version_ok};
 use bcct::spinner::Terminal;
 use serde_json::{Value, json};
 use support::{
@@ -662,6 +662,32 @@ fn the_constants_match_the_js() {
     assert_eq!(
         text(constants, "manualUninstallCommands"),
         manual_uninstall_commands()
+    );
+}
+
+#[test]
+fn the_git_version_is_the_third_word_and_a_missing_or_failing_git_has_none() {
+    let folder = sandbox();
+    let script = |name: &str, body: &str| {
+        let path = folder.path().join(name);
+        std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::set_permissions(&path, std::os::unix::fs::PermissionsExt::from_mode(0o755))
+            .unwrap();
+        path
+    };
+    let apple = script("apple", "echo 'git version 2.39.3 (Apple Git-145)'");
+    let failing = script("failing", "echo 'git version 2.43.0'; exit 1");
+    let short = script("short", "echo 'git'");
+
+    assert_eq!(
+        git_version_from(Command::new(apple)).as_deref(),
+        Some("2.39.3")
+    );
+    assert_eq!(git_version_from(Command::new(failing)), None);
+    assert_eq!(git_version_from(Command::new(short)), None);
+    assert_eq!(
+        git_version_from(Command::new(folder.path().join("missing"))),
+        None
     );
 }
 

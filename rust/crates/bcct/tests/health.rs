@@ -31,6 +31,7 @@ const BCCT: &str = env!("CARGO_BIN_EXE_bcct");
 const CYAN: &str = "\u{1b}[36m";
 const SPINNER_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 const REGULAR_UID: u32 = 1000;
+const GIT_VERSION: &str = "2.43.0";
 
 struct FakeTelegram {
     root: String,
@@ -246,6 +247,7 @@ fn observe(scenario: &Value, now: u64) -> Observed {
         ),
         now,
         node_version: &node_version,
+        git_version: &|| Some(GIT_VERSION.to_owned()),
         has_command: &has_command,
         claude_output: &claude_output,
         python_works: &whisper_python_works,
@@ -302,6 +304,39 @@ fn every_scenario_prints_what_the_fixture_recorded() {
     }
 }
 
+fn with_a_fake_git(
+    mut variables: HashMap<String, OsString>,
+    tools: &Path,
+) -> HashMap<String, OsString> {
+    let git = tools.join("git");
+
+    std::fs::write(
+        &git,
+        format!("#!/bin/sh\necho 'git version {GIT_VERSION}'\n"),
+    )
+    .unwrap();
+    set_mode(&git, 0o755);
+
+    let mut path = tools.as_os_str().to_owned();
+    if let Some(rest) = variables.get("PATH") {
+        path.push(":");
+        path.push(rest);
+    }
+    variables.insert("PATH".to_owned(), path);
+
+    variables
+}
+
+fn status_of(output: &Value, check: &str) -> Value {
+    output["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|result| result["check"] == json!(check))
+        .unwrap()["status"]
+        .clone()
+}
+
 #[test]
 fn every_scenario_of_the_binary_matches_the_fixture() {
     let fixture = frozen(FIXTURE);
@@ -319,12 +354,17 @@ fn every_scenario_of_the_binary_matches_the_fixture() {
         let telegram = FakeTelegram::start(scenario);
         let now = now_ms();
         materialize(root.path(), &filled(&scenario["files"], now));
+        let tools = sandbox();
+        let variables = with_a_fake_git(
+            variables_of(scenario, root.path(), &telegram.root),
+            tools.path(),
+        );
         let output = cargo_bin_cmd!("bcct")
             .arg("health")
             .args(strings(&scenario["args"]))
             .env_clear()
             .envs(support::coverage_env())
-            .envs(variables_of(scenario, root.path(), &telegram.root))
+            .envs(variables)
             .current_dir(root.path())
             .timeout(Duration::from_secs(60))
             .output()
@@ -536,6 +576,7 @@ fn a_node_that_cannot_be_found_fails_the_node_check() {
         uid: None,
         now: 0,
         node_version: &|| None,
+        git_version: &|| Some(GIT_VERSION.to_owned()),
         has_command: &|name| name == "claude",
         claude_output: &|_| String::new(),
         python_works: &|_| false,
@@ -660,6 +701,8 @@ fn sandboxed<R>(
     let bin = root.path().join("bin");
     let version = text(scenario, "nodeVersion").to_owned();
     let node_version = || Some(version.clone());
+    let git = (scenario.get("gitVersion") != Some(&Value::Null)).then(|| GIT_VERSION.to_owned());
+    let git_version = || git.clone();
     let has_command = |name: &str| bin.join(name).is_file();
     let claude_output = |args: &[&str]| {
         Command::new(bin.join("claude"))
@@ -679,6 +722,7 @@ fn sandboxed<R>(
         ),
         now,
         node_version: &node_version,
+        git_version: &git_version,
         has_command: &has_command,
         claude_output: &claude_output,
         python_works: &whisper_python_works,
@@ -992,6 +1036,25 @@ fn write(path: &Path, content: &str, mode: u32) {
 }
 
 const RUN_SETUP: &str = "Run 'npx better-claude-code-telegram'.";
+
+#[test]
+fn the_git_check_shows_the_version_or_says_why_git_is_needed() {
+    let mut without_git = healthy();
+    without_git["gitVersion"] = Value::Null;
+
+    assert_eq!(
+        install_row(&healthy(), "Git", &|_| {}),
+        (0, format!("✔ Git: {GIT_VERSION}"))
+    );
+    assert_eq!(
+        install_row(&without_git, "Git", &|_| {}),
+        (
+            1,
+            "✘ Git: not installed. Claude Code needs it to download and update the plugins."
+                .to_owned()
+        )
+    );
+}
 
 #[test]
 fn the_launcher_check_names_the_active_version_and_its_channel() {
@@ -1565,7 +1628,7 @@ fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
             "skipped": [],
         })
     );
-    assert_eq!(output["results"][5]["status"], json!("fail"));
+    assert_eq!(status_of(&output, "shell"), json!("fail"));
 
     let applied = fixing(
         &healthy(),
@@ -1582,7 +1645,7 @@ fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
         output["fixes"]["skipped"],
         json!([{"id": "statusline", "reason": "not needed"}])
     );
-    assert_eq!(output["results"][5]["status"], json!("ok"));
+    assert_eq!(status_of(&output, "shell"), json!("ok"));
 }
 
 #[test]
