@@ -603,6 +603,9 @@ pub(super) const MESSAGES: Messages = Messages {
         format!("{version} is in use. Switch first with 'bcct update'.")
     },
     uninstall_version_missing: |version| format!("{version} is not installed."),
+    session_start_notice: |plugin, binary| {
+        format!("bcct: the plugin is on {plugin} and the binary on {binary}. Run 'bcct update'.")
+    },
     path_question: "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
     path_added: |file| format!("{file} now adds bcct to your PATH. It applies to new terminals."),
     path_already: |file| format!("{file} already adds bcct to your PATH."),

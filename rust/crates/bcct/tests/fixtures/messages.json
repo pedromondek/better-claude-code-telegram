@@ -951,6 +951,12 @@
     "uninstallVersionMissing": [
       { "args": ["alpha 1"], "out": "alpha 1 is not installed." }
     ],
+    "sessionStartNotice": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "bcct: the plugin is on alpha 1 and the binary on beta 'two'. Run 'bcct update'."
+      }
+    ],
     "pathQuestion": "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
     "pathAdded": [
       {
@@ -2126,6 +2132,12 @@
     ],
     "uninstallVersionMissing": [
       { "args": ["alpha 1"], "out": "A alpha 1 não está instalada." }
+    ],
+    "sessionStartNotice": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "bcct: o plugin está na alpha 1 e o binário na beta 'two'. Rode 'bcct update'."
+      }
     ],
     "pathQuestion": "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
     "pathAdded": [

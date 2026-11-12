@@ -538,6 +538,8 @@ const enUs = {
   uninstallVersionActive: (version) =>
     `${version} is in use. Switch first with 'bcct update'.`,
   uninstallVersionMissing: (version) => `${version} is not installed.`,
+  sessionStartNotice: (plugin, binary) =>
+    `bcct: the plugin is on ${plugin} and the binary on ${binary}. Run 'bcct update'.`,
   pathQuestion:
     "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
   pathAdded: (file) =>
@@ -1170,6 +1172,8 @@ const ptBr = {
   uninstallVersionActive: (version) =>
     `A ${version} está em uso. Troque antes com 'bcct update'.`,
   uninstallVersionMissing: (version) => `A ${version} não está instalada.`,
+  sessionStartNotice: (plugin, binary) =>
+    `bcct: o plugin está na ${plugin} e o binário na ${binary}. Rode 'bcct update'.`,
   pathQuestion:
     "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
   pathAdded: (file) =>

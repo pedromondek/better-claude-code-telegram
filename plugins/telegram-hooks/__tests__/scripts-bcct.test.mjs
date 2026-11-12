@@ -85,6 +85,24 @@ describe("the bcct script of the plugins", () => {
 });
 
 describe.each(["sh", "bash"])("the bcct script under %s", (shell) => {
+  it.each(COPIES)("tells the binary where its plugin is (%s)", (copy) => {
+    const app = join(workDir, "app");
+    writeFakeBcct(join(app, "bin", "bcct"), logDir);
+
+    const result = spawnSync(shell, [copy, "hook", "session-start"], {
+      env: {
+        PATH: sandboxPath(binDir),
+        HOME: join(workDir, "home"),
+        BETTER_CC_TELEGRAM_DIR: app,
+        BETTER_CC_TELEGRAM_PLUGIN_DIR: "/somewhere/else",
+      },
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(readLog(logDir, "plugin-dir")).toBe(`${join(copy, "..", "..")}\n`);
+  });
+
   it("runs BETTER_CC_TELEGRAM_BIN first, with the arguments, the stdin, the output and the exit code", () => {
     const chosen = join(workDir, "chosen", "bcct");
     writeFakeBcct(chosen, logDir, { exit: 7, stdout: "out" });

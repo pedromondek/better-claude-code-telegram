@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook session-start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PermissionRequest": [
       {
         "matcher": "AskUserQuestion",

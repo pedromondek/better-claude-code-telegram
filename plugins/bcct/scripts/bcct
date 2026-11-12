@@ -1,5 +1,7 @@
 #!/bin/sh
 app=${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}
+BETTER_CC_TELEGRAM_PLUGIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && cd .. && pwd -P)
+export BETTER_CC_TELEGRAM_PLUGIN_DIR
 
 for candidate in "${BETTER_CC_TELEGRAM_BIN:-}" "$app/bin/bcct"; do
   if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then

@@ -611,6 +611,9 @@ pub(super) const MESSAGES: Messages = Messages {
         format!("A {version} está em uso. Troque antes com 'bcct update'.")
     },
     uninstall_version_missing: |version| format!("A {version} não está instalada."),
+    session_start_notice: |plugin, binary| {
+        format!("bcct: o plugin está na {plugin} e o binário na {binary}. Rode 'bcct update'.")
+    },
     path_question: "Adicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx?",
     path_added: |file| {
         format!("{file} passou a adicionar o bcct ao PATH. Vale nos terminais novos.")

@@ -15,6 +15,7 @@ pub mod paths;
 pub mod prompt;
 pub mod release;
 pub mod self_install;
+pub mod session_start;
 pub mod settings;
 pub mod setup;
 pub mod setup_ask;
@@ -35,6 +36,7 @@ use std::process::ExitCode;
 
 const USAGE_ERROR: u8 = 2;
 const AFTER_PREVIOUS: &str = "--after-previous";
+const SESSION_START: &str = "session-start";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
@@ -62,6 +64,10 @@ where
     match parse(args) {
         Ok(Command::Version) => self_install::run_version_process(stdout, stderr)
             .map_or(ExitCode::FAILURE, |()| ExitCode::SUCCESS),
+        Ok(Command::Hook(mode)) if mode.as_deref() == Some(SESSION_START) => {
+            session_start::run_process(stdout);
+            ExitCode::SUCCESS
+        }
         Ok(Command::Hook(mode)) => {
             hook::run_process(mode.as_deref(), stdout);
             ExitCode::SUCCESS

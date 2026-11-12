@@ -38,6 +38,7 @@ export function writeFakeBcct(
       "fi",
       `{ printf '%s' "$0|$$"; for arg in "$@"; do printf '|%s' "$arg"; done; printf '\\n'; } >> "${logDir}/calls"`,
       `cat >> "${logDir}/stdin"`,
+      `printf '%s\\n' "\${BETTER_CC_TELEGRAM_PLUGIN_DIR:-}" >> "${logDir}/plugin-dir"`,
       `printf '%s' '${stdout}'`,
       "echo bcct-stderr >&2",
       `exit ${exit}`,

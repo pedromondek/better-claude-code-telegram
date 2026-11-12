@@ -34,6 +34,8 @@ let binDir;
 let appDir;
 let appBin;
 
+const SESSION_START = '"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" hook session-start';
+
 function telegramHook(mode) {
   return `if { ${GUARD}; }; then "\${CLAUDE_PLUGIN_ROOT}/scripts/bcct" hook ${mode}; fi`;
 }
@@ -102,6 +104,12 @@ describe("hooks.json", () => {
 
   it("runs the binary through the script of the plugin, behind the Telegram guard", () => {
     expect(hooks()).toEqual({
+      SessionStart: [
+        {
+          matcher: "startup|resume",
+          hooks: [{ type: "command", command: SESSION_START, timeout: 10 }],
+        },
+      ],
       PermissionRequest: [
         {
           matcher: "AskUserQuestion",
@@ -161,6 +169,9 @@ describe("hooks.json", () => {
     expect(readFileSync(join(rust, "lib.rs"), "utf8")).toContain(
       'Some("hook") =>',
     );
+    expect(readFileSync(join(rust, "lib.rs"), "utf8")).toContain(
+      'const SESSION_START: &str = "session-start";',
+    );
   });
 });
 
@@ -199,6 +210,21 @@ describe.each(["sh", "bash"])("the Telegram hooks under %s", (shell) => {
       expect(readLog(logDir, "stdin")).toBe('{"session_id":"s9"}');
     },
   );
+
+  it("runs the session start with Telegram off and passes the plugin folder", () => {
+    writeFakeBcct(appBin, logDir, { stdout: '{"systemMessage":"x"}' });
+
+    const result = run(shell, SESSION_START, { telegram: false });
+
+    expect([result.status, result.stdout]).toEqual([
+      0,
+      '{"systemMessage":"x"}',
+    ]);
+    expect(readCalls(logDir).map(({ args }) => args)).toEqual([
+      ["hook", "session-start"],
+    ]);
+    expect(readLog(logDir, "plugin-dir")).toBe(`${PLUGIN_ROOT}\n`);
+  });
 
   it("opens the guard with a bot.pid even without the variable", () => {
     writeFakeBcct(appBin, logDir);
