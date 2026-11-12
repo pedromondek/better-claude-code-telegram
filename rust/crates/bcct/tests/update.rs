@@ -329,36 +329,28 @@ fn the_dist_tags_give_the_newest_of_each_channel() {
 }
 
 #[test]
-fn the_recommended_channel_is_the_own_one_until_a_stable_catches_up() {
+fn the_recommended_channel_is_the_stable_and_the_own_one_only_without_a_stable() {
     let newest = Newest {
         stable: Some("0.2.1".to_owned()),
         beta: Some("0.3.0-rc.1".to_owned()),
         alpha: Some("0.4.0-alpha.1".to_owned()),
     };
+    let without_stable = Newest {
+        stable: None,
+        ..newest.clone()
+    };
 
-    assert_eq!(recommended("0.3.0-beta.2", &newest), Channel::Beta);
-    assert_eq!(recommended("0.4.0-alpha.1", &newest), Channel::Alpha);
+    assert_eq!(recommended("0.3.0-beta.2", &newest), Channel::Stable);
+    assert_eq!(recommended("0.4.0-alpha.1", &newest), Channel::Stable);
     assert_eq!(recommended("0.2.1-rc.1", &newest), Channel::Stable);
+    assert_eq!(recommended("0.3.0-beta.2", &without_stable), Channel::Beta);
     assert_eq!(
-        recommended(
-            "0.3.0-beta.2",
-            &Newest {
-                stable: Some("0.3.0-beta.2".to_owned()),
-                ..newest.clone()
-            }
-        ),
-        Channel::Stable
+        recommended("0.4.0-alpha.1", &without_stable),
+        Channel::Alpha
     );
     assert_eq!(
-        recommended(
-            "0.3.0-beta.2",
-            &Newest {
-                stable: None,
-                beta: None,
-                alpha: None
-            }
-        ),
-        Channel::Stable
+        recommended("0.3.0-beta.2", &Newest::default()),
+        Channel::Beta
     );
 }
 
@@ -578,7 +570,7 @@ fn a_test_version_asks_which_channel_and_offers_to_clean_the_old_ones() {
         vec![
             Reply::Text("9".to_owned()),
             Reply::Text("x".to_owned()),
-            Reply::Text(String::new()),
+            Reply::Text("2".to_owned()),
             Reply::Text("s".to_owned()),
         ],
         true,
@@ -602,7 +594,7 @@ fn a_test_version_asks_which_channel_and_offers_to_clean_the_old_ones() {
     );
     assert_eq!(outcome.prompts.len(), 4, "{:?}", outcome.prompts);
     assert!(
-        outcome.prompts[0].contains("Which one? (1, 2, 3; Enter: 2):"),
+        outcome.prompts[0].contains("Which one? (1, 2, 3; Enter: 3):"),
         "{:?}",
         outcome.prompts
     );
@@ -699,9 +691,48 @@ fn outside_a_terminal_a_test_version_only_shows_the_commands() {
     assert_eq!(
         outcome.out,
         "Looking for versions on npm\n\
-         ○ Test version 0.3.0-beta.1. Pick with 'bcct update alpha' (0.4.0-alpha.1), 'bcct update beta' (0.3.0-beta.2) or 'bcct update stable' (0.2.1).\n"
+         ○ Test version 0.3.0-beta.1. Pick with 'bcct update stable' (0.2.1), 'bcct update alpha' (0.4.0-alpha.1) or 'bcct update beta' (0.3.0-beta.2).\n"
     );
     assert_eq!(outcome.calls, Vec::<String>::new());
+}
+
+#[test]
+fn without_a_stable_the_own_channel_comes_first_outside_a_terminal() {
+    let folder = sandbox();
+    let fake = Fake::new(folder.path())
+        .tags(&json!({ "beta": "0.3.0-beta.2", "alpha": "0.4.0-alpha.1" }))
+        .plugins("0.3.0-beta.1", None, &[]);
+    fake.active("0.3.0-beta.1");
+
+    assert_eq!(
+        fake.run(&[], Vec::new(), false).out,
+        "Looking for versions on npm\n\
+         ○ Test version 0.3.0-beta.1. Pick with 'bcct update beta' (0.3.0-beta.2) or 'bcct update alpha' (0.4.0-alpha.1).\n"
+    );
+}
+
+#[test]
+fn enter_in_the_menu_of_a_test_version_goes_to_the_stable() {
+    let folder = sandbox();
+    let fake = Fake::new(folder.path())
+        .tags(&json!({ "latest": "0.3.0", "beta": "0.3.0-beta.2" }))
+        .plugins("0.3.0-beta.1", Some("0.3.0"), &[])
+        .release("0.3.0", "0.3.0", None);
+    fake.active("0.3.0-beta.1");
+
+    let outcome = fake.run(&[], vec![Reply::Text(String::new())], true);
+
+    assert_eq!(outcome.code, 0, "{}", outcome.err);
+    assert!(
+        outcome.prompts[0].contains("Which one? (1, 2; Enter: 2):"),
+        "{:?}",
+        outcome.prompts
+    );
+    assert!(
+        outcome.out.contains("✔ Binary: 0.3.0-beta.1 → 0.3.0\n"),
+        "{}",
+        outcome.out
+    );
 }
 
 fn failed(fake: &Fake, list: &[&str]) -> String {

@@ -28,6 +28,7 @@ const SKILL_SUBCOMMANDS = {
   release: "release",
   statusline: "setup",
   transcription: "setup",
+  update: "update",
 };
 
 function skills() {
@@ -59,6 +60,7 @@ describe("bcct skills", () => {
         "token",
         "transcription",
         "uninstall",
+        "update",
       ].toSorted(),
     );
   });
@@ -147,8 +149,8 @@ describe("bcct skills", () => {
     expect(usage).toEqual(expected);
   });
 
-  it("only uses flags of the setup and the health that the bcct of this repository has", () => {
-    const source = ["setup_run.rs", "health.rs"]
+  it("only uses flags of the setup, the health and the update that the bcct of this repository has", () => {
+    const source = ["setup_run.rs", "health.rs", "update.rs"]
       .map((file) => readFileSync(join(RUST_SOURCE, file), "utf8"))
       .join("");
     const flags = [
@@ -163,6 +165,7 @@ describe("bcct skills", () => {
     ];
 
     expect(flags.toSorted()).toEqual([
+      "--check",
       "--fix",
       "--json",
       "--only",

@@ -198,18 +198,10 @@ pub fn parse_dist_tags(bytes: &[u8]) -> Option<Newest> {
 
 #[must_use]
 pub fn recommended(current: &str, newest: &Newest) -> Channel {
-    let stable_caught_up = newest
-        .stable
-        .as_deref()
-        .and_then(|stable| Version::parse(stable).ok())
-        .zip(Version::parse(current).ok())
-        .is_some_and(|(stable, current)| stable >= current);
-    let own = Channel::of(current);
-
-    if stable_caught_up || newest.of(own).is_none() {
+    if newest.stable.is_some() {
         Channel::Stable
     } else {
-        own
+        Channel::of(current)
     }
 }
 
@@ -416,8 +408,10 @@ impl Run<'_, '_> {
             .unwrap_or_default();
 
         if !ask.interactive() {
-            let listed: Vec<String> = options
-                .iter()
+            let mut ordered: Vec<&(Channel, String)> = options.iter().collect();
+            ordered.sort_by_key(|(channel, _)| *channel != pick);
+            let listed: Vec<String> = ordered
+                .into_iter()
                 .map(|(channel, version)| (texts.pick_option)(channel.name(), version))
                 .collect();
             let text = (texts.pick)(current, &joined(&listed, texts.or));
