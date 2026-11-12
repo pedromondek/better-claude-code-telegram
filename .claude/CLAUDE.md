@@ -6,7 +6,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 
 ## Layout
 
-- `plugins/telegram/` - the channel plugin fork (`server.ts`, skills) with the project's own TypeScript in `plugins/telegram/extensions/`. Upstream files stay identical to the official plugin; see `NOTICE` for the two exceptions.
+- `plugins/telegram/` - the channel plugin fork (`server.ts`, skills) with the project's own TypeScript in `plugins/telegram/extensions/`. Upstream files stay identical to the official plugin; see `NOTICE` for the exceptions, and keep it in step when one is added.
 - `plugins/telegram-hooks/` - the hooks and status line plugin.
 - `plugins/bcct/` - the `/bcct:` skills (setup, health, token, pairing and the rest).
 - `scripts/` - setup, health, release, mutation, coverage and git helpers, each with its test in `scripts/__tests__/`.
