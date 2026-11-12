@@ -179,6 +179,7 @@ pub(super) const MESSAGES: Messages = Messages {
         mermaid: "Mermaid (mmdc)",
         statusline: "Statusline",
         launcher: "Launcher",
+        version: "Versão",
         app_dir: "Pasta do app",
         hooks: "Hooks",
     },
@@ -258,6 +259,11 @@ pub(super) const MESSAGES: Messages = Messages {
             format!("sem launcher em {folder}. Rode 'npx better-claude-code-telegram'.")
         },
         launcher_no_version: "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+        version_same: |version| format!("binário e plugins na {version}"),
+        version_differs: |plugin, binary| {
+            format!("o plugin está na {plugin} e o binário na {binary}. Rode 'bcct update'.")
+        },
+        version_unknown: "sem como comparar (veja Launcher e Plugins)",
         app_writable: "gravável",
         app_no_permission: |folder| {
             format!(
@@ -718,5 +724,6 @@ pub(super) const MESSAGES: Messages = Messages {
             format!("trocar o comando antigo (do clone) pelo atual em {settings}")
         },
         app_dir: |folder| format!("dar permissão de escrita em {folder}"),
+        update: "rodar 'bcct update'",
     },
 };

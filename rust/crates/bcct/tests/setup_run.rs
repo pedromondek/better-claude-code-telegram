@@ -113,9 +113,11 @@ fn with_the_new_checks(after: &str, shell: usize, messages: &Messages) -> String
         .find('\n')
         .map_or(after.len(), |line| shell + line + 1);
     let launcher = format!(
-        "✘ {}: {}\n",
+        "✘ {}: {}\n○ {}: {}\n",
         labels.launcher,
-        (detail.launcher_missing)(&format!("{APP}/bin"))
+        (detail.launcher_missing)(&format!("{APP}/bin")),
+        labels.version,
+        detail.version_unknown
     );
     let rows = format!(
         "○ {}: {}\n✔ {}: {}\n✔ {}: {}\n",

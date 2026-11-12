@@ -20,9 +20,9 @@ use bcct::messages::messages_for;
 use bcct::prompt::{FakePrompter, Reply};
 use bcct::self_install::{Channel, Origin, Store};
 use bcct::update::{
-    Newest, Request, Screen, Wanted, World, asset_name, failure_line, hash_from_checksums,
+    Getter, Newest, Request, Screen, Wanted, World, asset_name, failure_line, hash_from_checksums,
     http_download, http_get, npm_platform, parse_dist_tags, parse_plugins, parse_request, platform,
-    reason_of, recommended, run_with,
+    quietly, reason_of, recommended, run_with,
 };
 
 fn set_mode(path: &Path, mode: u32) {
@@ -989,6 +989,103 @@ fn the_world_and_the_screen_show_only_their_plain_fields() {
 
     assert!(format!("{world:?}").contains("npm_root: \"https://npm.test\""));
     assert!(format!("{screen:?}").contains("colorize_out: true"));
+}
+
+fn quiet_world_result(get: Getter<'_>, running: &str) -> Result<(), String> {
+    let folder = sandbox();
+    let list = plugin_list("0.2.1", &folder.path().join("cache"), &[]).to_string();
+    let world = World {
+        app_dir: &folder.path().join("app"),
+        running,
+        claude: &|_| list.clone(),
+        has_command: &|_| true,
+        get,
+        download: &|_, _| Ok(404),
+        npm_root: NPM,
+        releases_root: RELEASES,
+    };
+
+    quietly(&world, messages_for(Locale::EnUs), "0.2.1")
+}
+
+#[test]
+fn the_quiet_update_gives_only_the_reason_when_it_fails() {
+    assert_eq!(
+        quiet_world_result(&|_| Err("timed out".to_owned()), "0.2.1"),
+        Err("Could not fetch the versions from npm (timed out). Try again.".to_owned())
+    );
+    assert_eq!(
+        quiet_world_result(
+            &|url| {
+                if url == DIST_TAGS {
+                    Ok((200, br#"{"latest":"0.2.1"}"#.to_vec()))
+                } else {
+                    Ok((200, Vec::new()))
+                }
+            },
+            "0.2.1"
+        ),
+        Ok(())
+    );
+}
+
+#[test]
+fn the_health_fix_runs_the_quiet_update_of_the_binary() {
+    let folder = sandbox();
+    let root = folder.path();
+    let bin = root.join("bin");
+    let store = Store::new(&root.join("app"));
+    fs::create_dir_all(&bin).unwrap();
+    let installed = root.join("installed");
+    let body = binary_answering("0.1.0");
+    fs::write(&installed, &body).unwrap();
+    set_mode(&installed, 0o755);
+    store
+        .install(&installed, &hash_of(&body), Origin::Release)
+        .unwrap();
+    fs::write(
+        root.join("plugins.json"),
+        plugin_list("0.2.0", &root.join("cache"), &[]).to_string(),
+    )
+    .unwrap();
+    fs::write(
+        bin.join("claude"),
+        format!(
+            "#!/bin/sh\nif [ \"$3\" = --json ]; then cat '{}'; else printf '%s\\n' {CHANNEL} {HOOKS}; fi\n",
+            root.join("plugins.json").display()
+        ),
+    )
+    .unwrap();
+    set_mode(&bin.join("claude"), 0o755);
+    std::os::unix::fs::symlink("/bin/sh", bin.join("sh")).unwrap();
+    std::os::unix::fs::symlink("/bin/cat", bin.join("cat")).unwrap();
+    let closed = {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        format!("http://{}", listener.local_addr().unwrap())
+    };
+
+    let output = cargo_bin_cmd!("bcct")
+        .args(["health", "install", "--fix", "--only", "update"])
+        .env("PATH", &bin)
+        .env("HOME", root.join("home"))
+        .env("CLAUDE_CONFIG_DIR", root.join("claude"))
+        .env("BETTER_CC_TELEGRAM_DIR", root.join("app"))
+        .env("BETTER_CC_TELEGRAM_NPM_ROOT", &closed)
+        .env_remove("LC_MESSAGES")
+        .env_remove("LANG")
+        .env_remove("LC_ALL")
+        .output()
+        .unwrap();
+    let shown = String::from_utf8_lossy(&output.stdout);
+
+    assert!(
+        shown.contains("✘ Version: the plugin is on 0.2.0 and the binary on 0.1.0."),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("Could not fetch the versions from npm ("),
+        "{shown}"
+    );
 }
 
 #[test]

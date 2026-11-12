@@ -152,6 +152,7 @@ const enUs = {
     mermaid: "Diagrams (mmdc)",
     statusline: "Status line",
     launcher: "Launcher",
+    version: "Version",
     appDir: "App folder",
     hooks: "Hooks",
   },
@@ -219,6 +220,10 @@ const enUs = {
       `no launcher in ${folder}. Run 'npx better-claude-code-telegram'.`,
     launcherNoVersion:
       "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+    versionSame: (version) => `binary and plugins on ${version}`,
+    versionDiffers: (plugin, binary) =>
+      `the plugin is on ${plugin} and the binary on ${binary}. Run 'bcct update'.`,
+    versionUnknown: "nothing to compare (see Launcher and Plugins)",
     appWritable: "writable",
     appNoPermission: (folder) =>
       `cannot write to ${folder} (no write permission). Run 'chmod u+rwx ${folder}'.`,
@@ -631,6 +636,7 @@ const enUs = {
     statusline: (settings) =>
       `replace the old command (from the clone) with the current one in ${settings}`,
     appDir: (folder) => `give write permission to ${folder}`,
+    update: "run 'bcct update'",
   },
 };
 
@@ -786,6 +792,7 @@ const ptBr = {
     mermaid: "Mermaid (mmdc)",
     statusline: "Statusline",
     launcher: "Launcher",
+    version: "Versão",
     appDir: "Pasta do app",
     hooks: "Hooks",
   },
@@ -852,6 +859,10 @@ const ptBr = {
       `sem launcher em ${folder}. Rode 'npx better-claude-code-telegram'.`,
     launcherNoVersion:
       "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+    versionSame: (version) => `binário e plugins na ${version}`,
+    versionDiffers: (plugin, binary) =>
+      `o plugin está na ${plugin} e o binário na ${binary}. Rode 'bcct update'.`,
+    versionUnknown: "sem como comparar (veja Launcher e Plugins)",
     appWritable: "gravável",
     appNoPermission: (folder) =>
       `não dá para gravar em ${folder} (sem permissão de escrita). Rode 'chmod u+rwx ${folder}'.`,
@@ -1264,6 +1275,7 @@ const ptBr = {
     statusline: (settings) =>
       `trocar o comando antigo (do clone) pelo atual em ${settings}`,
     appDir: (folder) => `dar permissão de escrita em ${folder}`,
+    update: "rodar 'bcct update'",
   },
 };
 

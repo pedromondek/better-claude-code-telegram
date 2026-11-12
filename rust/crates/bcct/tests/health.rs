@@ -252,6 +252,7 @@ fn observe(scenario: &Value, now: u64) -> Observed {
         claude_output: &claude_output,
         python_works: &whisper_python_works,
         fetch: &post_json,
+        update: &|_| Ok(()),
     };
     let mut out = Vec::new();
     let mut err = Vec::new();
@@ -581,6 +582,7 @@ fn a_node_that_cannot_be_found_fails_the_node_check() {
         claude_output: &|_| String::new(),
         python_works: &|_| false,
         fetch: &|_, _| None,
+        update: &|_| Ok(()),
     };
     let mut out = Vec::new();
     let mut err = Vec::new();
@@ -727,6 +729,7 @@ fn sandboxed<R>(
         claude_output: &claude_output,
         python_works: &whisper_python_works,
         fetch: &post_json,
+        update: &|_| Ok(()),
     };
 
     let result = body(&machine, root.path());
@@ -1053,6 +1056,54 @@ fn the_git_check_shows_the_version_or_says_why_git_is_needed() {
             "✘ Git: not installed. Claude Code needs it to download and update the plugins."
                 .to_owned()
         )
+    );
+}
+
+fn plugins_on(root: &Path, version: &str) {
+    write(
+        &root.join("plugins.json"),
+        &json!([
+            { "id": "telegram@better-claude-code-telegram", "version": version, "installPath": "/c/t" },
+            { "id": "telegram-hooks@better-claude-code-telegram", "version": version, "installPath": "/c/h" },
+        ])
+        .to_string(),
+        0o600,
+    );
+    write(
+        &root.join("bin/claude"),
+        "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nif [ \"$3\" = --json ]; then cat \"$here/plugins.json\"; else cat \"$here/plugins.txt\"; fi\n",
+        0o755,
+    );
+}
+
+#[test]
+fn the_version_check_compares_the_active_binary_with_the_hooks_plugin() {
+    assert_eq!(
+        install_row(&healthy(), "Version", &|root| plugins_on(root, "0.1.0")),
+        (0, "✔ Version: binary and plugins on 0.1.0".to_owned())
+    );
+    assert_eq!(
+        install_row(&healthy(), "Version", &|root| plugins_on(root, "0.2.0")),
+        (
+            1,
+            "✘ Version: the plugin is on 0.2.0 and the binary on 0.1.0. Run 'bcct update'."
+                .to_owned()
+        )
+    );
+    assert_eq!(
+        install_row(&healthy(), "Version", &|_| {}),
+        (
+            0,
+            "○ Version: nothing to compare (see Launcher and Plugins)".to_owned()
+        )
+    );
+    assert_eq!(
+        install_row(&healthy(), "Version", &|root| {
+            plugins_on(root, "0.1.0");
+            std::fs::remove_file(root.join("app/bin/current")).unwrap();
+        })
+        .1,
+        "○ Version: nothing to compare (see Launcher and Plugins)"
     );
 }
 
@@ -1442,7 +1493,7 @@ fn an_unknown_fix_id_stops_before_any_check() {
     assert_eq!(fixed.out, "");
     assert_eq!(
         fixed.err,
-        "✘ Unknown fixes: nope, other. The possible ones are: shell, protection, statusline, app.\n"
+        "✘ Unknown fixes: nope, other. The possible ones are: shell, protection, statusline, app, update.\n"
     );
 }
 

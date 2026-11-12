@@ -175,6 +175,7 @@ pub(super) const MESSAGES: Messages = Messages {
         mermaid: "Diagrams (mmdc)",
         statusline: "Status line",
         launcher: "Launcher",
+        version: "Version",
         app_dir: "App folder",
         hooks: "Hooks",
     },
@@ -254,6 +255,11 @@ pub(super) const MESSAGES: Messages = Messages {
             format!("no launcher in {folder}. Run 'npx better-claude-code-telegram'.")
         },
         launcher_no_version: "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+        version_same: |version| format!("binary and plugins on {version}"),
+        version_differs: |plugin, binary| {
+            format!("the plugin is on {plugin} and the binary on {binary}. Run 'bcct update'.")
+        },
+        version_unknown: "nothing to compare (see Launcher and Plugins)",
         app_writable: "writable",
         app_no_permission: |folder| {
             format!("cannot write to {folder} (no write permission). Run 'chmod u+rwx {folder}'.")
@@ -706,5 +712,6 @@ pub(super) const MESSAGES: Messages = Messages {
             format!("replace the old command (from the clone) with the current one in {settings}")
         },
         app_dir: |folder| format!("give write permission to {folder}"),
+        update: "run 'bcct update'",
     },
 };

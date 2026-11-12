@@ -28,6 +28,7 @@ use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
 use crate::statusline::{TELEGRAM_HEALTH_TTL_MS, TELEGRAM_LAUNCH_GRACE_MS, time_of};
 use crate::telegram::{api_root, call, post_json, property};
 use crate::ui::{fail, section, should_colorize, skipped, success};
+use crate::update::{parse_plugins, run_quietly};
 
 const JSON_FLAG: &str = "--json";
 const FIX_FLAG: &str = "--fix";
@@ -49,6 +50,7 @@ pub struct Machine<'a> {
     pub claude_output: &'a dyn Fn(&[&str]) -> String,
     pub python_works: &'a dyn Fn(&Path) -> bool,
     pub fetch: &'a dyn Fn(&str, &str) -> Option<Vec<u8>>,
+    pub update: &'a dyn Fn(&str) -> Result<(), String>,
 }
 
 impl std::fmt::Debug for Machine<'_> {
@@ -128,6 +130,7 @@ impl Group {
                 Check::Git,
                 Check::Plugins,
                 Check::Launcher,
+                Check::Version,
                 Check::Shell,
                 Check::Path,
                 Check::AppDir,
@@ -148,6 +151,7 @@ pub enum Check {
     Git,
     Plugins,
     Launcher,
+    Version,
     Shell,
     Path,
     AppDir,
@@ -174,6 +178,7 @@ impl Check {
             Self::Git => "git",
             Self::Plugins => "plugins",
             Self::Launcher => "launcher",
+            Self::Version => "version",
             Self::Shell => "shell",
             Self::Path => "path",
             Self::AppDir => "app",
@@ -202,6 +207,7 @@ impl Check {
             Self::Git => labels.git,
             Self::Plugins => labels.plugins,
             Self::Launcher => labels.launcher,
+            Self::Version => labels.version,
             Self::Shell => labels.shell,
             Self::Path => labels.path,
             Self::AppDir => labels.app_dir,
@@ -258,6 +264,19 @@ fn failed(detail: &str) -> Verdict {
 
 fn off(detail: &str) -> Verdict {
     (Status::Off, detail.to_owned())
+}
+
+#[must_use]
+pub fn installed_versions(machine: &Machine<'_>, app_dir: &Path) -> Option<(String, String)> {
+    let binary = Store::new(app_dir).active()?.version;
+
+    if !(machine.has_command)("claude") {
+        return None;
+    }
+
+    let plugins = parse_plugins(&(machine.claude_output)(&["plugin", "list", "--json"]))?;
+
+    Some((binary, plugins.hooks_version))
 }
 
 pub fn parse_health_groups(args: &[String], messages: &Messages) -> Result<Vec<Group>, String> {
@@ -397,6 +416,7 @@ impl Checks<'_> {
             Check::Shell => self.shell(),
             Check::Path => self.path(),
             Check::Launcher => self.launcher(),
+            Check::Version => self.version(),
             Check::AppDir => self.app_dir(),
             Check::Hooks => self.hooks(),
             Check::Token => self.token_check(),
@@ -472,6 +492,16 @@ impl Checks<'_> {
         match store.active() {
             Some(active) => ok(&(detail.launcher_active)(&active.version, &active.channel)),
             None => failed(detail.launcher_no_version),
+        }
+    }
+
+    fn version(&self) -> Verdict {
+        let detail = self.messages.health_detail;
+
+        match installed_versions(self.machine, &self.paths.app_dir) {
+            Some((binary, plugin)) if binary == plugin => ok(&(detail.version_same)(&binary)),
+            Some((binary, plugin)) => failed(&(detail.version_differs)(&plugin, &binary)),
+            None => off(detail.version_unknown),
         }
     }
 
@@ -1107,6 +1137,7 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         claude_output: &claude_output,
         python_works: &whisper_python_works,
         fetch: &post_json,
+        update: &run_quietly,
     };
     let on_terminal = io::stdout().is_terminal();
     let mut screen = Screen {

@@ -5,9 +5,11 @@ use std::path::{Path, PathBuf};
 use serde_json::{Value, json};
 
 use crate::files::{create_private_dir, read_json, write_private};
+use semver::Version;
+
 use crate::health::{
-    Check, Entry, Group, Machine, Screen, Status, collect, entries_json, first_blocked, owner_of,
-    status_of, write_all,
+    Check, Entry, Group, Machine, Screen, Status, collect, entries_json, first_blocked,
+    installed_versions, owner_of, status_of, write_all,
 };
 use crate::hook::Abort;
 use crate::hook_failures::{Reason, clear_reason};
@@ -36,14 +38,16 @@ pub enum FixId {
     Protection,
     Statusline,
     AppDir,
+    Update,
 }
 
 impl FixId {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::Shell,
         Self::Protection,
         Self::Statusline,
         Self::AppDir,
+        Self::Update,
     ];
 
     #[must_use]
@@ -53,6 +57,7 @@ impl FixId {
             Self::Protection => "protection",
             Self::Statusline => "statusline",
             Self::AppDir => "app",
+            Self::Update => "update",
         }
     }
 
@@ -68,6 +73,7 @@ impl FixId {
             Self::Protection => Check::Protection,
             Self::Statusline => Check::Statusline,
             Self::AppDir => Check::AppDir,
+            Self::Update => Check::Version,
         }
     }
 }
@@ -89,6 +95,7 @@ impl Fix {
             FixId::Protection => (texts.protection)(&target),
             FixId::Statusline => (texts.statusline)(&target),
             FixId::AppDir => (texts.app_dir)(&target),
+            FixId::Update => texts.update.to_owned(),
         }
     }
 }
@@ -249,7 +256,26 @@ pub fn plan(
         });
     }
 
+    if failed(results, Check::Version) {
+        fixes.push(Fix {
+            id: FixId::Update,
+            target: paths.app_dir.clone(),
+        });
+    }
+
     fixes
+}
+
+#[must_use]
+pub fn newer_of(binary: &str, plugin: &str) -> String {
+    let parsed = |text: &str| Version::parse(text).ok();
+
+    match (parsed(binary), parsed(plugin)) {
+        (Some(binary_version), Some(plugin_version)) => {
+            binary_version.max(plugin_version).to_string()
+        }
+        _ => plugin.to_owned(),
+    }
 }
 
 fn give_write_permission(folder: &Path) -> io::Result<()> {
@@ -319,6 +345,12 @@ pub fn apply(
             give_write_permission(&fix.target).map_err(io_failed)?;
             clear_reason(&paths.app_dir, Reason::NoPermission);
             Ok(())
+        }
+        FixId::Update => {
+            let (binary, plugin) =
+                installed_versions(machine, &paths.app_dir).ok_or_else(|| NOT_NEEDED.to_owned())?;
+
+            (machine.update)(&newer_of(&binary, &plugin))
         }
     }
 }
@@ -595,7 +627,7 @@ mod tests {
         assert_eq!(parse_only(&[], &EN_US), Ok(vec![]));
         assert_eq!(
             parse_only(&ids(&["x", "shell", "y"]), &PT_BR),
-            Err("Consertos desconhecidos: x, y. Os possíveis são: shell, protection, statusline, app.".to_owned())
+            Err("Consertos desconhecidos: x, y. Os possíveis são: shell, protection, statusline, app, update.".to_owned())
         );
     }
 

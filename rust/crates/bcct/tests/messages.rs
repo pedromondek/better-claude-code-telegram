@@ -166,6 +166,7 @@ catalog! { m, a;
     "healthLabels.mermaid" => m.health_labels.mermaid.to_owned(),
     "healthLabels.statusline" => m.health_labels.statusline.to_owned(),
     "healthLabels.launcher" => m.health_labels.launcher.to_owned(),
+    "healthLabels.version" => m.health_labels.version.to_owned(),
     "healthLabels.appDir" => m.health_labels.app_dir.to_owned(),
     "healthLabels.hooks" => m.health_labels.hooks.to_owned(),
     "healthDetail.version" => (m.health_detail.version)(s(a, 0)),
@@ -213,6 +214,9 @@ catalog! { m, a;
     "healthDetail.launcherActive" => (m.health_detail.launcher_active)(s(a, 0), s(a, 1)),
     "healthDetail.launcherMissing" => (m.health_detail.launcher_missing)(s(a, 0)),
     "healthDetail.launcherNoVersion" => m.health_detail.launcher_no_version.to_owned(),
+    "healthDetail.versionSame" => (m.health_detail.version_same)(s(a, 0)),
+    "healthDetail.versionDiffers" => (m.health_detail.version_differs)(s(a, 0), s(a, 1)),
+    "healthDetail.versionUnknown" => m.health_detail.version_unknown.to_owned(),
     "healthDetail.appWritable" => m.health_detail.app_writable.to_owned(),
     "healthDetail.appNoPermission" => (m.health_detail.app_no_permission)(s(a, 0)),
     "healthDetail.appOtherOwner" => (m.health_detail.app_other_owner)(s(a, 0), s(a, 1)),
@@ -470,6 +474,7 @@ catalog! { m, a;
     "fix.protection" => (m.fix.protection)(s(a, 0)),
     "fix.statusline" => (m.fix.statusline)(s(a, 0)),
     "fix.appDir" => (m.fix.app_dir)(s(a, 0)),
+    "fix.update" => m.fix.update.to_owned(),
 }
 
 fn fixture() -> Value {

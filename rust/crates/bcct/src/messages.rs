@@ -87,6 +87,7 @@ pub struct HealthLabels {
     pub mermaid: &'static str,
     pub statusline: &'static str,
     pub launcher: &'static str,
+    pub version: &'static str,
     pub app_dir: &'static str,
     pub hooks: &'static str,
 }
@@ -143,6 +144,9 @@ pub struct HealthDetail {
     pub launcher_active: fn(&str, &str) -> String,
     pub launcher_missing: fn(&str) -> String,
     pub launcher_no_version: &'static str,
+    pub version_same: fn(&str) -> String,
+    pub version_differs: fn(&str, &str) -> String,
+    pub version_unknown: &'static str,
     pub app_writable: &'static str,
     pub app_no_permission: fn(&str) -> String,
     pub app_other_owner: fn(&str, &str) -> String,
@@ -535,6 +539,7 @@ pub struct FixTexts {
     pub protection: fn(&str) -> String,
     pub statusline: fn(&str) -> String,
     pub app_dir: fn(&str) -> String,
+    pub update: &'static str,
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -11,7 +11,7 @@ use serde_json::Value;
 use crate::install::{MARKETPLACE_NAME, MARKETPLACE_REPO, marketplace_source};
 use crate::messages::{Messages, messages_for};
 use crate::paths::Paths;
-use crate::prompt::{Prompter, create_prompter};
+use crate::prompt::{FakePrompter, Prompter, create_prompter};
 use crate::self_install::{Channel, InstallError, Origin, Store};
 use crate::setup::{HOOKS_PLUGIN_ID, has_command, setup_locale};
 use crate::ui::{fail, info, should_colorize, skipped, success, warn};
@@ -811,7 +811,9 @@ fn claude_with_errors(args: &[&str]) -> String {
         .unwrap_or_default()
 }
 
-pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
+fn with_process_world<T>(
+    run: impl FnOnce(&World<'_>, &'static Messages, &dyn Fn(&str) -> Option<OsString>) -> T,
+) -> T {
     let paths = Paths::from_process();
     let var = |name: &str| std::env::var_os(name);
     let messages = messages_for(setup_locale(&paths.app_dir, &var));
@@ -836,13 +838,60 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         npm_root: &npm_root,
         releases_root: &releases_root,
     };
-    let screen = Screen {
-        out: stdout,
-        err: stderr,
-        colorize_out: should_colorize(&var, io::stdout().is_terminal()),
-        colorize_err: should_colorize(&var, io::stderr().is_terminal()),
-    };
-    let mut ask = create_prompter(&var);
 
-    run_with(args, &world, messages, screen, &mut *ask)
+    run(&world, messages, &var)
+}
+
+pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
+    with_process_world(|world, messages, var| {
+        let screen = Screen {
+            out: stdout,
+            err: stderr,
+            colorize_out: should_colorize(var, io::stdout().is_terminal()),
+            colorize_err: should_colorize(var, io::stderr().is_terminal()),
+        };
+        let mut ask = create_prompter(var);
+
+        run_with(args, world, messages, screen, &mut *ask)
+    })
+}
+
+pub fn run_quietly(version: &str) -> Result<(), String> {
+    with_process_world(|world, messages, _| quietly(world, messages, version))
+}
+
+pub fn quietly(
+    world: &World<'_>,
+    messages: &'static Messages,
+    version: &str,
+) -> Result<(), String> {
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    let screen = Screen {
+        out: &mut out,
+        err: &mut err,
+        colorize_out: false,
+        colorize_err: false,
+    };
+    let code = run_with(
+        &[OsString::from(version)],
+        world,
+        messages,
+        screen,
+        &mut FakePrompter::new(false),
+    );
+
+    if code == SUCCESS {
+        return Ok(());
+    }
+
+    let text = String::from_utf8_lossy(&err);
+
+    Err(text
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .trim_start_matches(FAILURE_MARK)
+        .trim()
+        .to_owned())
 }

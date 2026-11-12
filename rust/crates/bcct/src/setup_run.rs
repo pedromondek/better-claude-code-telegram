@@ -914,6 +914,7 @@ impl<'a> Setup<'a> {
             claude_output: &claude_output,
             python_works: &whisper_python_works,
             fetch: &fetch,
+            update: &crate::update::run_quietly,
         };
         let failed = health::check_all(&machine, &mut self.output.screen(), messages);
 

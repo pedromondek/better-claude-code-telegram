@@ -249,6 +249,7 @@
     "healthLabels.mermaid": "Diagrams (mmdc)",
     "healthLabels.statusline": "Status line",
     "healthLabels.launcher": "Launcher",
+    "healthLabels.version": "Version",
     "healthLabels.appDir": "App folder",
     "healthLabels.hooks": "Hooks",
     "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
@@ -367,6 +368,16 @@
       }
     ],
     "healthDetail.launcherNoVersion": "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+    "healthDetail.versionSame": [
+      { "args": ["alpha 1"], "out": "binary and plugins on alpha 1" }
+    ],
+    "healthDetail.versionDiffers": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "the plugin is on alpha 1 and the binary on beta 'two'. Run 'bcct update'."
+      }
+    ],
+    "healthDetail.versionUnknown": "nothing to compare (see Launcher and Plugins)",
     "healthDetail.appWritable": "writable",
     "healthDetail.appNoPermission": [
       {
@@ -1168,7 +1179,8 @@
     ],
     "fix.appDir": [
       { "args": ["alpha 1"], "out": "give write permission to alpha 1" }
-    ]
+    ],
+    "fix.update": "run 'bcct update'"
   },
   "pt-br": {
     "statusMain": "(Principal)",
@@ -1426,6 +1438,7 @@
     "healthLabels.mermaid": "Mermaid (mmdc)",
     "healthLabels.statusline": "Statusline",
     "healthLabels.launcher": "Launcher",
+    "healthLabels.version": "Versão",
     "healthLabels.appDir": "Pasta do app",
     "healthLabels.hooks": "Hooks",
     "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
@@ -1544,6 +1557,16 @@
       }
     ],
     "healthDetail.launcherNoVersion": "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+    "healthDetail.versionSame": [
+      { "args": ["alpha 1"], "out": "binário e plugins na alpha 1" }
+    ],
+    "healthDetail.versionDiffers": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "o plugin está na alpha 1 e o binário na beta 'two'. Rode 'bcct update'."
+      }
+    ],
+    "healthDetail.versionUnknown": "sem como comparar (veja Launcher e Plugins)",
     "healthDetail.appWritable": "gravável",
     "healthDetail.appNoPermission": [
       {
@@ -2350,6 +2373,7 @@
     ],
     "fix.appDir": [
       { "args": ["alpha 1"], "out": "dar permissão de escrita em alpha 1" }
-    ]
+    ],
+    "fix.update": "rodar 'bcct update'"
   }
 }
