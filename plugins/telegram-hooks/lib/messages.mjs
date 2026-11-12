@@ -558,6 +558,57 @@ const enUs = {
     busy: "file busy or changed by another instance",
     input: "unexpected input from Claude Code",
   },
+  update: {
+    looking: "Looking for versions on npm",
+    switching: (from, to) => `Switching channel: #${from} → #${to}`,
+    plugins: (from, to) => `Plugins: ${from} → ${to}`,
+    binary: (from, to) => `Binary: ${from} → ${to}`,
+    reload:
+      "It applies to new Claude Code sessions; in open ones, run /reload-plugins.",
+    newestStable: (version) => `Already on ${version}, the newest stable.`,
+    already: (version) => `Already on ${version}.`,
+    check: (from, to) =>
+      `Would update from ${from} to ${to} (plugins and binary).`,
+    unstableIntro: (channel, version) =>
+      `You are on a test version (${channel} ${version}).`,
+    newestAlpha: (version) => `Newest alpha: ${version}`,
+    newestBeta: (version) => `Newest beta: ${version}`,
+    newestStableOption: (version) => `Newest stable: ${version}`,
+    theCurrent: "(the current one)",
+    which: (numbers, fallback) =>
+      `Which one? (${numbers}; Enter: ${fallback}):`,
+    pick: (version, options) =>
+      `Test version ${version}. Pick with ${options}.`,
+    pickOption: (channel, version) => `'bcct update ${channel}' (${version})`,
+    or: " or ",
+    and: " and ",
+    cleanupQuestion: (count, versions) =>
+      `There are ${count} test versions kept (${versions}). Delete the ones not in use? (y/N):`,
+    cleaned: (versions) => `Deleted ${versions}.`,
+    npmFailed: (reason) =>
+      `Could not fetch the versions from npm (${reason}). Try again.`,
+    badList:
+      "The version list came in an unexpected format. Try again in a moment.",
+    noVersion: (version, newest) =>
+      `Version ${version} does not exist. Newest: ${newest}.`,
+    noChannel: (channel) => `There is no ${channel} version yet.`,
+    noPlugins:
+      "The plugins are not installed. Run 'npx better-claude-code-telegram'.",
+    noGit:
+      "git is not installed, and Claude Code needs it to update the plugins. Install git and run 'bcct update' again.",
+    pluginFailed: (line) => `Plugins: ${line}. Run 'bcct update' again.`,
+    pluginStayed: (have, want) =>
+      `The telegram-hooks plugin stayed on ${have}, not ${want}. Run 'bcct update' again.`,
+    noHash: (version, platform) =>
+      `Plugin ${version} has no binary hash for ${platform}.`,
+    downloadFailed: (version, reason) =>
+      `Binary: could not download ${version} from GitHub (${reason}). The plugins are already on ${version}. Run 'bcct update' again.`,
+    binaryFailed: (version, reason) =>
+      `Binary: could not install ${version} (${reason}). The plugins are already on ${version}. Run 'bcct update' again.`,
+    hashMismatch: "hash mismatch",
+    notBcct: (version) => `did not answer as bcct ${version}`,
+    usage: "Usage: bcct update [stable|beta|alpha|<version>] [--check]",
+  },
   fix: {
     canFix: "I can fix:",
     onlyRecommend: "I only recommend:",
@@ -1138,6 +1189,56 @@ const ptBr = {
     quota: "cota de disco excedida",
     busy: "arquivo ocupado ou mexido por outra instância",
     input: "entrada inesperada do Claude Code",
+  },
+  update: {
+    looking: "Procurando versões no npm",
+    switching: (from, to) => `Trocando o canal: #${from} → #${to}`,
+    plugins: (from, to) => `Plugins: ${from} → ${to}`,
+    binary: (from, to) => `Binário: ${from} → ${to}`,
+    reload:
+      "Vale nas sessões novas do Claude Code; nas abertas, rode /reload-plugins.",
+    newestStable: (version) => `Já está na ${version}, a estável mais nova.`,
+    already: (version) => `Já está na ${version}.`,
+    check: (from, to) =>
+      `Atualizaria de ${from} para ${to} (plugins e binário).`,
+    unstableIntro: (channel, version) =>
+      `Você está numa versão de teste (${channel} ${version}).`,
+    newestAlpha: (version) => `Alpha mais nova: ${version}`,
+    newestBeta: (version) => `Beta mais nova: ${version}`,
+    newestStableOption: (version) => `Estável mais nova: ${version}`,
+    theCurrent: "(a atual)",
+    which: (numbers, fallback) => `Qual? (${numbers}; Enter: ${fallback}):`,
+    pick: (version, options) =>
+      `Versão de teste ${version}. Escolha com ${options}.`,
+    pickOption: (channel, version) => `'bcct update ${channel}' (${version})`,
+    or: " ou ",
+    and: " e ",
+    cleanupQuestion: (count, versions) =>
+      `Há ${count} versões de teste guardadas (${versions}). Apagar as que não estão em uso? (s/N):`,
+    cleaned: (versions) => `Apaguei ${versions}.`,
+    npmFailed: (reason) =>
+      `Não consegui buscar as versões no npm (${reason}). Tente de novo.`,
+    badList:
+      "A lista de versões veio num formato inesperado. Tente de novo daqui a pouco.",
+    noVersion: (version, newest) =>
+      `A versão ${version} não existe. Mais novas: ${newest}.`,
+    noChannel: (channel) => `Ainda não há versão ${channel}.`,
+    noPlugins:
+      "Os plugins não estão instalados. Rode 'npx better-claude-code-telegram'.",
+    noGit:
+      "O git não está instalado, e o Claude Code precisa dele para atualizar os plugins. Instale o git e rode 'bcct update' de novo.",
+    pluginFailed: (line) => `Plugins: ${line}. Rode 'bcct update' de novo.`,
+    pluginStayed: (have, want) =>
+      `O plugin telegram-hooks ficou na ${have}, não na ${want}. Rode 'bcct update' de novo.`,
+    noHash: (version, platform) =>
+      `O plugin ${version} não traz o hash do binário para ${platform}.`,
+    downloadFailed: (version, reason) =>
+      `Binário: não consegui baixar a ${version} do GitHub (${reason}). Os plugins já estão na ${version}. Rode 'bcct update' de novo.`,
+    binaryFailed: (version, reason) =>
+      `Binário: não consegui instalar a ${version} (${reason}). Os plugins já estão na ${version}. Rode 'bcct update' de novo.`,
+    hashMismatch: "hash diferente",
+    notBcct: (version) => `não respondeu como bcct ${version}`,
+    usage: "Uso: bcct update [stable|beta|alpha|<versão>] [--check]",
   },
   fix: {
     canFix: "Posso consertar:",

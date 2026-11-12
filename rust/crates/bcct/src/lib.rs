@@ -27,6 +27,7 @@ pub mod spinner;
 pub mod statusline;
 pub mod telegram;
 pub mod ui;
+pub mod update;
 
 use std::ffi::OsString;
 use std::io::Write;
@@ -47,6 +48,7 @@ enum Command {
     Uninstall,
     UninstallVersion(String),
     SelfInstall(Vec<OsString>),
+    Update(Vec<OsString>),
 }
 
 const VERSION_FLAGS: [&str; 5] = ["-v", "-V", "-version", "--version", "--v"];
@@ -80,6 +82,7 @@ where
         Ok(Command::SelfInstall(args)) => {
             ExitCode::from(self_install::run_process(&args, stdout, stderr))
         }
+        Ok(Command::Update(args)) => ExitCode::from(update::run_process(&args, stdout, stderr)),
         Err(error) => {
             let _written = writeln!(stderr, "bcct: {error}");
             ExitCode::from(USAGE_ERROR)
@@ -129,6 +132,9 @@ where
         }
         Some(lexopt::Arg::Value(word)) if word == "self-install" => {
             Ok(Command::SelfInstall(parser.raw_args()?.collect()))
+        }
+        Some(lexopt::Arg::Value(word)) if word == "update" => {
+            Ok(Command::Update(parser.raw_args()?.collect()))
         }
         Some(arg) => Err(arg.unexpected()),
         None => Err("missing subcommand".into()),
@@ -214,6 +220,17 @@ mod tests {
             parsed(&["bcct", "uninstall", "0.3.0-beta.1", "x"]),
             Command::UninstallVersion("0.3.0-beta.1".to_owned())
         );
+    }
+
+    #[test]
+    fn update_keeps_every_argument() {
+        let parsed = |list: &[&str]| parse(args(list)).unwrap();
+
+        assert_eq!(
+            parsed(&["bcct", "update", "beta", "--check"]),
+            Command::Update(args(&["beta", "--check"]))
+        );
+        assert_eq!(parsed(&["bcct", "update"]), Command::Update(Vec::new()));
     }
 
     #[test]

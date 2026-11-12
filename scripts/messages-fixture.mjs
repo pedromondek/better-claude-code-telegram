@@ -49,6 +49,7 @@ const OVERRIDES = {
   ],
   "healthDetail.hookFailedOften": [["PostToolUse", 4, "disk full"]],
   "fix.invalidAnswer": [[3], [1]],
+  "update.cleanupQuestion": [[3, "0.3.0-beta.1, 0.3.0-beta.2, 0.4.0-alpha.1"]],
 };
 
 function stringArgs(arity) {

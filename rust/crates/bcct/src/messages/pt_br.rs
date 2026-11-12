@@ -2,7 +2,7 @@ use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
     HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
+    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels, UpdateTexts,
 };
 
 pub(super) const MESSAGES: Messages = Messages {
@@ -633,6 +633,66 @@ pub(super) const MESSAGES: Messages = Messages {
         quota: "cota de disco excedida",
         busy: "arquivo ocupado ou mexido por outra instância",
         input: "entrada inesperada do Claude Code",
+    },
+    update: UpdateTexts {
+        looking: "Procurando versões no npm",
+        switching: |from, to| format!("Trocando o canal: #{from} → #{to}"),
+        plugins: |from, to| format!("Plugins: {from} → {to}"),
+        binary: |from, to| format!("Binário: {from} → {to}"),
+        reload: "Vale nas sessões novas do Claude Code; nas abertas, rode /reload-plugins.",
+        newest_stable: |version| format!("Já está na {version}, a estável mais nova."),
+        already: |version| format!("Já está na {version}."),
+        check: |from, to| format!("Atualizaria de {from} para {to} (plugins e binário)."),
+        unstable_intro: |channel, version| {
+            format!("Você está numa versão de teste ({channel} {version}).")
+        },
+        newest_alpha: |version| format!("Alpha mais nova: {version}"),
+        newest_beta: |version| format!("Beta mais nova: {version}"),
+        newest_stable_option: |version| format!("Estável mais nova: {version}"),
+        the_current: "(a atual)",
+        which: |numbers, default| format!("Qual? ({numbers}; Enter: {default}):"),
+        pick: |version, options| format!("Versão de teste {version}. Escolha com {options}."),
+        pick_option: |channel, version| format!("'bcct update {channel}' ({version})"),
+        or: " ou ",
+        and: " e ",
+        cleanup_question: |count, versions| {
+            format!(
+                "Há {count} versões de teste guardadas ({versions}). Apagar as que não estão em uso? (s/N):"
+            )
+        },
+        cleaned: |versions| format!("Apaguei {versions}."),
+        npm_failed: |reason| {
+            format!("Não consegui buscar as versões no npm ({reason}). Tente de novo.")
+        },
+        bad_list: "A lista de versões veio num formato inesperado. Tente de novo daqui a pouco.",
+        no_version: |version, newest| {
+            format!("A versão {version} não existe. Mais novas: {newest}.")
+        },
+        no_channel: |channel| format!("Ainda não há versão {channel}."),
+        no_plugins: "Os plugins não estão instalados. Rode 'npx better-claude-code-telegram'.",
+        no_git: "O git não está instalado, e o Claude Code precisa dele para atualizar os plugins. Instale o git e rode 'bcct update' de novo.",
+        plugin_failed: |line| format!("Plugins: {line}. Rode 'bcct update' de novo."),
+        plugin_stayed: |have, want| {
+            format!(
+                "O plugin telegram-hooks ficou na {have}, não na {want}. Rode 'bcct update' de novo."
+            )
+        },
+        no_hash: |version, platform| {
+            format!("O plugin {version} não traz o hash do binário para {platform}.")
+        },
+        download_failed: |version, reason| {
+            format!(
+                "Binário: não consegui baixar a {version} do GitHub ({reason}). Os plugins já estão na {version}. Rode 'bcct update' de novo."
+            )
+        },
+        binary_failed: |version, reason| {
+            format!(
+                "Binário: não consegui instalar a {version} ({reason}). Os plugins já estão na {version}. Rode 'bcct update' de novo."
+            )
+        },
+        hash_mismatch: "hash diferente",
+        not_bcct: |version| format!("não respondeu como bcct {version}"),
+        usage: "Uso: bcct update [stable|beta|alpha|<versão>] [--check]",
     },
     fix: FixTexts {
         can_fix: "Posso consertar:",

@@ -2,7 +2,7 @@ use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
     HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels,
+    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels, UpdateTexts,
 };
 
 pub(super) const MESSAGES: Messages = Messages {
@@ -623,6 +623,64 @@ pub(super) const MESSAGES: Messages = Messages {
         quota: "disk quota exceeded",
         busy: "file busy or changed by another instance",
         input: "unexpected input from Claude Code",
+    },
+    update: UpdateTexts {
+        looking: "Looking for versions on npm",
+        switching: |from, to| format!("Switching channel: #{from} → #{to}"),
+        plugins: |from, to| format!("Plugins: {from} → {to}"),
+        binary: |from, to| format!("Binary: {from} → {to}"),
+        reload: "It applies to new Claude Code sessions; in open ones, run /reload-plugins.",
+        newest_stable: |version| format!("Already on {version}, the newest stable."),
+        already: |version| format!("Already on {version}."),
+        check: |from, to| format!("Would update from {from} to {to} (plugins and binary)."),
+        unstable_intro: |channel, version| {
+            format!("You are on a test version ({channel} {version}).")
+        },
+        newest_alpha: |version| format!("Newest alpha: {version}"),
+        newest_beta: |version| format!("Newest beta: {version}"),
+        newest_stable_option: |version| format!("Newest stable: {version}"),
+        the_current: "(the current one)",
+        which: |numbers, default| format!("Which one? ({numbers}; Enter: {default}):"),
+        pick: |version, options| format!("Test version {version}. Pick with {options}."),
+        pick_option: |channel, version| format!("'bcct update {channel}' ({version})"),
+        or: " or ",
+        and: " and ",
+        cleanup_question: |count, versions| {
+            format!(
+                "There are {count} test versions kept ({versions}). Delete the ones not in use? (y/N):"
+            )
+        },
+        cleaned: |versions| format!("Deleted {versions}."),
+        npm_failed: |reason| {
+            format!("Could not fetch the versions from npm ({reason}). Try again.")
+        },
+        bad_list: "The version list came in an unexpected format. Try again in a moment.",
+        no_version: |version, newest| {
+            format!("Version {version} does not exist. Newest: {newest}.")
+        },
+        no_channel: |channel| format!("There is no {channel} version yet."),
+        no_plugins: "The plugins are not installed. Run 'npx better-claude-code-telegram'.",
+        no_git: "git is not installed, and Claude Code needs it to update the plugins. Install git and run 'bcct update' again.",
+        plugin_failed: |line| format!("Plugins: {line}. Run 'bcct update' again."),
+        plugin_stayed: |have, want| {
+            format!(
+                "The telegram-hooks plugin stayed on {have}, not {want}. Run 'bcct update' again."
+            )
+        },
+        no_hash: |version, platform| format!("Plugin {version} has no binary hash for {platform}."),
+        download_failed: |version, reason| {
+            format!(
+                "Binary: could not download {version} from GitHub ({reason}). The plugins are already on {version}. Run 'bcct update' again."
+            )
+        },
+        binary_failed: |version, reason| {
+            format!(
+                "Binary: could not install {version} ({reason}). The plugins are already on {version}. Run 'bcct update' again."
+            )
+        },
+        hash_mismatch: "hash mismatch",
+        not_bcct: |version| format!("did not answer as bcct {version}"),
+        usage: "Usage: bcct update [stable|beta|alpha|<version>] [--check]",
     },
     fix: FixTexts {
         can_fix: "I can fix:",

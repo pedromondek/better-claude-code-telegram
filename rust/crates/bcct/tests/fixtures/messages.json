@@ -990,6 +990,132 @@
     "hookReasons.quota": "disk quota exceeded",
     "hookReasons.busy": "file busy or changed by another instance",
     "hookReasons.input": "unexpected input from Claude Code",
+    "update.looking": "Looking for versions on npm",
+    "update.switching": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Switching channel: #alpha 1 → #beta 'two'"
+      }
+    ],
+    "update.plugins": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Plugins: alpha 1 → beta 'two'"
+      }
+    ],
+    "update.binary": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Binary: alpha 1 → beta 'two'"
+      }
+    ],
+    "update.reload": "It applies to new Claude Code sessions; in open ones, run /reload-plugins.",
+    "update.newestStable": [
+      { "args": ["alpha 1"], "out": "Already on alpha 1, the newest stable." }
+    ],
+    "update.already": [{ "args": ["alpha 1"], "out": "Already on alpha 1." }],
+    "update.check": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Would update from alpha 1 to beta 'two' (plugins and binary)."
+      }
+    ],
+    "update.unstableIntro": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "You are on a test version (alpha 1 beta 'two')."
+      }
+    ],
+    "update.newestAlpha": [
+      { "args": ["alpha 1"], "out": "Newest alpha: alpha 1" }
+    ],
+    "update.newestBeta": [
+      { "args": ["alpha 1"], "out": "Newest beta: alpha 1" }
+    ],
+    "update.newestStableOption": [
+      { "args": ["alpha 1"], "out": "Newest stable: alpha 1" }
+    ],
+    "update.theCurrent": "(the current one)",
+    "update.which": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Which one? (alpha 1; Enter: beta 'two'):"
+      }
+    ],
+    "update.pick": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Test version alpha 1. Pick with beta 'two'."
+      }
+    ],
+    "update.pickOption": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'bcct update alpha 1' (beta 'two')"
+      }
+    ],
+    "update.or": " or ",
+    "update.and": " and ",
+    "update.cleanupQuestion": [
+      {
+        "args": [3, "0.3.0-beta.1, 0.3.0-beta.2, 0.4.0-alpha.1"],
+        "out": "There are 3 test versions kept (0.3.0-beta.1, 0.3.0-beta.2, 0.4.0-alpha.1). Delete the ones not in use? (y/N):"
+      }
+    ],
+    "update.cleaned": [{ "args": ["alpha 1"], "out": "Deleted alpha 1." }],
+    "update.npmFailed": [
+      {
+        "args": ["alpha 1"],
+        "out": "Could not fetch the versions from npm (alpha 1). Try again."
+      }
+    ],
+    "update.badList": "The version list came in an unexpected format. Try again in a moment.",
+    "update.noVersion": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Version alpha 1 does not exist. Newest: beta 'two'."
+      }
+    ],
+    "update.noChannel": [
+      { "args": ["alpha 1"], "out": "There is no alpha 1 version yet." }
+    ],
+    "update.noPlugins": "The plugins are not installed. Run 'npx better-claude-code-telegram'.",
+    "update.noGit": "git is not installed, and Claude Code needs it to update the plugins. Install git and run 'bcct update' again.",
+    "update.pluginFailed": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugins: alpha 1. Run 'bcct update' again."
+      }
+    ],
+    "update.pluginStayed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "The telegram-hooks plugin stayed on alpha 1, not beta 'two'. Run 'bcct update' again."
+      }
+    ],
+    "update.noHash": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Plugin alpha 1 has no binary hash for beta 'two'."
+      }
+    ],
+    "update.downloadFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Binary: could not download alpha 1 from GitHub (beta 'two'). The plugins are already on alpha 1. Run 'bcct update' again."
+      }
+    ],
+    "update.binaryFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Binary: could not install alpha 1 (beta 'two'). The plugins are already on alpha 1. Run 'bcct update' again."
+      }
+    ],
+    "update.hashMismatch": "hash mismatch",
+    "update.notBcct": [
+      { "args": ["alpha 1"], "out": "did not answer as bcct alpha 1" }
+    ],
+    "update.usage": "Usage: bcct update [stable|beta|alpha|<version>] [--check]",
     "fix.canFix": "I can fix:",
     "fix.onlyRecommend": "I only recommend:",
     "fix.question": "Which ones? (1, 2, ... or all; Enter: none):",
@@ -2040,6 +2166,132 @@
     "hookReasons.quota": "cota de disco excedida",
     "hookReasons.busy": "arquivo ocupado ou mexido por outra instância",
     "hookReasons.input": "entrada inesperada do Claude Code",
+    "update.looking": "Procurando versões no npm",
+    "update.switching": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Trocando o canal: #alpha 1 → #beta 'two'"
+      }
+    ],
+    "update.plugins": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Plugins: alpha 1 → beta 'two'"
+      }
+    ],
+    "update.binary": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Binário: alpha 1 → beta 'two'"
+      }
+    ],
+    "update.reload": "Vale nas sessões novas do Claude Code; nas abertas, rode /reload-plugins.",
+    "update.newestStable": [
+      { "args": ["alpha 1"], "out": "Já está na alpha 1, a estável mais nova." }
+    ],
+    "update.already": [{ "args": ["alpha 1"], "out": "Já está na alpha 1." }],
+    "update.check": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Atualizaria de alpha 1 para beta 'two' (plugins e binário)."
+      }
+    ],
+    "update.unstableIntro": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Você está numa versão de teste (alpha 1 beta 'two')."
+      }
+    ],
+    "update.newestAlpha": [
+      { "args": ["alpha 1"], "out": "Alpha mais nova: alpha 1" }
+    ],
+    "update.newestBeta": [
+      { "args": ["alpha 1"], "out": "Beta mais nova: alpha 1" }
+    ],
+    "update.newestStableOption": [
+      { "args": ["alpha 1"], "out": "Estável mais nova: alpha 1" }
+    ],
+    "update.theCurrent": "(a atual)",
+    "update.which": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Qual? (alpha 1; Enter: beta 'two'):"
+      }
+    ],
+    "update.pick": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Versão de teste alpha 1. Escolha com beta 'two'."
+      }
+    ],
+    "update.pickOption": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "'bcct update alpha 1' (beta 'two')"
+      }
+    ],
+    "update.or": " ou ",
+    "update.and": " e ",
+    "update.cleanupQuestion": [
+      {
+        "args": [3, "0.3.0-beta.1, 0.3.0-beta.2, 0.4.0-alpha.1"],
+        "out": "Há 3 versões de teste guardadas (0.3.0-beta.1, 0.3.0-beta.2, 0.4.0-alpha.1). Apagar as que não estão em uso? (s/N):"
+      }
+    ],
+    "update.cleaned": [{ "args": ["alpha 1"], "out": "Apaguei alpha 1." }],
+    "update.npmFailed": [
+      {
+        "args": ["alpha 1"],
+        "out": "Não consegui buscar as versões no npm (alpha 1). Tente de novo."
+      }
+    ],
+    "update.badList": "A lista de versões veio num formato inesperado. Tente de novo daqui a pouco.",
+    "update.noVersion": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "A versão alpha 1 não existe. Mais novas: beta 'two'."
+      }
+    ],
+    "update.noChannel": [
+      { "args": ["alpha 1"], "out": "Ainda não há versão alpha 1." }
+    ],
+    "update.noPlugins": "Os plugins não estão instalados. Rode 'npx better-claude-code-telegram'.",
+    "update.noGit": "O git não está instalado, e o Claude Code precisa dele para atualizar os plugins. Instale o git e rode 'bcct update' de novo.",
+    "update.pluginFailed": [
+      {
+        "args": ["alpha 1"],
+        "out": "Plugins: alpha 1. Rode 'bcct update' de novo."
+      }
+    ],
+    "update.pluginStayed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O plugin telegram-hooks ficou na alpha 1, não na beta 'two'. Rode 'bcct update' de novo."
+      }
+    ],
+    "update.noHash": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "O plugin alpha 1 não traz o hash do binário para beta 'two'."
+      }
+    ],
+    "update.downloadFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Binário: não consegui baixar a alpha 1 do GitHub (beta 'two'). Os plugins já estão na alpha 1. Rode 'bcct update' de novo."
+      }
+    ],
+    "update.binaryFailed": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Binário: não consegui instalar a alpha 1 (beta 'two'). Os plugins já estão na alpha 1. Rode 'bcct update' de novo."
+      }
+    ],
+    "update.hashMismatch": "hash diferente",
+    "update.notBcct": [
+      { "args": ["alpha 1"], "out": "não respondeu como bcct alpha 1" }
+    ],
+    "update.usage": "Uso: bcct update [stable|beta|alpha|<versão>] [--check]",
     "fix.canFix": "Posso consertar:",
     "fix.onlyRecommend": "Só recomendo:",
     "fix.question": "Quais consertar? (1, 2, ... ou todos; Enter: nenhum):",
