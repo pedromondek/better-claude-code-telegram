@@ -1,7 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   copyFileSync,
-  cpSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -74,7 +73,6 @@ beforeAll(() => {
     copyFileSync(join(ROOT, file), join(dir, file));
   }
 
-  cpSync(join(ROOT, ".mise"), join(dir, ".mise"), { recursive: true });
   execFileSync("git", ["init", "-q"], { cwd: dir });
   writeFileSync(join(dir, ".git", "notes.md"), `${MISSPELLED}\n`);
 });
@@ -87,7 +85,7 @@ describe("pinned lint tools", { timeout: TOOL_TIMEOUT }, () => {
   it("runs the versions of mise.toml", () => {
     expect(tool("typos", "--version").stdout).toContain("1.51.1");
     expect(tool("actionlint", "--version").stdout).toContain("1.7.12");
-    expect(tool("pinact", "--version").stdout).toContain("5.0.0");
+    expect(tool("pinact", "--version").stdout).toContain("5.0.2");
     expect(tool("zizmor", "--version").stdout).toContain("1.31.1");
   });
 

@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
-  cpSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -64,8 +63,6 @@ beforeEach(() => {
     mkdirSync(dirname(join(repo, file)), { recursive: true });
     copyFileSync(join(ROOT, file), join(repo, file));
   }
-
-  cpSync(join(ROOT, ".mise"), join(repo, ".mise"), { recursive: true });
 
   symlinkSync(join(ROOT, "node_modules"), join(repo, "node_modules"));
   mkdirSync(join(repo, "hooks"));
