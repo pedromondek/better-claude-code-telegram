@@ -10,5 +10,6 @@ minimum_release_age = "7d"
 "aqua:zizmorcore/zizmor" = "1.31.1"
 "aqua:taiki-e/cargo-llvm-cov" = "0.9.1"
 "aqua:EmbarkStudios/cargo-deny" = "0.20.2"
+"aqua:orhun/git-cliff" = "2.14.2"
 "github:sourcefrog/cargo-mutants" = "27.1.0"
 "github:nextest-rs/nextest" = { version = "0.9.149", version_prefix = "cargo-nextest-" }
