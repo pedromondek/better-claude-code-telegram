@@ -32,14 +32,22 @@ describe("each .github file has the test with the same name in the mirrored __te
     expect(tests).toEqual(sources);
   });
 
-  it(".github/<name>.yml and .github/<name>.yaml mirror __tests__/config/<name>.test.mjs", () => {
+  it(".github/<name>.yml, .github/<name>.yaml and the root .coderabbit.yaml mirror __tests__/config/<name>.test.mjs", () => {
     const sources = [
       ...namesIn(GITHUB, ".yml"),
       ...namesIn(GITHUB, ".yaml"),
+      ...(existsSync(join(GITHUB, "..", ".coderabbit.yaml"))
+        ? ["coderabbit"]
+        : []),
     ].toSorted();
     const tests = namesIn(join(TESTS, "config"), ".test.mjs");
 
-    expect(sources).toEqual(["actionlint", "dependabot", "zizmor"]);
+    expect(sources).toEqual([
+      "actionlint",
+      "coderabbit",
+      "dependabot",
+      "zizmor",
+    ]);
     expect(tests).toEqual(sources);
   });
 
