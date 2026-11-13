@@ -1,11 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   gitVariablesIn,
+  isolateHome,
   PRE_PUSH_CONTROL_VARIABLES,
 } from "../../vitest.setup.ts";
 
@@ -80,6 +87,19 @@ describe("vitest.setup", () => {
     expect(git("var", "GIT_COMMITTER_IDENT")).toMatch(
       /^probe <probe@example\.com> /,
     );
+  });
+
+  it("creates the isolated HOME under the given folder and removes it with everything inside", () => {
+    const { home, remove } = isolateHome(dir);
+
+    mkdirSync(join(home, ".claude"));
+    writeFileSync(join(home, ".claude", "settings.json"), "{}");
+
+    expect(home.startsWith(join(dir, "bcct-home-"))).toBe(true);
+
+    remove();
+
+    expect(existsSync(home)).toBe(false);
   });
 
   it("points HOME to a temporary folder", () => {

@@ -1,9 +1,24 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterAll } from "vitest";
 
 export function gitVariablesIn(env: NodeJS.ProcessEnv): string[] {
   return Object.keys(env).filter((name) => name.startsWith("GIT_"));
+}
+
+export function isolateHome(base: string): {
+  home: string;
+  remove: () => void;
+} {
+  const home = mkdtempSync(join(base, "bcct-home-"));
+
+  return {
+    home,
+    remove: (): void => {
+      rmSync(home, { recursive: true, force: true });
+    },
+  };
 }
 
 export const PRE_PUSH_CONTROL_VARIABLES = [
@@ -22,9 +37,11 @@ for (const name of [
   delete process.env[name];
 }
 
-const isolatedHome = mkdtempSync(join(tmpdir(), "bcct-home-"));
+const isolated = isolateHome(tmpdir());
 
-process.env.HOME = isolatedHome;
-process.env.USERPROFILE = isolatedHome;
+process.env.HOME = isolated.home;
+process.env.USERPROFILE = isolated.home;
 delete process.env.CLAUDE_CONFIG_DIR;
 delete process.env.TELEGRAM_STATE_DIR;
+
+afterAll(isolated.remove);
