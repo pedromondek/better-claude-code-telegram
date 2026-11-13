@@ -30,7 +30,7 @@ pub(crate) const COLOR_VARIABLES: [&str; 11] = [
 const QUIET: Duration = Duration::from_millis(250);
 const BLIND_START: Duration = Duration::from_millis(1000);
 const POLL: Duration = Duration::from_millis(10);
-const LIMIT: Duration = Duration::from_secs(10);
+const LIMIT: Duration = Duration::from_secs(60);
 const BUFFER: usize = 4096;
 
 #[derive(Debug, Clone)]
