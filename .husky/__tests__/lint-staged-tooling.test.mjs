@@ -383,6 +383,7 @@ describe("lint-staged: Rust", () => {
       "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
       "rust:build":
         "cargo build --manifest-path rust/Cargo.toml --release --locked",
+      "rust:clean": "cargo clean --manifest-path rust/Cargo.toml",
     });
   });
 
