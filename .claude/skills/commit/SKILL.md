@@ -17,7 +17,7 @@ Every new user message ends the skill in the hook: a prose approval, the "I comm
 - **Authorization.** A git operation that changes state (commit, push, branch, PR, merge, reset, rebase, `branch -d/-f`) runs only when the user asks for it, and the request covers only that operation. Fixing a mistake (moving a commit, deleting a branch) needs approval too. Editing files, installing dependencies and running checks need no approval.
 - **Never `--no-verify`**, and never skip or weaken a hook. A red hook means fix the cause and repeat.
 - **Never a `Co-Authored-By` trailer** or any AI attribution in a commit message or PR body.
-- **Questions** go through `AskUserQuestion`, recommendation first with `(Recommended)` in the label, `multiSelect` when the choices do not exclude each other, independent questions in the same call (up to 4). Open text, such as approving a draft, stays in prose. The argument pre-answers: what it already answered is not asked again, only confirmed in one line. A pre-answer never replaces an approval that is required case by case (every git operation outside the approved plan).
+- **Questions** go through `AskUserQuestion`, recommendation first with `(Recommended)` in the label, `multiSelect` when the choices do not exclude each other, independent questions in the same call (up to 4). A draft, such as the commit message, is approved through `AskUserQuestion` too, its text in the `preview`. The argument pre-answers: what it already answered is not asked again, only confirmed in one line. A pre-answer never replaces an approval that is required case by case (every git operation outside the approved plan).
 - **Only finished work becomes a commit**: nothing with a red test or half a change.
 
 ## Argument

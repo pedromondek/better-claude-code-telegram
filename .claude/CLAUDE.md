@@ -50,13 +50,14 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `/commit` - groups the changes by theme, validates each commit and pushes with approval; the only path to `git commit` and `git push`.
 - `/pre-commit` - reviews the changes and runs the checks, then hands over to `/commit`.
 - `/decision` - records a technical decision in `docs/decisions/<Scope>/` as Decision, Why, Discarded, and updates the scope index.
+- `/release-notes` - writes the public notes of the next release in `docs/releases/<major.minor.patch>/<stage>.md` from the git-cliff draft, in en-us with a collapsed pt-br block, and gets each part approved; the repository work stays in the omitted list.
 - `.claude/hooks/` - hooks that enforce these conventions on tool calls (routing commit and push through `/commit`, formatting and linting edited files, checking the lockfile after dependency commands); read them before relying on their behavior.
 
 ## Questions in skills
 
 Applies to every skill in `.claude/skills/` that asks the developer something:
 
-- A question with options goes through `AskUserQuestion`, with the recommendation first (`(Recommended)` in the label) and `multiSelect` when the choices do not exclude each other. Independent questions of the same moment go together in one call (up to 4); one that depends on another answer goes in a later call. Open text, such as approving a draft, stays in prose.
+- A question with options goes through `AskUserQuestion`, with the recommendation first (`(Recommended)` in the label) and `multiSelect` when the choices do not exclude each other. Independent questions of the same moment go together in one call (up to 4); one that depends on another answer goes in a later call. A draft is approved through `AskUserQuestion` too: one question per part, its text in the `preview` and "Approve (Recommended)" first, the adjustment through "Other". Only text that does not exist yet, such as a free description the developer gives, stays in prose.
 - The argument pre-answers. The developer may pass the answer in the command itself, as a keyword or in free language (`/commit stage`, `/pre-commit skip the review`). What the argument answers is not asked again: confirm in one line what was understood. An ambiguous argument falls back to the question.
 - Each skill declares the answers it accepts in the `argument-hint` of its frontmatter and in an **Argument** section at the top. A skill that calls another passes along the part of the argument that belongs to the other.
 - A pre-answer is valid only for that run and never replaces an approval the rules require case by case, such as each git operation outside the approved plan.
