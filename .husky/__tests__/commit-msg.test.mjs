@@ -14,6 +14,7 @@ import { HUSKY_HOOK_ARGS } from "./support/husky-hook.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const HOOK = join(ROOT, ".husky", "commit-msg");
+const HOOK_TIMEOUT = 30_000;
 
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
@@ -224,7 +225,7 @@ describe("validateCommitMessage", () => {
   });
 });
 
-describe(".husky/commit-msg", () => {
+describe(".husky/commit-msg", { timeout: HOOK_TIMEOUT }, () => {
   it("exits 0 with no output for a valid message", () => {
     const result = runHook("🔧 chore(root): subject\n");
 

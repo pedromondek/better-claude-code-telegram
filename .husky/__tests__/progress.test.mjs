@@ -8,6 +8,7 @@ import { HUSKY_HOOK_ARGS } from "./support/husky-hook.mjs";
 
 const PROGRESS = join(import.meta.dirname, "..", "lib", "progress.sh");
 const LABEL = "typecheck...";
+const SLOW_TICK_SECONDS = 30;
 
 const hasUtilLinuxScript =
   spawnSync("script", ["--version"], { encoding: "utf8" }).stdout?.includes(
@@ -152,9 +153,12 @@ describe("wait_step", () => {
 
     it("returns as soon as the step ends, without waiting for the next notice", () => {
       const started = Date.now();
-      runPiped(0, { seconds: 0.2 });
+      runPiped(0, {
+        seconds: 0.2,
+        env: { PROGRESS_TICK_SECONDS: String(SLOW_TICK_SECONDS) },
+      });
 
-      expect(Date.now() - started).toBeLessThan(800);
+      expect(Date.now() - started).toBeLessThan((SLOW_TICK_SECONDS * 1000) / 2);
     });
 
     it("tells on a new line, at every interval, that the step is still running and for how long", () => {

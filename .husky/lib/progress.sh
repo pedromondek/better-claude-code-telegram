@@ -76,9 +76,10 @@ progress_heartbeat() {
   owner_pid=$3
   step_file=$4
   interval=${PROGRESS_HEARTBEAT_SECONDS:-10}
+  tick=${PROGRESS_TICK_SECONDS:-1}
   waited=0
-  while sleep 1 >/dev/null 2>&1 && kill -0 "$step_pid" 2>/dev/null && kill -0 "$owner_pid" 2>/dev/null; do
-    waited=$((waited + 1))
+  while sleep "$tick" >/dev/null 2>&1 && kill -0 "$step_pid" 2>/dev/null && kill -0 "$owner_pid" 2>/dev/null; do
+    waited=$((waited + tick))
     [ $((waited % interval)) -eq 0 ] || continue
     count=$(progress_count "$step_file" "$waited")
     if [ -n "$count" ]; then
