@@ -41,7 +41,7 @@ Survey without changing anything:
 - open PR for the branch (`gh pr view --json number,url,body`), only when a remote exists;
 - working tree: `git status --short` and `git diff`, including untracked files.
 
-The issue of the branch comes from its name: `0042-short-title` is issue #42 (`npm run branch -- check <name>` checks the pattern). A branch outside the pattern (other than `main`, `revert/*`, `dependabot/*`) is refused by the hooks: propose `npm run branch -- <issue number>` (or `npm run branch -- "<title>"` to open an issue and the branch together) instead of committing there.
+The issue of the branch comes from its name: `0042-short-title` is issue #42 (`npm run branch -- check <name>` checks the pattern). A branch outside the pattern (other than `main`, `revert/*`, `dependabot/*` and the version branch `release/v<version>` that the prepare release workflow opens) is refused by the hooks: propose `npm run branch -- <issue number>` (or `npm run branch -- "<title>"` to open an issue and the branch together) instead of committing there.
 
 If `/pre-commit` did not run on these changes, offer to run it first. Weigh what is already ahead of the remote (`git diff --stat @{upstream}..HEAD`: changed sources, test support files, dependencies or config all force the mutation run over everything) and, if it is already heavy, recommend pushing before committing more. About 10 commits is a reference, not a limit.
 

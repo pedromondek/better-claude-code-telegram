@@ -14,7 +14,7 @@ export const VERSION_FILES = [
   "plugins/bcct/.claude-plugin/plugin.json",
 ];
 
-const STAGES = ["alpha", "beta", "rc", "stable"];
+export const STAGES = ["alpha", "beta", "rc", "stable"];
 const VERSION_PATTERN =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?$/;
 const JSON_VERSION = /^( {2}"version": ")([^"]+)(")/m;
@@ -151,20 +151,24 @@ export function setVersion(root, version) {
   }
 }
 
-function gitCliffBump(root) {
+export function gitCliff(root, args, purpose) {
   const result = spawnSync(
     "sh",
-    [join(root, "scripts", "mise-exec.sh"), "git-cliff", "--bumped-version"],
+    [join(root, "scripts", "mise-exec.sh"), "git-cliff", ...args],
     { cwd: root, encoding: "utf8" },
   );
 
   if (result.status !== 0) {
-    throw new Error(
-      `git-cliff could not compute the next version:\n${result.stderr.trim()}`,
-    );
+    throw new Error(`git-cliff could not ${purpose}:\n${result.stderr.trim()}`);
   }
 
-  return result.stdout.trim().replace(/^v/, "");
+  return result.stdout;
+}
+
+export function gitCliffBump(root) {
+  return gitCliff(root, ["--bumped-version"], "compute the next version")
+    .trim()
+    .replace(/^v/, "");
 }
 
 export function run(args, { root, bumped, out, err }) {

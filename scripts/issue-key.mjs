@@ -8,7 +8,12 @@ const BRANCH_PATTERN = new RegExp(
 const PR_TITLE_PATTERN = new RegExp(`^(\\d{${KEY_DIGITS},}): \\S`, "u");
 const CLOSING_KEYWORD_PATTERN =
   /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+#(\d+)\b/giu;
-const EXEMPT_BRANCHES = [/^main$/u, /^revert\/.+/u, /^dependabot\/.+/u];
+const EXEMPT_BRANCHES = [
+  /^main$/u,
+  /^revert\/.+/u,
+  /^dependabot\/.+/u,
+  /^release\/v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:alpha|beta|rc)\.[1-9]\d*)?$/u,
+];
 
 export function issueKey(number) {
   if (!Number.isInteger(number) || number <= 0) {

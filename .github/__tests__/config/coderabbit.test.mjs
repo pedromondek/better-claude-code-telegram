@@ -62,6 +62,11 @@ describe(".coderabbit.yaml", () => {
     expect(merge_risk_instructions.length).toBeLessThanOrEqual(RISK_LIMIT);
   });
 
+  it("keeps its summary in the walkthrough comment and never writes the pull request description, where the release notes live", () => {
+    expect(config.reviews.high_level_summary_in_walkthrough).toBe(true);
+    expect(config.reviews).not.toHaveProperty("high_level_summary_placeholder");
+  });
+
   it("enriches new issues and suggests labels without applying them", () => {
     expect(config.issue_enrichment).toEqual({
       auto_enrich: { enabled: true },

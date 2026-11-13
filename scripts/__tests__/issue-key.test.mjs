@@ -96,16 +96,32 @@ describe("isAllowedBranch", () => {
     "main",
     "revert/abc1234",
     "dependabot/npm_and_yarn/grammy-1.46.0",
+    "release/v0.1.0-alpha.1",
+    "release/v0.2.0-rc.12",
+    "release/v1.0.0",
   ])("accepts %s, in the pattern or an exception", (name) => {
     expect(isAllowedBranch(name)).toBe(true);
   });
 
-  it.each(["upgrade-node-24", "38-x", "main2", "revert", "dependabot"])(
-    "refuses %s",
-    (name) => {
-      expect(isAllowedBranch(name)).toBe(false);
-    },
-  );
+  it.each([
+    "upgrade-node-24",
+    "38-x",
+    "main2",
+    "revert",
+    "dependabot",
+    "release",
+    "release/0.1.0",
+    "release/v0.1",
+    "release/v0.1.0-",
+    "release/v0.1.0-alpha",
+    "release/v0.1.0-alpha.0",
+    "release/v0.1.0-gamma.1",
+    "release/v01.0.0",
+    "release/v0.1.0-alpha.1-x",
+    "x-release/v0.1.0",
+  ])("refuses %s", (name) => {
+    expect(isAllowedBranch(name)).toBe(false);
+  });
 });
 
 describe("prTitle", () => {

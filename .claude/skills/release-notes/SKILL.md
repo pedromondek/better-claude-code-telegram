@@ -7,27 +7,27 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, AskUserQuestion
 
 # /release-notes
 
-Write the notes of the next release in `docs/releases/<major.minor.patch>/<stage>.md`, the file the release workflow reads for the body of the GitHub Release. One folder per version keeps its whole cycle together: `0.1.0-alpha.2` goes to `docs/releases/0.1.0/alpha.2.md`, `0.1.0-rc.1` to `docs/releases/0.1.0/rc.1.md` and the stable `0.1.0` to `docs/releases/0.1.0/stable.md`. If the file already has content, ask with `AskUserQuestion` whether to replace it.
+Write the notes of the next release in the description of the version pull request (`release/v<version>`), between the lines `<!-- notes -->` and `<!-- /notes -->`, which the prepare workflow (`prepare-release.yml`, through `npm run release:pr -- prepare`) opens with the git-cliff draft there, under a `<!-- draft -->` line. The `Release notes` check (`release-notes.yml`) keeps the pull request red while that line is between the markers or the notes are empty, so the notes written here leave it out. On merge, the release workflow reads only what is between the two markers, uses it as the body of the GitHub Release and records it in `docs/releases/<major.minor.patch>/<stage>.md` (`0.1.0-alpha.2` in `docs/releases/0.1.0/alpha.2.md`, the stable `0.1.0` in `docs/releases/0.1.0/stable.md`) in the commit that records the checksums. The notes are drafted in a scratchpad file, approved part by part and only then written to the description with `gh pr edit <n> --body-file -`, keeping everything outside the markers as it was. If the markers already hold notes other than the git-cliff draft (no `<!-- draft -->` line), ask with `AskUserQuestion` whether to replace them. After the edit, `npm run release:pr -- check-notes` with the new description in `PR_BODY` gives the same answer as the check.
 
 Questions go through `AskUserQuestion`, recommendation first with `(Recommended)` in the label, and each draft part is approved there with its text in the `preview`. When the user answers through Telegram, only the question reaches them: the explanation, the options and the numbers go inside the question, never only in the terminal.
 
 ## Argument
 
-`$ARGUMENTS` can pre-answer: the version (`0.1.0-alpha.1`; without it, `npm run release:version -- check` gives the current one), `replace` (overwrites the file without asking) and `no omitted` (closes the file without offering the omitted items). What the argument answered is not asked again.
+`$ARGUMENTS` can pre-answer: the version (`0.1.0-alpha.1`; without it, `npm run release:version -- check` gives the current one, and `gh pr list --head release/v<version>` gives the pull request), `replace` (replaces the notes in the description without asking) and `no omitted` (closes the notes without offering the omitted items). What the argument answered is not asked again.
 
 ## Reader
 
 - **Only the public.** The notes are for whoever installs the plugin and uses Claude Code through Telegram: features, fixes the user notices, speed, setup and update, and security in general terms. Product language, without function, file, script, crate or flag names, except the commands the user types (`bcct update`, `/bcct:health`).
 - **Repository work stays out.** Hooks, CI, tests, mutation, scripts and the Claude Code setup of the repository do not enter the notes; they go to the omitted list, where the user can still pick one that the public notices.
 - **A release with nothing for the public** says so in one summary bullet and lists the rest as omitted.
-- **When in doubt, ask.** An item whose place is not clear (the user notices it or not, a security detail that may not fit the public) or whose wording is not clear goes to the user with `AskUserQuestion` before the file is closed:
+- **When in doubt, ask.** An item whose place is not clear (the user notices it or not, a security detail that may not fit the public) or whose wording is not clear goes to the user with `AskUserQuestion` before the notes are closed:
   - **Place:** options "Include" and "Omit", recommendation first, with the proposed bullet in the question.
   - **Wording:** two or three versions of the bullet as options, each in its `preview`, recommendation first.
   - Independent questions go together in one call (up to 4); an item without doubt is not asked.
 
 ## The body of the Release
 
-The file is the body of the GitHub Release as it is, so it has the two languages: en-us first, then the same sections in pt-br inside a collapsed block.
+What goes between the markers is the body of the GitHub Release as it is, so it has the two languages: en-us first, then the same sections in pt-br inside a collapsed block.
 
 ```
 ### 📋 Summary
@@ -53,7 +53,7 @@ The pt-br block is a faithful version of the en-us one, section by section and i
 
 ## Formatting rules
 
-- No title at the top: the Release has the version as its name. The file starts with `### 📋 Summary`.
+- No title at the top: the Release has the version as its name. The notes start with `### 📋 Summary`.
 - No horizontal rules (`---`) and no count of files or lines.
 - GitHub markdown: `###` for the sections, `**bold**`, `- bullets`; `<details>` only for the pt-br block.
 - A dependency update the user notices names the version before and after (`grammy 1.21 → 1.46`), checked in the lock of the last tag and of `HEAD`.
@@ -62,7 +62,7 @@ The pt-br block is a faithful version of the en-us one, section by section and i
 
 - **Section title:** starts with the fixed emoji of the area, the same in both languages: 💬 Telegram channel, 🧰 Setup, health and update, 🧩 Plugin and binary, 🎙️ Voice transcription, 📊 Status line, 🔐 Security. A new area picks an emoji not in use yet and keeps it in every release.
 - **Item:** each change starts with the emoji of its kind, right after `- `: ✨ new, 🐛 fix, ⚡ performance, 🔐 security, 💥 breaking change, 🔥 removal, ♻️ redone. The kind says the nature of the change and the area stays in the title: an item never repeats the emoji of its own section.
-- **Legend:** right after the summary of each language, with only the item emojis that language block uses, separated by `·`. GitHub has no script that adds it, so the file carries it.
+- **Legend:** right after the summary of each language, with only the item emojis that language block uses, separated by `·`. GitHub has no script that adds it, so the notes carry it.
 - **No item emoji** in the summary bullets: they are short sentences about the release as a whole.
 
 ## Structure
@@ -81,7 +81,7 @@ Use only the sections that apply:
 
 - `### 📋 Summary` in two to four bullets: what someone who updates notices first, with **bold** at the start when it helps scanning. A breaking change, a new requirement (Node, git, a command to run after updating) or a step the user has to take comes first.
 - `### 🔐 Security` only in general terms. The detail of a fix (which path answered what) stays out of the notes until every installed version can update.
-- Self-contained bullets, one change each. Each item appears once in the file.
+- Self-contained bullets, one change each. Each item appears once in the notes.
 
 ## Process
 
@@ -112,7 +112,7 @@ The notes are public: the Release page and anyone who watches the repository rea
 
 ## Omitted items
 
-After writing the file, list **in the terminal (not in the file)** the omitted items, split by why they stayed out:
+After writing the notes, list **in the terminal (not in the notes)** the omitted items, split by why they stayed out:
 
 ```
 **Left out as low impact (confirm if you want any):**

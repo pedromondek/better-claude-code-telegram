@@ -58,6 +58,7 @@
     "lint:plugins": "node scripts/validate-plugins.mjs",
     "tools:lock": "mise lock",
     "release:cliff": "sh scripts/mise-exec.sh git-cliff",
+    "release:pr": "node scripts/release-pr.mjs",
     "release:version": "node scripts/version.mjs",
     "lint:workflows": "sh scripts/mise-exec.sh actionlint && sh scripts/mise-exec.sh zizmor --offline . && sh scripts/mise-exec.sh pinact run --fix=false --no-api",
     "typecheck": "tsc -p tsconfig.json",

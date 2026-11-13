@@ -174,14 +174,16 @@ describe("pullRequestCheckMessage", () => {
     ).toBeNull();
   });
 
-  it.each(["main", "revert/abc", "dependabot/npm_and_yarn/x"])(
-    "does not check the title of a pull request from %s",
-    (branch) => {
-      expect(
-        pullRequestCheckMessage("🔐 security(root): bump x", branch),
-      ).toBeNull();
-    },
-  );
+  it.each([
+    "main",
+    "revert/abc",
+    "dependabot/npm_and_yarn/x",
+    "release/v0.1.0-alpha.1",
+  ])("does not check the title of a pull request from %s", (branch) => {
+    expect(
+      pullRequestCheckMessage("🔐 security(root): bump x", branch),
+    ).toBeNull();
+  });
 
   it("explains the branch pattern when the branch is outside it", () => {
     expect(pullRequestCheckMessage("0043: Fix chatting", "my-branch")).toBe(
