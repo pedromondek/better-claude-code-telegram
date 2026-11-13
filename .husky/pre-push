@@ -205,7 +205,7 @@ unset $(git rev-parse --local-env-vars)
 if [ -n "$PUSHED_RANGE" ]; then
   export MUTATION_RANGE="$PUSHED_RANGE"
 fi
-export CARGO_TARGET_DIR="$ROOT/rust/target"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/rust/target}"
 cd "$WORKTREE" || exit 1
 
 run_step "lint and typecheck" lint

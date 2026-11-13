@@ -475,11 +475,21 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
     it("builds in the target folder of the main tree, not in the temporary worktree", () => {
       useScripts({ "rust:cov": 'echo "TARGET=$CARGO_TARGET_DIR" && exit 1' });
 
-      const result = push();
+      const result = push({ env: { CARGO_TARGET_DIR: "" } });
 
       expect(result.stdout).toContain(
         `TARGET=${realpathSync(repo)}/rust/target`,
       );
+    });
+
+    it("keeps the target folder the developer chose, such as one in memory", () => {
+      useScripts({ "rust:cov": 'echo "TARGET=$CARGO_TARGET_DIR" && exit 1' });
+
+      const result = push({
+        env: { CARGO_TARGET_DIR: "/dev/shm/bcct-target" },
+      });
+
+      expect(result.stdout).toContain("TARGET=/dev/shm/bcct-target");
     });
 
     it("hands the same target folder to the rust mutation", () => {
@@ -487,7 +497,7 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
         "rust:mutation:prepush": 'echo "TARGET=$CARGO_TARGET_DIR"',
       });
 
-      const result = push();
+      const result = push({ env: { CARGO_TARGET_DIR: "" } });
 
       expect(result.stdout).toContain(
         `TARGET=${realpathSync(repo)}/rust/target`,
