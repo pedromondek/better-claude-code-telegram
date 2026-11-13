@@ -2226,6 +2226,22 @@ fn signalled_modes(flow: &str, signal: &str) -> String {
 
 const SIGNAL_DRIVE: &str = "BCCT_SIGNAL_DRIVE";
 
+const QUESTION_LIMIT: Duration = Duration::from_secs(60);
+
+fn asking_a_question() -> bool {
+    use rustix::termios::{LocalModes, tcgetattr};
+
+    tcgetattr(std::io::stdin()).is_ok_and(|modes| !modes.local_modes.contains(LocalModes::ICANON))
+}
+
+fn wait_for_a_question() {
+    let started = Instant::now();
+
+    while !asking_a_question() && started.elapsed() < QUESTION_LIMIT {
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
 #[test]
 #[ignore = "runs inside a terminal, started by the test below"]
 fn signal_driver() {
@@ -2243,7 +2259,7 @@ fn signal_driver() {
         .spawn()
         .unwrap();
 
-    thread::sleep(Duration::from_millis(1000));
+    wait_for_a_question();
     kill_process(Pid::from_child(&child), signal).unwrap();
 
     let status = child.wait().unwrap();
