@@ -9,6 +9,7 @@ export default defineConfig({
       "scripts/__tests__/**/*.test.mjs",
       ".husky/__tests__/**/*.test.mjs",
       ".claude/hooks/__tests__/**/*.test.mjs",
+      ".github/__tests__/**/*.test.mjs",
     ],
     exclude: ["**/node_modules/**", E2E_TESTS],
     setupFiles: ["./vitest.setup.ts"],

@@ -55,6 +55,10 @@ export default {
     tool(`pinact run --fix=false --no-api ${quoted(files)}`),
   ],
   ".github/actionlint.{yml,yaml}": () => [tool("actionlint")],
+  ".github/dependabot.{yml,yaml}": (files) => [
+    tool(`zizmor --offline ${quoted(files)}`),
+  ],
+  ".github/zizmor.{yml,yaml}": () => [tool("zizmor --offline .")],
   "{.husky/*,.husky/**/*.sh}": () => ["npm run --silent test:hooks"],
   "scripts/**/*.sh": (files) => [
     `vitest run --passWithNoTests ${quoted(files.map(scriptTestOf))}`,

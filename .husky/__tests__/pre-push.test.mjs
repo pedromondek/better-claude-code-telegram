@@ -653,6 +653,8 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       ".github/workflows/ci.yml",
       ".github/actions/setup/action.yml",
       ".github/actionlint.yaml",
+      ".github/dependabot.yml",
+      ".github/zizmor.yml",
     ])("run when the push changes %s", (file) => {
       const remote = git("rev-parse", "HEAD");
       useScripts({ "lint:workflows": "echo WORKFLOWS_RAN && exit 1" });
@@ -664,6 +666,21 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       expect(result.stdout).toContain("✗ workflow linters failed");
       expect(result.stdout).toContain("WORKFLOWS_RAN");
     });
+
+    it.each(["mise.toml", "mise.lock"])(
+      "run when the push changes %s, which pins the linters",
+      (file) => {
+        commitFile(".github/workflows/ci.yml", "name: x\n");
+        const remote = git("rev-parse", "HEAD");
+        useScripts({ "lint:workflows": "echo WORKFLOWS_RAN && exit 1" });
+        commitFile(file, "[tools]\n");
+
+        const result = push({ input: pushLine(remote) });
+
+        expect(result.status).toBe(1);
+        expect(result.stdout).toContain("WORKFLOWS_RAN");
+      },
+    );
 
     it("do not run when the push does not touch a workflow", () => {
       commitFile(".github/workflows/ci.yml", "name: x\n");

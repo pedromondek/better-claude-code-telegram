@@ -205,6 +205,16 @@ describe("lint-staged: workflows and actions", () => {
     ]);
   });
 
+  it("passes zizmor on the Dependabot config, which it audits for the cooldown", () => {
+    const file = ".github/dependabot.yml";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      tool(`zizmor --offline ${quoted([file])}`),
+    ]);
+  });
+
   it.each([
     ".claude-plugin/marketplace.json",
     "plugins/bcct/.claude-plugin/plugin.json",
@@ -215,6 +225,16 @@ describe("lint-staged: workflows and actions", () => {
       ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
       "npm run --silent lint:plugins",
+    ]);
+  });
+
+  it("audits every workflow again when the zizmor config changes", () => {
+    const file = ".github/zizmor.yml";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      tool("zizmor --offline ."),
     ]);
   });
 
@@ -345,8 +365,9 @@ describe("lint-staged: Rust", () => {
       "rust:check":
         "cargo check --manifest-path rust/Cargo.toml --all-targets --locked --quiet --message-format=short",
       "rust:fmt": "cargo fmt --manifest-path rust/Cargo.toml --all --check",
-      "rust:lint":
-        "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings && npm run --silent rust:fmt",
+      "rust:clippy":
+        "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings",
+      "rust:lint": "npm run --silent rust:clippy && npm run --silent rust:fmt",
       "rust:test": tool(
         "cargo nextest run --manifest-path rust/Cargo.toml --locked",
       ),

@@ -33,6 +33,7 @@
   "scripts": {
     "commit": "czg",
     "branch": "node scripts/branch.mjs",
+    "merged-pr": "node scripts/merged-pr.mjs",
     "setup": "node -r ./scripts/require-node.cjs scripts/setup.mjs",
     "setup:language": "node -r ./scripts/require-node.cjs scripts/setup.mjs language",
     "setup:plugin": "node -r ./scripts/require-node.cjs scripts/setup.mjs plugin",
@@ -77,7 +78,8 @@
     "rust:check": "cargo check --manifest-path rust/Cargo.toml --all-targets --locked --quiet --message-format=short",
     "rust:fmt": "cargo fmt --manifest-path rust/Cargo.toml --all --check",
     "rust:fmt:fix": "cargo fmt --manifest-path rust/Cargo.toml --all",
-    "rust:lint": "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings && npm run --silent rust:fmt",
+    "rust:clippy": "cargo clippy --manifest-path rust/Cargo.toml --all-targets --locked -- -D warnings",
+    "rust:lint": "npm run --silent rust:clippy && npm run --silent rust:fmt",
     "rust:test": "sh scripts/mise-exec.sh cargo nextest run --manifest-path rust/Cargo.toml --locked",
     "rust:bless": "BCCT_BLESS=1 sh scripts/mise-exec.sh cargo nextest run --manifest-path rust/Cargo.toml --locked -E 'test(/^blessing_/)' && prettier --write --log-level warn rust/crates/bcct/tests/fixtures",
     "rust:cov": "sh scripts/mise-exec.sh cargo llvm-cov nextest --manifest-path rust/Cargo.toml --locked --fail-under-lines 100",
@@ -114,7 +116,8 @@
     "secretlint": "13.0.7",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
-    "vitest": "5.0.5"
+    "vitest": "5.0.5",
+    "yaml": "2.9.1"
   },
   "overrides": {
     "typed-rest-client": {

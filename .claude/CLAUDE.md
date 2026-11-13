@@ -12,6 +12,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `scripts/` - setup, health, release, mutation, coverage and git helpers, each with its test in `scripts/__tests__/`.
 - `rust/` - the Rust workspace of the `bcct` binary (`rust/crates/bcct/`), with the toolchain pinned in `rust-toolchain.toml` at the root and its lints, `clippy.toml`, `rustfmt.toml` and `deny.toml` in `rust/`.
 - `.husky/` - git hooks, with their tests in `.husky/__tests__/`.
+- `.github/` - `workflows/ci.yml` only orchestrates: it calls one reusable task per job (`push-checks.yml` runs the pre-push itself on Linux, with the mutation kept local; `check-rust-platforms.yml` runs clippy and the Rust tests on macOS and Windows; `check-pull-request.yml` checks the title and the new dependencies) and closes with the `CI passed` aggregate check, and each task can also be dispatched or re-run on its own; `dependabot.yml` opens only security updates (version updates are off), and a Dependabot rule in the repository settings limits them to high and critical alerts. `.github/__tests__/` mirrors each of them with a test (`layout.test.mjs` requires the mirror).
 - `docs/` - `docs/setup/` (setup guide) and `docs/decisions/<Scope>/NNN-slug.md` (one file per decision, `000` is the scope index).
 
 ## Main scripts
@@ -22,7 +23,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `npm run lint:plugins` - `claude plugin validate` on every plugin of the marketplace (strict except the upstream one) with a temporary config folder, so it never touches the one in use; without the `claude` CLI it warns and skips, except in CI.
 - `npm run format` / `format:check` / `format:file -- <files>` - Prettier.
 - `npm run test:mutation`, `test:mutation:changed`, `test:mutation:score`, `test:mutation:baseline` - Stryker.
-- `npm run rust:check` (`cargo check`, short and quiet, for the edit loop), `rust:lint` (clippy with `-D warnings` and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants, always `--in-place`), `rust:build` (release binary). The cargo tools come pinned through mise.
+- `npm run rust:check` (`cargo check`, short and quiet, for the edit loop), `rust:lint` (`rust:clippy`, clippy with `-D warnings`, and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants, always `--in-place`), `rust:build` (release binary). The cargo tools come pinned through mise.
 - `npm run tools:lock` - rewrites `mise.lock` after a change in `mise.toml`; mise refuses any tool version younger than 7 days.
 - `npm run check:commit` - runs the pre-push checks (without mutation) on a commit in a temporary worktree.
 - `npm run check:private` - scans the staged changes for personal data.

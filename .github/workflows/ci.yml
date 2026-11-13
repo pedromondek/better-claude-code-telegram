@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Every task, or a single one to run again on its own
+        required: true
+        type: choice
+        default: All
+        options:
+          - All
+          - Checks
+          - Rust on macOS and Windows
+      pr:
+        description: Merged pull request whose merge commit and range the checks validate
+        required: true
+        type: choice
+        options:
+          - Last merged PR
+          - Second to last merged PR
+          - Third to last merged PR
+      pr_number:
+        description: Another merged pull request (number), which wins over the select
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    name: Checks
+    if: inputs.stage != 'Rust on macOS and Windows'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/push-checks.yml
+    with:
+      pr: ${{ inputs.pr }}
+      pr_number: ${{ inputs.pr_number }}
+
+  rust:
+    name: Rust
+    if: inputs.stage != 'Checks'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/check-rust-platforms.yml
+
+  pull-request:
+    name: Pull request
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/check-pull-request.yml
+
+  ci-passed:
+    name: CI passed
+    needs:
+      - checks
+      - rust
+      - pull-request
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: A task failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
