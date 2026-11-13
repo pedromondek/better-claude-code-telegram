@@ -344,7 +344,7 @@ describe("lint-staged: Rust", () => {
         "cargo deny --manifest-path rust/Cargo.toml check advisories",
       ),
       "rust:mutation": tool(
-        "cargo mutants --manifest-path rust/Cargo.toml --test-tool=nextest --cargo-test-arg=--max-fail=1:immediate",
+        "cargo mutants --manifest-path rust/Cargo.toml --in-place --test-tool=nextest --cargo-test-arg=--max-fail=1:immediate",
       ),
       "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
       "rust:build":

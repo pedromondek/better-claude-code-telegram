@@ -110,7 +110,15 @@ pub(crate) fn strings(value: &Value) -> Vec<String> {
 }
 
 pub(crate) fn repo_root() -> PathBuf {
-    fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")).unwrap()
+    let root = fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")).unwrap();
+
+    assert!(
+        root.join("scripts").is_dir() && root.join("plugins").is_dir(),
+        "the tests run outside the repository ({}): run cargo-mutants with --in-place",
+        root.display()
+    );
+
+    root
 }
 
 pub(crate) fn substitute(text: &str, root: &Path) -> String {

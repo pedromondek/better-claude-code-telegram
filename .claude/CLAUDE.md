@@ -21,7 +21,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `npm run lint` - oxlint, ESLint and `tsc`; `npm run lint:typos`, `lint:secrets`, `lint:lockfile`.
 - `npm run format` / `format:check` / `format:file -- <files>` - Prettier.
 - `npm run test:mutation`, `test:mutation:changed`, `test:mutation:score`, `test:mutation:baseline` - Stryker.
-- `npm run rust:check` (`cargo check`, short and quiet, for the edit loop), `rust:lint` (clippy with `-D warnings` and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants), `rust:build` (release binary). The cargo tools come pinned through mise.
+- `npm run rust:check` (`cargo check`, short and quiet, for the edit loop), `rust:lint` (clippy with `-D warnings` and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants, always `--in-place`), `rust:build` (release binary). The cargo tools come pinned through mise.
 - `npm run tools:lock` - rewrites `mise.lock` after a change in `mise.toml`; mise refuses any tool version younger than 7 days.
 - `npm run check:commit` - runs the pre-push checks (without mutation) on a commit in a temporary worktree.
 - `npm run check:private` - scans the staged changes for personal data.
