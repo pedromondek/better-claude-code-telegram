@@ -480,10 +480,11 @@ struct Setup<'a> {
 impl<'a> Setup<'a> {
     fn new(
         var: &'a dyn Fn(&str) -> Option<OsString>,
+        home: PathBuf,
+        system: System,
         stdout: &'a mut dyn Write,
         stderr: &'a mut dyn Write,
     ) -> Self {
-        let home = std::env::home_dir().unwrap_or_default();
         let on_terminal = io::stdout().is_terminal();
         let filled = |name: &str| var(name).is_some_and(|value| !value.is_empty());
         #[cfg(unix)]
@@ -502,7 +503,7 @@ impl<'a> Setup<'a> {
             paths: SetupPaths::resolve(var, &home),
             hf_cache: huggingface_cache_dir(var, &home),
             api_root: api_root(var),
-            system: Rc::new(System::from_process()),
+            system: Rc::new(system),
             interruption: Interruption::new(),
             journal: Journal::new(),
             home,
@@ -1562,7 +1563,7 @@ fn text_args(args: &[OsString]) -> Vec<String> {
 pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
     let var = |name: &str| std::env::var_os(name);
     let args = text_args(args);
-    let mut setup = Setup::new(&var, stdout, stderr);
+    let mut setup = process_setup(&var, stdout, stderr);
 
     match args.first().map(String::as_str) {
         Some("--check") => setup.check(args.get(1..).unwrap_or_default()),
@@ -1587,9 +1588,23 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
     }
 }
 
+fn process_setup<'a>(
+    var: &'a dyn Fn(&str) -> Option<OsString>,
+    stdout: &'a mut dyn Write,
+    stderr: &'a mut dyn Write,
+) -> Setup<'a> {
+    Setup::new(
+        var,
+        std::env::home_dir().unwrap_or_default(),
+        System::from_process(),
+        stdout,
+        stderr,
+    )
+}
+
 pub fn run_uninstall_process(stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
     let var = |name: &str| std::env::var_os(name);
-    let mut setup = Setup::new(&var, stdout, stderr);
+    let mut setup = process_setup(&var, stdout, stderr);
     let mut terminal = create_prompter(&var);
 
     setup.run_uninstall(&mut *terminal)
@@ -1601,6 +1616,30 @@ mod tests {
     use crate::prompt::FakePrompter;
 
     const PLUGIN: &str = "telegram@better-claude-code-telegram";
+
+    fn sandboxed<'a>(
+        var: &'a dyn Fn(&str) -> Option<OsString>,
+        home: &Path,
+        out: &'a mut dyn Write,
+        err: &'a mut dyn Write,
+    ) -> Setup<'a> {
+        Setup::new(var, home.to_path_buf(), System::new(Vec::new()), out, err)
+    }
+
+    #[test]
+    fn a_setup_built_in_the_test_process_lives_in_the_home_and_system_it_is_given() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+
+        assert_eq!(setup.home, folder.path());
+        assert_eq!(setup.home_text, folder.path().to_string_lossy());
+        assert!(setup.paths.app_dir.starts_with(folder.path()));
+        assert!(setup.paths.settings_file.starts_with(folder.path()));
+        assert!(setup.hf_cache.starts_with(folder.path()));
+        assert_eq!(setup.system.path(), None);
+    }
 
     fn tampered_journal(file: &Path) -> Journal {
         let mut journal = Journal::new();
@@ -1620,7 +1659,7 @@ mod tests {
         let var = |_: &str| None::<OsString>;
         let (mut out, mut err) = (Vec::new(), Vec::new());
         let code = {
-            let mut setup = Setup::new(&var, &mut out, &mut err);
+            let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
             let mut ask = FakePrompter::new(true);
 
             setup.journal = tampered_journal(&settings);
@@ -1640,7 +1679,7 @@ mod tests {
         let var = |_: &str| None::<OsString>;
         let (mut out, mut err) = (Vec::new(), Vec::new());
         let messages = messages_for(Locale::EnUs);
-        let setup = Setup::new(&var, &mut out, &mut err);
+        let setup = sandboxed(&var, folder.path(), &mut out, &mut err);
         let target = settings.to_string_lossy().into_owned();
         let change = Change {
             kind: ChangeKind::FileChanged,

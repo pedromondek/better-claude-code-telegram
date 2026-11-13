@@ -37,7 +37,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - Every change comes with tests, covering the error and edge paths and not only the happy path. Write the test before the fix; for a refactor, a test that locks the current behavior before touching the source.
 - Mutation testing is a gate: the pre-push hook mutates the pushed sources, a survivor on a changed line blocks the push, and the rest of a file may not exceed `mutation-baseline.json`. The baseline only goes down (`npm run test:mutation:baseline`); never raise it to get a push through.
 - Never read, print or commit `.env` files or tokens; the bot token only enters through the setup.
-- Tests never touch the real `~/.claude`, the real bot or the real `.git`: they run on a temporary home and temporary repositories (`vitest.setup.ts`).
+- Tests never touch the real `~/.claude`, the real bot or the real `.git`: they run on a temporary home and temporary repositories (`vitest.setup.ts`). In Rust, only the `run_process` entry points read the process (`HOME`, `PATH` and the environment); the code below takes them as parameters, so a unit test builds it with a temporary home and no `PATH`, and a test that starts the binary clears the environment and passes `HOME`.
 - No personal data in commits (emails, machine paths, tokens, other people's accounts): the pre-commit runs `npm run check:private`.
 - Check the editor diagnostics of the files you edited before declaring the work done; use `npm run lint` at the end of a task and the targeted spec in the middle of it.
 - Dependencies: install pinned versions, keep `package.json` and `package-lock.json` in the same commit, and run `npm run lint:lockfile` after changing either.
