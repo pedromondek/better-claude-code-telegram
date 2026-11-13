@@ -31,6 +31,8 @@ export default {
     ];
   },
   "*.{json,md,yml,yaml}": (files) => [`prettier --write ${quoted(files)}`],
+  "{.claude-plugin/marketplace.json,plugins/*/.claude-plugin/plugin.json,plugins/*/hooks/hooks.json,plugins/*/skills/*/SKILL.md}":
+    () => ["npm run --silent lint:plugins"],
   "{package.json,package-lock.json,.lockfile-lintrc.json}": (files) =>
     fromRoot(files).some((file) => dirname(file) === ".")
       ? ["npm run --silent lint:lockfile"]

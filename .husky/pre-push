@@ -212,6 +212,7 @@ run_step "lint and typecheck" lint
 run_step "secrets" lint:secrets
 run_step "typos" lint:typos
 run_step "lockfile" lint:lockfile
+run_step "plugin manifests" lint:plugins
 [ "$RUN_WORKFLOWS" = "1" ] && [ -d .github ] && run_step "workflow linters" lint:workflows
 run_step "unit tests with coverage" "test:cov -- --reporter=minimal --reporter=./scripts/vitest-progress-reporter.mjs" test:cov:changed
 run_step "rust lint" rust:lint

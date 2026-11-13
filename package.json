@@ -54,6 +54,7 @@
     "lint:secrets": "secretlint \"**/*\"",
     "lint:lockfile": "node scripts/check-lockfile-sync.mjs && lockfile-lint",
     "lint:typos": "sh scripts/mise-exec.sh typos",
+    "lint:plugins": "node scripts/validate-plugins.mjs",
     "tools:lock": "mise lock",
     "lint:workflows": "sh scripts/mise-exec.sh actionlint && sh scripts/mise-exec.sh zizmor --offline . && sh scripts/mise-exec.sh pinact run --fix=false --no-api",
     "typecheck": "tsc -p tsconfig.json",

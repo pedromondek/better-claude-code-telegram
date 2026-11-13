@@ -23,6 +23,7 @@ const PASSING = {
   "lint:secrets": "exit 0",
   "lint:typos": "exit 0",
   "lint:lockfile": "exit 0",
+  "lint:plugins": "exit 0",
   "lint:workflows": "exit 0",
   "test:cov": "exit 0",
   "test:cov:changed": "exit 0",

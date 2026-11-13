@@ -205,6 +205,19 @@ describe("lint-staged: workflows and actions", () => {
     ]);
   });
 
+  it.each([
+    ".claude-plugin/marketplace.json",
+    "plugins/bcct/.claude-plugin/plugin.json",
+    "plugins/telegram-hooks/hooks/hooks.json",
+    "plugins/bcct/skills/update/SKILL.md",
+  ])("validates the plugins with claude when %s changes", (file) => {
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      "npm run --silent lint:plugins",
+    ]);
+  });
+
   it("leaves a YAML file outside .github to prettier only", () => {
     expect(tasksFor("docs/example.yml")).toEqual([
       ...everyFileTasks("docs/example.yml"),

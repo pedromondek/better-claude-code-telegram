@@ -19,6 +19,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `npm run setup` (and `setup:<step>`) - interactive setup; `npm run health` checks it.
 - `npm test` - unit suite; `npm run test:e2e` - end-to-end suite; `npm run test:all` - both; `npm run test:hooks` - the hook tests.
 - `npm run lint` - oxlint, ESLint and `tsc`; `npm run lint:typos`, `lint:secrets`, `lint:lockfile`.
+- `npm run lint:plugins` - `claude plugin validate` on every plugin of the marketplace (strict except the upstream one) with a temporary config folder, so it never touches the one in use; without the `claude` CLI it warns and skips, except in CI.
 - `npm run format` / `format:check` / `format:file -- <files>` - Prettier.
 - `npm run test:mutation`, `test:mutation:changed`, `test:mutation:score`, `test:mutation:baseline` - Stryker.
 - `npm run rust:check` (`cargo check`, short and quiet, for the edit loop), `rust:lint` (clippy with `-D warnings` and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants, always `--in-place`), `rust:build` (release binary). The cargo tools come pinned through mise.
