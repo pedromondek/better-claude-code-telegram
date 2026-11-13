@@ -14,6 +14,10 @@ const SECRETS = {
     "@secretlint/secretlint-rule-pattern",
     `const token = "${TELEGRAM_TOKEN}";`,
   ],
+  "Telegram bot token inside a Bot API URL": [
+    "@secretlint/secretlint-rule-pattern",
+    `const url = "https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe";`,
+  ],
   "Google API key": [
     "@secretlint/secretlint-rule-pattern",
     `const key = "AIza${"c".repeat(35)}";`,
@@ -55,6 +59,7 @@ const LOOKALIKES = [
   "const bot = process.env.TELEGRAM_BOT_TOKEN;",
   "const id = 'ghp_short';",
   "const key = 'AIza-not-a-key';",
+  `const chat = '1${"2".repeat(12)}:${"A".repeat(35)}';`,
   "-----BEGIN PUBLIC KEY-----",
 ].join("\n");
 
