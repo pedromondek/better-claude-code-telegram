@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -70,6 +71,12 @@ function fuse() {
     encoding: "utf8",
     env: { ...env(), GIT_EDITOR: "false", EDITOR: "false" },
   });
+}
+
+function hookCopies() {
+  return readdirSync(hookTmp).filter((name) =>
+    name.startsWith("check-commit-hooks."),
+  );
 }
 
 function checkRunsFile() {
@@ -147,6 +154,34 @@ describe("check:commit", { timeout: HOOK_TIMEOUT }, () => {
     expect(git("rev-parse", "HEAD")).toBe(head);
     expect(readFileSync(join(repo, "state.txt"), "utf8")).toBe("GREEN fixed\n");
     expect(git("status", "--porcelain")).toBe("");
+  });
+
+  it("runs the pre-push of the commit it checks, not the one of HEAD, and leaves no copy of it behind", () => {
+    commitFile(
+      ".husky/pre-push",
+      '. "$(dirname "$0")/lib/own.sh"\necho "own pre-push of $(cat state.txt)"\n',
+    );
+    commitFile(".husky/lib/own.sh", "echo own helper\n");
+    const own = git("rev-parse", "HEAD");
+    commitFile(".husky/pre-push", "echo pre-push of HEAD && exit 1\n");
+
+    const result = checkCommit(own);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("own helper");
+    expect(result.stdout).toContain("own pre-push of GREEN");
+    expect(result.stdout).not.toContain("pre-push of HEAD");
+    expect(hookCopies()).toEqual([]);
+  });
+
+  it("falls back to the current pre-push when the commit it checks has none", () => {
+    commitFile("state.txt", "GREEN too\n");
+
+    const result = checkCommit();
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("✓ lint and typecheck OK");
+    expect(hookCopies()).toEqual([]);
   });
 
   it("fails with a clear message when the commit does not exist", () => {

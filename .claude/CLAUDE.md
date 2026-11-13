@@ -25,7 +25,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `npm run test:mutation`, `test:mutation:changed`, `test:mutation:score`, `test:mutation:baseline` - Stryker.
 - `npm run rust:check` (`cargo check`, short and quiet, for the edit loop), `rust:lint` (`rust:clippy`, clippy with `-D warnings`, and `rustfmt --check`), `rust:test` (nextest), `rust:cov` (100% of lines), `rust:deny` (known vulnerabilities and yanked versions), `rust:mutation` (cargo-mutants, always `--in-place`), `rust:build` (release binary), `rust:clean` (`cargo clean`). The cargo tools come pinned through mise. Builds go to `rust/target` by default; set `CARGO_TARGET_DIR` to build elsewhere (the pre-push and `check:commit` respect it), and cap the memory of the job when that folder is in RAM (tmpfs).
 - `npm run tools:lock` - rewrites `mise.lock` after a change in `mise.toml`; mise refuses any tool version younger than 7 days.
-- `npm run check:commit` - runs the pre-push checks (without mutation) on a commit in a temporary worktree.
+- `npm run check:commit` - runs the pre-push checks (without mutation) on a commit in a temporary worktree, with the `.husky` of that commit, so a step added later does not fail an older commit.
 - `npm run check:private` - scans the staged changes for personal data.
 - Run tools through these scripts, never `npx`.
 
