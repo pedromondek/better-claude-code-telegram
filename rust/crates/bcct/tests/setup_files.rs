@@ -1111,6 +1111,55 @@ fn the_setup_swaps_the_rc_line_of_the_clone_and_the_uninstall_removes_the_new_on
 }
 
 #[test]
+fn the_setup_leaves_one_line_when_the_rc_loads_two_clones() {
+    let root = sandbox();
+    let home = root.path().join("home");
+    let rc = home.join(".bashrc");
+    let shell = root.path().join("app/shell.sh");
+    let marker = bcct::shell_rc::SHELL_MARKER;
+    let first = "[ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\"";
+    let second = "[ -f \"/dev/shm/scripts/shell.sh\" ] && . \"/dev/shm/scripts/shell.sh\"";
+    let home_text = home.to_string_lossy().into_owned();
+    let en = messages_for(Locale::EnUs);
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        &rc,
+        format!("a\n\n{marker}\n{first}\n. \"$HOME/.cargo/env\"\n\n{marker}\n{second}\n"),
+    )
+    .unwrap();
+    fs::write(
+        home.join(".zshrc"),
+        format!("{marker}\n{first}\n{second}\n{marker}\n{second}"),
+    )
+    .unwrap();
+    let mut out = Vec::new();
+    let mut journal = Journal::new();
+    let mut printer = Printer::new(&mut out, false, en);
+
+    install_shell_function(
+        &home_text,
+        Some("/bin/bash"),
+        false,
+        &shell,
+        &mut journal,
+        &mut printer,
+    )
+    .unwrap();
+
+    assert_eq!(
+        fs::read_to_string(&rc).unwrap(),
+        format!(
+            "a\n\n{marker}\n{}\n. \"$HOME/.cargo/env\"\n",
+            source_line(&shell.to_string_lossy())
+        )
+    );
+    assert_eq!(
+        fs::read_to_string(home.join(".zshrc")).unwrap(),
+        format!("{marker}\n{}", source_line(&shell.to_string_lossy()))
+    );
+}
+
+#[test]
 fn the_uninstall_removes_the_statusline_of_the_clone() {
     let root = sandbox();
     let en = messages_for(Locale::EnUs);

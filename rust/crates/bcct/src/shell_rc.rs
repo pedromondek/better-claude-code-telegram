@@ -60,19 +60,26 @@ pub fn with_shell_block(rc_text: &str, shell_file: &str) -> Option<String> {
     let line = source_line(shell_file);
 
     if clone_line(rc_text).is_some() {
-        return Some(
-            rc_text
-                .split('\n')
-                .map(|old| {
-                    if is_clone_line(old) {
-                        line.as_str()
-                    } else {
-                        old
+        let mut kept: Vec<&str> = Vec::new();
+        let mut replaced = false;
+
+        for old in rc_text.split('\n') {
+            if !is_clone_line(old) {
+                kept.push(old);
+            } else if replaced {
+                if kept.last() == Some(&SHELL_MARKER) {
+                    kept.pop();
+                    if kept.last() == Some(&"") {
+                        kept.pop();
                     }
-                })
-                .collect::<Vec<_>>()
-                .join("\n"),
-        );
+                }
+            } else {
+                replaced = true;
+                kept.push(&line);
+            }
+        }
+
+        return Some(kept.join("\n"));
     }
 
     let block = block(&line);
@@ -223,7 +230,25 @@ mod tests {
         );
         assert_eq!(
             with_shell_block(&format!("{CLONE}\n{CLONE}"), NEW),
-            Some(format!("{}\n{}", new_line(), new_line()))
+            Some(new_line())
+        );
+    }
+
+    #[test]
+    fn the_setup_keeps_one_line_when_the_rc_has_the_line_of_two_clones() {
+        let other = "[ -f \"/s/scripts/shell.sh\" ] && . \"/s/scripts/shell.sh\"";
+        let rc = format!("a\n\n{SHELL_MARKER}\n{CLONE}\nb\n\n{SHELL_MARKER}\n{other}\n");
+
+        assert_eq!(
+            with_shell_block(&rc, NEW),
+            Some(format!("a\n\n{SHELL_MARKER}\n{}\nb\n", new_line()))
+        );
+        assert_eq!(
+            with_shell_block(
+                &format!("{SHELL_MARKER}\n{CLONE}\n{SHELL_MARKER}\n{other}"),
+                NEW
+            ),
+            Some(format!("{SHELL_MARKER}\n{}", new_line()))
         );
     }
 
