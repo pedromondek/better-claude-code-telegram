@@ -5,6 +5,7 @@ import {
   createBranch,
   createIssueAndBranch,
   issueNumberFromUrl,
+  pullRequestCheckMessage,
   run,
 } from "../branch.mjs";
 
@@ -166,6 +167,41 @@ describe("branchCheckMessage", () => {
   });
 });
 
+describe("pullRequestCheckMessage", () => {
+  it("lets a title with the key of the branch issue through", () => {
+    expect(
+      pullRequestCheckMessage("0043: Fix chatting", "0043-fix-chatting"),
+    ).toBeNull();
+  });
+
+  it.each(["main", "revert/abc", "dependabot/npm_and_yarn/x"])(
+    "does not check the title of a pull request from %s",
+    (branch) => {
+      expect(
+        pullRequestCheckMessage("🔐 security(root): bump x", branch),
+      ).toBeNull();
+    },
+  );
+
+  it("explains the branch pattern when the branch is outside it", () => {
+    expect(pullRequestCheckMessage("0043: Fix chatting", "my-branch")).toBe(
+      branchCheckMessage("my-branch"),
+    );
+  });
+
+  it.each([
+    ["Fix chatting", "without the key"],
+    ["0044: Fix chatting", "with the key of another issue"],
+    ["43: Fix chatting", "with the key not padded to four digits"],
+    ["0043:Fix chatting", "without the space after the colon"],
+  ])("refuses the title %s, %s, and shows the expected one", (title) => {
+    const message = pullRequestCheckMessage(title, "0043-fix-chatting");
+
+    expect(message).toContain(`"${title}"`);
+    expect(message).toContain("0043: <title of the issue>");
+  });
+});
+
 describe("run", () => {
   const io = () => {
     const out = [];
@@ -181,6 +217,31 @@ describe("run", () => {
     expect(ok.out).toEqual([]);
     expect(run(["check", "my-branch"], { ...bad, gh: fakeGh(null) })).toBe(1);
     expect(bad.out.join("\n")).toContain("outside the pattern");
+  });
+
+  it("pr exits 0 on a title with the key of the branch and 1 with the explanation otherwise", () => {
+    const ok = io();
+    const bad = io();
+    const gh = fakeGh(null);
+
+    expect(
+      run(["pr", "0043: Fix chatting", "0043-fix-chatting"], { ...ok, gh }),
+    ).toBe(0);
+    expect(ok.out).toEqual([]);
+    expect(
+      run(["pr", "Fix chatting", "0043-fix-chatting"], { ...bad, gh }),
+    ).toBe(1);
+    expect(bad.out.join("\n")).toContain("0043: <title of the issue>");
+    expect(gh.calls).toEqual([]);
+  });
+
+  it("pr refuses a missing title or branch", () => {
+    const out = io();
+
+    expect(
+      run(["pr", "0043: Fix chatting"], { ...out, gh: fakeGh(null) }),
+    ).toBe(1);
+    expect(out.out.join("\n")).toContain("npm run branch -- pr");
   });
 
   it("creates the branch and shows its name", () => {

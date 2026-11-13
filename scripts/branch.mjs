@@ -5,11 +5,15 @@ import {
   branchSlug,
   isAllowedBranch,
   issueKey,
+  issueNumberFromBranch,
+  issueNumberFromPrTitle,
 } from "./issue-key.mjs";
 
+const PR_USAGE = 'npm run branch -- pr "<pull request title>" <branch>';
 const USAGE = [
   "Usage: npm run branch -- <issue number> [summary] [--epic]",
   '       npm run branch -- "<title of a new issue>"',
+  `       ${PR_USAGE}`,
 ].join("\n");
 const EPIC_FLAG = "--epic";
 const ISSUE_ARGUMENT = /^#?(\d+)$/u;
@@ -88,8 +92,39 @@ export function branchCheckMessage(name) {
   ].join("\n");
 }
 
+export function pullRequestCheckMessage(title, branch) {
+  const branchMessage = branchCheckMessage(branch);
+
+  if (branchMessage !== null) return branchMessage;
+
+  const number = issueNumberFromBranch(branch);
+
+  if (number === null || issueNumberFromPrTitle(title) === number) return null;
+
+  return [
+    `✗ Pull request title "${title}" does not start with the key of the issue of the branch ${branch}.`,
+    `  Expected: ${issueKey(number)}: <title of the issue>`,
+  ].join("\n");
+}
+
 export function run(argv, { gh, log }) {
   const [command, ...rest] = argv;
+
+  if (command === "pr") {
+    const [title, branch] = rest;
+
+    if (title === undefined || branch === undefined) {
+      log(`Usage: ${PR_USAGE}`);
+      return 1;
+    }
+
+    const message = pullRequestCheckMessage(title, branch);
+
+    if (message === null) return 0;
+
+    log(message);
+    return 1;
+  }
 
   if (command === "check") {
     const message = branchCheckMessage(rest[0] ?? "");
