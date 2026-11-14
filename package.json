@@ -58,6 +58,7 @@
     "lint:plugins": "node scripts/validate-plugins.mjs",
     "tools:lock": "mise lock",
     "release:binary": "node scripts/release-binary.mjs",
+    "release:checksums": "node scripts/release-checksums.mjs",
     "release:cliff": "sh scripts/mise-exec.sh git-cliff",
     "release:npm": "node scripts/release-npm.mjs",
     "release:pr": "node scripts/release-pr.mjs",
