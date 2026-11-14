@@ -22,6 +22,8 @@ import {
   notesProblem,
   prepareRelease,
   pullRequestBody,
+  collectReleased,
+  npmVersions,
   releaseBranch,
   run,
 } from "../release-pr.mjs";
@@ -693,5 +695,127 @@ describe("run", () => {
     );
 
     expect(scripts["release:pr"]).toBe("node scripts/release-pr.mjs");
+  });
+});
+
+describe("npmVersions", () => {
+  function fakeFetch(status, body) {
+    const asked = [];
+
+    return {
+      asked,
+      fetch: async (url, options) => {
+        asked.push({ url, accept: options.headers.accept });
+
+        return {
+          status,
+          ok: status >= 200 && status < 300,
+          json: async () => body,
+        };
+      },
+    };
+  }
+
+  it("reads every version of the abbreviated document, deprecated ones included", async () => {
+    const npm = fakeFetch(200, {
+      versions: {
+        "0.1.0": {},
+        "0.2.0": { deprecated: "use 0.2.1" },
+        "0.2.1": {},
+      },
+    });
+
+    expect(await npmVersions("pkg", npm.fetch)).toEqual([
+      "0.1.0",
+      "0.2.0",
+      "0.2.1",
+    ]);
+    expect(npm.asked).toEqual([
+      {
+        url: "https://registry.npmjs.org/pkg",
+        accept: "application/vnd.npm.install-v1+json",
+      },
+    ]);
+  });
+
+  it("finds no version in a package never published", async () => {
+    expect(await npmVersions("pkg", fakeFetch(404, {}).fetch)).toEqual([]);
+  });
+
+  it("fails on any other answer, so a registry outage never reads as nothing released", async () => {
+    await expect(npmVersions("pkg", fakeFetch(503, {}).fetch)).rejects.toThrow(
+      "npm answered 503 for pkg",
+    );
+  });
+});
+
+describe("collectReleased", () => {
+  it("joins the tags, the published Releases, npm and the records of the repository", async () => {
+    copyProject("0.2.0");
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ name: "pkg", version: "0.2.0" }),
+    );
+    mkdirSync(join(root, "docs/releases/0.3.0"), { recursive: true });
+    writeFileSync(join(root, "docs/releases/0.3.0/alpha.1.md"), "notes");
+    const asked = [];
+    const pages = {
+      "repos/{owner}/{repo}/git/matching-refs/tags/v": [
+        [{ ref: "refs/tags/v0.1.0" }, { ref: "refs/tags/v0.2.0" }],
+      ],
+      "repos/{owner}/{repo}/releases?per_page=100": [
+        [
+          { tag_name: "v0.2.0", draft: false },
+          { tag_name: "v0.3.0-beta.1", draft: true },
+        ],
+        [{ tag_name: "v0.1.0", draft: false }],
+      ],
+    };
+
+    const released = await collectReleased({
+      root,
+      ghJson: (args) => {
+        asked.push(args);
+
+        return pages[args.at(-1)];
+      },
+      fetch: async () => ({
+        status: 200,
+        ok: true,
+        json: async () => ({ versions: { "0.1.0": {}, "0.2.0": {} } }),
+      }),
+    });
+
+    expect(released).toEqual({
+      versions: ["0.1.0", "0.2.0", "0.3.0-alpha.1"],
+      warnings: [],
+    });
+    expect(asked).toEqual([
+      [
+        "api",
+        "--paginate",
+        "--slurp",
+        "repos/{owner}/{repo}/git/matching-refs/tags/v",
+      ],
+      [
+        "api",
+        "--paginate",
+        "--slurp",
+        "repos/{owner}/{repo}/releases?per_page=100",
+      ],
+    ]);
+  });
+
+  it("reads an empty repository, which gh answers with one empty page", async () => {
+    copyProject("0.1.0");
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "pkg" }));
+
+    expect(
+      await collectReleased({
+        root,
+        ghJson: () => [[]],
+        fetch: async () => ({ status: 404, ok: false, json: async () => ({}) }),
+      }),
+    ).toEqual({ versions: [], warnings: [] });
   });
 });

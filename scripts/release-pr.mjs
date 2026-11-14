@@ -426,14 +426,10 @@ const githubCli = {
 
 const SOURCE_COMMANDS = new Set(["plan", "prepare", "check-version"]);
 
-function ghLines(args) {
-  return gh(args)
-    .split("\n")
-    .filter((line) => line !== "");
-}
+const TAG_PREFIX = "refs/tags/v";
 
-async function npmVersions(name) {
-  const response = await fetch(`${NPM_REGISTRY}/${name}`, {
+export async function npmVersions(name, fetchUrl) {
+  const response = await fetchUrl(`${NPM_REGISTRY}/${name}`, {
     headers: { accept: NPM_ABBREVIATED },
   });
 
@@ -448,27 +444,21 @@ async function npmVersions(name) {
   return Object.keys((await response.json()).versions);
 }
 
-async function collectReleased(root) {
-  const tags = ghLines([
-    "api",
-    "--paginate",
-    "repos/{owner}/{repo}/git/matching-refs/tags/v",
-    "--jq",
-    ".[].ref",
-  ]).map((ref) => ref.replace(/^refs\/tags\/v/u, ""));
-  const releases = ghLines([
-    "api",
-    "--paginate",
-    "repos/{owner}/{repo}/releases?per_page=100",
-    "--jq",
-    ".[] | select(.draft | not) | .tag_name",
-  ]).map((tag) => tag.replace(/^v/u, ""));
+export async function collectReleased({ root, ghJson, fetch: fetchUrl }) {
+  const pages = (path) => ghJson(["api", "--paginate", "--slurp", path]).flat();
+  const tags = pages("repos/{owner}/{repo}/git/matching-refs/tags/v")
+    .map(({ ref }) => ref)
+    .filter((ref) => ref.startsWith(TAG_PREFIX))
+    .map((ref) => ref.slice(TAG_PREFIX.length));
+  const releases = pages("repos/{owner}/{repo}/releases?per_page=100")
+    .filter((release) => !release.draft)
+    .map((release) => release.tag_name.replace(/^v/u, ""));
   const { name } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
   return releasedVersions({
     tags,
     releases,
-    npm: await npmVersions(name),
+    npm: await npmVersions(name, fetchUrl),
     ledger: ledgerVersions(root),
   });
 }
@@ -481,7 +471,11 @@ if (import.meta.main) {
 
   if (SOURCE_COMMANDS.has(args[0])) {
     try {
-      sources = await collectReleased(root);
+      sources = await collectReleased({
+        root,
+        ghJson: (ghArgs) => JSON.parse(gh(ghArgs)),
+        fetch,
+      });
     } catch (error) {
       console.error(
         `✗ could not read the released versions: ${error instanceof Error ? error.message : String(error)}`,
