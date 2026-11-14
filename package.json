@@ -59,6 +59,7 @@
     "tools:lock": "mise lock",
     "release:binary": "node scripts/release-binary.mjs",
     "release:cliff": "sh scripts/mise-exec.sh git-cliff",
+    "release:npm": "node scripts/release-npm.mjs",
     "release:pr": "node scripts/release-pr.mjs",
     "release:version": "node scripts/version.mjs",
     "lint:workflows": "sh scripts/mise-exec.sh actionlint && sh scripts/mise-exec.sh zizmor --offline . && sh scripts/mise-exec.sh pinact run --fix=false --no-api",
