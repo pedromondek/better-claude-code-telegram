@@ -65,7 +65,7 @@ export function nextVersion(current, stage, bumped) {
 
     if (!isAfter(target, version)) {
       throw new Error(
-        `nothing to release after ${current} (to pick the version by hand, use set <version>)`,
+        `nothing to release after ${current}: no feat, fix, perf or security commit since it (to pick the version by hand, use set <version> here or the exact version of the prepare release workflow)`,
       );
     }
 

@@ -106,7 +106,7 @@ describe("nextVersion", () => {
 
   it("from a stable version, refuses a bump that does not move forward", () => {
     expect(() => nextVersion("0.2.0", "stable", "0.2.0")).toThrow(
-      "nothing to release after 0.2.0 (to pick the version by hand, use set <version>)",
+      "nothing to release after 0.2.0: no feat, fix, perf or security commit since it (to pick the version by hand, use set <version> here or the exact version of the prepare release workflow)",
     );
   });
 });
