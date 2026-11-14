@@ -1,0 +1,114 @@
+name: Build binaries
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - asset: bcct-linux-x64
+            target: x86_64-unknown-linux-musl
+            runner: ubuntu-24.04
+          - asset: bcct-linux-arm64
+            target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+          - asset: bcct-darwin-arm64
+            target: aarch64-apple-darwin
+            runner: macos-15
+          - asset: bcct-darwin-x64
+            target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - asset: bcct-win32-x64.exe
+            target: x86_64-pc-windows-msvc
+            runner: windows-2025
+          - asset: bcct-win32-arm64.exe
+            target: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Rust toolchain and target
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup toolchain install
+          rustup target add "$TARGET"
+
+      - name: clang for ring on musl
+        if: runner.os == 'Linux'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends clang
+          echo "CC_${TARGET//-/_}=clang" >> "$GITHUB_ENV"
+
+      - name: Static C runtime on Windows
+        if: runner.os == 'Windows'
+        run: |
+          echo "RUSTFLAGS=-C target-feature=+crt-static" >> "$GITHUB_ENV"
+
+      - name: LLVM of Visual Studio for ARM64
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        run: |
+          vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+          if [ ! -x "$vswhere" ]; then
+            echo "::error::vswhere.exe is not at $vswhere"
+            exit 1
+          fi
+          studio=$(cygpath -u "$("$vswhere" -latest -property installationPath)")
+          for folder in "VC/Tools/Llvm/ARM64/bin" "VC/Tools/Llvm/bin"; do
+            if [ -x "$studio/$folder/clang.exe" ]; then
+              cygpath -w "$studio/$folder" >> "$GITHUB_PATH"
+              exit 0
+            fi
+          done
+          echo "::error::no clang.exe in the LLVM of Visual Studio at $studio (tried VC/Tools/Llvm/ARM64/bin and VC/Tools/Llvm/bin)"
+          exit 1
+
+      - name: Build
+        env:
+          TARGET: ${{ matrix.target }}
+        run: npm run --silent rust:build -- --target "$TARGET"
+
+      - name: Check and package
+        env:
+          TARGET: ${{ matrix.target }}
+        run: npm run --silent release:binary -- "$TARGET" dist
+
+      - name: Upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/
+          if-no-files-found: error
