@@ -91,6 +91,15 @@ describe("prepare-release.yml computes the next version, waits for approval on a
     expect(JSON.stringify(approval)).not.toMatch(/secrets\.|token/u);
   });
 
+  it("reads the release app key only in the release environment, which holds it apart from the repository secrets", () => {
+    expect(prepare.environment).toBe("release");
+    expect(
+      Object.entries(definition.jobs)
+        .filter(([, job]) => JSON.stringify(job).includes("secrets."))
+        .map(([id, job]) => [id, job.environment]),
+    ).toEqual([["prepare", "release"]]);
+  });
+
   it("opens the pull request only when no approval is needed or the approval succeeded, never after a rejection, a cancel or a failed plan", () => {
     expect(prepare.if).toBe(
       "always() && needs.plan.result == 'success' && (needs.plan.outputs.approval == 'false' || needs.approval.result == 'success')",

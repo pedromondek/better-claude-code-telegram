@@ -94,6 +94,7 @@ jobs:
       - plan
       - approval
     if: always() && needs.plan.result == 'success' && (needs.plan.outputs.approval == 'false' || needs.approval.result == 'success')
+    environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
