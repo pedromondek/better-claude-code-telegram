@@ -80,11 +80,20 @@ describe("cliff.toml", { timeout: TOOL_TIMEOUT }, () => {
     ["✨ feat(rust): add a command", "v0.2.0"],
     ["🐛 fix(root): repair the hook", "v0.1.1"],
     ["⚡ perf(rust): speed up the hook", "v0.1.1"],
+    ["🔐 security(rust): tighten the pairing", "v0.1.1"],
   ])("reads %s through the emoji and bumps to %s", (subject, bumped) => {
     released();
     commit(subject);
 
     expect(cliff("--bumped-version")).toBe(bumped);
+  });
+
+  it("keeps the version of the last tag when only maintenance came after it, so there is nothing to release", () => {
+    released();
+    commit("🔧 chore(root): bump a tool");
+    commit("✅ test(rust): cover the parser");
+
+    expect(cliff("--bumped-version")).toBe("v0.1.0");
   });
 
   it("keeps a breaking change on the minor while the version is 0.x", () => {
