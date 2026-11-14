@@ -26,6 +26,34 @@ describe("build-binaries.yml builds the 6 native binaries, checks each one and h
       "workflow_call",
       "workflow_dispatch",
     ]);
+    expect(definition.on.workflow_dispatch ?? null).toBeNull();
+  });
+
+  it("attests only when the release asks, through an input that is off by default", () => {
+    expect(definition.on.workflow_call.inputs).toEqual({
+      attest: {
+        description: expect.any(String),
+        required: false,
+        type: "boolean",
+        default: false,
+      },
+    });
+  });
+
+  it("asks only for what the attestation needs besides reading the code", () => {
+    expect(build.permissions).toEqual({
+      contents: "read",
+      "id-token": "write",
+      attestations: "write",
+    });
+  });
+
+  it("attests the binary right after it is built and checked, with actions/attest, as the GitHub docs show", () => {
+    const step = stepUsing(build, "actions/attest");
+
+    expect(step.name).toBe("Attest");
+    expect(step.if).toBe("inputs.attest");
+    expect(step.with).toEqual({ "subject-path": "dist/${{ matrix.asset }}" });
   });
 
   it("builds every target of scripts/release-binary.mjs on its own native runner, and one failing target never cancels the others", () => {
@@ -125,6 +153,7 @@ describe("build-binaries.yml builds the 6 native binaries, checks each one and h
       "LLVM of Visual Studio for ARM64",
       "Build",
       "Check and package",
+      "Attest",
       "Upload",
     ]);
   });

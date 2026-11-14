@@ -7,6 +7,14 @@ import { allWorkflows } from "./support/workflow.mjs";
 const GITHUB = join(import.meta.dirname, "..");
 const TESTS = import.meta.dirname;
 const MAIN_ONLY = "github.ref == 'refs/heads/main'";
+const READ_ONLY = { contents: "read" };
+const RELEASE_PERMISSIONS = {
+  "build-binaries.yml > build": {
+    contents: "read",
+    "id-token": "write",
+    attestations: "write",
+  },
+};
 
 const namesIn = (dir, extension) =>
   existsSync(dir)
@@ -129,17 +137,34 @@ describe("rules of every workflow", () => {
     expect(missing).toEqual([]);
   });
 
-  it("grants every job and every task call exactly contents: read, the only permission the checks need", () => {
+  it("grants every job and every task call exactly contents: read, except the release jobs listed here with the permission each needs", () => {
     const wrong = Object.entries(allWorkflows()).flatMap(([file, definition]) =>
       Object.entries(definition.jobs)
+        .map(([id, job]) => ({
+          name: `${file} > ${id}`,
+          permissions: job.permissions,
+        }))
         .filter(
-          ([, job]) =>
-            JSON.stringify(job.permissions) !== '{"contents":"read"}',
+          ({ name, permissions }) =>
+            JSON.stringify(permissions) !==
+            JSON.stringify(RELEASE_PERMISSIONS[name] ?? READ_ONLY),
         )
-        .map(([id]) => `${file} > ${id}`),
+        .map(({ name }) => name),
     );
 
     expect(wrong).toEqual([]);
+  });
+
+  it("lists only release jobs that exist, so a renamed job does not keep its permission", () => {
+    const jobs = new Set(
+      Object.entries(allWorkflows()).flatMap(([file, definition]) =>
+        Object.keys(definition.jobs).map((id) => `${file} > ${id}`),
+      ),
+    );
+
+    expect(
+      Object.keys(RELEASE_PERMISSIONS).filter((name) => !jobs.has(name)),
+    ).toEqual([]);
   });
 
   it("never uses the combined actions/cache step, which saves on every ref", () => {
