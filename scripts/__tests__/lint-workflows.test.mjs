@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { touchesWorkflowLint } from "../lint-workflows.mjs";
+
 const SCRIPT = join(import.meta.dirname, "..", "lint-workflows.mjs");
 const TOOLS = ["actionlint", "jactionlint", "zizmor", "pinact"];
 
@@ -114,5 +116,38 @@ describe("lint-workflows", () => {
     writeScripts(passing({ actionlint: "exit 1" }));
 
     expect(run().stdout).not.toMatch(/^> /mu);
+  });
+});
+
+describe("touchesWorkflowLint", () => {
+  it.each([
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yaml",
+    ".github/actions/setup/action.yml",
+    ".github/actions/group/setup/action.yaml",
+    ".github/actionlint.yaml",
+    ".github/actionlint.yml",
+    ".github/jactionlint.yaml",
+    ".github/jactionlint.yml",
+    ".github/dependabot.yml",
+    ".github/zizmor.yml",
+    "mise.toml",
+    "mise.lock",
+    ".github\\workflows\\ci.yml",
+  ])("matches %s", (file) => {
+    expect(touchesWorkflowLint(file)).toBe(true);
+  });
+
+  it.each([
+    "scripts/release.mjs",
+    ".github/workflows/nested/ci.yml",
+    ".github/workflows/ci.txt",
+    ".github/actions/setup/README.md",
+    ".github/CODEOWNERS",
+    "docs/mise.toml",
+    "mise.toml.bak",
+    "package.json",
+  ])("does not match %s", (file) => {
+    expect(touchesWorkflowLint(file)).toBe(false);
   });
 });

@@ -8,12 +8,20 @@ const GITHUB = join(import.meta.dirname, "..");
 const TESTS = import.meta.dirname;
 const MAIN_ONLY = "github.ref == 'refs/heads/main'";
 const READ_ONLY = { contents: "read" };
-const RELEASE_PERMISSIONS = {
+const READ_ISSUES = { contents: "read", issues: "read" };
+const WRITE_ISSUES = { contents: "read", issues: "write" };
+const EXTRA_PERMISSIONS = {
+  "audit-workflows-on-schedule.yml > audit": READ_ISSUES,
+  "audit-workflows-on-schedule.yml > issue": WRITE_ISSUES,
+  "audit-workflows.yml > audit": READ_ISSUES,
   "build-binaries.yml > build": {
     contents: "read",
     "id-token": "write",
     attestations: "write",
   },
+  "ci.yml > workflow-audit": READ_ISSUES,
+  "ci.yml > workflow-audit-issue": WRITE_ISSUES,
+  "report-workflow-audit.yml > report": WRITE_ISSUES,
 };
 
 const namesIn = (dir, extension) =>
@@ -138,7 +146,7 @@ describe("rules of every workflow", () => {
     expect(missing).toEqual([]);
   });
 
-  it("grants every job and every task call exactly contents: read, except the release jobs listed here with the permission each needs", () => {
+  it("grants every job and every task call exactly contents: read, except the jobs listed here with the permission each needs", () => {
     const wrong = Object.entries(allWorkflows()).flatMap(([file, definition]) =>
       Object.entries(definition.jobs)
         .map(([id, job]) => ({
@@ -148,7 +156,7 @@ describe("rules of every workflow", () => {
         .filter(
           ({ name, permissions }) =>
             JSON.stringify(permissions) !==
-            JSON.stringify(RELEASE_PERMISSIONS[name] ?? READ_ONLY),
+            JSON.stringify(EXTRA_PERMISSIONS[name] ?? READ_ONLY),
         )
         .map(({ name }) => name),
     );
@@ -156,7 +164,7 @@ describe("rules of every workflow", () => {
     expect(wrong).toEqual([]);
   });
 
-  it("lists only release jobs that exist, so a renamed job does not keep its permission", () => {
+  it("lists only jobs that exist, so a renamed job does not keep its permission", () => {
     const jobs = new Set(
       Object.entries(allWorkflows()).flatMap(([file, definition]) =>
         Object.keys(definition.jobs).map((id) => `${file} > ${id}`),
@@ -164,7 +172,7 @@ describe("rules of every workflow", () => {
     );
 
     expect(
-      Object.keys(RELEASE_PERMISSIONS).filter((name) => !jobs.has(name)),
+      Object.keys(EXTRA_PERMISSIONS).filter((name) => !jobs.has(name)),
     ).toEqual([]);
   });
 

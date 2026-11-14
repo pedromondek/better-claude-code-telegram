@@ -39,9 +39,11 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
     const tasks = dispatchableTasks();
 
     expect(tasks.map(({ file }) => file).toSorted()).toEqual([
+      "audit-workflows.yml",
       "build-binaries.yml",
       "check-rust-platforms.yml",
       "push-checks.yml",
+      "report-workflow-audit.yml",
     ]);
     expect(
       tasks.filter(({ definition }) => definition.concurrency !== undefined),

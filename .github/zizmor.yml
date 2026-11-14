@@ -4,6 +4,8 @@ rules:
       - push-checks.yml
   concurrency-limits:
     ignore:
+      - audit-workflows.yml
       - build-binaries.yml
       - check-rust-platforms.yml
       - push-checks.yml
+      - report-workflow-audit.yml

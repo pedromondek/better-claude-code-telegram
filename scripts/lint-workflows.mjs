@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const LINTERS = ["actionlint", "jactionlint", "zizmor", "pinact"];
+const WORKFLOW_LINT_FILE =
+  /^(?:\.github\/(?:workflows\/[^/]+\.ya?ml|actions\/.+\/action\.ya?ml|j?actionlint\.ya?ml|dependabot\.ya?ml|zizmor\.ya?ml)|mise\.(?:toml|lock))$/u;
+
+export function touchesWorkflowLint(file) {
+  return WORKFLOW_LINT_FILE.test(file.replaceAll("\\", "/"));
+}
 
 export function runScript(name) {
   return new Promise((resolve) => {

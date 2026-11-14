@@ -195,6 +195,19 @@ describe("lint-staged: workflows and actions", () => {
     expect(scripts().lint).not.toMatch(/lint:workflows|mise/u);
   });
 
+  it("keeps the online variants of zizmor and pinact out of lint:workflows, in machine format, for the online audit", () => {
+    expect(scripts()["lint:workflows:zizmor:online"]).toBe(
+      tool("zizmor --format=json"),
+    );
+    expect(scripts()["lint:workflows:pinact:online"]).toBe(
+      tool("pinact run --check --verify-comment --format sarif"),
+    );
+    expect(scripts()["audit:workflows"]).toBe(
+      "node scripts/workflow-audit.mjs",
+    );
+    expect(scripts()["lint:workflows"]).not.toMatch(/online/u);
+  });
+
   it.each([".github/workflows/ci.yml", ".github/workflows/release.yaml"])(
     "formats %s and passes actionlint, jactionlint on every workflow, zizmor offline with every audit of the auditor persona and the offline pin check of pinact",
     (file) => {

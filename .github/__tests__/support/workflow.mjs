@@ -50,10 +50,10 @@ export const thirdPartyUsesLines = (path) =>
     .filter((line) => /^\s*(?:-\s+)?uses:\s/.test(line))
     .filter((line) => !/uses:\s+(?:\.|\$)\//.test(line));
 
-export function assertPinnedWithVersion(path) {
+export function assertPinnedWithVersion(path, { onlyCallsTasks = false } = {}) {
   const lines = thirdPartyUsesLines(path);
 
-  expect(lines.length).toBeGreaterThan(0);
+  expect(lines.length > 0).toBe(!onlyCallsTasks);
   for (const line of lines) {
     expect(line).toMatch(PINNED_WITH_VERSION);
   }
@@ -99,7 +99,11 @@ export function describeWorkflowSecurity(file) {
     });
 
     it("pins every third-party action by full SHA with the version comment on the same line", () => {
-      assertPinnedWithVersion(`.github/workflows/${file}`);
+      assertPinnedWithVersion(`.github/workflows/${file}`, {
+        onlyCallsTasks: Object.values(definition.jobs).every(
+          (job) => job.steps === undefined,
+        ),
+      });
       for (const uses of usesOf(definition).filter((item) => !isLocal(item))) {
         expect(uses).toMatch(/^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/);
       }

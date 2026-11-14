@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MERGED_PR_CHOICES } from "../../../scripts/merged-pr.mjs";
+import { AuditOrigin } from "../../../scripts/workflow-audit-issue.mjs";
 import {
   LOCAL_WORKFLOW,
   calledTask,
@@ -16,10 +17,21 @@ const TASKS = {
   checks: "push-checks.yml",
   rust: "check-rust-platforms.yml",
   "pull-request": "check-pull-request.yml",
+  "workflow-audit": "audit-workflows.yml",
+  "workflow-audit-issue": "report-workflow-audit.yml",
 };
+const AGGREGATED = ["checks", "rust", "pull-request", "workflow-audit"];
 const STAGES = {
   checks: "Checks",
   rust: "Rust on macOS and Windows",
+  "workflow-audit": "Online audit of the workflows",
+};
+const PERMISSIONS = {
+  checks: { contents: "read" },
+  rust: { contents: "read" },
+  "pull-request": { contents: "read" },
+  "workflow-audit": { contents: "read", issues: "read" },
+  "workflow-audit-issue": { contents: "read", issues: "write" },
 };
 const passed = ci.jobs["ci-passed"];
 
@@ -110,12 +122,31 @@ describe("ci.yml orchestrates the CI: it only calls the tasks and closes with on
       },
     );
 
-    it.each(Object.entries(TASKS))(
-      "grants %s exactly contents: read, the permission its task asks for",
-      (id) => {
-        expect(ci.jobs[id].permissions).toEqual({ contents: "read" });
+    it.each(Object.entries(PERMISSIONS))(
+      "grants %s exactly the permission its task asks for (%o)",
+      (id, permissions) => {
+        expect(ci.jobs[id].permissions).toEqual(permissions);
       },
     );
+
+    it("audits the workflows online with the head and the base of the pull request, or the range of the push, and everything on a manual dispatch", () => {
+      expect(ci.jobs["workflow-audit"].with).toEqual({
+        ref: "${{ github.event.pull_request.head.sha }}",
+        before:
+          "${{ github.event.pull_request.base.sha || github.event.before }}",
+        force: "${{ github.event_name == 'workflow_dispatch' }}",
+      });
+    });
+
+    it("opens or comments the issue of the online audit only when it failed on a push to main", () => {
+      const issue = ci.jobs["workflow-audit-issue"];
+
+      expect(issue.needs).toEqual(["workflow-audit"]);
+      expect(issue.if).toBe(
+        "always() && github.event_name == 'push' && needs.workflow-audit.result == 'failure'",
+      );
+      expect(issue.with).toEqual({ origin: AuditOrigin.MERGE });
+    });
 
     it.each(Object.entries(TASKS))(
       "points %s to a task that the caller can call",
@@ -144,7 +175,7 @@ describe("ci.yml orchestrates the CI: it only calls the tasks and closes with on
 
   describe("ci-passed job", () => {
     it("waits for every task, even when one fails or is skipped", () => {
-      expect(passed.needs.toSorted()).toEqual(Object.keys(TASKS).toSorted());
+      expect(passed.needs.toSorted()).toEqual(AGGREGATED.toSorted());
       expect(passed.if).toBe("${{ always() }}");
     });
 

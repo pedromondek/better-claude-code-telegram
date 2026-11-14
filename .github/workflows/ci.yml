@@ -16,6 +16,7 @@ on:
           - All
           - Checks
           - Rust on macOS and Windows
+          - Online audit of the workflows
       pr:
         description: Merged pull request whose merge commit and range the checks validate
         required: true
@@ -43,7 +44,7 @@ defaults:
 jobs:
   checks:
     name: Checks
-    if: inputs.stage != 'Rust on macOS and Windows'
+    if: inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Online audit of the workflows'
     permissions:
       contents: read
     uses: $/.github/workflows/push-checks.yml
@@ -53,7 +54,7 @@ jobs:
 
   rust:
     name: Rust
-    if: inputs.stage != 'Checks'
+    if: inputs.stage != 'Checks' && inputs.stage != 'Online audit of the workflows'
     permissions:
       contents: read
     uses: $/.github/workflows/check-rust-platforms.yml
@@ -65,12 +66,37 @@ jobs:
       contents: read
     uses: $/.github/workflows/check-pull-request.yml
 
+  workflow-audit:
+    name: Online audit of the workflows
+    if: inputs.stage != 'Checks' && inputs.stage != 'Rust on macOS and Windows'
+    permissions:
+      contents: read
+      issues: read # finds the open issue of the online audit, to link it from an inherited finding
+    uses: $/.github/workflows/audit-workflows.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha }}
+      before: ${{ github.event.pull_request.base.sha || github.event.before }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
+  workflow-audit-issue:
+    name: Issue of the online audit
+    needs:
+      - workflow-audit
+    if: always() && github.event_name == 'push' && needs.workflow-audit.result == 'failure'
+    permissions:
+      contents: read
+      issues: write # opens the issue of the online audit, or comments on the open one
+    uses: $/.github/workflows/report-workflow-audit.yml
+    with:
+      origin: Merge on main
+
   ci-passed:
     name: CI passed
     needs:
       - checks
       - rust
       - pull-request
+      - workflow-audit
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
