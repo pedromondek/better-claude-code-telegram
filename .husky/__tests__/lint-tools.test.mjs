@@ -3,12 +3,13 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { miseEnv } from "./support/mise-env.mjs";
 import {
@@ -48,6 +49,69 @@ const GOOD_WORKFLOW = [
 ].join("\n");
 
 const TOOL_CONFIG = ["mise.toml", "mise.lock", "_typos.toml"];
+const TOKEN_ENV = new Set([
+  "GH_TOKEN",
+  "GITHUB_TOKEN",
+  "ZIZMOR_GITHUB_TOKEN",
+  "PINACT_GITHUB_TOKEN",
+]);
+const REPO_FILES = [
+  "mise.toml",
+  "mise.lock",
+  "scripts/mise-exec.sh",
+  "scripts/lint-workflows.mjs",
+  ".github/actionlint.yaml",
+  ".github/jactionlint.yaml",
+];
+
+const CALLED = ".github/workflows/called.yml";
+const CALLER = ".github/workflows/caller.yml";
+
+const CALLED_WORKFLOW = [
+  "name: called",
+  "on:",
+  "  workflow_call:",
+  "    inputs:",
+  "      before:",
+  "        required: true",
+  "        type: string",
+  "permissions: {}",
+  "defaults:",
+  "  run:",
+  "    shell: bash",
+  "jobs:",
+  "  run:",
+  "    name: Run",
+  "    runs-on: ubuntu-24.04",
+  "    permissions:",
+  "      contents: read",
+  "    steps:",
+  "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+  "        with:",
+  "          persist-credentials: false",
+  "      - run: node scripts/x.mjs | tee out.log",
+  "        env:",
+  "          BEFORE: ${{ inputs.before }}",
+].join("\n");
+const CALLER_WORKFLOW = [
+  "name: caller",
+  "on: push",
+  "permissions: {}",
+  "concurrency:",
+  "  group: ${{ github.workflow }}-${{ github.ref }}",
+  "  cancel-in-progress: true",
+  "defaults:",
+  "  run:",
+  "    shell: bash",
+  "jobs:",
+  "  call:",
+  "    name: Call",
+  "    permissions:",
+  "      contents: read",
+  "    uses: $/.github/workflows/called.yml",
+  "    with:",
+  "      before: ${{ github.event.before }}",
+].join("\n");
 
 let dir;
 
@@ -87,6 +151,7 @@ describe("pinned lint tools", { timeout: TOOL_TIMEOUT }, () => {
     expect(tool("actionlint", "--version").stdout).toContain("1.7.12");
     expect(tool("pinact", "--version").stdout).toContain("5.0.2");
     expect(tool("zizmor", "--version").stdout).toContain("1.31.1");
+    expect(tool("jactionlint", "--version").stdout).toContain("2.3.0");
   });
 
   describe("typos with _typos.toml", () => {
@@ -157,5 +222,104 @@ describe("pinned lint tools", { timeout: TOOL_TIMEOUT }, () => {
         tool("pinact", "run", "--fix=false", "--no-api", file).status,
       ).toBe(0);
     });
+  });
+});
+
+describe("workflow lint scripts", { timeout: TOOL_TIMEOUT }, () => {
+  let repo;
+
+  function write(name, content) {
+    mkdirSync(join(repo, name, ".."), { recursive: true });
+    writeFileSync(join(repo, name), `${content}\n`);
+  }
+
+  function script(name) {
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !TOKEN_ENV.has(key)),
+    );
+
+    return spawnSync("npm", ["run", "--silent", name], {
+      cwd: repo,
+      encoding: "utf8",
+      env: { ...env, ...miseEnv(repo) },
+    });
+  }
+
+  beforeAll(() => {
+    repo = mkdtempSync(join(tmpdir(), "bcct-lint-workflows-repo-"));
+
+    for (const file of REPO_FILES) {
+      mkdirSync(join(repo, file, ".."), { recursive: true });
+      copyFileSync(join(ROOT, file), join(repo, file));
+    }
+
+    const { scripts } = JSON.parse(
+      readFileSync(join(ROOT, "package.json"), "utf8"),
+    );
+    writeFileSync(
+      join(repo, "package.json"),
+      JSON.stringify({
+        name: "fixture",
+        scripts: Object.fromEntries(
+          Object.entries(scripts).filter(([name]) =>
+            name.startsWith("lint:workflows"),
+          ),
+        ),
+      }),
+    );
+
+    execFileSync("git", ["init", "-q"], { cwd: repo });
+  });
+
+  beforeEach(() => {
+    write(CALLED, CALLED_WORKFLOW);
+    write(CALLER, CALLER_WORKFLOW);
+  });
+
+  afterAll(() => {
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it("workflows in the pattern of the repository pass the whole lint:workflows", () => {
+    const result = script("lint:workflows");
+
+    expect(result.stdout + result.stderr).not.toContain("✗");
+    expect(result.status).toBe(0);
+  });
+
+  it("jactionlint follows the call through $/ and rejects a required input the job does not pass", () => {
+    write(CALLER, CALLER_WORKFLOW.replace(/\n {4}with:\n.*$/u, ""));
+
+    const result = script("lint:workflows:jactionlint");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("[missing-workflow-input]");
+  });
+
+  it("jactionlint rejects a pipeline whose failure vanishes without the bash shell of defaults", () => {
+    write(
+      CALLED,
+      CALLED_WORKFLOW.replace("defaults:\n  run:\n    shell: bash\n", ""),
+    );
+
+    const result = script("lint:workflows:jactionlint");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("[pipeline-without-pipefail]");
+  });
+
+  it("zizmor runs with every audit of the auditor persona, which the regular persona hides", () => {
+    write(
+      CALLED,
+      CALLED_WORKFLOW.replace(
+        "      contents: read\n",
+        "      contents: read\n      issues: write\n",
+      ),
+    );
+
+    const result = script("lint:workflows:zizmor");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain("undocumented-permissions");
   });
 });

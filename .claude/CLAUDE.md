@@ -21,6 +21,7 @@ Telegram for Claude Code: a fork of the official Telegram channel plugin extende
 - `npm run setup` (and `setup:<step>`) - interactive setup; `npm run health` checks it.
 - `npm test` - unit suite; `npm run test:e2e` - end-to-end suite; `npm run test:all` - both; `npm run test:hooks` - the hook tests.
 - `npm run lint` - oxlint, ESLint and `tsc`; `npm run lint:typos`, `lint:secrets`, `lint:lockfile`.
+- `npm run lint:workflows` - runs `lint:workflows:actionlint`, `:jactionlint` (only the checks of the calls between workflows and of a pipeline without `pipefail`), `:zizmor` (offline, with every audit of the auditor persona; exceptions only in `.github/zizmor.yml`) and `:pinact` (offline) in parallel, each through the binary of `mise.lock`, and reports every failure; outside `npm run lint`, it runs in the pre-commit, the pre-push and the CI when a workflow or its lint config changes.
 - `npm run lint:plugins` - `claude plugin validate` on every plugin of the marketplace (strict except the upstream one) with a temporary config folder, so it never touches the one in use; without the `claude` CLI it warns and skips, except in CI.
 - `npm run format` / `format:check` / `format:file -- <files>` - Prettier.
 - `npm run test:mutation`, `test:mutation:changed`, `test:mutation:score`, `test:mutation:baseline` - Stryker.

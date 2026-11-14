@@ -653,6 +653,7 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       ".github/workflows/ci.yml",
       ".github/actions/setup/action.yml",
       ".github/actionlint.yaml",
+      ".github/jactionlint.yaml",
       ".github/dependabot.yml",
       ".github/zizmor.yml",
     ])("run when the push changes %s", (file) => {

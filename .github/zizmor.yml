@@ -2,3 +2,8 @@ rules:
   adhoc-packages:
     ignore:
       - push-checks.yml
+  concurrency-limits:
+    ignore:
+      - build-binaries.yml
+      - check-rust-platforms.yml
+      - push-checks.yml

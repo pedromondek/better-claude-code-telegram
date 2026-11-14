@@ -47,18 +47,22 @@ export default {
   ],
   ".github/workflows/*.{yml,yaml}": (files) => [
     tool(`actionlint ${quoted(files)}`),
-    tool(`zizmor --offline ${quoted(files)}`),
+    "npm run --silent lint:workflows:jactionlint",
+    tool(`zizmor --offline --persona=auditor ${quoted(files)}`),
     tool(`pinact run --fix=false --no-api ${quoted(files)}`),
   ],
   ".github/actions/**/action.{yml,yaml}": (files) => [
-    tool(`zizmor --offline ${quoted(files)}`),
+    tool(`zizmor --offline --persona=auditor ${quoted(files)}`),
     tool(`pinact run --fix=false --no-api ${quoted(files)}`),
   ],
   ".github/actionlint.{yml,yaml}": () => [tool("actionlint")],
-  ".github/dependabot.{yml,yaml}": (files) => [
-    tool(`zizmor --offline ${quoted(files)}`),
+  ".github/jactionlint.{yml,yaml}": () => [
+    "npm run --silent lint:workflows:jactionlint",
   ],
-  ".github/zizmor.{yml,yaml}": () => [tool("zizmor --offline .")],
+  ".github/dependabot.{yml,yaml}": (files) => [
+    tool(`zizmor --offline --persona=auditor ${quoted(files)}`),
+  ],
+  ".github/zizmor.{yml,yaml}": () => ["npm run --silent lint:workflows:zizmor"],
   "{.husky/*,.husky/**/*.sh}": () => ["npm run --silent test:hooks"],
   "scripts/**/*.sh": (files) => [
     `vitest run --passWithNoTests ${quoted(files.map(scriptTestOf))}`,

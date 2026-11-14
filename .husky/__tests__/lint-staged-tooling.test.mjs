@@ -12,6 +12,15 @@ const scripts = () =>
 const quoted = (files) =>
   files.map((file) => `"${join(ROOT, file)}"`).join(" ");
 const tool = (command) => `sh scripts/mise-exec.sh ${command}`;
+const JACTIONLINT_RULES = [
+  "workflow-call-permissions",
+  "missing-workflow-input",
+  "unknown-workflow-input",
+  "workflow-input-type",
+  "invalid-local-workflow",
+  "pipeline-without-pipefail",
+];
+const JACTIONLINT = "npm run --silent lint:workflows:jactionlint";
 const secretsTask = (...files) => `secretlint --no-glob ${quoted(files)}`;
 const typosTask = (...files) =>
   tool(`typos --force-exclude ${files.map((file) => `"${file}"`).join(" ")}`);
@@ -171,14 +180,30 @@ describe("lint-staged: lockfile", () => {
 });
 
 describe("lint-staged: workflows and actions", () => {
+  it("lints the workflows with four tools, each through the binary mise pins in mise.lock, collected by one runner outside the root lint", () => {
+    expect(scripts()["lint:workflows"]).toBe("node scripts/lint-workflows.mjs");
+    expect(scripts()["lint:workflows:actionlint"]).toBe(tool("actionlint"));
+    expect(scripts()["lint:workflows:jactionlint"]).toBe(
+      tool(`jactionlint --select=${JACTIONLINT_RULES.join(",")}`),
+    );
+    expect(scripts()["lint:workflows:zizmor"]).toBe(
+      tool("zizmor --offline --persona=auditor ."),
+    );
+    expect(scripts()["lint:workflows:pinact"]).toBe(
+      tool("pinact run --fix=false --no-api"),
+    );
+    expect(scripts().lint).not.toMatch(/lint:workflows|mise/u);
+  });
+
   it.each([".github/workflows/ci.yml", ".github/workflows/release.yaml"])(
-    "formats %s and passes actionlint, zizmor offline and the offline pin check of pinact",
+    "formats %s and passes actionlint, jactionlint on every workflow, zizmor offline with every audit of the auditor persona and the offline pin check of pinact",
     (file) => {
       expect(tasksFor(file)).toEqual([
         ...everyFileTasks(file),
         `prettier --write ${quoted([file])}`,
         tool(`actionlint ${quoted([file])}`),
-        tool(`zizmor --offline ${quoted([file])}`),
+        JACTIONLINT,
+        tool(`zizmor --offline --persona=auditor ${quoted([file])}`),
         tool(`pinact run --fix=false --no-api ${quoted([file])}`),
       ]);
     },
@@ -190,8 +215,18 @@ describe("lint-staged: workflows and actions", () => {
     expect(tasksFor(file)).toEqual([
       ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
-      tool(`zizmor --offline ${quoted([file])}`),
+      tool(`zizmor --offline --persona=auditor ${quoted([file])}`),
       tool(`pinact run --fix=false --no-api ${quoted([file])}`),
+    ]);
+  });
+
+  it("checks every call between workflows again when the jactionlint config changes", () => {
+    const file = ".github/jactionlint.yaml";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      JACTIONLINT,
     ]);
   });
 
@@ -211,7 +246,7 @@ describe("lint-staged: workflows and actions", () => {
     expect(tasksFor(file)).toEqual([
       ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
-      tool(`zizmor --offline ${quoted([file])}`),
+      tool(`zizmor --offline --persona=auditor ${quoted([file])}`),
     ]);
   });
 
@@ -234,7 +269,7 @@ describe("lint-staged: workflows and actions", () => {
     expect(tasksFor(file)).toEqual([
       ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
-      tool("zizmor --offline ."),
+      "npm run --silent lint:workflows:zizmor",
     ]);
   });
 
