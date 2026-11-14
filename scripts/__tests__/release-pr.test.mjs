@@ -80,7 +80,11 @@ function fakeGithub({ refs = [], failOn = null } = {}) {
   };
 }
 
-function prepare(target, github, cliff = CLIFF) {
+function sources(versions = [], warnings = []) {
+  return () => ({ versions, warnings });
+}
+
+function prepare(target, github, { released = sources() } = {}) {
   const asked = [];
 
   const result = prepareRelease({
@@ -95,8 +99,9 @@ function prepare(target, github, cliff = CLIFF) {
     notes: (tag) => {
       asked.push(`notes ${tag}`);
 
-      return cliff;
+      return CLIFF;
     },
+    released,
     github,
   });
 
@@ -244,6 +249,7 @@ describe("prepareRelease", () => {
       version: "0.1.0-alpha.2",
       branch: "release/v0.1.0-alpha.2",
       url: "https://github.com/owner/repo/pull/7",
+      warnings: [],
     });
     expect(asked).toEqual(["notes v0.1.0-alpha.2"]);
     expect(readVersions(root).map(({ version }) => version)).toEqual(
@@ -303,7 +309,9 @@ describe("prepareRelease", () => {
     copyProject("0.1.0");
     const github = fakeGithub();
 
-    const { result, asked } = prepare("alpha", github);
+    const { result, asked } = prepare("alpha", github, {
+      released: sources(["0.1.0"]),
+    });
 
     expect(result.version).toBe("0.2.0-alpha.1");
     expect(asked).toEqual(["bumped", "notes v0.2.0-alpha.1"]);
@@ -319,24 +327,56 @@ describe("prepareRelease", () => {
     expect(asked).toEqual(["notes v0.1.0-alpha.1"]);
   });
 
-  it.each([
-    ["the tag", "tags/v0.1.0-alpha.2", "the tag v0.1.0-alpha.2 already exists"],
-    [
-      "the branch",
-      "heads/release/v0.1.0-alpha.2",
-      "the branch release/v0.1.0-alpha.2 already exists: the version pull request opens once, so write its notes with /release-notes, or close it and delete the branch to prepare it again",
-    ],
-  ])(
-    "refuses when %s of the version exists, writing nothing",
-    (_case, ref, message) => {
-      copyProject("0.1.0-alpha.1");
-      const github = fakeGithub({ refs: [ref] });
+  it("hands back the warnings of the sources that disagree", () => {
+    copyProject("0.1.0-alpha.1");
 
-      expect(() => prepare("alpha", github)).toThrow(message);
-      expect(github.calls).toEqual([]);
-      expect(readVersions(root)[0].version).toBe("0.1.0-alpha.1");
-    },
-  );
+    const { result } = prepare("alpha", fakeGithub(), {
+      released: sources(["0.1.0-alpha.1"], ["v0.1.0-alpha.1 is in npm"]),
+    });
+
+    expect(result.warnings).toEqual(["v0.1.0-alpha.1 is in npm"]);
+  });
+
+  it.each([
+    [
+      "the version already came out",
+      "alpha",
+      ["0.1.0-alpha.2"],
+      "v0.1.0-alpha.2 already exists",
+    ],
+    [
+      "the exact version skips one",
+      "0.3.0",
+      ["0.1.0"],
+      "v0.3.0 skips a version: the next one has the base 0.1.1, 0.2.0, 1.0.0",
+    ],
+    [
+      "the exact version comes before one released",
+      "0.1.0-alpha.1",
+      ["0.1.0"],
+      "v0.1.0-alpha.1 does not come after v0.1.0, the highest version released",
+    ],
+  ])("refuses when %s, writing nothing", (_case, target, released, message) => {
+    copyProject("0.1.0-alpha.1");
+    const github = fakeGithub();
+
+    expect(() =>
+      prepare(target, github, { released: sources(released) }),
+    ).toThrow(message);
+    expect(github.calls).toEqual([]);
+    expect(readVersions(root)[0].version).toBe("0.1.0-alpha.1");
+  });
+
+  it("refuses when the branch of the version exists, writing nothing", () => {
+    copyProject("0.1.0-alpha.1");
+    const github = fakeGithub({ refs: ["heads/release/v0.1.0-alpha.2"] });
+
+    expect(() => prepare("alpha", github)).toThrow(
+      "the branch release/v0.1.0-alpha.2 already exists: the version pull request opens once, so write its notes with /release-notes, or close it and delete the branch to prepare it again",
+    );
+    expect(github.calls).toEqual([]);
+    expect(readVersions(root)[0].version).toBe("0.1.0-alpha.1");
+  });
 
   it("refuses version files that disagree, before asking anything", () => {
     copyProject("0.1.0-alpha.1");
@@ -388,7 +428,10 @@ describe("prepareRelease", () => {
 });
 
 describe("run", () => {
-  function runWith(args, { env = {}, github = fakeGithub() } = {}) {
+  function runWith(
+    args,
+    { env = {}, github = fakeGithub(), released = sources() } = {},
+  ) {
     const out = [];
     const err = [];
     const code = run(args, {
@@ -397,6 +440,7 @@ describe("run", () => {
       head: () => HEAD,
       bumped: () => "0.2.0",
       notes: () => CLIFF,
+      released,
       github,
       out: (line) => out.push(line),
       err: (line) => err.push(line),
@@ -405,12 +449,33 @@ describe("run", () => {
     return { code, out, err };
   }
 
-  it("prepare prints the version and the pull request", () => {
+  function outputFiles() {
+    const files = {
+      GITHUB_OUTPUT: join(root, "output"),
+      GITHUB_STEP_SUMMARY: join(root, "summary"),
+    };
+
+    writeFileSync(files.GITHUB_OUTPUT, "");
+    writeFileSync(files.GITHUB_STEP_SUMMARY, "");
+
+    return {
+      env: files,
+      output: () => readFileSync(files.GITHUB_OUTPUT, "utf8"),
+      summary: () => readFileSync(files.GITHUB_STEP_SUMMARY, "utf8"),
+    };
+  }
+
+  it("prepare prints the warnings, the version and the pull request", () => {
     copyProject("0.1.0-alpha.1");
 
-    expect(runWith(["prepare", "alpha"])).toEqual({
+    expect(
+      runWith(["prepare", "alpha"], {
+        released: sources(["0.1.0-alpha.1"], ["v0.1.0-alpha.1 is in npm"]),
+      }),
+    ).toEqual({
       code: 0,
       out: [
+        "⚠ v0.1.0-alpha.1 is in npm",
         "✓ v0.1.0-alpha.2 prepared in release/v0.1.0-alpha.2: https://github.com/owner/repo/pull/7",
       ],
       err: [],
@@ -422,14 +487,169 @@ describe("run", () => {
 
     expect(
       runWith(["prepare", "alpha"], {
-        github: fakeGithub({ refs: ["tags/v0.1.0-alpha.2"] }),
+        released: sources(["0.1.0-alpha.2"]),
       }),
     ).toEqual({
       code: 1,
       out: [],
-      err: ["✗ the tag v0.1.0-alpha.2 already exists"],
+      err: ["✗ v0.1.0-alpha.2 already exists"],
     });
   });
+
+  it.each([
+    [
+      "a minor that opens its base waits for approval",
+      "0.1.0",
+      "alpha",
+      ["0.1.0"],
+      { version: "0.2.0-alpha.1", bump: "minor", approval: "true" },
+      "v0.1.0",
+      "waits for your approval in Review deployments",
+    ],
+    [
+      "a pre-release inside an open line goes straight on",
+      "0.2.0-alpha.1",
+      "beta",
+      ["0.1.0", "0.2.0-alpha.1"],
+      { version: "0.2.0-beta.1", bump: "minor", approval: "false" },
+      "v0.2.0-alpha.1",
+      "opens the pull request without approval",
+    ],
+    [
+      "the first version waits for approval",
+      "0.1.0",
+      "0.1.0-alpha.1",
+      [],
+      { version: "0.1.0-alpha.1", bump: "minor", approval: "true" },
+      "nothing released",
+      "waits for your approval in Review deployments",
+    ],
+  ])(
+    "plan writes the version, the bump and the approval for the next jobs: %s",
+    (_case, current, target, released, values, from, next) => {
+      copyProject(current);
+      const files = outputFiles();
+
+      expect(
+        runWith(["plan", target], {
+          env: files.env,
+          released: sources(released),
+        }),
+      ).toEqual({
+        code: 0,
+        out: [`✓ v${values.version} (${values.bump}, from ${from}) ${next}`],
+        err: [],
+      });
+      expect(files.output()).toBe(
+        `version=${values.version}\nbump=${values.bump}\napproval=${values.approval}\n`,
+      );
+      expect(files.summary()).toBe(
+        [
+          `### Release v${values.version}`,
+          "",
+          "| From | To | Bump | Next |",
+          "| --- | --- | --- | --- |",
+          `| ${from} | v${values.version} | ${values.bump} | ${next} |`,
+          "",
+          "",
+        ].join("\n"),
+      );
+    },
+  );
+
+  it("plan lists the warnings in the output and in the summary", () => {
+    copyProject("0.1.0");
+    const files = outputFiles();
+
+    const { out } = runWith(["plan", "alpha"], {
+      env: files.env,
+      released: sources(["0.1.0"], ["v0.1.0 is in npm, but not in the tags"]),
+    });
+
+    expect(out[0]).toBe("⚠ v0.1.0 is in npm, but not in the tags");
+    expect(files.summary()).toContain(
+      "> ⚠ v0.1.0 is in npm, but not in the tags\n",
+    );
+  });
+
+  it("plan exits 1 with the reason and writes nothing for the next jobs", () => {
+    copyProject("0.1.0");
+    const files = outputFiles();
+
+    expect(
+      runWith(["plan", "0.3.0"], {
+        env: files.env,
+        released: sources(["0.1.0"]),
+      }),
+    ).toEqual({
+      code: 1,
+      out: [],
+      err: [
+        "✗ v0.3.0 skips a version: the next one has the base 0.1.1, 0.2.0, 1.0.0",
+      ],
+    });
+    expect(files.output()).toBe("");
+    expect(files.summary()).toBe("");
+  });
+
+  it("plan only prints outside GitHub Actions, where the two files do not exist", () => {
+    copyProject("0.1.0");
+
+    expect(
+      runWith(["plan", "alpha"], { released: sources(["0.1.0"]) }).code,
+    ).toBe(0);
+  });
+
+  it("check-version passes a version branch whose files carry its version, still free and in order", () => {
+    copyProject("0.1.0-alpha.2");
+
+    expect(
+      runWith(["check-version"], {
+        env: { PR_BRANCH: "release/v0.1.0-alpha.2" },
+        released: sources(["0.1.0-alpha.1"]),
+      }),
+    ).toEqual({
+      code: 0,
+      out: ["✓ v0.1.0-alpha.2 is free and comes in order"],
+      err: [],
+    });
+  });
+
+  it.each([
+    [
+      "the files carry another version",
+      "0.1.0-alpha.1",
+      "release/v0.1.0-alpha.2",
+      [],
+      "the version files are on 0.1.0-alpha.1, not on 0.1.0-alpha.2 of the branch release/v0.1.0-alpha.2",
+    ],
+    [
+      "the version came out meanwhile",
+      "0.1.0-alpha.2",
+      "release/v0.1.0-alpha.2",
+      ["0.1.0-alpha.2"],
+      "v0.1.0-alpha.2 already exists",
+    ],
+    [
+      "the branch is not a version branch",
+      "0.1.0-alpha.2",
+      "0042-x",
+      [],
+      "0042-x is not a version branch (release/v<version>)",
+    ],
+  ])(
+    "check-version exits 1 when %s",
+    (_case, current, branch, released, problem) => {
+      copyProject(current);
+
+      expect(
+        runWith(["check-version"], {
+          env: { PR_BRANCH: branch },
+          released: sources(released),
+        }),
+      ).toEqual({ code: 1, out: [], err: [`✗ ${problem}`] });
+    },
+  );
 
   it("check-notes reads the description from PR_BODY and exits 0 on written notes", () => {
     expect(
@@ -449,18 +669,23 @@ describe("run", () => {
     });
   });
 
-  it.each([[[]], [["prepare"]], [["check-notes", "x"]], [["publish"]]])(
-    "a usage error exits 2 with the usage (%j)",
-    (args) => {
-      expect(runWith(args)).toEqual({
-        code: 2,
-        out: [],
-        err: [
-          "usage: npm run release:pr -- prepare <alpha|beta|rc|stable|version> | check-notes (description in PR_BODY)",
-        ],
-      });
-    },
-  );
+  it.each([
+    [[]],
+    [["prepare"]],
+    [["plan"]],
+    [["plan", "alpha", "x"]],
+    [["check-version", "x"]],
+    [["check-notes", "x"]],
+    [["publish"]],
+  ])("a usage error exits 2 with the usage (%j)", (args) => {
+    expect(runWith(args)).toEqual({
+      code: 2,
+      out: [],
+      err: [
+        "usage: npm run release:pr -- plan|prepare <alpha|beta|rc|stable|version> | check-version (branch in PR_BRANCH) | check-notes (description in PR_BODY)",
+      ],
+    });
+  });
 
   it("is the release:pr npm script", () => {
     const { scripts } = JSON.parse(

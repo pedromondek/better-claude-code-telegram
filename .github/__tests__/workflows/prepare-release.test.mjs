@@ -11,12 +11,18 @@ import {
 
 const FILE = "prepare-release.yml";
 const definition = workflow(FILE);
-const prepare = definition.jobs.prepare;
+const { plan, approval, prepare } = definition.jobs;
 const packageScripts = JSON.parse(read("package.json")).scripts;
 
-describe("prepare-release.yml opens the version pull request by hand, with the app token", () => {
-  it("has the prepare job only", () => {
-    expect(Object.keys(definition.jobs)).toEqual(["prepare"]);
+describe("prepare-release.yml computes the next version, waits for approval on a minor or major and opens the version pull request", () => {
+  it("has the plan, approval and prepare jobs, in this order of needs", () => {
+    expect(Object.keys(definition.jobs)).toEqual([
+      "plan",
+      "approval",
+      "prepare",
+    ]);
+    expect(approval.needs).toBe("plan");
+    expect(prepare.needs).toEqual(["plan", "approval"]);
   });
 
   it("runs only by hand, picking the stage in a select or typing an exact version", () => {
@@ -44,24 +50,51 @@ describe("prepare-release.yml opens the version pull request by hand, with the a
     });
   });
 
-  it("prepares only from main", () => {
-    expect(prepare.if).toBe("github.ref == 'refs/heads/main'");
+  it("plans only from main", () => {
+    expect(plan.if).toBe("github.ref == 'refs/heads/main'");
   });
 
-  it("checks out the whole history, which git-cliff reads for the bump and the draft", () => {
-    expect(stepUsing(prepare, "actions/checkout").with).toEqual({
+  it("plans with the whole history, git-cliff from mise.lock and the read-only token of the run, handing the version and the approval to the next jobs", () => {
+    expect(stepUsing(plan, "actions/checkout").with).toEqual({
       "fetch-depth": 0,
       "persist-credentials": false,
     });
-  });
-
-  it("installs git-cliff from mise.lock and Node from the .nvmrc", () => {
-    expect(stepUsing(prepare, "jdx/mise-action").with.version).toMatch(
+    expect(stepUsing(plan, "jdx/mise-action").with.version).toMatch(
       /^\d{4}\.\d+\.\d+$/u,
     );
-    expect(
-      stepUsing(prepare, "actions/setup-node").with["node-version-file"],
-    ).toBe(".nvmrc");
+
+    const step = stepNamed(
+      plan,
+      "Next version, checked against every version released",
+    );
+
+    expect(step.id).toBe("plan");
+    expect(step.env).toEqual({
+      GH_TOKEN: "${{ github.token }}",
+      GH_REPO: "${{ github.repository }}",
+      STAGE: "${{ inputs.stage }}",
+      VERSION: "${{ inputs.version }}",
+    });
+    expect(step.run).toBe(
+      'npm run --silent release:pr -- plan "${VERSION:-$STAGE}"',
+    );
+    expect(plan.outputs).toEqual({
+      version: "${{ steps.plan.outputs.version }}",
+      approval: "${{ steps.plan.outputs.approval }}",
+    });
+    expect(packageScripts["release:pr"]).toBe("node scripts/release-pr.mjs");
+  });
+
+  it("asks for approval in the release-approval environment only when the plan says so, without any token", () => {
+    expect(approval.if).toBe("needs.plan.outputs.approval == 'true'");
+    expect(approval.environment).toBe("release-approval");
+    expect(JSON.stringify(approval)).not.toMatch(/secrets\.|token/u);
+  });
+
+  it("opens the pull request only when no approval is needed or the approval succeeded, never after a rejection, a cancel or a failed plan", () => {
+    expect(prepare.if).toBe(
+      "always() && needs.plan.result == 'success' && (needs.plan.outputs.approval == 'false' || needs.approval.result == 'success')",
+    );
   });
 
   it("takes the release app token with only contents and pull requests, since a pull request opened with GITHUB_TOKEN starts no CI", () => {
@@ -76,22 +109,17 @@ describe("prepare-release.yml opens the version pull request by hand, with the a
     });
   });
 
-  it("hands the token only to the last step, which prepares the exact version or else the stage through the release:pr script", () => {
-    const steps = prepare.steps;
+  it("hands the token only to the last step, which prepares the planned version and checks it again", () => {
     const last = stepNamed(prepare, "Version files, branch and pull request");
 
-    expect(steps.at(-1)).toBe(last);
+    expect(prepare.steps.at(-1)).toBe(last);
     expect(last.env).toEqual({
       GH_TOKEN: "${{ steps.app.outputs.token }}",
       GH_REPO: "${{ github.repository }}",
-      STAGE: "${{ inputs.stage }}",
-      VERSION: "${{ inputs.version }}",
+      VERSION: "${{ needs.plan.outputs.version }}",
     });
-    expect(last.run).toBe(
-      'npm run --silent release:pr -- prepare "${VERSION:-$STAGE}"',
-    );
-    expect(packageScripts["release:pr"]).toBe("node scripts/release-pr.mjs");
-    for (const step of steps.slice(0, -1)) {
+    expect(last.run).toBe('npm run --silent release:pr -- prepare "$VERSION"');
+    for (const step of prepare.steps.slice(0, -1)) {
       expect(JSON.stringify(step)).not.toContain("steps.app.outputs.token");
     }
   });

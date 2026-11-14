@@ -1,7 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import {
+  checkOrder,
+  ledgerVersions,
+  releasedVersions,
+} from "./release-order.mjs";
 import {
   STAGES,
   VERSION_FILES,
@@ -22,7 +27,12 @@ const BASE_BRANCH = "main";
 const NOTES_CHECK = "Release notes";
 const MARKERS_PROBLEM = `the description needs the notes between one ${NOTES_START} and one ${NOTES_END}`;
 const USAGE =
-  "usage: npm run release:pr -- prepare <alpha|beta|rc|stable|version> | check-notes (description in PR_BODY)";
+  "usage: npm run release:pr -- plan|prepare <alpha|beta|rc|stable|version> | check-version (branch in PR_BRANCH) | check-notes (description in PR_BODY)";
+const RELEASE_BRANCH = /^release\/v(.+)$/u;
+const APPROVAL_WAIT = "waits for your approval in Review deployments";
+const APPROVAL_SKIP = "opens the pull request without approval";
+const NPM_REGISTRY = "https://registry.npmjs.org";
+const NPM_ABBREVIATED = "application/vnd.npm.install-v1+json";
 const CREATE_COMMIT =
   "mutation ($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }";
 
@@ -119,20 +129,54 @@ function targetVersion(root, target, bumped) {
   return nextVersion(current, target, stable ? bumped() : current);
 }
 
-export function prepareRelease({ target, root, head, bumped, notes, github }) {
+function ensureFilesAgree(root) {
   if (checkVersions(root).length > 0) {
     throw new Error(
       "the version files disagree: npm run release:version -- check names them",
     );
   }
+}
 
-  const version = targetVersion(root, target, bumped);
+function orderedVersion(version, released) {
+  const { versions, warnings } = released();
+  const order = checkOrder(version, versions);
+
+  if (order.problem !== null) {
+    throw new Error(order.problem);
+  }
+
+  return {
+    version,
+    from: versions.at(-1) ?? null,
+    bump: order.bump,
+    approval: order.approval,
+    warnings,
+  };
+}
+
+export function planRelease({ target, root, bumped, released }) {
+  ensureFilesAgree(root);
+
+  return orderedVersion(targetVersion(root, target, bumped), released);
+}
+
+export function prepareRelease({
+  target,
+  root,
+  head,
+  bumped,
+  notes,
+  released,
+  github,
+}) {
+  const { version, warnings } = planRelease({
+    target,
+    root,
+    bumped,
+    released,
+  });
   const tag = `v${version}`;
   const branch = releaseBranch(version);
-
-  if (github.refExists(`tags/${tag}`)) {
-    throw new Error(`the tag ${tag} already exists`);
-  }
 
   if (github.refExists(`heads/${branch}`)) {
     throw new Error(
@@ -167,38 +211,128 @@ export function prepareRelease({ target, root, head, bumped, notes, github }) {
       body: pullRequestBody(version, draft),
     });
 
-    return { version, branch, url };
+    return { version, branch, url, warnings };
   } catch (error) {
     github.deleteBranch(branch);
     throw error;
   }
 }
 
+export function checkReleaseBranch({ branch, root, released }) {
+  const match = RELEASE_BRANCH.exec(branch ?? "");
+
+  if (match === null) {
+    throw new Error(`${branch} is not a version branch (release/v<version>)`);
+  }
+
+  const [, version] = match;
+
+  ensureFilesAgree(root);
+
+  const current = readVersions(root)[0].version;
+
+  if (current !== version) {
+    throw new Error(
+      `the version files are on ${current}, not on ${version} of the branch ${branch}`,
+    );
+  }
+
+  return orderedVersion(version, released);
+}
+
+function planSummary({ version, from, bump, approval, warnings }) {
+  const next = approval ? APPROVAL_WAIT : APPROVAL_SKIP;
+
+  return [
+    `### Release v${version}`,
+    "",
+    "| From | To | Bump | Next |",
+    "| --- | --- | --- | --- |",
+    `| ${from === null ? "nothing released" : `v${from}`} | v${version} | ${bump} | ${next} |`,
+    "",
+    ...warnings.map((warning) => `> ⚠ ${warning}`),
+    "",
+  ].join("\n");
+}
+
+function attempt(action, err) {
+  try {
+    return action();
+  } catch (error) {
+    err(`✗ ${error instanceof Error ? error.message : String(error)}`);
+
+    return 1;
+  }
+}
+
 export function run(
   args,
-  { root, env, head, bumped, notes, github, out, err },
+  { root, env, head, bumped, notes, released, github, out, err },
 ) {
   const [command, value, ...rest] = args;
+  const warn = (warnings) => {
+    for (const warning of warnings) {
+      out(`⚠ ${warning}`);
+    }
+  };
+
+  if (command === "plan" && value !== undefined && rest.length === 0) {
+    return attempt(() => {
+      const plan = planRelease({ target: value, root, bumped, released });
+      const from = plan.from === null ? "nothing released" : `v${plan.from}`;
+
+      warn(plan.warnings);
+      out(
+        `✓ v${plan.version} (${plan.bump}, from ${from}) ${plan.approval ? APPROVAL_WAIT : APPROVAL_SKIP}`,
+      );
+
+      if (env.GITHUB_OUTPUT !== undefined) {
+        appendFileSync(
+          env.GITHUB_OUTPUT,
+          `version=${plan.version}\nbump=${plan.bump}\napproval=${String(plan.approval)}\n`,
+        );
+      }
+
+      if (env.GITHUB_STEP_SUMMARY !== undefined) {
+        appendFileSync(env.GITHUB_STEP_SUMMARY, planSummary(plan));
+      }
+
+      return 0;
+    }, err);
+  }
 
   if (command === "prepare" && value !== undefined && rest.length === 0) {
-    try {
-      const { version, branch, url } = prepareRelease({
+    return attempt(() => {
+      const { version, branch, url, warnings } = prepareRelease({
         target: value,
         root,
         head,
         bumped,
         notes,
+        released,
         github,
       });
 
+      warn(warnings);
       out(`✓ v${version} prepared in ${branch}: ${url}`);
 
       return 0;
-    } catch (error) {
-      err(`✗ ${error instanceof Error ? error.message : String(error)}`);
+    }, err);
+  }
 
-      return 1;
-    }
+  if (command === "check-version" && value === undefined) {
+    return attempt(() => {
+      const { version, warnings } = checkReleaseBranch({
+        branch: env.PR_BRANCH,
+        root,
+        released,
+      });
+
+      warn(warnings);
+      out(`✓ v${version} is free and comes in order`);
+
+      return 0;
+    }, err);
   }
 
   if (command === "check-notes" && value === undefined) {
@@ -290,22 +424,92 @@ const githubCli = {
     ).trim(),
 };
 
+const SOURCE_COMMANDS = new Set(["plan", "prepare", "check-version"]);
+
+function ghLines(args) {
+  return gh(args)
+    .split("\n")
+    .filter((line) => line !== "");
+}
+
+async function npmVersions(name) {
+  const response = await fetch(`${NPM_REGISTRY}/${name}`, {
+    headers: { accept: NPM_ABBREVIATED },
+  });
+
+  if (response.status === 404) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(`npm answered ${response.status} for ${name}`);
+  }
+
+  return Object.keys((await response.json()).versions);
+}
+
+async function collectReleased(root) {
+  const tags = ghLines([
+    "api",
+    "--paginate",
+    "repos/{owner}/{repo}/git/matching-refs/tags/v",
+    "--jq",
+    ".[].ref",
+  ]).map((ref) => ref.replace(/^refs\/tags\/v/u, ""));
+  const releases = ghLines([
+    "api",
+    "--paginate",
+    "repos/{owner}/{repo}/releases?per_page=100",
+    "--jq",
+    ".[] | select(.draft | not) | .tag_name",
+  ]).map((tag) => tag.replace(/^v/u, ""));
+  const { name } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+
+  return releasedVersions({
+    tags,
+    releases,
+    npm: await npmVersions(name),
+    ledger: ledgerVersions(root),
+  });
+}
+
 if (import.meta.main) {
   const root = join(import.meta.dirname, "..");
+  const args = process.argv.slice(2);
+  let sources = { versions: [], warnings: [] };
+  let unreadable = false;
 
-  process.exitCode = run(process.argv.slice(2), {
-    root,
-    env: process.env,
-    head: () =>
-      execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: root,
-        encoding: "utf8",
-      }).trim(),
-    bumped: () => gitCliffBump(root),
-    notes: (tag) =>
-      gitCliff(root, ["--unreleased", "--tag", tag], "draft the release notes"),
-    github: githubCli,
-    out: (line) => console.log(line),
-    err: (line) => console.error(line),
-  });
+  if (SOURCE_COMMANDS.has(args[0])) {
+    try {
+      sources = await collectReleased(root);
+    } catch (error) {
+      console.error(
+        `✗ could not read the released versions: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      unreadable = true;
+    }
+  }
+
+  process.exitCode = unreadable
+    ? 1
+    : run(args, {
+        root,
+        env: process.env,
+        released: () => sources,
+        head: () =>
+          execFileSync("git", ["rev-parse", "HEAD"], {
+            cwd: root,
+            encoding: "utf8",
+          }).trim(),
+        bumped: () => gitCliffBump(root),
+        notes: (tag) =>
+          gitCliff(
+            root,
+            ["--unreleased", "--tag", tag],
+            "draft the release notes",
+          ),
+        github: githubCli,
+        out: (line) => console.log(line),
+        err: (line) => console.error(line),
+      });
 }
