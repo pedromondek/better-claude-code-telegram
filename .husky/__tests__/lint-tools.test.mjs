@@ -192,6 +192,7 @@ describe("pinned lint tools", { timeout: TOOL_TIMEOUT }, () => {
           "docs/decisions/Fork/000-fork-decisoes.md",
           PORTUGUESE_SENTENCE,
         ),
+        fixture("docs/releases/0.1.0/alpha.1.md", PORTUGUESE_SENTENCE),
       );
 
       expect(result.stdout).toBe("");

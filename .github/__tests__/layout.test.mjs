@@ -10,17 +10,20 @@ const MAIN_ONLY = "github.ref == 'refs/heads/main'";
 const READ_ONLY = { contents: "read" };
 const READ_ISSUES = { contents: "read", issues: "read" };
 const WRITE_ISSUES = { contents: "read", issues: "write" };
+const ATTEST = {
+  contents: "read",
+  "id-token": "write",
+  attestations: "write",
+};
 const EXTRA_PERMISSIONS = {
   "audit-workflows-on-schedule.yml > audit": READ_ISSUES,
   "audit-workflows-on-schedule.yml > issue": WRITE_ISSUES,
   "audit-workflows.yml > audit": READ_ISSUES,
-  "build-binaries.yml > build": {
-    contents: "read",
-    "id-token": "write",
-    attestations: "write",
-  },
+  "build-binaries.yml > build": ATTEST,
   "ci.yml > workflow-audit": READ_ISSUES,
   "ci.yml > workflow-audit-issue": WRITE_ISSUES,
+  "release.yml > build": ATTEST,
+  "release.yml > plan": { contents: "read", "pull-requests": "read" },
   "report-workflow-audit.yml > report": WRITE_ISSUES,
 };
 

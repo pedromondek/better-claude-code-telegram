@@ -29,7 +29,7 @@ describe("build-binaries.yml builds the 6 native binaries, checks each one and h
     expect(definition.on.workflow_dispatch ?? null).toBeNull();
   });
 
-  it("attests only when the release asks, through an input that is off by default", () => {
+  it("attests only when the release asks, through an input that is off by default, and builds the commit the release names", () => {
     expect(definition.on.workflow_call.inputs).toEqual({
       attest: {
         description: expect.any(String),
@@ -37,6 +37,16 @@ describe("build-binaries.yml builds the 6 native binaries, checks each one and h
         type: "boolean",
         default: false,
       },
+      ref: {
+        description: expect.any(String),
+        required: false,
+        type: "string",
+        default: "",
+      },
+    });
+    expect(stepUsing(build, "actions/checkout").with).toEqual({
+      ref: "${{ inputs.ref }}",
+      "persist-credentials": false,
     });
   });
 

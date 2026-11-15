@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Merged version pull request to publish, when the merge did not start the release
+        required: true
+        type: choice
+        options:
+          - Last merged PR
+          - Second to last merged PR
+          - Third to last merged PR
+      pr_number:
+        description: Another merged version pull request (number), which wins over the select
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    name: Plan the release
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read # reads the notes in the description of the version pull request
+    outputs:
+      number: ${{ steps.plan.outputs.number }}
+      version: ${{ steps.plan.outputs.version }}
+      merge: ${{ steps.plan.outputs.merge }}
+      recorded: ${{ steps.plan.outputs.recorded }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Merged pull request of the dispatch
+        id: target
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PR_CHOICE: ${{ inputs.pr }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: npm run --silent merged-pr
+
+      - name: Version, merge commit and state of the release
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.target.outputs.number || github.event.pull_request.number }}
+        run: npm run --silent release:publish -- plan
+
+  build:
+    name: Build
+    needs:
+      - plan
+    permissions:
+      contents: read
+      id-token: write # actions/attest signs the provenance with the OIDC token of the build job
+      attestations: write # actions/attest stores the attestation in the repository
+    uses: $/.github/workflows/build-binaries.yml
+    with:
+      attest: true
+      ref: ${{ needs.plan.outputs.merge }}
+
+  publish:
+    name: Publish v${{ needs.plan.outputs.version }}
+    needs:
+      - plan
+      - build
+    environment: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.plan.outputs.merge }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Token of the release app
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: bcct-*
+          merge-multiple: true
+          path: dist
+
+      - name: Checksums and notes on main
+        id: record
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ needs.plan.outputs.number }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          MERGE: ${{ needs.plan.outputs.merge }}
+          RECORDED: ${{ needs.plan.outputs.recorded }}
+        run: npm run --silent release:publish -- record dist
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ needs.plan.outputs.number }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          COMMIT: ${{ steps.record.outputs.commit }}
+          PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+        run: npm run --silent release:publish -- release dist

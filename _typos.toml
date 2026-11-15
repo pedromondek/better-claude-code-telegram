@@ -1,6 +1,6 @@
 [files]
 ignore-hidden = false
-extend-exclude = [".git/", "*.pt-br.md", "docs/decisions/"]
+extend-exclude = [".git/", "*.pt-br.md", "docs/decisions/", "docs/releases/"]
 
 [default.extend-words]
 aprove = "aprove"
