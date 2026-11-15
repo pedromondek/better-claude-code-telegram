@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  UPSTREAM_CHANGES,
   UPSTREAM_COMMIT,
   UPSTREAM_LABEL,
   UPSTREAM_PATH,
@@ -277,6 +278,27 @@ describe("upstream.constants.mjs", () => {
     expect(notice).toContain(`(https://github.com/${UPSTREAM_REPOSITORY},`);
     expect(notice).toContain(` ${UPSTREAM_PATH}),`);
     expect(notice).toContain(`upstream version ${UPSTREAM_VERSION},`);
+  });
+
+  it("lists every file of the copy that differs from the upstream base, and NOTICE names each one", () => {
+    const notice = readFileSync(join(ROOT, "NOTICE"), "utf8").replaceAll(
+      "\n",
+      " ",
+    );
+
+    expect(UPSTREAM_CHANGES).toEqual([
+      ".claude-plugin/plugin.json",
+      "bun.lock",
+      "package.json",
+      "server.ts",
+      "skills/configure/SKILL.md",
+    ]);
+    expect(
+      UPSTREAM_CHANGES.filter(
+        (file) => !notice.includes(`plugins/telegram/${file}`),
+      ),
+    ).toEqual([]);
+    expect(notice).toContain("with four changes:");
   });
 
   it("is the upstream:watch npm script", () => {

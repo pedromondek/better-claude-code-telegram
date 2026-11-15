@@ -6,9 +6,12 @@ Claude Code (https://github.com/anthropics/claude-plugins-official,
 external_plugins/telegram), licensed under the Apache License, Version 2.0.
 
 The files under plugins/telegram/ outside plugins/telegram/extensions/ are a
-copy of upstream version 0.0.7, with three changes: plugins/telegram/server.ts
+copy of upstream version 0.0.7, with four changes: plugins/telegram/server.ts
 carries a small patch that calls the code in plugins/telegram/extensions/,
 plugins/telegram/skills/configure/SKILL.md is rewritten so the bot token is
-never saved through Claude, and the version in
+never saved through Claude, the version in
 plugins/telegram/.claude-plugin/plugin.json and plugins/telegram/package.json
-follows the version of this project. Every other upstream file is unchanged.
+follows the version of this project, and plugins/telegram/bun.lock is resolved
+again within the ranges of plugins/telegram/package.json, so no dependency
+carries a known high or critical advisory. Every other upstream file is
+unchanged.
