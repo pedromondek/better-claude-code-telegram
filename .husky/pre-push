@@ -56,12 +56,19 @@ done
 [ "$SAW_PUSH" = "1" ] || exit 0
 
 RUN_WORKFLOWS=0
+RUN_PLUGIN_AUDIT=0
 
 if [ "$RANGE_OK" = "0" ]; then
   echo "⚠ No reliable range (new branch or no upstream): running every check"
   RUN_WORKFLOWS=1
-elif echo "$CHANGED" | grep -qE '^(\.github/(workflows/[^/]+\.ya?ml|actions/.+/action\.ya?ml|j?actionlint\.ya?ml|dependabot\.ya?ml|zizmor\.ya?ml|pinact\.ya?ml)|mise\.(toml|lock))$'; then
-  RUN_WORKFLOWS=1
+  RUN_PLUGIN_AUDIT=1
+else
+  if echo "$CHANGED" | grep -qE '^(\.github/(workflows/[^/]+\.ya?ml|actions/.+/action\.ya?ml|j?actionlint\.ya?ml|dependabot\.ya?ml|zizmor\.ya?ml|pinact\.ya?ml)|mise\.(toml|lock))$'; then
+    RUN_WORKFLOWS=1
+  fi
+  if echo "$CHANGED" | grep -qE '^plugins/telegram/(bun\.lock|package\.json)$'; then
+    RUN_PLUGIN_AUDIT=1
+  fi
 fi
 
 FIXUP_COUNT=$(git log --format=%s "origin/main..$PUSHED_OID" 2>/dev/null | grep -cE '^(fixup|squash|amend)! ' || true)
@@ -214,6 +221,7 @@ run_step "typos" lint:typos
 run_step "lockfile" lint:lockfile
 run_step "plugin manifests" lint:plugins
 [ "$RUN_WORKFLOWS" = "1" ] && [ -d .github ] && run_step "workflow linters" lint:workflows
+[ "$RUN_PLUGIN_AUDIT" = "1" ] && [ -f plugins/telegram/bun.lock ] && run_step "plugin dependencies" audit:plugin
 run_step "unit tests with coverage" "test:cov -- --reporter=minimal --reporter=./scripts/vitest-progress-reporter.mjs" test:cov:changed
 run_step "rust lint" rust:lint
 run_step "rust dependencies" rust:deny

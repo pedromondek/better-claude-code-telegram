@@ -707,6 +707,56 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
     });
   });
 
+  describe("plugin dependencies", () => {
+    it.each(["plugins/telegram/bun.lock", "plugins/telegram/package.json"])(
+      "audit the dependencies of the telegram plugin when the push changes %s",
+      (file) => {
+        commitFile("plugins/telegram/bun.lock", "{}\n");
+        const remote = git("rev-parse", "HEAD");
+        useScripts({ "audit:plugin": "echo PLUGIN_AUDIT_RAN && exit 1" });
+        commitFile(file, '{ "changed": true }\n');
+
+        const result = push({ input: pushLine(remote) });
+
+        expect(result.status).toBe(1);
+        expect(result.stdout).toContain("✗ plugin dependencies failed");
+        expect(result.stdout).toContain("PLUGIN_AUDIT_RAN");
+      },
+    );
+
+    it("are not audited when the push does not touch them", () => {
+      commitFile("plugins/telegram/bun.lock", "{}\n");
+      const remote = git("rev-parse", "HEAD");
+      useScripts({ "audit:plugin": "echo PLUGIN_AUDIT_RAN && exit 1" });
+      commitFile("README.md", "readme\n");
+
+      const result = push({ input: pushLine(remote) });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain("plugin dependencies");
+    });
+
+    it("are audited, like every check, when the push has no reliable range", () => {
+      useScripts({ "audit:plugin": "echo PLUGIN_AUDIT_RAN && exit 1" });
+      commitFile("plugins/telegram/bun.lock", "{}\n");
+
+      const result = push();
+
+      expect(result.stdout).toContain("No reliable range");
+      expect(result.stdout).toContain("PLUGIN_AUDIT_RAN");
+    });
+
+    it("are skipped in a repository without the telegram plugin, even with no reliable range", () => {
+      useScripts({ "audit:plugin": "echo PLUGIN_AUDIT_RAN && exit 1" });
+      commitFile("README.md", "readme\n");
+
+      const result = push();
+
+      expect(result.stdout).toContain("No reliable range");
+      expect(result.stdout).not.toContain("plugin dependencies");
+    });
+  });
+
   describe("progress of the test step", () => {
     const WRITE_PROGRESS = `node -e "require('node:fs').writeFileSync(process.env.TEST_PROGRESS_FILE, '1 1\\n')" --`;
 

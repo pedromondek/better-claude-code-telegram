@@ -456,8 +456,19 @@ describe("lint-staged: Rust", () => {
   });
 });
 
+describe("lint-staged: the dependencies of the telegram plugin", () => {
+  it("audits them for high and critical advisories when the lock of the plugin changes", () => {
+    const file = "plugins/telegram/bun.lock";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      "npm run --silent audit:plugin",
+    ]);
+  });
+});
+
 describe("lint-staged: files with no other task", () => {
-  it.each(["LICENSE", "NOTICE", ".gitignore", "plugins/telegram/bun.lock"])(
+  it.each(["LICENSE", "NOTICE", ".gitignore"])(
     "only checks %s for secrets and typos",
     (file) => {
       expect(tasksFor(file)).toEqual(everyFileTasks(file));

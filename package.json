@@ -36,6 +36,8 @@
     "merged-pr": "node scripts/merged-pr.mjs",
     "pr:lock": "node scripts/lock-pull-requests.mjs",
     "upstream:watch": "node scripts/watch-upstream.mjs",
+    "audit:plugin": "node scripts/audit-plugin.mjs",
+    "audit:plugin:issue": "node scripts/audit-plugin.mjs --issue",
     "setup": "node -r ./scripts/require-node.cjs scripts/setup.mjs",
     "setup:language": "node -r ./scripts/require-node.cjs scripts/setup.mjs language",
     "setup:plugin": "node -r ./scripts/require-node.cjs scripts/setup.mjs plugin",

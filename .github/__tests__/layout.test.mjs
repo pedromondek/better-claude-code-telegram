@@ -19,6 +19,7 @@ const READ_ATTESTATIONS = { contents: "read", attestations: "read" };
 const EXTRA_PERMISSIONS = {
   "audit-workflows-on-schedule.yml > audit": READ_ISSUES,
   "audit-workflows-on-schedule.yml > issue": WRITE_ISSUES,
+  "audit-plugin-dependencies.yml > audit": WRITE_ISSUES,
   "audit-workflows.yml > audit": READ_ISSUES,
   "build-binaries.yml > build": ATTEST,
   "ci.yml > workflow-audit": READ_ISSUES,

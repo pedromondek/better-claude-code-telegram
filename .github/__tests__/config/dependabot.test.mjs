@@ -39,7 +39,7 @@ const blockOf = ({ ecosystem, directory }) =>
       block["package-ecosystem"] === ecosystem && block.directory === directory,
   );
 
-describe("dependabot.yml: security updates only", () => {
+describe("dependabot.yml: security updates, and the major versions of grammy", () => {
   it("does not use YAML anchors or aliases, which Dependabot refuses and then ignores the whole file", () => {
     expect(anchorsAndAliases(source)).toEqual([]);
   });
@@ -54,16 +54,45 @@ describe("dependabot.yml: security updates only", () => {
     expect(config.version).toBe(2);
   });
 
-  it("covers exactly npm in /, cargo in /rust and github-actions in /", () => {
+  it("covers exactly npm in /, cargo in /rust and github-actions in /, plus the bun of the telegram plugin", () => {
     expect(
       config.updates
         .map((block) => `${block["package-ecosystem"]} ${block.directory}`)
         .toSorted(),
     ).toEqual(
-      ECOSYSTEMS.map(
-        ({ ecosystem, directory }) => `${ecosystem} ${directory}`,
-      ).toSorted(),
+      [
+        ...ECOSYSTEMS.map(
+          ({ ecosystem, directory }) => `${ecosystem} ${directory}`,
+        ),
+        "bun /plugins/telegram",
+      ].toSorted(),
     );
+  });
+
+  it("opens only the major versions of grammy in the telegram plugin, 30 days after they come out, since Dependabot makes no security update for bun", () => {
+    const upgrade = czConfig.types.find((type) => type.value === "upgrade");
+
+    expect(
+      blockOf({ ecosystem: "bun", directory: "/plugins/telegram" }),
+    ).toEqual({
+      "package-ecosystem": "bun",
+      directory: "/plugins/telegram",
+      schedule: { interval: "weekly" },
+      "open-pull-requests-limit": 1,
+      allow: [{ "dependency-name": "grammy" }],
+      ignore: [
+        {
+          "dependency-name": "grammy",
+          "update-types": [
+            "version-update:semver-minor",
+            "version-update:semver-patch",
+          ],
+        },
+      ],
+      cooldown: { "semver-major-days": 30 },
+      "commit-message": { prefix: `${upgrade.emoji} upgrade(telegram)` },
+    });
+    expect(czConfig.scopes).toContain("telegram");
   });
 
   describe.each(ECOSYSTEMS)("$ecosystem in $directory", (target) => {
