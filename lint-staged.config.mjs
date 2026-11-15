@@ -63,6 +63,7 @@ export default {
     tool(`zizmor --offline --persona=auditor ${quoted(files)}`),
   ],
   ".github/zizmor.{yml,yaml}": () => ["npm run --silent lint:workflows:zizmor"],
+  ".github/pinact.{yml,yaml}": () => ["npm run --silent lint:workflows:pinact"],
   "{.husky/*,.husky/**/*.sh}": () => ["npm run --silent test:hooks"],
   "scripts/**/*.sh": (files) => [
     `vitest run --passWithNoTests ${quoted(files.map(scriptTestOf))}`,

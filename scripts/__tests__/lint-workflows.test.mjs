@@ -131,6 +131,8 @@ describe("touchesWorkflowLint", () => {
     ".github/jactionlint.yml",
     ".github/dependabot.yml",
     ".github/zizmor.yml",
+    ".github/pinact.yaml",
+    ".github/pinact.yml",
     "mise.toml",
     "mise.lock",
     ".github\\workflows\\ci.yml",

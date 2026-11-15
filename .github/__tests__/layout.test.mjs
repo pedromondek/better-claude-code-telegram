@@ -70,6 +70,7 @@ describe("each .github file has the test with the same name in the mirrored __te
       "coderabbit",
       "dependabot",
       "jactionlint",
+      "pinact",
       "zizmor",
     ]);
     expect(tests).toEqual(sources);

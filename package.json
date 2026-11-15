@@ -72,7 +72,7 @@
     "lint:workflows:zizmor": "sh scripts/mise-exec.sh zizmor --offline --persona=auditor .",
     "lint:workflows:pinact": "sh scripts/mise-exec.sh pinact run --fix=false --no-api",
     "lint:workflows:zizmor:online": "sh scripts/mise-exec.sh zizmor --format=json",
-    "lint:workflows:pinact:online": "sh scripts/mise-exec.sh pinact run --check --verify-comment --format sarif",
+    "lint:workflows:pinact:online": "sh scripts/mise-exec.sh pinact run --check --verify-comment --verify-min-age --format sarif",
     "audit:workflows": "node scripts/workflow-audit.mjs",
     "audit:workflows:issue": "node scripts/workflow-audit-issue.mjs",
     "typecheck": "tsc -p tsconfig.json",

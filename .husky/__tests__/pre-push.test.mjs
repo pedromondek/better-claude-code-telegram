@@ -656,6 +656,7 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
       ".github/jactionlint.yaml",
       ".github/dependabot.yml",
       ".github/zizmor.yml",
+      ".github/pinact.yaml",
     ])("run when the push changes %s", (file) => {
       const remote = git("rev-parse", "HEAD");
       useScripts({ "lint:workflows": "echo WORKFLOWS_RAN && exit 1" });

@@ -71,6 +71,7 @@ describe("shouldAudit", () => {
     ".github/actions/merge-main-and-install/action.yml",
     ".github/actionlint.yaml",
     ".github/jactionlint.yaml",
+    ".github/pinact.yaml",
     ".github/dependabot.yml",
     "mise.toml",
     "mise.lock",

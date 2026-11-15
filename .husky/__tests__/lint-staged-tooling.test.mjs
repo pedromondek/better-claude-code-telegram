@@ -200,7 +200,9 @@ describe("lint-staged: workflows and actions", () => {
       tool("zizmor --format=json"),
     );
     expect(scripts()["lint:workflows:pinact:online"]).toBe(
-      tool("pinact run --check --verify-comment --format sarif"),
+      tool(
+        "pinact run --check --verify-comment --verify-min-age --format sarif",
+      ),
     );
     expect(scripts()["audit:workflows"]).toBe(
       "node scripts/workflow-audit.mjs",
@@ -283,6 +285,16 @@ describe("lint-staged: workflows and actions", () => {
       ...everyFileTasks(file),
       `prettier --write ${quoted([file])}`,
       "npm run --silent lint:workflows:zizmor",
+    ]);
+  });
+
+  it("checks every workflow again with pinact when the pinact config changes", () => {
+    const file = ".github/pinact.yaml";
+
+    expect(tasksFor(file)).toEqual([
+      ...everyFileTasks(file),
+      `prettier --write ${quoted([file])}`,
+      "npm run --silent lint:workflows:pinact",
     ]);
   });
 
