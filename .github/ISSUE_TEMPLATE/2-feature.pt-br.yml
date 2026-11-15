@@ -1,0 +1,31 @@
+name: Pedir uma funcionalidade
+description: Algo novo, ou uma mudança no que a ponte faz.
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nunca cole o token do bot, um chat id nem o `access.json`, em nenhum campo ou print.
+        Prefere inglês? Abra o formulário **Feature request**.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: O que você está tentando fazer e o que atrapalha hoje.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: O que a funcionalidade faria, do lado de quem usa.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Outros caminhos que você pensou ou tentou, e por que não bastam.

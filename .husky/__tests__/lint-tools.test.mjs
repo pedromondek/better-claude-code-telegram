@@ -183,11 +183,12 @@ describe("pinned lint tools", { timeout: TOOL_TIMEOUT }, () => {
       expect(tool("typos", "--force-exclude", file).status).toBe(0);
     });
 
-    it("skips the pt-br docs passed by the path relative to the repository, as lint-staged passes them", () => {
+    it("skips the pt-br docs and issue forms passed by the path relative to the repository, as lint-staged passes them", () => {
       const result = tool(
         "typos",
         "--force-exclude",
         fixture("README.pt-br.md", PORTUGUESE_SENTENCE),
+        fixture(".github/ISSUE_TEMPLATE/1-bug.pt-br.yml", PORTUGUESE_SENTENCE),
         fixture(
           "docs/decisions/Fork/000-fork-decisoes.md",
           PORTUGUESE_SENTENCE,

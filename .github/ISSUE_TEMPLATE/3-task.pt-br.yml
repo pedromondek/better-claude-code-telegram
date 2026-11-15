@@ -1,0 +1,36 @@
+name: Tarefa
+description: Trabalho técnico sem mudança visível para quem usa, como upgrade, refatoração, CI e documentação.
+type: Task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nunca cole o token do bot, um chat id nem o `access.json`, em nenhum campo ou print.
+        Prefere inglês? Abra o formulário **Task**.
+
+  - type: textarea
+    id: what-to-do
+    attributes:
+      label: O que fazer
+      description: A mudança técnica e onde ela mexe.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Por quê
+      description: O problema ou o risco de não fazer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done-criteria
+    attributes:
+      label: Critério de pronto
+      description: Como saber que está pronto, em itens verificáveis.
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true

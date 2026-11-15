@@ -1,0 +1,103 @@
+name: Relatar um bug
+description: Algo que deveria funcionar e não funciona.
+type: Bug
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Rode `npx @pedromondek/better-claude-code-telegram health` e cole a saída abaixo: ela mostra quase tudo o que ajuda a reproduzir o bug.
+        Nunca cole o token do bot, um chat id nem o `access.json`, em nenhum campo ou print.
+        Prefere inglês? Abra o formulário **Bug report**.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: O que aconteceu
+      description: O comportamento que apareceu, com a mensagem de erro exata quando houver.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Como reproduzir
+      description: O cenário passo a passo, a partir do comando que você rodou.
+      placeholder: |
+        1. Rodar `claude --telegram`
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: O que era esperado
+      description: O comportamento certo no mesmo cenário.
+    validations:
+      required: true
+
+  - type: input
+    id: bcct-version
+    attributes:
+      label: Versão do bcct
+      description: A primeira linha que o `bcct -v` imprime.
+      placeholder: bcct 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: claude-code-version
+    attributes:
+      label: Versão do Claude Code
+      description: O que o `claude --version` imprime.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema operacional
+      description: Onde o Claude Code roda.
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - WSL
+    validations:
+      required: true
+
+  - type: textarea
+    id: health
+    attributes:
+      label: Saída do bcct health
+      description: Colada como texto, sem o token e sem o chat id.
+      render: shell
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Funcionava antes?
+      description: Se é regressão, o que mudou desde quando funcionava ajuda a achar a causa.
+      options:
+        - Sim, funcionava antes
+        - Não, nunca funcionou
+        - Não sei
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Com que frequência acontece?
+      description: Repetindo o mesmo cenário.
+      options:
+        - Sempre
+        - Às vezes
+        - Só uma vez
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log ou erro
+      description: Trecho do log ou a mensagem de erro, colado como texto.
+      render: shell
