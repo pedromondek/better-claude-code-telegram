@@ -33,6 +33,7 @@ const EXTRA_PERMISSIONS = {
   "release.yml > verify": READ_ATTESTATIONS,
   "report-workflow-audit.yml > report": WRITE_ISSUES,
   "verify-release.yml > verify": READ_ATTESTATIONS,
+  "watch-upstream.yml > watch": WRITE_ISSUES,
 };
 
 const namesIn = (dir, extension) =>
