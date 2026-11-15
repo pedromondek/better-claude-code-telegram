@@ -204,6 +204,17 @@ describe("releasedVersions", () => {
     ).toEqual(["0.1.0", "0.2.0", "0.3.0-alpha.1", "0.3.0-alpha.2"]);
   });
 
+  it("ignores the 0.0.0-stage placeholder that npm stage publish leaves on a new package, without a warning", () => {
+    expect(
+      releasedVersions({
+        tags: ["0.1.0-alpha.1"],
+        releases: ["0.1.0-alpha.1"],
+        npm: ["0.0.0-stage", "0.1.0-alpha.1"],
+        ledger: ["0.1.0-alpha.1"],
+      }),
+    ).toEqual({ versions: ["0.1.0-alpha.1"], warnings: [] });
+  });
+
   it("warns about a version that the tags, the Releases and npm do not all have", () => {
     expect(
       releasedVersions({

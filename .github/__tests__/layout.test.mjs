@@ -23,6 +23,7 @@ const EXTRA_PERMISSIONS = {
   "ci.yml > workflow-audit": READ_ISSUES,
   "ci.yml > workflow-audit-issue": WRITE_ISSUES,
   "release.yml > build": ATTEST,
+  "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },
   "report-workflow-audit.yml > report": WRITE_ISSUES,
 };

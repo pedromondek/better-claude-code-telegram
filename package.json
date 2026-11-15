@@ -61,6 +61,7 @@
     "release:checksums": "node scripts/release-checksums.mjs",
     "release:cliff": "sh scripts/mise-exec.sh git-cliff",
     "release:npm": "node scripts/release-npm.mjs",
+    "release:npm:publish": "node scripts/release-npm-publish.mjs",
     "release:pr": "node scripts/release-pr.mjs",
     "release:publish": "node scripts/release-publish.mjs",
     "release:version": "node scripts/version.mjs",

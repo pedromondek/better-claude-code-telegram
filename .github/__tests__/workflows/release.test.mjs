@@ -16,7 +16,7 @@ import {
 
 const FILE = "release.yml";
 const definition = workflow(FILE);
-const { plan, build, publish } = definition.jobs;
+const { plan, build, publish, npm } = definition.jobs;
 const packageScripts = JSON.parse(
   readFileSync(join(ROOT, "package.json"), "utf8"),
 ).scripts;
@@ -51,10 +51,65 @@ describe("release.yml publishes the version pull request that was merged", () =>
     });
   });
 
-  it("has the plan, build and publish jobs, in this order of needs", () => {
-    expect(Object.keys(definition.jobs)).toEqual(["plan", "build", "publish"]);
+  it("has the plan, build, publish and npm jobs, in this order of needs", () => {
+    expect(Object.keys(definition.jobs)).toEqual([
+      "plan",
+      "build",
+      "publish",
+      "npm",
+    ]);
     expect(build.needs).toEqual(["plan"]);
     expect(publish.needs).toEqual(["plan", "build"]);
+    expect(npm.needs).toEqual(["plan", "publish"]);
+  });
+
+  describe("npm", () => {
+    it("stages on npm only from the release environment, with the OIDC token of trusted publishing and nothing to write in the repository", () => {
+      expect(npm.environment).toBe("release");
+      expect(npm.permissions).toEqual({
+        contents: "read",
+        "id-token": "write",
+      });
+      expect(JSON.stringify(npm)).not.toMatch(/secrets\.|NODE_AUTH_TOKEN/u);
+    });
+
+    it("builds the packages at the recorded commit, whose checksums.txt has the version, which the publish job hands over", () => {
+      expect(publish.outputs).toEqual({
+        commit: "${{ steps.record.outputs.commit }}",
+      });
+      expect(stepUsing(npm, "actions/checkout").with).toEqual({
+        ref: "${{ needs.publish.outputs.commit }}",
+        "persist-credentials": false,
+      });
+    });
+
+    it("points setup-node at the npm registry, as the trusted publishing example does", () => {
+      expect(stepUsing(npm, "actions/setup-node").with).toEqual({
+        "node-version-file": ".nvmrc",
+        "registry-url": "https://registry.npmjs.org",
+      });
+    });
+
+    it("gathers the binaries, builds the 7 packages through release:npm and stages them through release:npm:publish", () => {
+      const packages = stepNamed(npm, "npm packages");
+      const stage = stepNamed(npm, "Stage on npm");
+
+      expect(stepUsing(npm, "actions/download-artifact").with).toEqual({
+        pattern: "bcct-*",
+        "merge-multiple": true,
+        path: "dist",
+      });
+      expect(packages.run).toBe(
+        "npm run --silent release:npm -- dist dist/npm",
+      );
+      expect(stage.env).toEqual({
+        VERSION: "${{ needs.plan.outputs.version }}",
+      });
+      expect(stage.run).toBe(
+        "npm run --silent release:npm:publish -- stage dist/npm",
+      );
+      expect(npm.steps.at(-1)).toBe(stage);
+    });
   });
 
   describe("plan", () => {
