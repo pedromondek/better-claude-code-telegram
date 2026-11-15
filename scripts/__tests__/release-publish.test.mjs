@@ -95,6 +95,16 @@ function fakeGithub(state = {}) {
     editDraft: (draft) => calls.push(["editDraft", draft]),
     upload: (upload) => calls.push(["upload", upload]),
     publish: (published) => calls.push(["publish", published]),
+    branchHeadIfAny: (branch) => {
+      calls.push(["branchHeadIfAny", branch]);
+      return state.stableHead === undefined ? MERGE : state.stableHead;
+    },
+    compare: (base, head) => {
+      calls.push(["compare", base, head]);
+      return state.compareStatus ?? "ahead";
+    },
+    createBranch: (branch, sha) => calls.push(["createBranch", branch, sha]),
+    moveBranch: (branch, sha) => calls.push(["moveBranch", branch, sha]),
   };
 
   return { github, calls };
@@ -416,15 +426,101 @@ describe("release", () => {
   });
 });
 
+describe("stable", () => {
+  const OLD = "c".repeat(40);
+  const stableEnv = { VERSION: "0.2.0", COMMIT: RECORD };
+  const moves = (calls) =>
+    calls.filter(([name]) => name === "createBranch" || name === "moveBranch");
+
+  it("moves stable forward to the verified record of a stable version, only after checking that stable is behind it", () => {
+    const result = runWith(["stable"], {
+      env: stableEnv,
+      state: { stableHead: OLD },
+    });
+
+    expect(result.code).toBe(0);
+    expect(result.calls).toContainEqual(["branchHeadIfAny", "stable"]);
+    expect(result.calls).toContainEqual(["compare", OLD, RECORD]);
+    expect(moves(result.calls)).toEqual([["moveBranch", "stable", RECORD]]);
+    expect(result.out).toEqual([
+      "✓ stable moved from ccccccc to bbbbbbb, the record of v0.2.0",
+    ]);
+  });
+
+  it("creates stable at the record when the first stable version finds no stable branch", () => {
+    const result = runWith(["stable"], {
+      env: stableEnv,
+      state: { stableHead: null },
+    });
+
+    expect(result.code).toBe(0);
+    expect(moves(result.calls)).toEqual([["createBranch", "stable", RECORD]]);
+    expect(result.out).toEqual([
+      "✓ stable created at bbbbbbb, the record of v0.2.0",
+    ]);
+  });
+
+  it("leaves stable alone when it already is at the record, so a re-run goes through", () => {
+    const result = runWith(["stable"], {
+      env: stableEnv,
+      state: { stableHead: RECORD },
+    });
+
+    expect(result.code).toBe(0);
+    expect(moves(result.calls)).toEqual([]);
+    expect(result.calls.some(([name]) => name === "compare")).toBe(false);
+    expect(result.out).toEqual([
+      "✓ stable is already at bbbbbbb, the record of v0.2.0",
+    ]);
+  });
+
+  it.each(["behind", "diverged", "identical"])(
+    "refuses to move stable when the record is not ahead of it (%s), since stable only moves forward",
+    (status) => {
+      const result = runWith(["stable"], {
+        env: stableEnv,
+        state: { stableHead: OLD, compareStatus: status },
+      });
+
+      expect(result.code).toBe(1);
+      expect(moves(result.calls)).toEqual([]);
+      expect(result.err).toEqual([
+        `✗ stable at ccccccc is not behind bbbbbbb, the record of v0.2.0 (the compare says ${status}): stable only moves forward, so find what moved it`,
+      ]);
+    },
+  );
+
+  it("refuses a pre-release, whose testers follow its tag and never stable", () => {
+    const result = runWith(["stable"], {
+      env: { VERSION, COMMIT: RECORD },
+      state: { stableHead: OLD },
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.calls.some(([name]) => name === "branchHeadIfAny")).toBe(
+      false,
+    );
+    expect(result.err).toEqual([
+      `✗ v${VERSION} is a pre-release, which never moves stable`,
+    ]);
+  });
+
+  it("names the branch that the setup registers for a stable version", () => {
+    expect(
+      readFileSync(join(ROOT, "rust/crates/bcct/src/install.rs"), "utf8"),
+    ).toContain('const STABLE_REF: &str = "stable";');
+  });
+});
+
 describe("run", () => {
-  it.each([[[]], [["record"]], [["release"]], [["nope"]]])(
+  it.each([[[]], [["record"]], [["release"]], [["stable", "x"]], [["nope"]]])(
     "a usage error exits 2 (%j)",
     (args) => {
       const result = runWith(args);
 
       expect(result.code).toBe(2);
       expect(result.err).toEqual([
-        "usage: npm run release:publish -- plan | record <assets folder> | release <assets folder>",
+        "usage: npm run release:publish -- plan | record <assets folder> | release <assets folder> | stable",
       ]);
     },
   );

@@ -16,7 +16,7 @@ import {
 
 const FILE = "release.yml";
 const definition = workflow(FILE);
-const { plan, build, publish, npm, approval, verify } = definition.jobs;
+const { plan, build, publish, npm, approval, verify, stable } = definition.jobs;
 const packageScripts = JSON.parse(
   readFileSync(join(ROOT, "package.json"), "utf8"),
 ).scripts;
@@ -51,7 +51,7 @@ describe("release.yml publishes the version pull request that was merged", () =>
     });
   });
 
-  it("has the plan, build, publish, npm, approval and verify jobs, in this order of needs", () => {
+  it("has the plan, build, publish, npm, approval, verify and stable jobs, in this order of needs", () => {
     expect(Object.keys(definition.jobs)).toEqual([
       "plan",
       "build",
@@ -59,7 +59,9 @@ describe("release.yml publishes the version pull request that was merged", () =>
       "npm",
       "approval",
       "verify",
+      "stable",
     ]);
+    expect(stable.needs).toEqual(["plan", "verify"]);
     expect(build.needs).toEqual(["plan"]);
     expect(publish.needs).toEqual(["plan", "build"]);
     expect(npm.needs).toEqual(["plan", "publish"]);
@@ -101,6 +103,47 @@ describe("release.yml publishes the version pull request that was merged", () =>
         contents: "read",
         attestations: "read",
       });
+    });
+  });
+
+  describe("stable", () => {
+    it("runs only for a stable version, whose users follow stable, while a pre-release keeps its tag", () => {
+      expect(stable.if).toBe("needs.plan.outputs.prerelease == 'false'");
+    });
+
+    it("reads the release app key only in the release environment, with a read-only GITHUB_TOKEN", () => {
+      expect(stable.environment).toBe("release");
+      expect(stable.permissions).toEqual({ contents: "read" });
+      expect(stepUsing(stable, "actions/create-github-app-token").with).toEqual(
+        {
+          "client-id": "${{ vars.RELEASE_APP_CLIENT_ID }}",
+          "private-key": "${{ secrets.RELEASE_APP_PRIVATE_KEY }}",
+          "permission-contents": "write",
+        },
+      );
+    });
+
+    it("checks out the verified record", () => {
+      expect(stepUsing(stable, "actions/checkout").with).toEqual({
+        ref: "${{ needs.verify.outputs.commit }}",
+        "persist-credentials": false,
+      });
+    });
+
+    it("moves stable forward to the commit the verify hands over, through release:publish, the only step with the app token", () => {
+      const step = stepNamed(stable, "Stable");
+
+      expect(step.env).toEqual({
+        GH_TOKEN: "${{ steps.app.outputs.token }}",
+        GH_REPO: "${{ github.repository }}",
+        VERSION: "${{ needs.plan.outputs.version }}",
+        COMMIT: "${{ needs.verify.outputs.commit }}",
+      });
+      expect(step.run).toBe("npm run --silent release:publish -- stable");
+      expect(stable.steps.at(-1)).toBe(step);
+      for (const item of stable.steps.filter((entry) => entry !== step)) {
+        expect(JSON.stringify(item.env ?? {})).not.toContain("steps.app");
+      }
     });
   });
 

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
@@ -19,6 +19,7 @@ import {
   notesPath,
   notesProblem,
 } from "./release-pr.mjs";
+import { STABLE_BRANCH } from "./release.constants.mjs";
 import { parseVersion } from "./version.mjs";
 
 export const RELEASE_ASSETS = [
@@ -30,7 +31,7 @@ const BASE_BRANCH = "main";
 const RELEASE_BRANCH = /^release\/v(.+)$/u;
 const NOTES_FILE = "release-notes.md";
 const USAGE =
-  "usage: npm run release:publish -- plan | record <assets folder> | release <assets folder>";
+  "usage: npm run release:publish -- plan | record <assets folder> | release <assets folder> | stable";
 const CREATE_COMMIT =
   "mutation ($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }";
 
@@ -241,6 +242,39 @@ function release({ env, github, assetsDir, out }) {
   out(`✓ ${tag} published at ${short(commit)}`);
 }
 
+function stable({ env, github, out }) {
+  const { COMMIT: commit, VERSION: version } = env;
+  const target = `${short(commit)}, the record of v${version}`;
+
+  if (parseVersion(version).stage !== null) {
+    throw new Error(`v${version} is a pre-release, which never moves stable`);
+  }
+
+  const head = github.branchHeadIfAny(STABLE_BRANCH);
+
+  if (head === null) {
+    github.createBranch(STABLE_BRANCH, commit);
+    out(`✓ ${STABLE_BRANCH} created at ${target}`);
+    return;
+  }
+
+  if (head === commit) {
+    out(`✓ ${STABLE_BRANCH} is already at ${target}`);
+    return;
+  }
+
+  const status = github.compare(head, commit);
+
+  if (status !== "ahead") {
+    throw new Error(
+      `${STABLE_BRANCH} at ${short(head)} is not behind ${target} (the compare says ${status}): ${STABLE_BRANCH} only moves forward, so find what moved it`,
+    );
+  }
+
+  github.moveBranch(STABLE_BRANCH, commit);
+  out(`✓ ${STABLE_BRANCH} moved from ${short(head)} to ${target}`);
+}
+
 export function run(args, { root, env, github, released, out, err }) {
   const [command, folder, ...rest] = args;
   const withFolder = folder !== undefined && rest.length === 0;
@@ -248,6 +282,7 @@ export function run(args, { root, env, github, released, out, err }) {
     plan: folder === undefined ? plan : null,
     record: withFolder ? record : null,
     release: withFolder ? release : null,
+    stable: folder === undefined ? stable : null,
   };
   const action = Object.hasOwn(commands, command) ? commands[command] : null;
 
@@ -384,6 +419,54 @@ export const githubCli = {
   },
   publish: ({ tag, latest }) => {
     gh(["release", "edit", tag, "--draft=false", `--latest=${String(latest)}`]);
+  },
+  branchHeadIfAny: (branch) => {
+    const result = spawnSync(
+      "gh",
+      ["api", `repos/{owner}/{repo}/git/ref/heads/${branch}`],
+      { encoding: "utf8" },
+    );
+
+    if (result.status === 0) {
+      return JSON.parse(result.stdout).object.sha;
+    }
+
+    if (result.stdout.includes('"Not Found"')) {
+      return null;
+    }
+
+    throw new Error(`gh api of ${branch} failed: ${result.stderr.trim()}`);
+  },
+  compare: (base, head) =>
+    gh([
+      "api",
+      `repos/{owner}/{repo}/compare/${base}...${head}`,
+      "--jq",
+      ".status",
+    ]).trim(),
+  createBranch: (branch, sha) => {
+    gh([
+      "api",
+      "-X",
+      "POST",
+      "repos/{owner}/{repo}/git/refs",
+      "-f",
+      `ref=refs/heads/${branch}`,
+      "-f",
+      `sha=${sha}`,
+    ]);
+  },
+  moveBranch: (branch, sha) => {
+    gh([
+      "api",
+      "-X",
+      "PATCH",
+      `repos/{owner}/{repo}/git/refs/heads/${branch}`,
+      "-f",
+      `sha=${sha}`,
+      "-F",
+      "force=false",
+    ]);
   },
 };
 
