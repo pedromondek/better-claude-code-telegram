@@ -34,6 +34,7 @@
     "commit": "czg",
     "branch": "node scripts/branch.mjs",
     "merged-pr": "node scripts/merged-pr.mjs",
+    "pr:lock": "node scripts/lock-pull-requests.mjs",
     "setup": "node -r ./scripts/require-node.cjs scripts/setup.mjs",
     "setup:language": "node -r ./scripts/require-node.cjs scripts/setup.mjs language",
     "setup:plugin": "node -r ./scripts/require-node.cjs scripts/setup.mjs plugin",

@@ -23,6 +23,10 @@ const EXTRA_PERMISSIONS = {
   "build-binaries.yml > build": ATTEST,
   "ci.yml > workflow-audit": READ_ISSUES,
   "ci.yml > workflow-audit-issue": WRITE_ISSUES,
+  "lock-pull-requests.yml > lock": {
+    contents: "read",
+    "pull-requests": "write",
+  },
   "release.yml > build": ATTEST,
   "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },
