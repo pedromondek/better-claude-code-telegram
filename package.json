@@ -64,6 +64,7 @@
     "release:npm:publish": "node scripts/release-npm-publish.mjs",
     "release:pr": "node scripts/release-pr.mjs",
     "release:publish": "node scripts/release-publish.mjs",
+    "release:verify": "node scripts/release-verify.mjs",
     "release:version": "node scripts/version.mjs",
     "lint:workflows": "node scripts/lint-workflows.mjs",
     "lint:workflows:actionlint": "sh scripts/mise-exec.sh actionlint",

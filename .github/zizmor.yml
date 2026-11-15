@@ -9,3 +9,4 @@ rules:
       - check-rust-platforms.yml
       - push-checks.yml
       - report-workflow-audit.yml
+      - verify-release.yml

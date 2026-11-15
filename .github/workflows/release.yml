@@ -193,3 +193,36 @@ jobs:
         env:
           VERSION: ${{ needs.plan.outputs.version }}
         run: npm run --silent release:npm:publish -- stage dist/npm
+
+  approval:
+    name: Approve v${{ needs.plan.outputs.version }} on npm, then here
+    needs:
+      - plan
+      - npm
+    environment: npm-approved
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Approved on npm
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: echo "v${VERSION} was approved on npm, so its packages are public"
+
+  verify:
+    name: Verify v${{ needs.plan.outputs.version }}
+    needs:
+      - plan
+      - approval
+    permissions:
+      contents: read
+      attestations: read # gh attestation verify and gh release verify-asset read the attestations of the binaries
+    uses: $/.github/workflows/verify-release.yml
+    with:
+      pr_number: ${{ needs.plan.outputs.number }}

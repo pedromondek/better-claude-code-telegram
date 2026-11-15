@@ -16,7 +16,7 @@ import {
 
 const FILE = "release.yml";
 const definition = workflow(FILE);
-const { plan, build, publish, npm } = definition.jobs;
+const { plan, build, publish, npm, approval, verify } = definition.jobs;
 const packageScripts = JSON.parse(
   readFileSync(join(ROOT, "package.json"), "utf8"),
 ).scripts;
@@ -51,16 +51,57 @@ describe("release.yml publishes the version pull request that was merged", () =>
     });
   });
 
-  it("has the plan, build, publish and npm jobs, in this order of needs", () => {
+  it("has the plan, build, publish, npm, approval and verify jobs, in this order of needs", () => {
     expect(Object.keys(definition.jobs)).toEqual([
       "plan",
       "build",
       "publish",
       "npm",
+      "approval",
+      "verify",
     ]);
     expect(build.needs).toEqual(["plan"]);
     expect(publish.needs).toEqual(["plan", "build"]);
     expect(npm.needs).toEqual(["plan", "publish"]);
+    expect(approval.needs).toEqual(["plan", "npm"]);
+    expect(verify.needs).toEqual(["plan", "approval"]);
+  });
+
+  describe("approval", () => {
+    it("waits in the npm-approved environment, whose reviewer approves once the 7 packages are approved on npmjs.com, since npm sends no event of it", () => {
+      expect(approval.environment).toBe("npm-approved");
+      expect(approval.permissions).toEqual({ contents: "read" });
+      expect(JSON.stringify(approval)).not.toMatch(/secrets\./u);
+    });
+
+    it("only records the approval, with the version through env", () => {
+      const step = stepNamed(approval, "Approved on npm");
+
+      expect(approval.steps).toHaveLength(2);
+      expect(approval.steps.at(-1)).toBe(step);
+      expect(step.env).toEqual({
+        VERSION: "${{ needs.plan.outputs.version }}",
+      });
+      expect(step.run).toBe(
+        'echo "v${VERSION} was approved on npm, so its packages are public"',
+      );
+    });
+  });
+
+  describe("verify", () => {
+    it("checks the Release and the npm packages through verify-release.yml, with the version pull request", () => {
+      expect(verify.uses).toBe(`${LOCAL_WORKFLOW}verify-release.yml`);
+      expect(verify.with).toEqual({
+        pr_number: "${{ needs.plan.outputs.number }}",
+      });
+    });
+
+    it("grants the verify what reading the attestations needs", () => {
+      expect(verify.permissions).toEqual({
+        contents: "read",
+        attestations: "read",
+      });
+    });
   });
 
   describe("npm", () => {

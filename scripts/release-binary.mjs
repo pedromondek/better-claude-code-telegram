@@ -114,6 +114,10 @@ export function binaryProblems(entry, { headers, programHeaders = "" }) {
   return problems;
 }
 
+export function sha256Line(sha256, asset) {
+  return `${sha256}  ${asset}\n`;
+}
+
 export function packageBinary({
   root,
   target,
@@ -155,7 +159,7 @@ export function packageBinary({
   copyFileSync(binary, join(outDir, entry.asset));
   writeFileSync(
     join(outDir, `${entry.asset}.sha256`),
-    `${sha256}  ${entry.asset}\n`,
+    sha256Line(sha256, entry.asset),
   );
 
   return { asset: entry.asset, sha256 };

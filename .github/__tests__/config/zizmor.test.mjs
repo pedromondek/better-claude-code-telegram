@@ -44,6 +44,7 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
       "check-rust-platforms.yml",
       "push-checks.yml",
       "report-workflow-audit.yml",
+      "verify-release.yml",
     ]);
     expect(
       tasks.filter(({ definition }) => definition.concurrency !== undefined),

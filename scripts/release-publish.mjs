@@ -38,9 +38,9 @@ export function recordHeadline(version) {
   return `📦 build(root): record the checksums and notes of v${version}`;
 }
 
-const short = (sha) => sha.slice(0, 7);
+export const short = (sha) => sha.slice(0, 7);
 
-function mergedRelease(pr) {
+export function mergedRelease(pr) {
   if (pr.state !== "MERGED" || !pr.mergeCommit) {
     throw new Error(`#${pr.number} was not merged`);
   }
@@ -104,7 +104,7 @@ function recordedCommit(github, { number, version, merge }) {
   );
 }
 
-function output(env, values) {
+export function output(env, values) {
   if (env.GITHUB_OUTPUT !== undefined) {
     appendFileSync(
       env.GITHUB_OUTPUT,
@@ -272,7 +272,7 @@ export function run(args, { root, env, github, released, out, err }) {
   }
 }
 
-function gh(args, input) {
+export function gh(args, input) {
   return execFileSync("gh", args, {
     encoding: "utf8",
     input,
@@ -280,7 +280,7 @@ function gh(args, input) {
   });
 }
 
-const githubCli = {
+export const githubCli = {
   pullRequest: (number) =>
     JSON.parse(
       gh([

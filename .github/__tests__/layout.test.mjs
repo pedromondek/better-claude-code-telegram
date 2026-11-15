@@ -15,6 +15,7 @@ const ATTEST = {
   "id-token": "write",
   attestations: "write",
 };
+const READ_ATTESTATIONS = { contents: "read", attestations: "read" };
 const EXTRA_PERMISSIONS = {
   "audit-workflows-on-schedule.yml > audit": READ_ISSUES,
   "audit-workflows-on-schedule.yml > issue": WRITE_ISSUES,
@@ -25,7 +26,9 @@ const EXTRA_PERMISSIONS = {
   "release.yml > build": ATTEST,
   "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },
+  "release.yml > verify": READ_ATTESTATIONS,
   "report-workflow-audit.yml > report": WRITE_ISSUES,
+  "verify-release.yml > verify": READ_ATTESTATIONS,
 };
 
 const namesIn = (dir, extension) =>

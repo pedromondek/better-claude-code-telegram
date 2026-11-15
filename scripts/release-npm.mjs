@@ -35,7 +35,7 @@ const META_FIELDS = [
   "author",
 ];
 
-function platformOf(target) {
+export function platformOf(target) {
   const cpu = NPM_ARCH[target.arch];
 
   return {

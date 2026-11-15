@@ -7,6 +7,7 @@ import {
   ledgerVersions,
   releasedVersions,
 } from "./release-order.mjs";
+import { NPM_REGISTRY } from "./release.constants.mjs";
 import {
   STAGES,
   VERSION_FILES,
@@ -31,7 +32,6 @@ const USAGE =
 const RELEASE_BRANCH = /^release\/v(.+)$/u;
 const APPROVAL_WAIT = "waits for your approval in Review deployments";
 const APPROVAL_SKIP = "opens the pull request without approval";
-const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_ABBREVIATED = "application/vnd.npm.install-v1+json";
 const CREATE_COMMIT =
   "mutation ($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }";
