@@ -218,7 +218,7 @@
     "notSettable": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "'alpha 1' cannot be set with --set, only beta 'two'. The token, the pairing and the plugins go through 'npx better-claude-code-telegram' in your own terminal."
+        "out": "'alpha 1' cannot be set with --set, only beta 'two'. The token, the pairing and the plugins go through 'npx @pedromondek/better-claude-code-telegram' in your own terminal."
       }
     ],
     "unknownHealthGroups": [
@@ -260,7 +260,7 @@
     "healthDetail.notInstalled": [
       {
         "args": ["alpha 1"],
-        "out": "missing alpha 1. Run 'npx better-claude-code-telegram plugin'."
+        "out": "missing alpha 1. Run 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.loadedIn": [
@@ -269,7 +269,7 @@
     "healthDetail.notLoaded": [
       {
         "args": ["alpha 1"],
-        "out": "not loaded by alpha 1. Run 'npx better-claude-code-telegram plugin'."
+        "out": "not loaded by alpha 1. Run 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.pathOn": [{ "args": ["alpha 1"], "out": "alpha 1" }],
@@ -279,29 +279,29 @@
         "out": "turned on in alpha 1; it applies to new terminals"
       }
     ],
-    "healthDetail.pathOff": "off (optional). Run 'npx better-claude-code-telegram path'.",
+    "healthDetail.pathOff": "off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.",
     "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
-    "healthDetail.noToken": "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
+    "healthDetail.noToken": "no token. Run 'npx @pedromondek/better-claude-code-telegram token' in your own terminal.",
     "healthDetail.paired": [
       { "args": ["alpha 1"], "out": "paired with one account (alpha 1)" }
     ],
-    "healthDetail.notPaired": "not paired. Run 'npx better-claude-code-telegram pairing'.",
+    "healthDetail.notPaired": "not paired. Run 'npx @pedromondek/better-claude-code-telegram pairing'.",
     "healthDetail.notAllowlist": [
       {
         "args": ["alpha 1"],
-        "out": "dmPolicy is alpha 1, so strangers who write to the bot get a pairing code. Run 'npx better-claude-code-telegram pairing'."
+        "out": "dmPolicy is alpha 1, so strangers who write to the bot get a pairing code. Run 'npx @pedromondek/better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.pendingPairings": [
       {
         "args": [2],
-        "out": "2 pairing(s) pending in access.json. Run 'npx better-claude-code-telegram pairing'."
+        "out": "2 pairing(s) pending in access.json. Run 'npx @pedromondek/better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsAllowed": [
       {
         "args": [2],
-        "out": "2 group(s) can talk to the bot. Run 'npx better-claude-code-telegram pairing'."
+        "out": "2 group(s) can talk to the bot. Run 'npx @pedromondek/better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsOff": "the bot cannot be added to groups",
@@ -340,19 +340,19 @@
     "healthDetail.shellCommented": [
       {
         "args": ["alpha 1"],
-        "out": "the line in alpha 1 is commented out. Run 'npx better-claude-code-telegram plugin'."
+        "out": "the line in alpha 1 is commented out. Run 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.shellScriptMissing": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "alpha 1 loads beta 'two', which does not exist. Run 'npx better-claude-code-telegram plugin'."
+        "out": "alpha 1 loads beta 'two', which does not exist. Run 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.shellScriptOutdated": [
       {
         "args": ["alpha 1"],
-        "out": "alpha 1 is out of date. Run 'npx better-claude-code-telegram plugin'."
+        "out": "alpha 1 is out of date. Run 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.launcherActive": [
@@ -364,10 +364,10 @@
     "healthDetail.launcherMissing": [
       {
         "args": ["alpha 1"],
-        "out": "no launcher in alpha 1. Run 'npx better-claude-code-telegram'."
+        "out": "no launcher in alpha 1. Run 'npx @pedromondek/better-claude-code-telegram'."
       }
     ],
-    "healthDetail.launcherNoVersion": "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+    "healthDetail.launcherNoVersion": "the launcher has no active version. Run 'npx @pedromondek/better-claude-code-telegram'.",
     "healthDetail.versionSame": [
       { "args": ["alpha 1"], "out": "binary and plugins on alpha 1" }
     ],
@@ -415,7 +415,7 @@
     "healthDetail.denyNotAList": [
       {
         "args": ["alpha 1"],
-        "out": "permissions.deny in alpha 1 is not a list. Fix the file and run 'npx better-claude-code-telegram token'."
+        "out": "permissions.deny in alpha 1 is not a list. Fix the file and run 'npx @pedromondek/better-claude-code-telegram token'."
       }
     ],
     "installToolPrompt": [
@@ -942,8 +942,8 @@
     "versionChannels.stable": "stable",
     "versionChannels.beta": "beta",
     "versionChannels.alpha": "alpha",
-    "versionRemoveHint": "To delete a kept one: npx better-claude-code-telegram uninstall <version>",
-    "versionUninstallHint": "To uninstall everything: npx better-claude-code-telegram uninstall",
+    "versionRemoveHint": "To delete a kept one: npx @pedromondek/better-claude-code-telegram uninstall <version>",
+    "versionUninstallHint": "To uninstall everything: npx @pedromondek/better-claude-code-telegram uninstall",
     "versionUnstable": [
       {
         "args": ["alpha 1"],
@@ -984,7 +984,7 @@
         "out": "alpha 1 no longer adds bcct to your PATH."
       }
     ],
-    "pathOff": "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'.",
+    "pathOff": "bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.",
     "hookWriteFailed": [
       {
         "args": ["alpha 1", "beta 'two'"],
@@ -1096,7 +1096,7 @@
     "update.noChannel": [
       { "args": ["alpha 1"], "out": "There is no alpha 1 version yet." }
     ],
-    "update.noPlugins": "The plugins are not installed. Run 'npx better-claude-code-telegram'.",
+    "update.noPlugins": "The plugins are not installed. Run 'npx @pedromondek/better-claude-code-telegram'.",
     "update.noGit": "git is not installed, and Claude Code needs it to update the plugins. Install git and run 'bcct update' again.",
     "update.pluginFailed": [
       {
@@ -1407,7 +1407,7 @@
     "notSettable": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "'alpha 1' não muda pelo --set, só beta 'two'. Token, pareamento e plugins passam pelo 'npx better-claude-code-telegram' no seu próprio terminal."
+        "out": "'alpha 1' não muda pelo --set, só beta 'two'. Token, pareamento e plugins passam pelo 'npx @pedromondek/better-claude-code-telegram' no seu próprio terminal."
       }
     ],
     "unknownHealthGroups": [
@@ -1449,7 +1449,7 @@
     "healthDetail.notInstalled": [
       {
         "args": ["alpha 1"],
-        "out": "faltam alpha 1. Rode 'npx better-claude-code-telegram plugin'."
+        "out": "faltam alpha 1. Rode 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.loadedIn": [
@@ -1458,7 +1458,7 @@
     "healthDetail.notLoaded": [
       {
         "args": ["alpha 1"],
-        "out": "não carregado por alpha 1. Rode 'npx better-claude-code-telegram plugin'."
+        "out": "não carregado por alpha 1. Rode 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.pathOn": [{ "args": ["alpha 1"], "out": "alpha 1" }],
@@ -1468,29 +1468,29 @@
         "out": "ligado em alpha 1; vale nos terminais novos"
       }
     ],
-    "healthDetail.pathOff": "fora (opcional). Rode 'npx better-claude-code-telegram path'.",
+    "healthDetail.pathOff": "fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.",
     "healthDetail.bot": [{ "args": ["alpha 1"], "out": "@alpha 1" }],
-    "healthDetail.noToken": "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
+    "healthDetail.noToken": "sem token. Rode 'npx @pedromondek/better-claude-code-telegram token' no seu próprio terminal.",
     "healthDetail.paired": [
       { "args": ["alpha 1"], "out": "pareado com uma conta (alpha 1)" }
     ],
-    "healthDetail.notPaired": "não pareado. Rode 'npx better-claude-code-telegram pairing'.",
+    "healthDetail.notPaired": "não pareado. Rode 'npx @pedromondek/better-claude-code-telegram pairing'.",
     "healthDetail.notAllowlist": [
       {
         "args": ["alpha 1"],
-        "out": "o dmPolicy é alpha 1, e quem escreve para o bot recebe um código de pareamento. Rode 'npx better-claude-code-telegram pairing'."
+        "out": "o dmPolicy é alpha 1, e quem escreve para o bot recebe um código de pareamento. Rode 'npx @pedromondek/better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.pendingPairings": [
       {
         "args": [2],
-        "out": "2 pareamento(s) pendente(s) no access.json. Rode 'npx better-claude-code-telegram pairing'."
+        "out": "2 pareamento(s) pendente(s) no access.json. Rode 'npx @pedromondek/better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsAllowed": [
       {
         "args": [2],
-        "out": "2 grupo(s) podem falar com o bot. Rode 'npx better-claude-code-telegram pairing'."
+        "out": "2 grupo(s) podem falar com o bot. Rode 'npx @pedromondek/better-claude-code-telegram pairing'."
       }
     ],
     "healthDetail.groupsOff": "o bot não entra em grupos",
@@ -1529,19 +1529,19 @@
     "healthDetail.shellCommented": [
       {
         "args": ["alpha 1"],
-        "out": "a linha de alpha 1 está comentada. Rode 'npx better-claude-code-telegram plugin'."
+        "out": "a linha de alpha 1 está comentada. Rode 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.shellScriptMissing": [
       {
         "args": ["alpha 1", "beta 'two'"],
-        "out": "alpha 1 carrega beta 'two', que não existe. Rode 'npx better-claude-code-telegram plugin'."
+        "out": "alpha 1 carrega beta 'two', que não existe. Rode 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.shellScriptOutdated": [
       {
         "args": ["alpha 1"],
-        "out": "alpha 1 está desatualizado. Rode 'npx better-claude-code-telegram plugin'."
+        "out": "alpha 1 está desatualizado. Rode 'npx @pedromondek/better-claude-code-telegram plugin'."
       }
     ],
     "healthDetail.launcherActive": [
@@ -1553,10 +1553,10 @@
     "healthDetail.launcherMissing": [
       {
         "args": ["alpha 1"],
-        "out": "sem launcher em alpha 1. Rode 'npx better-claude-code-telegram'."
+        "out": "sem launcher em alpha 1. Rode 'npx @pedromondek/better-claude-code-telegram'."
       }
     ],
-    "healthDetail.launcherNoVersion": "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+    "healthDetail.launcherNoVersion": "o launcher não tem versão ativa. Rode 'npx @pedromondek/better-claude-code-telegram'.",
     "healthDetail.versionSame": [
       { "args": ["alpha 1"], "out": "binário e plugins na alpha 1" }
     ],
@@ -1604,7 +1604,7 @@
     "healthDetail.denyNotAList": [
       {
         "args": ["alpha 1"],
-        "out": "o permissions.deny de alpha 1 não é uma lista. Corrija o arquivo e rode 'npx better-claude-code-telegram token'."
+        "out": "o permissions.deny de alpha 1 não é uma lista. Corrija o arquivo e rode 'npx @pedromondek/better-claude-code-telegram token'."
       }
     ],
     "installToolPrompt": [
@@ -2136,8 +2136,8 @@
     "versionChannels.stable": "estável",
     "versionChannels.beta": "beta",
     "versionChannels.alpha": "alpha",
-    "versionRemoveHint": "Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>",
-    "versionUninstallHint": "Para desinstalar tudo: npx better-claude-code-telegram uninstall",
+    "versionRemoveHint": "Para apagar uma guardada: npx @pedromondek/better-claude-code-telegram uninstall <versão>",
+    "versionUninstallHint": "Para desinstalar tudo: npx @pedromondek/better-claude-code-telegram uninstall",
     "versionUnstable": [
       {
         "args": ["alpha 1"],
@@ -2178,7 +2178,7 @@
         "out": "alpha 1 não adiciona mais o bcct ao PATH."
       }
     ],
-    "pathOff": "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
+    "pathOff": "bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.",
     "hookWriteFailed": [
       {
         "args": ["alpha 1", "beta 'two'"],
@@ -2290,7 +2290,7 @@
     "update.noChannel": [
       { "args": ["alpha 1"], "out": "Ainda não há versão alpha 1." }
     ],
-    "update.noPlugins": "Os plugins não estão instalados. Rode 'npx better-claude-code-telegram'.",
+    "update.noPlugins": "Os plugins não estão instalados. Rode 'npx @pedromondek/better-claude-code-telegram'.",
     "update.noGit": "O git não está instalado, e o Claude Code precisa dele para atualizar os plugins. Instale o git e rode 'bcct update' de novo.",
     "update.pluginFailed": [
       {

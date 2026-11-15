@@ -65,7 +65,7 @@ const HEADING: &str = "── ";
 const JS_HEALTH_HEADING: &str = "── 🩺 10/10 ";
 const HEALTH_HEADING: &str = "── 🩺 11/11 ";
 const SHELL_CHECK: &str = " Shell: ";
-const HEALTH_COMMAND: &str = "npx better-claude-code-telegram health";
+const HEALTH_COMMAND: &str = "npx @pedromondek/better-claude-code-telegram health";
 
 fn counted_with_the_path_step(stdout: &str) -> String {
     stdout

@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { COMMAND, PACKAGE, PLATFORMS } from "../shim/shim.constants.mjs";
 import {
-  PLATFORMS,
   binaryCommand,
   expectedHash,
   localeOf,
@@ -24,6 +24,17 @@ const CHECKSUMS = [
   `${VERSION} bcct-win32-arm64.exe ${HASH}`,
   "",
 ].join("\n");
+
+describe("the package", () => {
+  it("is the name in the root package.json, with the unscoped command npx runs", () => {
+    const { name } = JSON.parse(
+      readFileSync(join(ROOT, "package.json"), "utf8"),
+    );
+
+    expect(PACKAGE).toBe(name);
+    expect(COMMAND).toBe(name.split("/").at(-1));
+  });
+});
 
 function deps({
   platform = "linux",
@@ -129,12 +140,12 @@ describe("platformOf", () => {
     ["win32", "x64", "bcct-win32-x64.exe", "bcct.exe"],
     ["win32", "arm64", "bcct-win32-arm64.exe", "bcct.exe"],
   ])(
-    "maps %s %s to the asset %s and its unscoped package",
+    "maps %s %s to the asset %s and its package in the @pedromondek scope",
     (os, arch, asset, binary) => {
       expect(platformOf(os, arch)).toEqual({
         name: `${os}-${arch}`,
         asset,
-        packageName: `better-claude-code-telegram-${os}-${arch}`,
+        packageName: `@pedromondek/better-claude-code-telegram-${os}-${arch}`,
         binary,
       });
     },
@@ -219,7 +230,7 @@ describe("run", () => {
 
     expect(await shim.run()).toBe(0);
     expect(shim.calls).toEqual([
-      ["readInstalled", "better-claude-code-telegram-linux-x64"],
+      ["readInstalled", "@pedromondek/better-claude-code-telegram-linux-x64"],
       ["writeExecutable", HASH],
       [
         "spawn",
@@ -291,7 +302,7 @@ describe("run", () => {
 
     expect(await shim.run()).toBe(1);
     expect(shim.err).toEqual([
-      "✗ The checksums.txt of better-claude-code-telegram has no hash for bcct-linux-x64 0.2.0. Reinstall better-claude-code-telegram.",
+      "✗ The checksums.txt of @pedromondek/better-claude-code-telegram has no hash for bcct-linux-x64 0.2.0. Reinstall @pedromondek/better-claude-code-telegram.",
     ]);
   });
 
@@ -307,7 +318,7 @@ describe("run", () => {
 
   describe("without the platform package", () => {
     const missing = [
-      "✗ The package better-claude-code-telegram-linux-x64, with the bcct binary for this machine, was not installed.",
+      "✗ The package @pedromondek/better-claude-code-telegram-linux-x64, with the bcct binary for this machine, was not installed.",
       "  It is an optional dependency: npm skips it with --omit=optional or optional=false, and some registry mirrors do not serve it.",
     ];
     const manual = [
@@ -330,7 +341,7 @@ describe("run", () => {
       expect(await shim.run()).toBe(0);
       expect(shim.asked).toEqual([]);
       expect(shim.calls).toEqual([
-        ["readInstalled", "better-claude-code-telegram-linux-x64"],
+        ["readInstalled", "@pedromondek/better-claude-code-telegram-linux-x64"],
         [
           "download",
           "https://github.com/pedromondek/better-claude-code-telegram/releases/download/v0.2.0/bcct-linux-x64",
@@ -443,7 +454,7 @@ describe("run", () => {
 
     expect(shim.calls[0]).toEqual([
       "readInstalled",
-      "better-claude-code-telegram-win32-arm64",
+      "@pedromondek/better-claude-code-telegram-win32-arm64",
     ]);
   });
 });

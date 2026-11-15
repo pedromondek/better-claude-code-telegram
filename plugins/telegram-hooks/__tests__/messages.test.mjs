@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MESSAGES, messagesFor } from "../lib/messages.mjs";
+import { NPM_PACKAGE, SETUP_COMMAND } from "../lib/package.constants.mjs";
 import {
   CONFIG_FILE,
   DEFAULT_DELAY_MINUTES,
@@ -18,6 +19,17 @@ import {
 } from "../lib/state.mjs";
 
 let workDir;
+
+describe("the npm package", () => {
+  it("is the name in the root package.json, and the setup runs it through npx", () => {
+    const { name } = JSON.parse(
+      readFileSync(join(import.meta.dirname, "../../../package.json"), "utf8"),
+    );
+
+    expect(NPM_PACKAGE).toBe(name);
+    expect(SETUP_COMMAND).toBe(`npx ${name}`);
+  });
+});
 
 function flatten(value, prefix = "") {
   return Object.entries(value).flatMap(([key, entry]) =>

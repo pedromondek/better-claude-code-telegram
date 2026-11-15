@@ -6,11 +6,10 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 
+import { APP_FOLDER, CONFIG_FILE } from "../shim.constants.mjs";
 import { run } from "../shim.mjs";
 
 const SHIM_DIR = join(import.meta.dirname, "..");
-const CONFIG_FILE = "better-cc-telegram.json";
-const APP_FOLDER = "better-claude-code-telegram";
 const require = createRequire(import.meta.url);
 
 function readText(path) {

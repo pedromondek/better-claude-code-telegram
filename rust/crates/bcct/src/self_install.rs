@@ -15,17 +15,23 @@ use crate::paths::Paths;
 use crate::setup::setup_locale;
 use crate::ui::{fail, should_colorize, success, warn};
 
-pub const LAUNCHER_SH: &str = r#"#!/bin/sh
+pub const LAUNCHER_SH: &str = concat!(
+    r#"#!/bin/sh
 bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 current=$(cat "$bin_dir/current" 2>/dev/null)
 binary="$bin_dir/versions/$current/bcct"
 if [ -z "$current" ] || [ ! -x "$binary" ]; then
-  echo 'bcct: no installed version found. Run: npx better-claude-code-telegram' >&2
-  echo 'bcct: nenhuma versão instalada encontrada. Rode: npx better-claude-code-telegram' >&2
+  echo 'bcct: no installed version found. Run: "#,
+    crate::setup_command!(),
+    r#"' >&2
+  echo 'bcct: nenhuma versão instalada encontrada. Rode: "#,
+    crate::setup_command!(),
+    r#"' >&2
   exit 127
 fi
 exec "$binary" "$@"
-"#;
+"#
+);
 
 pub const LAUNCHER_CMD: &str = concat!(
     "@echo off\r\n",
@@ -38,8 +44,12 @@ pub const LAUNCHER_CMD: &str = concat!(
     "\"%~dp0versions\\%current%\\bcct.exe\" %*\r\n",
     "exit /b %errorlevel%\r\n",
     ":missing\r\n",
-    "echo bcct: no installed version found. Run: npx better-claude-code-telegram 1>&2\r\n",
-    "echo bcct: nenhuma versao instalada encontrada. Rode: npx better-claude-code-telegram 1>&2\r\n",
+    "echo bcct: no installed version found. Run: ",
+    crate::setup_command!(),
+    " 1>&2\r\n",
+    "echo bcct: nenhuma versao instalada encontrada. Rode: ",
+    crate::setup_command!(),
+    " 1>&2\r\n",
     "exit /b 127\r\n",
 );
 

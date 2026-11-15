@@ -982,7 +982,7 @@ fn the_path_check_says_whether_bcct_is_on_the_path_and_never_fails() {
         path_check_of(&healthy),
         (
             0,
-            "○ bcct on PATH: off (optional). Run 'npx better-claude-code-telegram path'."
+            "○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'."
                 .to_owned()
         )
     );
@@ -1038,7 +1038,7 @@ fn write(path: &Path, content: &str, mode: u32) {
     set_mode(path, mode);
 }
 
-const RUN_SETUP: &str = "Run 'npx better-claude-code-telegram'.";
+const RUN_SETUP: &str = "Run 'npx @pedromondek/better-claude-code-telegram'.";
 
 #[test]
 fn the_git_check_shows_the_version_or_says_why_git_is_needed() {
@@ -1251,7 +1251,7 @@ fn the_hooks_check_lists_every_open_warning_of_the_hooks() {
 
 #[test]
 fn a_missing_or_old_shell_script_fails_the_shell_check() {
-    let plugin = "Run 'npx better-claude-code-telegram plugin'.";
+    let plugin = "Run 'npx @pedromondek/better-claude-code-telegram plugin'.";
 
     assert_eq!(
         install_row(&healthy(), "Shell", &|root| {
@@ -1604,8 +1604,7 @@ fn a_fix_that_fails_says_why_and_the_others_still_run() {
 
 #[test]
 fn what_cannot_be_fixed_is_only_recommended() {
-    let missing =
-        "  - Launcher: no launcher in {root}/app/bin. Run 'npx better-claude-code-telegram'.\n";
+    let missing = "  - Launcher: no launcher in {root}/app/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n";
     let no_launcher = |root: &Path| std::fs::remove_file(root.join("app/bin/bcct")).unwrap();
 
     let fixed = fixing(

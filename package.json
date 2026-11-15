@@ -1,5 +1,5 @@
 {
-  "name": "better-claude-code-telegram",
+  "name": "@pedromondek/better-claude-code-telegram",
   "version": "0.1.0",
   "private": true,
   "description": "Telegram for Claude Code: answer AskUserQuestion with buttons, get a notice when Claude waits on you, and reach every instance on your machine through one bot.",

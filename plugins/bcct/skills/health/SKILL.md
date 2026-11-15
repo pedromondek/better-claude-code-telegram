@@ -21,4 +21,4 @@ Arguments: `$ARGUMENTS`
 4. If `fixes.available` is empty, stop. Otherwise call AskUserQuestion once, `multiSelect: true`, header "Fix", asking which ones to apply, with one option per available fix: label = its `check`, description = its `action`. When there is only one, add a second option `none` that applies nothing.
 5. If the user picked any fix, run `"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" health --json --fix --only <ids> <groups>` with the picked `id`s joined by commas, then show the new table from `results` and say what `fixes.applied` holds and each `fixes.skipped` with its reason.
 
-Never read files of the Telegram state folder yourself and never ask for the bot token: the token is set only with `npx better-claude-code-telegram token` in the user's own terminal.
+Never read files of the Telegram state folder yourself and never ask for the bot token: the token is set only with `npx @pedromondek/better-claude-code-telegram token` in the user's own terminal.

@@ -247,8 +247,8 @@ describe.each(["sh", "bash"])("the Telegram hooks under %s", (shell) => {
       expect(result.stdout).toBe("");
       expect(result.stderr).toBe(
         [
-          `bcct: not installed (no launcher in ${appDir}/bin). Run: npx better-claude-code-telegram`,
-          `bcct: não instalado (sem launcher em ${appDir}/bin). Rode: npx better-claude-code-telegram`,
+          `bcct: not installed (no launcher in ${appDir}/bin). Run: npx @pedromondek/better-claude-code-telegram`,
+          `bcct: não instalado (sem launcher em ${appDir}/bin). Rode: npx @pedromondek/better-claude-code-telegram`,
           "",
         ].join("\n"),
       );

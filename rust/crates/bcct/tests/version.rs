@@ -95,8 +95,8 @@ fn the_version_lists_the_kept_ones_by_channel_and_how_to_remove_them() {
              estável  0.2.1, 0.2.0\n  \
              beta     0.3.0-beta.2 (ativa), 0.3.0-beta.1\n  \
              alpha    0.4.0-alpha.1\n\
-             Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>\n\
-             Para desinstalar tudo: npx better-claude-code-telegram uninstall\n"
+             Para apagar uma guardada: npx @pedromondek/better-claude-code-telegram uninstall <versão>\n\
+             Para desinstalar tudo: npx @pedromondek/better-claude-code-telegram uninstall\n"
                 .to_owned(),
             "⚠ Versão de teste (beta). Para a estável: 'bcct update stable'.\n".to_owned()
         )
@@ -109,8 +109,8 @@ fn the_version_lists_the_kept_ones_by_channel_and_how_to_remove_them() {
              stable  0.2.1, 0.2.0\n  \
              beta    0.3.0-beta.2 (active), 0.3.0-beta.1\n  \
              alpha   0.4.0-alpha.1\n\
-             To delete a kept one: npx better-claude-code-telegram uninstall <version>\n\
-             To uninstall everything: npx better-claude-code-telegram uninstall\n"
+             To delete a kept one: npx @pedromondek/better-claude-code-telegram uninstall <version>\n\
+             To uninstall everything: npx @pedromondek/better-claude-code-telegram uninstall\n"
                 .to_owned(),
             "⚠ Test version (beta). For the stable one: 'bcct update stable'.\n".to_owned()
         )
@@ -205,8 +205,8 @@ fn every_version_flag_prints_the_same_lines() {
         "bcct {}\n\
          Installed:\n  \
          stable  0.2.0 (active)\n\
-         To delete a kept one: npx better-claude-code-telegram uninstall <version>\n\
-         To uninstall everything: npx better-claude-code-telegram uninstall\n",
+         To delete a kept one: npx @pedromondek/better-claude-code-telegram uninstall <version>\n\
+         To uninstall everything: npx @pedromondek/better-claude-code-telegram uninstall\n",
         env!("CARGO_PKG_VERSION")
     );
 

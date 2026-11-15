@@ -18,7 +18,7 @@ const RUST_SOURCE = join(
 );
 const SHIM_PATH = "${CLAUDE_PLUGIN_ROOT}/scripts/bcct";
 const SHIM_RUN = /"\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/bcct" (\w+)/g;
-const SETUP_COMMAND = "npx better-claude-code-telegram";
+const SETUP_COMMAND = "npx @pedromondek/better-claude-code-telegram";
 const SKILL_SUBCOMMANDS = {
   delay: "setup",
   health: "health",
@@ -94,7 +94,7 @@ describe("bcct skills", () => {
     }
   });
 
-  it("sends the steps that need the terminal to npx better-claude-code-telegram", () => {
+  it("sends the steps that need the terminal to npx @pedromondek/better-claude-code-telegram", () => {
     const steps = {
       pairing: `${SETUP_COMMAND} pairing`,
       setup: SETUP_COMMAND,

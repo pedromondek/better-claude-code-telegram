@@ -22,6 +22,7 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const VERSION = "0.2.0";
 const SHIM_FILES = [
   "npm/shim/shim.mjs",
+  "npm/shim/shim.constants.mjs",
   "npm/shim/bin/better-claude-code-telegram.mjs",
 ];
 
@@ -83,13 +84,13 @@ describe("buildPackages", () => {
     project();
 
     expect(build()).toEqual([
-      "better-claude-code-telegram",
-      "better-claude-code-telegram-linux-x64",
-      "better-claude-code-telegram-linux-arm64",
-      "better-claude-code-telegram-darwin-arm64",
-      "better-claude-code-telegram-darwin-x64",
-      "better-claude-code-telegram-win32-x64",
-      "better-claude-code-telegram-win32-arm64",
+      "@pedromondek/better-claude-code-telegram",
+      "@pedromondek/better-claude-code-telegram-linux-x64",
+      "@pedromondek/better-claude-code-telegram-linux-arm64",
+      "@pedromondek/better-claude-code-telegram-darwin-arm64",
+      "@pedromondek/better-claude-code-telegram-darwin-x64",
+      "@pedromondek/better-claude-code-telegram-win32-x64",
+      "@pedromondek/better-claude-code-telegram-win32-arm64",
     ]);
   });
 
@@ -98,10 +99,10 @@ describe("buildPackages", () => {
     build();
 
     const source = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-    const shim = manifest("better-claude-code-telegram");
+    const shim = manifest("@pedromondek/better-claude-code-telegram");
 
     expect(shim).toEqual({
-      name: "better-claude-code-telegram",
+      name: "@pedromondek/better-claude-code-telegram",
       version: VERSION,
       description: source.description,
       keywords: source.keywords,
@@ -115,7 +116,7 @@ describe("buildPackages", () => {
       bin: {
         "better-claude-code-telegram": "bin/better-claude-code-telegram.mjs",
       },
-      files: ["bin/", "shim.mjs", "checksums.txt"],
+      files: ["bin/", "shim.mjs", "shim.constants.mjs", "checksums.txt"],
       optionalDependencies: Object.fromEntries(
         [
           "linux-x64",
@@ -124,7 +125,10 @@ describe("buildPackages", () => {
           "darwin-x64",
           "win32-x64",
           "win32-arm64",
-        ].map((name) => [`better-claude-code-telegram-${name}`, VERSION]),
+        ].map((name) => [
+          `@pedromondek/better-claude-code-telegram-${name}`,
+          VERSION,
+        ]),
       ),
     });
     expect(shim).not.toHaveProperty("private");
@@ -136,10 +140,11 @@ describe("buildPackages", () => {
     project();
     build();
 
-    const dir = join(root, "dist/npm/better-claude-code-telegram");
+    const dir = join(root, "dist/npm/@pedromondek/better-claude-code-telegram");
 
     for (const [published, source] of [
       ["shim.mjs", "npm/shim/shim.mjs"],
+      ["shim.constants.mjs", "npm/shim/shim.constants.mjs"],
       [
         "bin/better-claude-code-telegram.mjs",
         "npm/shim/bin/better-claude-code-telegram.mjs",
@@ -171,10 +176,16 @@ describe("buildPackages", () => {
       project();
       build();
 
-      const dir = join(root, "dist/npm", `better-claude-code-telegram-${name}`);
+      const dir = join(
+        root,
+        "dist/npm",
+        `@pedromondek/better-claude-code-telegram-${name}`,
+      );
 
-      expect(manifest(`better-claude-code-telegram-${name}`)).toMatchObject({
-        name: `better-claude-code-telegram-${name}`,
+      expect(
+        manifest(`@pedromondek/better-claude-code-telegram-${name}`),
+      ).toMatchObject({
+        name: `@pedromondek/better-claude-code-telegram-${name}`,
         version: VERSION,
         os: [os],
         cpu: [cpu],
@@ -183,7 +194,7 @@ describe("buildPackages", () => {
           .repository,
       });
       expect(
-        manifest(`better-claude-code-telegram-${name}`),
+        manifest(`@pedromondek/better-claude-code-telegram-${name}`),
       ).not.toHaveProperty("libc");
       expect(readFileSync(join(dir, "bin", binary), "utf8")).toBe(
         `binary ${asset}`,
@@ -275,7 +286,7 @@ describe("run", () => {
 
     expect(result.code).toBe(0);
     expect(result.out[0]).toBe("✓ 7 packages of v0.2.0 in dist/npm:");
-    expect(result.out).toContain("  better-claude-code-telegram");
+    expect(result.out).toContain("  @pedromondek/better-claude-code-telegram");
   });
 
   it("exits 1 with the reason", () => {

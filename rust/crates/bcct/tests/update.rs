@@ -34,8 +34,9 @@ use support::sandbox;
 
 const NPM: &str = "https://npm.test";
 const RELEASES: &str = "https://releases.test";
-const DIST_TAGS: &str = "https://npm.test/-/package/better-claude-code-telegram/dist-tags";
-const PACKAGE_URL: &str = "https://npm.test/better-claude-code-telegram/";
+const DIST_TAGS: &str =
+    "https://npm.test/-/package/@pedromondek/better-claude-code-telegram/dist-tags";
+const PACKAGE_URL: &str = "https://npm.test/@pedromondek/better-claude-code-telegram/";
 const HOOKS: &str = "telegram-hooks@better-claude-code-telegram";
 const CHANNEL: &str = "telegram@better-claude-code-telegram";
 const BCCT: &str = "bcct@better-claude-code-telegram";
@@ -812,7 +813,8 @@ fn missing_plugins_claude_or_git_stop_before_any_change() {
             .tags(&json!({ "latest": "0.3.0" }))
             .plugins("0.2.1", None, &[])
     };
-    let no_plugins = "✘ The plugins are not installed. Run 'npx better-claude-code-telegram'.\n";
+    let no_plugins =
+        "✘ The plugins are not installed. Run 'npx @pedromondek/better-claude-code-telegram'.\n";
 
     let mut without_claude = base();
     without_claude.has_claude = false;
@@ -1304,7 +1306,7 @@ fn the_update_command_reads_the_roots_from_the_environment() {
     assert!(called.exists());
     assert_eq!(
         String::from_utf8_lossy(&listed.stderr),
-        "✘ The plugins are not installed. Run 'npx better-claude-code-telegram'.\n"
+        "✘ The plugins are not installed. Run 'npx @pedromondek/better-claude-code-telegram'.\n"
     );
 
     let usage = cargo_bin_cmd!("bcct")

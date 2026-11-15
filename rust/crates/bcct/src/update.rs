@@ -20,7 +20,7 @@ pub const NPM_ROOT_ENV: &str = "BETTER_CC_TELEGRAM_NPM_ROOT";
 pub const RELEASES_ROOT_ENV: &str = "BETTER_CC_TELEGRAM_RELEASES_ROOT";
 
 const NPM_ROOT: &str = "https://registry.npmjs.org";
-const PACKAGE: &str = "better-claude-code-telegram";
+const PACKAGE: &str = crate::package::NPM_PACKAGE;
 const CHECKSUMS_FILE: &str = "checksums.txt";
 const CHECK_FLAG: &str = "--check";
 const DOWNLOAD_LIMIT: u64 = 256 * 1024 * 1024;

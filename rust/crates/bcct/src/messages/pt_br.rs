@@ -1,3 +1,5 @@
+use crate::package::SETUP_COMMAND;
+
 use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
     HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
@@ -148,7 +150,7 @@ pub(super) const MESSAGES: Messages = Messages {
     inbox_forever: "mantidos para sempre",
     not_settable: |step, steps| {
         format!(
-            "'{step}' não muda pelo --set, só {steps}. Token, pareamento e plugins passam pelo 'npx better-claude-code-telegram' no seu próprio terminal."
+            "'{step}' não muda pelo --set, só {steps}. Token, pareamento e plugins passam pelo '{SETUP_COMMAND}' no seu próprio terminal."
         )
     },
     unknown_health_groups: |groups, valid| {
@@ -189,34 +191,36 @@ pub(super) const MESSAGES: Messages = Messages {
         missing: "não encontrado",
         git_missing: "não instalado. O Claude Code precisa dele para baixar e atualizar os plugins.",
         installed: "instalados",
-        not_installed: |ids| {
-            format!("faltam {ids}. Rode 'npx better-claude-code-telegram plugin'.")
-        },
+        not_installed: |ids| format!("faltam {ids}. Rode '{SETUP_COMMAND} plugin'."),
         loaded_in: |file| format!("carregado por {file}"),
-        not_loaded: |file| {
-            format!("não carregado por {file}. Rode 'npx better-claude-code-telegram plugin'.")
-        },
+        not_loaded: |file| format!("não carregado por {file}. Rode '{SETUP_COMMAND} plugin'."),
         path_on: str::to_owned,
         path_pending: |file| format!("ligado em {file}; vale nos terminais novos"),
-        path_off: "fora (opcional). Rode 'npx better-claude-code-telegram path'.",
+        path_off: concat!(
+            "fora (opcional). Rode '",
+            crate::setup_command!(),
+            " path'."
+        ),
         bot: |username| format!("@{username}"),
-        no_token: "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
+        no_token: concat!(
+            "sem token. Rode '",
+            crate::setup_command!(),
+            " token' no seu próprio terminal."
+        ),
         paired: |account| format!("pareado com uma conta ({account})"),
-        not_paired: "não pareado. Rode 'npx better-claude-code-telegram pairing'.",
+        not_paired: concat!("não pareado. Rode '", crate::setup_command!(), " pairing'."),
         not_allowlist: |policy| {
             format!(
-                "o dmPolicy é {policy}, e quem escreve para o bot recebe um código de pareamento. Rode 'npx better-claude-code-telegram pairing'."
+                "o dmPolicy é {policy}, e quem escreve para o bot recebe um código de pareamento. Rode '{SETUP_COMMAND} pairing'."
             )
         },
         pending_pairings: |count| {
             format!(
-                "{count} pareamento(s) pendente(s) no access.json. Rode 'npx better-claude-code-telegram pairing'."
+                "{count} pareamento(s) pendente(s) no access.json. Rode '{SETUP_COMMAND} pairing'."
             )
         },
         groups_allowed: |count| {
-            format!(
-                "{count} grupo(s) podem falar com o bot. Rode 'npx better-claude-code-telegram pairing'."
-            )
+            format!("{count} grupo(s) podem falar com o bot. Rode '{SETUP_COMMAND} pairing'.")
         },
         groups_off: "o bot não entra em grupos",
         groups_unknown: "precisa de um token de bot válido",
@@ -242,23 +246,21 @@ pub(super) const MESSAGES: Messages = Messages {
             custom_pending: "o Claude junta o indicador à sua no próximo 'claude --telegram'",
         },
         shell_commented: |rc| {
-            format!(
-                "a linha de {rc} está comentada. Rode 'npx better-claude-code-telegram plugin'."
-            )
+            format!("a linha de {rc} está comentada. Rode '{SETUP_COMMAND} plugin'.")
         },
         shell_script_missing: |rc, script| {
-            format!(
-                "{rc} carrega {script}, que não existe. Rode 'npx better-claude-code-telegram plugin'."
-            )
+            format!("{rc} carrega {script}, que não existe. Rode '{SETUP_COMMAND} plugin'.")
         },
         shell_script_outdated: |script| {
-            format!("{script} está desatualizado. Rode 'npx better-claude-code-telegram plugin'.")
+            format!("{script} está desatualizado. Rode '{SETUP_COMMAND} plugin'.")
         },
         launcher_active: |version, channel| format!("versão {version} ativa ({channel})"),
-        launcher_missing: |folder| {
-            format!("sem launcher em {folder}. Rode 'npx better-claude-code-telegram'.")
-        },
-        launcher_no_version: "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+        launcher_missing: |folder| format!("sem launcher em {folder}. Rode '{SETUP_COMMAND}'."),
+        launcher_no_version: concat!(
+            "o launcher não tem versão ativa. Rode '",
+            crate::setup_command!(),
+            "'."
+        ),
         version_same: |version| format!("binário e plugins na {version}"),
         version_differs: |plugin, binary| {
             format!("o plugin está na {plugin} e o binário na {binary}. Rode 'bcct update'.")
@@ -289,7 +291,7 @@ pub(super) const MESSAGES: Messages = Messages {
         bot_answer_unexpected: "o Telegram respondeu ao getMe sem os dados do bot. Tente de novo daqui a pouco.",
         deny_not_a_list: |settings| {
             format!(
-                "o permissions.deny de {settings} não é uma lista. Corrija o arquivo e rode 'npx better-claude-code-telegram token'."
+                "o permissions.deny de {settings} não é uma lista. Corrija o arquivo e rode '{SETUP_COMMAND} token'."
             )
         },
     },
@@ -607,8 +609,16 @@ pub(super) const MESSAGES: Messages = Messages {
         beta: "beta",
         alpha: "alpha",
     },
-    version_remove_hint: "Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>",
-    version_uninstall_hint: "Para desinstalar tudo: npx better-claude-code-telegram uninstall",
+    version_remove_hint: concat!(
+        "Para apagar uma guardada: ",
+        crate::setup_command!(),
+        " uninstall <versão>"
+    ),
+    version_uninstall_hint: concat!(
+        "Para desinstalar tudo: ",
+        crate::setup_command!(),
+        " uninstall"
+    ),
     version_unstable: |channel| {
         format!("Versão de teste ({channel}). Para a estável: 'bcct update stable'.")
     },
@@ -626,7 +636,11 @@ pub(super) const MESSAGES: Messages = Messages {
     },
     path_already: |file| format!("{file} já adiciona o bcct ao PATH."),
     path_removed: |file| format!("{file} não adiciona mais o bcct ao PATH."),
-    path_off: "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
+    path_off: concat!(
+        "bcct fora do PATH. Para usar direto depois, rode '",
+        crate::setup_command!(),
+        " path'."
+    ),
     hook_write_failed: |file, reason| {
         format!(
             "bcct: não consegui gravar {file} ({reason}). As mensagens do Telegram podem não chegar. Rode /bcct:health."
@@ -678,7 +692,11 @@ pub(super) const MESSAGES: Messages = Messages {
             format!("A versão {version} não existe. Mais novas: {newest}.")
         },
         no_channel: |channel| format!("Ainda não há versão {channel}."),
-        no_plugins: "Os plugins não estão instalados. Rode 'npx better-claude-code-telegram'.",
+        no_plugins: concat!(
+            "Os plugins não estão instalados. Rode '",
+            crate::setup_command!(),
+            "'."
+        ),
         no_git: "O git não está instalado, e o Claude Code precisa dele para atualizar os plugins. Instale o git e rode 'bcct update' de novo.",
         plugin_failed: |line| format!("Plugins: {line}. Rode 'bcct update' de novo."),
         plugin_stayed: |have, want| {

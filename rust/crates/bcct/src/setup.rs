@@ -17,7 +17,7 @@ use crate::paths::{LAUNCH_FILE, Paths};
 use crate::settings::remove_if_present;
 use crate::setup_files::{CUSTOMIZED_KEY, update_config};
 
-pub const SETUP_COMMAND: &str = "npx better-claude-code-telegram";
+pub use crate::package::SETUP_COMMAND;
 pub const STATUSLINE_REQUEST_FILE: &str = "statusline-customize.json";
 pub const CHANNEL_PLUGIN_ID: &str = "telegram@better-claude-code-telegram";
 pub const HOOKS_PLUGIN_ID: &str = "telegram-hooks@better-claude-code-telegram";

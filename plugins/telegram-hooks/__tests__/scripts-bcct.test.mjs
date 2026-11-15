@@ -18,6 +18,8 @@ import {
   writeFakeBcct,
 } from "../../../scripts/__tests__/fixtures/fake-bcct.mjs";
 
+import { SETUP_COMMAND } from "../lib/package.constants.mjs";
+
 const PLUGINS = join(import.meta.dirname, "..", "..");
 const COPIES = ["bcct", "telegram-hooks"].map((plugin) =>
   join(PLUGINS, plugin, "scripts", "bcct"),
@@ -31,8 +33,8 @@ let binDir;
 
 function missing(app) {
   return [
-    `bcct: not installed (no launcher in ${app}/bin). Run: npx better-claude-code-telegram`,
-    `bcct: não instalado (sem launcher em ${app}/bin). Rode: npx better-claude-code-telegram`,
+    `bcct: not installed (no launcher in ${app}/bin). Run: npx @pedromondek/better-claude-code-telegram`,
+    `bcct: não instalado (sem launcher em ${app}/bin). Rode: npx @pedromondek/better-claude-code-telegram`,
     "",
   ].join("\n");
 }
@@ -72,6 +74,13 @@ describe("the bcct script of the plugins", () => {
     for (const file of COPIES) {
       expect(statSync(file).mode & 0o777).toBe(EXECUTABLE);
     }
+  });
+
+  it("names the setup command once, the same SETUP_COMMAND as the hooks plugin", () => {
+    const text = readFileSync(SCRIPT, "utf8");
+
+    expect(text).toContain(`setup="${SETUP_COMMAND}"\n`);
+    expect(text.split("npx ")).toHaveLength(2);
   });
 
   it("starts with sh and needs nothing outside the plugin but the launcher it looks for", () => {

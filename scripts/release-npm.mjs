@@ -10,15 +10,17 @@ import {
 } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
-import { PACKAGE, expectedHash } from "../npm/shim/shim.mjs";
+import { COMMAND, PACKAGE } from "../npm/shim/shim.constants.mjs";
+import { expectedHash } from "../npm/shim/shim.mjs";
 import { TARGETS } from "./release-binary.mjs";
 import { CHECKSUMS_FILE } from "./release-order.mjs";
 import { checkVersions, readVersions } from "./version.mjs";
 
 const USAGE = "usage: npm run release:npm -- <assets folder> <output folder>";
-const SHIM_BIN = "bin/better-claude-code-telegram.mjs";
+const SHIM_BIN = `bin/${COMMAND}.mjs`;
 const SHIM_SOURCES = [
   ["shim.mjs", "npm/shim/shim.mjs"],
+  ["shim.constants.mjs", "npm/shim/shim.constants.mjs"],
   [SHIM_BIN, `npm/shim/${SHIM_BIN}`],
 ];
 const LEGAL_FILES = ["LICENSE", "NOTICE"];
@@ -120,8 +122,8 @@ export function buildPackages({ root, assetsDir, outDir }) {
     ...meta,
     type: "module",
     engines: rootManifest.engines,
-    bin: { [PACKAGE]: SHIM_BIN },
-    files: ["bin/", "shim.mjs", "checksums.txt"],
+    bin: { [COMMAND]: SHIM_BIN },
+    files: ["bin/", "shim.mjs", "shim.constants.mjs", "checksums.txt"],
     optionalDependencies: Object.fromEntries(
       platforms.map(({ packageName }) => [packageName, version]),
     ),

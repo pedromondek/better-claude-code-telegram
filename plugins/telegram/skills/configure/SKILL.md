@@ -30,12 +30,12 @@ the user, in their language:
 1. That token is now in this conversation, so treat it as exposed: revoke it
    in @BotFather with `/revoke`.
 2. Set the new one in their own terminal:
-   `npx better-claude-code-telegram token`. It is typed hidden and saved
+   `npx @pedromondek/better-claude-code-telegram token`. It is typed hidden and saved
    readable only by them.
 3. Reopen `claude --telegram` afterwards.
 
 ### `clear` — remove the token
 
-Tell the user to run `npx better-claude-code-telegram uninstall` in their own
-terminal to remove everything, or `npx better-claude-code-telegram token` to
+Tell the user to run `npx @pedromondek/better-claude-code-telegram uninstall` in their own
+terminal to remove everything, or `npx @pedromondek/better-claude-code-telegram token` to
 replace the token.

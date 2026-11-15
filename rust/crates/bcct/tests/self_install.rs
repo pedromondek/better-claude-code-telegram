@@ -431,8 +431,8 @@ fn the_launcher_without_an_active_version_explains_in_both_languages_and_exits_1
         assert_eq!(String::from_utf8_lossy(&output.stdout), "");
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
-            "bcct: no installed version found. Run: npx better-claude-code-telegram\n\
-             bcct: nenhuma versão instalada encontrada. Rode: npx better-claude-code-telegram\n"
+            "bcct: no installed version found. Run: npx @pedromondek/better-claude-code-telegram\n\
+             bcct: nenhuma versão instalada encontrada. Rode: npx @pedromondek/better-claude-code-telegram\n"
         );
     }
 }
@@ -444,7 +444,7 @@ fn the_windows_launcher_reads_the_same_file_and_runs_the_exe() {
     assert!(LAUNCHER_CMD.contains("set \"current=%current:/=\\%\""));
     assert!(LAUNCHER_CMD.contains("\"%~dp0versions\\%current%\\bcct.exe\" %*"));
     assert!(LAUNCHER_CMD.contains("exit /b 127"));
-    assert!(LAUNCHER_CMD.contains("npx better-claude-code-telegram"));
+    assert!(LAUNCHER_CMD.contains("npx @pedromondek/better-claude-code-telegram"));
     assert!(!LAUNCHER_CMD.replace("\r\n", "").contains('\n'));
 }
 

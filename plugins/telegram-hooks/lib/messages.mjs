@@ -1,3 +1,4 @@
+import { SETUP_COMMAND } from "./package.constants.mjs";
 import { DEFAULT_LOCALE, LOCALES } from "./state.mjs";
 
 const enUs = {
@@ -124,7 +125,7 @@ const enUs = {
   inboxDays: (days) => `deleted after ${days} day(s)`,
   inboxForever: "kept forever",
   notSettable: (step, steps) =>
-    `'${step}' cannot be set with --set, only ${steps}. The token, the pairing and the plugins go through 'npx better-claude-code-telegram' in your own terminal.`,
+    `'${step}' cannot be set with --set, only ${steps}. The token, the pairing and the plugins go through '${SETUP_COMMAND}' in your own terminal.`,
   unknownHealthGroups: (groups, valid) =>
     `Unknown group:\n  • ${groups}\nUse all, or one or more of these:\n  • ${valid}`,
   healthGroupTitles: {
@@ -163,25 +164,23 @@ const enUs = {
     gitMissing:
       "not installed. Claude Code needs it to download and update the plugins.",
     installed: "installed",
-    notInstalled: (ids) =>
-      `missing ${ids}. Run 'npx better-claude-code-telegram plugin'.`,
+    notInstalled: (ids) => `missing ${ids}. Run '${SETUP_COMMAND} plugin'.`,
     loadedIn: (file) => `loaded by ${file}`,
     notLoaded: (file) =>
-      `not loaded by ${file}. Run 'npx better-claude-code-telegram plugin'.`,
+      `not loaded by ${file}. Run '${SETUP_COMMAND} plugin'.`,
     pathOn: (dir) => dir,
     pathPending: (file) => `turned on in ${file}; it applies to new terminals`,
-    pathOff: "off (optional). Run 'npx better-claude-code-telegram path'.",
+    pathOff: `off (optional). Run '${SETUP_COMMAND} path'.`,
     bot: (username) => `@${username}`,
-    noToken:
-      "no token. Run 'npx better-claude-code-telegram token' in your own terminal.",
+    noToken: `no token. Run '${SETUP_COMMAND} token' in your own terminal.`,
     paired: (account) => `paired with one account (${account})`,
-    notPaired: "not paired. Run 'npx better-claude-code-telegram pairing'.",
+    notPaired: `not paired. Run '${SETUP_COMMAND} pairing'.`,
     notAllowlist: (policy) =>
-      `dmPolicy is ${policy}, so strangers who write to the bot get a pairing code. Run 'npx better-claude-code-telegram pairing'.`,
+      `dmPolicy is ${policy}, so strangers who write to the bot get a pairing code. Run '${SETUP_COMMAND} pairing'.`,
     pendingPairings: (count) =>
-      `${count} pairing(s) pending in access.json. Run 'npx better-claude-code-telegram pairing'.`,
+      `${count} pairing(s) pending in access.json. Run '${SETUP_COMMAND} pairing'.`,
     groupsAllowed: (count) =>
-      `${count} group(s) can talk to the bot. Run 'npx better-claude-code-telegram pairing'.`,
+      `${count} group(s) can talk to the bot. Run '${SETUP_COMMAND} pairing'.`,
     groupsOff: "the bot cannot be added to groups",
     groupsUnknown: "needs a working bot token",
     regularUser: "no, runs as a regular user (as recommended)",
@@ -209,17 +208,16 @@ const enUs = {
         "Claude fits the indicator into yours on the next 'claude --telegram'",
     },
     shellCommented: (rc) =>
-      `the line in ${rc} is commented out. Run 'npx better-claude-code-telegram plugin'.`,
+      `the line in ${rc} is commented out. Run '${SETUP_COMMAND} plugin'.`,
     shellScriptMissing: (rc, script) =>
-      `${rc} loads ${script}, which does not exist. Run 'npx better-claude-code-telegram plugin'.`,
+      `${rc} loads ${script}, which does not exist. Run '${SETUP_COMMAND} plugin'.`,
     shellScriptOutdated: (script) =>
-      `${script} is out of date. Run 'npx better-claude-code-telegram plugin'.`,
+      `${script} is out of date. Run '${SETUP_COMMAND} plugin'.`,
     launcherActive: (version, channel) =>
       `version ${version} active (${channel})`,
     launcherMissing: (folder) =>
-      `no launcher in ${folder}. Run 'npx better-claude-code-telegram'.`,
-    launcherNoVersion:
-      "the launcher has no active version. Run 'npx better-claude-code-telegram'.",
+      `no launcher in ${folder}. Run '${SETUP_COMMAND}'.`,
+    launcherNoVersion: `the launcher has no active version. Run '${SETUP_COMMAND}'.`,
     versionSame: (version) => `binary and plugins on ${version}`,
     versionDiffers: (plugin, binary) =>
       `the plugin is on ${plugin} and the binary on ${binary}. Run 'bcct update'.`,
@@ -240,7 +238,7 @@ const enUs = {
     botAnswerUnexpected:
       "Telegram answered getMe without the bot data. Try again in a moment.",
     denyNotAList: (settings) =>
-      `permissions.deny in ${settings} is not a list. Fix the file and run 'npx better-claude-code-telegram token'.`,
+      `permissions.deny in ${settings} is not a list. Fix the file and run '${SETUP_COMMAND} token'.`,
   },
   installToolPrompt: (tool, command) =>
     `'${tool}' is missing. Install it now with the official installer (${command})?`,
@@ -533,10 +531,8 @@ const enUs = {
     beta: "beta",
     alpha: "alpha",
   },
-  versionRemoveHint:
-    "To delete a kept one: npx better-claude-code-telegram uninstall <version>",
-  versionUninstallHint:
-    "To uninstall everything: npx better-claude-code-telegram uninstall",
+  versionRemoveHint: `To delete a kept one: ${SETUP_COMMAND} uninstall <version>`,
+  versionUninstallHint: `To uninstall everything: ${SETUP_COMMAND} uninstall`,
   versionUnstable: (channel) =>
     `Test version (${channel}). For the stable one: 'bcct update stable'.`,
   uninstallVersionRemoved: (version) => `Deleted ${version}.`,
@@ -551,8 +547,7 @@ const enUs = {
     `${file} now adds bcct to your PATH. It applies to new terminals.`,
   pathAlready: (file) => `${file} already adds bcct to your PATH.`,
   pathRemoved: (file) => `${file} no longer adds bcct to your PATH.`,
-  pathOff:
-    "bcct stays off your PATH. To use it directly later, run 'npx better-claude-code-telegram path'.",
+  pathOff: `bcct stays off your PATH. To use it directly later, run '${SETUP_COMMAND} path'.`,
   hookWriteFailed: (file, reason) =>
     `bcct: could not write ${file} (${reason}). Telegram messages may not arrive. Run /bcct:health.`,
   hookFailedOften: (event, count, reason) =>
@@ -599,8 +594,7 @@ const enUs = {
     noVersion: (version, newest) =>
       `Version ${version} does not exist. Newest: ${newest}.`,
     noChannel: (channel) => `There is no ${channel} version yet.`,
-    noPlugins:
-      "The plugins are not installed. Run 'npx better-claude-code-telegram'.",
+    noPlugins: `The plugins are not installed. Run '${SETUP_COMMAND}'.`,
     noGit:
       "git is not installed, and Claude Code needs it to update the plugins. Install git and run 'bcct update' again.",
     pluginFailed: (line) => `Plugins: ${line}. Run 'bcct update' again.`,
@@ -764,7 +758,7 @@ const ptBr = {
   inboxDays: (days) => `apagados depois de ${days} dia(s)`,
   inboxForever: "mantidos para sempre",
   notSettable: (step, steps) =>
-    `'${step}' não muda pelo --set, só ${steps}. Token, pareamento e plugins passam pelo 'npx better-claude-code-telegram' no seu próprio terminal.`,
+    `'${step}' não muda pelo --set, só ${steps}. Token, pareamento e plugins passam pelo '${SETUP_COMMAND}' no seu próprio terminal.`,
   unknownHealthGroups: (groups, valid) =>
     `Grupo desconhecido:\n  • ${groups}\nUse all, ou um ou mais destes:\n  • ${valid}`,
   healthGroupTitles: {
@@ -803,25 +797,23 @@ const ptBr = {
     gitMissing:
       "não instalado. O Claude Code precisa dele para baixar e atualizar os plugins.",
     installed: "instalados",
-    notInstalled: (ids) =>
-      `faltam ${ids}. Rode 'npx better-claude-code-telegram plugin'.`,
+    notInstalled: (ids) => `faltam ${ids}. Rode '${SETUP_COMMAND} plugin'.`,
     loadedIn: (file) => `carregado por ${file}`,
     notLoaded: (file) =>
-      `não carregado por ${file}. Rode 'npx better-claude-code-telegram plugin'.`,
+      `não carregado por ${file}. Rode '${SETUP_COMMAND} plugin'.`,
     pathOn: (dir) => dir,
     pathPending: (file) => `ligado em ${file}; vale nos terminais novos`,
-    pathOff: "fora (opcional). Rode 'npx better-claude-code-telegram path'.",
+    pathOff: `fora (opcional). Rode '${SETUP_COMMAND} path'.`,
     bot: (username) => `@${username}`,
-    noToken:
-      "sem token. Rode 'npx better-claude-code-telegram token' no seu próprio terminal.",
+    noToken: `sem token. Rode '${SETUP_COMMAND} token' no seu próprio terminal.`,
     paired: (account) => `pareado com uma conta (${account})`,
-    notPaired: "não pareado. Rode 'npx better-claude-code-telegram pairing'.",
+    notPaired: `não pareado. Rode '${SETUP_COMMAND} pairing'.`,
     notAllowlist: (policy) =>
-      `o dmPolicy é ${policy}, e quem escreve para o bot recebe um código de pareamento. Rode 'npx better-claude-code-telegram pairing'.`,
+      `o dmPolicy é ${policy}, e quem escreve para o bot recebe um código de pareamento. Rode '${SETUP_COMMAND} pairing'.`,
     pendingPairings: (count) =>
-      `${count} pareamento(s) pendente(s) no access.json. Rode 'npx better-claude-code-telegram pairing'.`,
+      `${count} pareamento(s) pendente(s) no access.json. Rode '${SETUP_COMMAND} pairing'.`,
     groupsAllowed: (count) =>
-      `${count} grupo(s) podem falar com o bot. Rode 'npx better-claude-code-telegram pairing'.`,
+      `${count} grupo(s) podem falar com o bot. Rode '${SETUP_COMMAND} pairing'.`,
     groupsOff: "o bot não entra em grupos",
     groupsUnknown: "precisa de um token de bot válido",
     regularUser: "não, roda como usuário comum (o recomendado)",
@@ -848,17 +840,16 @@ const ptBr = {
         "o Claude junta o indicador à sua no próximo 'claude --telegram'",
     },
     shellCommented: (rc) =>
-      `a linha de ${rc} está comentada. Rode 'npx better-claude-code-telegram plugin'.`,
+      `a linha de ${rc} está comentada. Rode '${SETUP_COMMAND} plugin'.`,
     shellScriptMissing: (rc, script) =>
-      `${rc} carrega ${script}, que não existe. Rode 'npx better-claude-code-telegram plugin'.`,
+      `${rc} carrega ${script}, que não existe. Rode '${SETUP_COMMAND} plugin'.`,
     shellScriptOutdated: (script) =>
-      `${script} está desatualizado. Rode 'npx better-claude-code-telegram plugin'.`,
+      `${script} está desatualizado. Rode '${SETUP_COMMAND} plugin'.`,
     launcherActive: (version, channel) =>
       `versão ${version} ativa (${channel})`,
     launcherMissing: (folder) =>
-      `sem launcher em ${folder}. Rode 'npx better-claude-code-telegram'.`,
-    launcherNoVersion:
-      "o launcher não tem versão ativa. Rode 'npx better-claude-code-telegram'.",
+      `sem launcher em ${folder}. Rode '${SETUP_COMMAND}'.`,
+    launcherNoVersion: `o launcher não tem versão ativa. Rode '${SETUP_COMMAND}'.`,
     versionSame: (version) => `binário e plugins na ${version}`,
     versionDiffers: (plugin, binary) =>
       `o plugin está na ${plugin} e o binário na ${binary}. Rode 'bcct update'.`,
@@ -880,7 +871,7 @@ const ptBr = {
     botAnswerUnexpected:
       "o Telegram respondeu ao getMe sem os dados do bot. Tente de novo daqui a pouco.",
     denyNotAList: (settings) =>
-      `o permissions.deny de ${settings} não é uma lista. Corrija o arquivo e rode 'npx better-claude-code-telegram token'.`,
+      `o permissions.deny de ${settings} não é uma lista. Corrija o arquivo e rode '${SETUP_COMMAND} token'.`,
   },
   installToolPrompt: (tool, command) =>
     `O '${tool}' não está instalado. Instalar agora com o instalador do próprio projeto (${command})?`,
@@ -1173,10 +1164,8 @@ const ptBr = {
     beta: "beta",
     alpha: "alpha",
   },
-  versionRemoveHint:
-    "Para apagar uma guardada: npx better-claude-code-telegram uninstall <versão>",
-  versionUninstallHint:
-    "Para desinstalar tudo: npx better-claude-code-telegram uninstall",
+  versionRemoveHint: `Para apagar uma guardada: ${SETUP_COMMAND} uninstall <versão>`,
+  versionUninstallHint: `Para desinstalar tudo: ${SETUP_COMMAND} uninstall`,
   versionUnstable: (channel) =>
     `Versão de teste (${channel}). Para a estável: 'bcct update stable'.`,
   uninstallVersionRemoved: (version) => `Apaguei a ${version}.`,
@@ -1191,8 +1180,7 @@ const ptBr = {
     `${file} passou a adicionar o bcct ao PATH. Vale nos terminais novos.`,
   pathAlready: (file) => `${file} já adiciona o bcct ao PATH.`,
   pathRemoved: (file) => `${file} não adiciona mais o bcct ao PATH.`,
-  pathOff:
-    "bcct fora do PATH. Para usar direto depois, rode 'npx better-claude-code-telegram path'.",
+  pathOff: `bcct fora do PATH. Para usar direto depois, rode '${SETUP_COMMAND} path'.`,
   hookWriteFailed: (file, reason) =>
     `bcct: não consegui gravar ${file} (${reason}). As mensagens do Telegram podem não chegar. Rode /bcct:health.`,
   hookFailedOften: (event, count, reason) =>
@@ -1238,8 +1226,7 @@ const ptBr = {
     noVersion: (version, newest) =>
       `A versão ${version} não existe. Mais novas: ${newest}.`,
     noChannel: (channel) => `Ainda não há versão ${channel}.`,
-    noPlugins:
-      "Os plugins não estão instalados. Rode 'npx better-claude-code-telegram'.",
+    noPlugins: `Os plugins não estão instalados. Rode '${SETUP_COMMAND}'.`,
     noGit:
       "O git não está instalado, e o Claude Code precisa dele para atualizar os plugins. Instale o git e rode 'bcct update' de novo.",
     pluginFailed: (line) => `Plugins: ${line}. Rode 'bcct update' de novo.`,

@@ -31,11 +31,20 @@ const RELEASE_FORMS: [(&str, &str); 8] = [
     (" (ou 'npm run telegram' neste repositório)", ""),
     (
         "npm run setup -- token",
-        "npx better-claude-code-telegram token",
+        "npx @pedromondek/better-claude-code-telegram token",
     ),
-    ("npm run setup:", "npx better-claude-code-telegram "),
-    ("npm run setup", "npx better-claude-code-telegram"),
-    ("npm run health", "npx better-claude-code-telegram health"),
+    (
+        "npm run setup:",
+        "npx @pedromondek/better-claude-code-telegram ",
+    ),
+    (
+        "npm run setup",
+        "npx @pedromondek/better-claude-code-telegram",
+    ),
+    (
+        "npm run health",
+        "npx @pedromondek/better-claude-code-telegram health",
+    ),
 ];
 
 pub(crate) fn release_form(text: &str) -> String {
