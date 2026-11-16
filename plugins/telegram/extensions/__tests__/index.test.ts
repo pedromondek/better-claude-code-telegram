@@ -217,7 +217,7 @@ describe("createExtensions", () => {
     expect(statSync(join(appDir, "asks")).isDirectory()).toBe(true);
   });
 
-  it("cleans the inbox of the channel on start and every hour, with the retention of the setup", async () => {
+  it("cleans the inbox of the channel on start and every hour, with the retention of the setup", () => {
     const inbox = join(stateDir, "inbox");
     const receiveOld = (name: string): void => {
       const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -232,12 +232,21 @@ describe("createExtensions", () => {
       JSON.stringify({ inboxRetentionDays: 1 }),
     );
     receiveOld("first.jpg");
+
+    const intervals = vi.spyOn(globalThis, "setInterval");
+
     build().start();
 
     expect(readdirSync(inbox)).toEqual([]);
 
+    const [cleanupEveryHour] =
+      intervals.mock.calls.find(([, delay]) => delay === 60 * 60 * 1000) ?? [];
+
+    expect(cleanupEveryHour).toBeTypeOf("function");
+
     receiveOld("second.jpg");
-    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+
+    if (typeof cleanupEveryHour === "function") cleanupEveryHour();
 
     expect(readdirSync(inbox)).toEqual([]);
   });
