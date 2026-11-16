@@ -291,6 +291,7 @@ describe("upstream.constants.mjs", () => {
       "bun.lock",
       "package.json",
       "server.ts",
+      "skills/channel-guide/",
       "skills/configure/SKILL.md",
     ]);
     expect(
@@ -298,7 +299,7 @@ describe("upstream.constants.mjs", () => {
         (file) => !notice.includes(`plugins/telegram/${file}`),
       ),
     ).toEqual([]);
-    expect(notice).toContain("with four changes:");
+    expect(notice).toContain("with five changes:");
   });
 
   it("is the upstream:watch npm script", () => {

@@ -218,3 +218,64 @@ describe("createPermissionDelay log in en-us", () => {
     expect(logs).toEqual(["permission abcde: sent to Telegram"]);
   });
 });
+
+describe("permission delay of its own", () => {
+  it("waits the permission delay of the setup, not the delay of the questions", (): void => {
+    const { sent, delay, defer } = setup();
+
+    writeConfig({ delayMinutes: 4, delays: { permissions: 10, questions: 0 } });
+    defer("abcde");
+    clock = NOW + DEFAULT_DELAY;
+    delay.tick();
+
+    expect(sent).toEqual([]);
+
+    clock = NOW + 10 * 60_000;
+    delay.tick();
+
+    expect(sent).toEqual(["abcde"]);
+  });
+
+  it("sends on the next cycle when the permission delay is 0", (): void => {
+    const { sent, delay, defer } = setup();
+
+    writeConfig({ delays: { permissions: 0 } });
+    defer("abcde");
+    delay.tick();
+
+    expect(sent).toEqual(["abcde"]);
+    expect(delay.held()).toBe(0);
+  });
+});
+
+describe("permission requests held", () => {
+  it("counts the requests past the delay that the terminal did not answer", (): void => {
+    const { delay, defer } = setup();
+
+    defer("old-1");
+    clock = NOW + 1000;
+    defer("old-2");
+    clock = NOW + DEFAULT_DELAY + 1000;
+    defer("new-1");
+
+    expect(delay.held()).toBe(2);
+
+    writeStamp("last-activity", NOW + 500);
+
+    expect(delay.held()).toBe(1);
+    expect(delay.pendingCount()).toBe(3);
+  });
+
+  it("counts a request exactly at the delay as held", (): void => {
+    const { delay, defer } = setup();
+
+    defer("edge");
+    clock = NOW + DEFAULT_DELAY;
+
+    expect(delay.held()).toBe(1);
+
+    clock = NOW + DEFAULT_DELAY - 1;
+
+    expect(delay.held()).toBe(0);
+  });
+});

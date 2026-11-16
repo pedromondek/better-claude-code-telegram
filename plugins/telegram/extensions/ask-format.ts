@@ -22,6 +22,7 @@ export interface AskRecord {
   dueAt: number;
   instance?: string | null;
   context?: string | null;
+  released?: unknown;
   questions: AskQuestion[];
 }
 
@@ -43,6 +44,7 @@ export interface KeyboardButton {
 export interface AskProgress {
   answers: Record<number, string>;
   selections: Record<number, number[]>;
+  typed?: Record<number, string>;
 }
 
 export const ANSWERED_CALLBACK = "ask:answered";
@@ -106,6 +108,7 @@ export function buildKeyboard(
   questionIndex: number,
   messages: Messages,
   selected?: number[],
+  typed?: string,
 ): KeyboardButton[][] {
   const optionRows = question.options.map((option, optionIndex) => {
     const mark = selected?.includes(optionIndex) ? "☑️ " : "";
@@ -123,7 +126,10 @@ export function buildKeyboard(
   const extraRows = [
     [
       {
-        text: messages.otherButton,
+        text:
+          typed === undefined
+            ? messages.otherButton
+            : truncate(`☑️ ✍️ ${typed}`, MAX_BUTTON_TEXT_LENGTH),
         data: `ask:${shortId}:${questionIndex}:o`,
       },
     ],
@@ -187,6 +193,58 @@ export function toggleSelection(
   };
 }
 
+export function typeSelection(
+  progress: AskProgress,
+  questionIndex: number,
+  text: string,
+): AskProgress {
+  return {
+    ...progress,
+    typed: { ...progress.typed, [questionIndex]: text },
+  };
+}
+
+export function multipleAnswer(
+  question: AskQuestion,
+  selected: number[],
+  typed: string | undefined,
+): string | null {
+  const parts = [selectionAnswer(question, selected), typed].filter(
+    (part): part is string => part !== null && part !== undefined,
+  );
+
+  return parts.length === 0 ? null : parts.join(", ");
+}
+
+export function progressAnswer(
+  question: AskQuestion,
+  progress: AskProgress,
+  questionIndex: number,
+): string | null {
+  return multipleAnswer(
+    question,
+    progress.selections[questionIndex] ?? [],
+    progress.typed?.[questionIndex],
+  );
+}
+
+export function progressKeyboard(
+  question: AskQuestion,
+  shortId: string,
+  questionIndex: number,
+  messages: Messages,
+  progress: AskProgress,
+): KeyboardButton[][] {
+  return buildKeyboard(
+    question,
+    shortId,
+    questionIndex,
+    messages,
+    progress.selections[questionIndex],
+    progress.typed?.[questionIndex],
+  );
+}
+
 export function answerQuestion(
   progress: AskProgress,
   questionIndex: number,
@@ -218,6 +276,17 @@ export function selectionAnswer(
 
 export function otherAnswer(text: string): string {
   return text.trim();
+}
+
+export function typedAnswer(
+  question: AskQuestion,
+  selected: number[],
+  text: string,
+): string {
+  const marked = selectionAnswer(question, selected);
+  const typed = otherAnswer(text);
+
+  return marked === null ? typed : `${marked}, ${typed}`;
 }
 
 export function isAnswered(

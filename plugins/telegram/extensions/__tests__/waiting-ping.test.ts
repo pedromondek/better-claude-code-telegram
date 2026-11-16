@@ -490,3 +490,31 @@ describe("createWaitingPing", () => {
     expect(readdirSync(pingsDir())).toEqual(["last-inbound"]);
   });
 });
+
+describe("waiting notices held", () => {
+  it("counts the due notices it would send now, leaving out the ones not due and the unreadable files", (): void => {
+    const { ping } = setup();
+
+    writePing("due-1", { dueAt: NOW - 1 });
+    writePing("due-2", { dueAt: NOW, instance: "api" });
+    writePing("later", { dueAt: NOW + 1 });
+    writeFileSync(join(pingsDir(), "broken.json"), "{not json");
+
+    expect(ping.held()).toBe(2);
+  });
+
+  it("leaves out the notice of this instance while the conversation is on Telegram", (): void => {
+    const { ping } = setup();
+
+    writePing("own", { dueAt: NOW - 1 });
+    writePing("other", { dueAt: NOW - 1, instance: "api" });
+    writePing("another", { dueAt: NOW - 1, instance: "web" });
+    writeFileSync(join(pingsDir(), "last-inbound"), String(NOW - 10));
+
+    expect(ping.held()).toBe(2);
+  });
+
+  it("holds nothing without a pings folder", (): void => {
+    expect(setup().ping.held()).toBe(0);
+  });
+});

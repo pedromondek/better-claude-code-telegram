@@ -10,14 +10,19 @@ import {
   isAnswered,
   isAskRecord,
   isComplete,
+  multipleAnswer,
   optionAnswer,
   otherAnswer,
   parseAskCallback,
+  progressAnswer,
+  progressKeyboard,
   renderContextText,
   renderQuestionText,
   selectionAnswer,
   shortIdFor,
   toggleSelection,
+  typeSelection,
+  typedAnswer,
   type AskQuestion,
 } from "../ask-format.ts";
 import { MESSAGES } from "../i18n.ts";
@@ -66,7 +71,7 @@ describe("renderQuestionText in pt-br", () => {
         "linha 2",
         "```",
         "",
-        "✍️ Outra resposta: toque no botão e escreva a resposta aqui no chat.",
+        "✍️ Outra resposta: toque no botão e responda citando o pedido que ele abre.",
       ].join("\n"),
     );
   });
@@ -121,7 +126,7 @@ describe("renderQuestionText in en-us", () => {
         "linha 2",
         "```",
         "",
-        "✍️ Other answer: tap the button and type your answer here in the chat.",
+        "✍️ Other answer: tap the button and reply quoting the request it opens.",
       ].join("\n"),
     );
   });
@@ -272,6 +277,63 @@ describe("answer progress", () => {
     expect(selectionAnswer(MULTI, [0, 2])).toBe("Backend, Infra");
     expect(selectionAnswer(MULTI, [])).toBeNull();
     expect(otherAnswer("  MySQL  ")).toBe("MySQL");
+  });
+
+  it("keeps the emoji variation selector of the labels in the answer", (): void => {
+    const emoji: AskQuestion = {
+      question: "Teste do emoji?",
+      multiSelect: true,
+      options: [{ label: "☑\u{fe0f} Marcado" }, { label: "ℹ\u{fe0f} Info" }],
+    };
+
+    expect(selectionAnswer(emoji, [0, 1])).toBe(
+      "☑\u{fe0f} Marcado, ℹ\u{fe0f} Info",
+    );
+    expect(multipleAnswer(emoji, [1], "✍\u{fe0f} x")).toBe(
+      "ℹ\u{fe0f} Info, ✍\u{fe0f} x",
+    );
+    expect(optionAnswer(emoji, 0)).toBe("☑\u{fe0f} Marcado");
+  });
+
+  it("joins the marked options and the typed text of a multiple choice", (): void => {
+    const typed = typeSelection(emptyProgress(), 0, "Mobile");
+
+    expect(multipleAnswer(MULTI, [], undefined)).toBeNull();
+    expect(multipleAnswer(MULTI, [0], undefined)).toBe("Backend");
+    expect(multipleAnswer(MULTI, [], "Mobile")).toBe("Mobile");
+    expect(multipleAnswer(MULTI, [0, 2], "Mobile")).toBe(
+      "Backend, Infra, Mobile",
+    );
+    expect(progressAnswer(MULTI, typed, 0)).toBe("Mobile");
+    expect(progressAnswer(MULTI, typed, 1)).toBeNull();
+    expect(typeSelection(typed, 0, "Infra").typed).toEqual({ 0: "Infra" });
+  });
+
+  it("marks the other button with the typed text, cut to the button limit", (): void => {
+    const long = "x".repeat(80);
+    const other = (typed?: string): string =>
+      buildKeyboard(MULTI, "abcd1234", 0, PT, [], typed)[3][0].text;
+    const shown = progressKeyboard(
+      MULTI,
+      "abcd1234",
+      0,
+      PT,
+      typeSelection(emptyProgress(), 0, "Mobile"),
+    );
+
+    expect(other()).toBe(PT.otherButton);
+    expect(other("Mobile")).toBe("☑️ ✍️ Mobile");
+    expect(other(long)).toHaveLength(64);
+    expect(other(long).endsWith("…")).toBe(true);
+    expect(shown[3][0].text).toBe("☑️ ✍️ Mobile");
+  });
+
+  it("puts the typed text after the marked options, as the terminal joins them", (): void => {
+    expect(typedAnswer(MULTI, [0, 2], " Mobile ")).toBe(
+      "Backend, Infra, Mobile",
+    );
+    expect(typedAnswer(MULTI, [], "Mobile")).toBe("Mobile");
+    expect(typedAnswer(SINGLE, [], "MySQL")).toBe("MySQL");
   });
 
   it("is complete only with every question answered", (): void => {

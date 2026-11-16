@@ -7,6 +7,7 @@ import { describeError, messagesFor, type Messages } from "./i18n.ts";
 import { cleanInbox } from "./inbox-cleanup.ts";
 import { createFileLog, writeHealth, type Log } from "./log.ts";
 import { createPermissionDelay } from "./permission-delay.ts";
+import { createQuietNotice } from "./quiet-notice.ts";
 import { withReplyContext, type RepliedMessage } from "./reply-context.ts";
 import { createTranscriber, formatTranscription } from "./transcription.ts";
 import { createWaitingPing } from "./waiting-ping.ts";
@@ -55,6 +56,14 @@ export function createExtensions({
   const askMirror = createAskMirror(moduleOptions);
   const waitingPing = createWaitingPing(moduleOptions);
   const permissionDelay = createPermissionDelay(moduleOptions);
+  const quietNotice = createQuietNotice({
+    ...moduleOptions,
+    held: () => ({
+      questions: askMirror.held(),
+      notices: waitingPing.held(),
+      permissions: permissionDelay.held(),
+    }),
+  });
   const transcriber = createTranscriber({
     ...moduleOptions,
     stateDir,
@@ -75,8 +84,7 @@ export function createExtensions({
     cleanup();
     setInterval(cleanup, INBOX_CLEANUP_MS).unref();
 
-    setInterval(() => {
-      writeHealth(appDir, isPolling());
+    const runModules = (): void => {
       askMirror
         .tick()
         .catch((error: unknown) =>
@@ -88,6 +96,16 @@ export function createExtensions({
           log(messages().pingFailed(describeError(error))),
         );
       permissionDelay.tick();
+    };
+
+    setInterval(() => {
+      writeHealth(appDir, isPolling());
+      quietNotice
+        .tick()
+        .catch((error: unknown) =>
+          log(messages().quietNoticeFailed(describeError(error))),
+        )
+        .finally(runModules);
     }, TICK_MS).unref();
   }
 

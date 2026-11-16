@@ -35,6 +35,10 @@ const modules = vi.hoisted(() => ({
   askTick: vi.fn<() => Promise<void>>(),
   pingTick: vi.fn<() => Promise<void>>(),
   permissionTick: vi.fn<() => void>(),
+  quietTick: vi.fn<() => Promise<void>>(),
+  askHeld: vi.fn<() => number>(),
+  pingHeld: vi.fn<() => number>(),
+  permissionHeld: vi.fn<() => number>(),
   handleCallback: vi.fn<() => Promise<boolean>>(),
   consumeText: vi.fn<() => Promise<boolean>>(),
   noteInbound: vi.fn<() => void>(),
@@ -50,6 +54,7 @@ vi.mock("../ask-mirror.ts", () => ({
 
     return {
       tick: modules.askTick,
+      held: modules.askHeld,
       handleCallback: modules.handleCallback,
       consumeText: modules.consumeText,
     };
@@ -60,7 +65,11 @@ vi.mock("../waiting-ping.ts", () => ({
   createWaitingPing: (options: unknown): Module => {
     modules.received.set("waitingPing", options);
 
-    return { tick: modules.pingTick, noteInbound: modules.noteInbound };
+    return {
+      tick: modules.pingTick,
+      held: modules.pingHeld,
+      noteInbound: modules.noteInbound,
+    };
   },
 }));
 
@@ -68,7 +77,19 @@ vi.mock("../permission-delay.ts", () => ({
   createPermissionDelay: (options: unknown): Module => {
     modules.received.set("permissionDelay", options);
 
-    return { tick: modules.permissionTick, defer: modules.defer };
+    return {
+      tick: modules.permissionTick,
+      held: modules.permissionHeld,
+      defer: modules.defer,
+    };
+  },
+}));
+
+vi.mock("../quiet-notice.ts", () => ({
+  createQuietNotice: (options: unknown): Module => {
+    modules.received.set("quietNotice", options);
+
+    return { tick: modules.quietTick };
   },
 }));
 
@@ -122,6 +143,7 @@ beforeEach(() => {
   modules.received.clear();
   modules.askTick.mockResolvedValue();
   modules.pingTick.mockResolvedValue();
+  modules.quietTick.mockResolvedValue();
 });
 
 afterEach(() => {
@@ -237,6 +259,72 @@ describe("createExtensions", () => {
 
     expect(health()).toMatchObject({ polling: false });
     expect(modules.askTick).toHaveBeenCalledTimes(2);
+  });
+
+  it("runs the quiet notice first, so its summary reaches Telegram before the held items", async () => {
+    const order: string[] = [];
+    let finishQuiet = (): void => {};
+
+    modules.quietTick.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          order.push("quiet");
+          finishQuiet = resolve;
+        }),
+    );
+    modules.askTick.mockImplementation(() => {
+      order.push("ask");
+
+      return Promise.resolve();
+    });
+    modules.pingTick.mockImplementation(() => {
+      order.push("ping");
+
+      return Promise.resolve();
+    });
+    modules.permissionTick.mockImplementation(() => {
+      order.push("permission");
+    });
+    build().start();
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(order).toEqual(["quiet"]);
+
+    finishQuiet();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(order).toEqual(["quiet", "ask", "ping", "permission"]);
+  });
+
+  it("hands the quiet notice what the mirror, the pings and the permission delay hold", () => {
+    modules.askHeld.mockReturnValue(2);
+    modules.pingHeld.mockReturnValue(1);
+    modules.permissionHeld.mockReturnValue(3);
+    build();
+
+    const options = receivedBy("quietNotice") as ModuleOptions & {
+      held: () => unknown;
+    };
+
+    expect(options.held()).toEqual({
+      questions: 2,
+      notices: 1,
+      permissions: 3,
+    });
+    expect(options.appDir).toBe(appDir);
+    expect(options.allowedChats()).toEqual(["42"]);
+  });
+
+  it("logs a failed quiet notice and still runs the other cycles", async () => {
+    modules.quietTick.mockRejectedValue(new Error("quiet boom"));
+    build().start();
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(echoed).toContain(EN.quietNoticeFailed("Error: quiet boom"));
+    expect(modules.askTick).toHaveBeenCalledTimes(1);
+    expect(modules.permissionTick).toHaveBeenCalledTimes(1);
   });
 
   it("logs a failed cycle of the mirror or of the pings and keeps going", async () => {

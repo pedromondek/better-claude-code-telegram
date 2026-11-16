@@ -47,9 +47,29 @@ export function readConfig(appDir: string): Record<string, unknown> {
   }
 }
 
+export const DELAY_KINDS = ["questions", "permissions", "waiting"] as const;
+
+export type DelayKind = (typeof DELAY_KINDS)[number];
+
+export function kindMinutes(
+  config: Record<string, unknown>,
+  kind: DelayKind | undefined,
+): number | null {
+  const { delays } = config;
+
+  if (kind === undefined || !isRecord(delays)) return null;
+
+  const minutes = delays[kind];
+
+  return typeof minutes === "number" && minutes >= 0 && minutes < Infinity
+    ? minutes
+    : null;
+}
+
 export function readDelayMinutes(
   appDir: string,
   env: Env = process.env,
+  kind?: DelayKind,
 ): number {
   const fromEnv = Number(nonEmpty(env.BETTER_CC_TELEGRAM_DELAY_MS?.trim()));
 
@@ -57,9 +77,16 @@ export function readDelayMinutes(
     return fromEnv / 60_000;
   }
 
-  const minutes = Number(readConfig(appDir).delayMinutes);
+  const config = readConfig(appDir);
+  const ownMinutes = kindMinutes(config, kind);
 
-  return Number.isFinite(minutes) && minutes > 0
+  if (ownMinutes !== null) return ownMinutes;
+
+  const raw = config.delayMinutes;
+  const minutes = Number(raw);
+  const rightAway = raw === 0 || raw === "0";
+
+  return Number.isFinite(minutes) && (minutes > 0 || rightAway)
     ? minutes
     : DEFAULT_DELAY_MINUTES;
 }
@@ -121,7 +148,13 @@ export function isQuietTime(
 }
 
 export function formatDelay(minutes: number): string {
-  return minutes >= 1 && Number.isInteger(minutes)
-    ? `${minutes} min`
-    : `${Math.round(minutes * 60)} s`;
+  const totalSeconds = Math.round(minutes * 60);
+  const wholeMinutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (wholeMinutes === 0) return `${seconds} s`;
+
+  return seconds === 0
+    ? `${wholeMinutes} min`
+    : `${wholeMinutes} min ${seconds} s`;
 }

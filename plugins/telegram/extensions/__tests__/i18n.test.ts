@@ -13,7 +13,12 @@ import {
 const FUNCTION_CALLS: Record<string, unknown[]> = {
   contextText: ["ctx-sample"],
   questionTitle: ["inst-sample"],
-  writeOtherAnswer: [2, "header-sample"],
+  writeOtherAnswer: [2, "header-sample", "typed-sample"],
+  otherNeedsPrompt: [2, "header-sample"],
+  quietStarted: ["end-sample"],
+  quietEnded: [{ questions: 1, notices: 2, permissions: 0 }],
+  quietNoticeFailed: ["err-sample"],
+  otherAlreadyAnswered: [1, "header-sample", "answer-sample"],
   askEditFailed: ["err-sample"],
   askSent: ["ask-sample", "inst-sample"],
   askAnsweredInTerminal: ["ask-sample"],
@@ -123,20 +128,69 @@ describe("whisperLanguage", () => {
 
 describe("writeOtherAnswer", () => {
   it("names the question header in brackets when the question has one", (): void => {
-    expect(MESSAGES["en-us"].writeOtherAnswer(2, "Scope")).toBe(
+    expect(MESSAGES["en-us"].writeOtherAnswer(2, "Scope", null)).toBe(
       "✍️ Type here the answer to question 2 [Scope].",
     );
-    expect(MESSAGES["pt-br"].writeOtherAnswer(2, "Escopo")).toBe(
+    expect(MESSAGES["pt-br"].writeOtherAnswer(2, "Escopo", null)).toBe(
       "✍️ Escreva aqui a resposta da pergunta 2 [Escopo].",
     );
   });
 
   it("leaves the brackets out when the question has no header", (): void => {
-    expect(MESSAGES["en-us"].writeOtherAnswer(1, null)).toBe(
+    expect(MESSAGES["en-us"].writeOtherAnswer(1, null, null)).toBe(
       "✍️ Type here the answer to question 1.",
     );
-    expect(MESSAGES["pt-br"].writeOtherAnswer(1, null)).toBe(
+    expect(MESSAGES["pt-br"].writeOtherAnswer(1, null, null)).toBe(
       "✍️ Escreva aqui a resposta da pergunta 1.",
+    );
+  });
+
+  it("adds a line with the typed text it replaces, with and without header", (): void => {
+    expect(MESSAGES["en-us"].writeOtherAnswer(2, "Scope", "Mobile")).toBe(
+      "✍️ Type here the answer to question 2 [Scope].\n🔁 Replaces the answer typed before: “Mobile”.",
+    );
+    expect(MESSAGES["pt-br"].writeOtherAnswer(2, "Escopo", "Mobile")).toBe(
+      "✍️ Escreva aqui a resposta da pergunta 2 [Escopo].\n🔁 Substitui a resposta escrita antes: “Mobile”.",
+    );
+    expect(MESSAGES["en-us"].writeOtherAnswer(1, null, "Infra")).toBe(
+      "✍️ Type here the answer to question 1.\n🔁 Replaces the answer typed before: “Infra”.",
+    );
+    expect(MESSAGES["pt-br"].writeOtherAnswer(1, null, "Infra")).toBe(
+      "✍️ Escreva aqui a resposta da pergunta 1.\n🔁 Substitui a resposta escrita antes: “Infra”.",
+    );
+  });
+});
+
+describe("typed answer notices", () => {
+  it("tells that a text went to Claude and how to answer the question with text", (): void => {
+    expect(MESSAGES["en-us"].otherNeedsPrompt(2, "Animal")).toBe(
+      "ℹ️ That went to Claude as a message. To answer question 2 [Animal] with text, tap “✍️ Other answer” again and reply quoting the request.",
+    );
+    expect(MESSAGES["pt-br"].otherNeedsPrompt(2, "Animal")).toBe(
+      "ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta 2 [Animal] com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.",
+    );
+    expect(MESSAGES["pt-br"].otherNeedsPrompt(1, null)).toBe(
+      "ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta 1 com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.",
+    );
+    expect(MESSAGES["en-us"].otherNeedsPrompt(1, null)).toBe(
+      "ℹ️ That went to Claude as a message. To answer question 1 with text, tap “✍️ Other answer” again and reply quoting the request.",
+    );
+  });
+
+  it("warns that a text quoting an answered question was not used, with the answer it kept", (): void => {
+    expect(MESSAGES["en-us"].otherAlreadyAnswered(1, "Season", "Winter")).toBe(
+      "⚠️ Question 1 [Season] was already answered with Winter; this text was not used.",
+    );
+    expect(
+      MESSAGES["pt-br"].otherAlreadyAnswered(1, "Estação", "Inverno"),
+    ).toBe(
+      "⚠️ A pergunta 1 [Estação] já foi respondida com Inverno; este texto não foi usado.",
+    );
+    expect(MESSAGES["en-us"].otherAlreadyAnswered(3, null, "Yes")).toBe(
+      "⚠️ Question 3 was already answered with Yes; this text was not used.",
+    );
+    expect(MESSAGES["pt-br"].otherAlreadyAnswered(3, null, "Sim")).toBe(
+      "⚠️ A pergunta 3 já foi respondida com Sim; este texto não foi usado.",
     );
   });
 });

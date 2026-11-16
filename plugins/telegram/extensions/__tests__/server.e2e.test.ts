@@ -55,6 +55,7 @@ const skipNote = canRun
 interface TelegramCall {
   method: string;
   params: Record<string, unknown>;
+  messageId?: number;
 }
 
 interface FakeTelegram {
@@ -129,6 +130,7 @@ function createFakeTelegram(): FakeTelegram {
 
         if (method === "sendMessage") {
           nextMessageId += 1;
+          calls[calls.length - 1].messageId = nextMessageId;
           result = {
             message_id: nextMessageId,
             date: 0,
@@ -290,23 +292,25 @@ async function startFork(language: string | null): Promise<Fork> {
   };
 }
 
-function writeAsk(stateDir: string): void {
+function writeAsk(
+  stateDir: string,
+  id = ASK_ID,
+  titles = ["Which database?"],
+): void {
   mkdirSync(join(stateDir, "asks"), { recursive: true });
   writeFileSync(
-    join(stateDir, "asks", `${ASK_ID}.json`),
+    join(stateDir, "asks", `${id}.json`),
     JSON.stringify({
-      id: ASK_ID,
+      id,
       sessionId: "s1",
       createdAt: Date.now(),
       dueAt: 0,
       instance: "back-s3",
       context: "I compared the databases.",
-      questions: [
-        {
-          question: "Which database?",
-          options: [{ label: "Postgres" }, { label: "Redis" }],
-        },
-      ],
+      questions: titles.map((question) => ({
+        question,
+        options: [{ label: "Postgres" }, { label: "Redis" }],
+      })),
     }),
   );
 }
@@ -370,7 +374,7 @@ describe.skipIf(!canRun)(
       const result = isRecord(initialize?.result) ? initialize.result : {};
 
       expect(String(result.instructions)).toContain(
-        `in ${MESSAGES["pt-br"].languageName}, the language the user chose`,
+        `in ${MESSAGES["pt-br"].languageName} (the setup language)`,
       );
     });
 
@@ -408,6 +412,109 @@ describe.skipIf(!canRun)(
       );
 
       expect(answers).toEqual({ "Which database?": "Redis" });
+    });
+
+    it("takes the dev reply to the Other prompt as the typed answer, keeping it off the channel", async (): Promise<void> => {
+      const otherAskId = "s2-2000";
+      const sentBefore = fork.sentMessages().length;
+
+      writeAsk(fork.appDir, otherAskId, ["Which database?", "Which cache?"]);
+      await waitFor(
+        () =>
+          fork
+            .sentMessages()
+            .slice(sentBefore)
+            .filter((call) => call.params.reply_markup)
+            .at(1),
+        "the two new questions with buttons",
+      );
+
+      for (const questionIndex of [0, 1]) {
+        fork.telegram.push({
+          callback_query: {
+            id: `cb-other-${questionIndex}`,
+            from: DEV,
+            chat_instance: "x",
+            data: `ask:${shortIdFor(otherAskId)}:${questionIndex}:o`,
+            message: { message_id: 1, date: 0, chat: CHAT, text: "question" },
+          },
+        });
+      }
+
+      const prompt = await waitFor(
+        () =>
+          fork
+            .sentMessages()
+            .find((call) =>
+              String(call.params.text).startsWith(
+                "✍️ Escreva aqui a resposta da pergunta 1",
+              ),
+            ),
+        "the prompt of the first other answer",
+      );
+
+      const secondPrompt = await waitFor(
+        () =>
+          fork
+            .sentMessages()
+            .find((call) =>
+              String(call.params.text).startsWith(
+                "✍️ Escreva aqui a resposta da pergunta 2",
+              ),
+            ),
+        "the prompt of the second other answer",
+      );
+
+      fork.telegram.push({
+        message: {
+          message_id: 40,
+          date: Math.floor(Date.now() / 1000),
+          chat: CHAT,
+          from: DEV,
+          text: "MySQL",
+          reply_to_message: {
+            message_id: prompt.messageId,
+            date: 0,
+            chat: CHAT,
+            from: BOT,
+            text: String(prompt.params.text),
+          },
+        },
+      });
+
+      fork.telegram.push({
+        message: {
+          message_id: 41,
+          date: Math.floor(Date.now() / 1000),
+          chat: CHAT,
+          from: DEV,
+          text: "Memcached",
+          reply_to_message: {
+            message_id: secondPrompt.messageId,
+            date: 0,
+            chat: CHAT,
+            from: BOT,
+            text: String(secondPrompt.params.text),
+          },
+        },
+      });
+
+      const answers = await waitFor(
+        () =>
+          readJsonFile(join(fork.appDir, "asks", `${otherAskId}.answer.json`))
+            ?.answers,
+        "the typed answer file",
+      );
+
+      expect(answers).toEqual({
+        "Which database?": "MySQL",
+        "Which cache?": "Memcached",
+      });
+      expect(
+        fork.mcpMessages.some((message) =>
+          JSON.stringify(message).includes("MySQL"),
+        ),
+      ).toBe(false);
     });
 
     it("delivers to Claude the dev message with the text it replied to", async (): Promise<void> => {

@@ -38,8 +38,12 @@ interface Markup {
   inline_keyboard: { text: string; callback_data: string }[][];
 }
 
+interface ForceReply {
+  force_reply: true;
+}
+
 interface SendOptions {
-  reply_markup?: Markup;
+  reply_markup?: Markup | ForceReply;
   parse_mode?: "HTML";
 }
 
@@ -48,6 +52,8 @@ interface SentMessage {
   text: string;
   parseMode: string | undefined;
   keyboard: Markup["inline_keyboard"] | undefined;
+  forceReply: boolean;
+  messageId: number;
 }
 
 interface EditedMarkup {
@@ -60,6 +66,7 @@ interface AskOptions {
   dueAt?: number;
   context?: string | null;
   instance?: string | null;
+  released?: unknown;
 }
 
 interface SetupOptions {
@@ -209,13 +216,23 @@ function fakeApi({
       sendMessage: (chatId, text, options): Promise<{ message_id: number }> => {
         if (rejectSend(text)) return Promise.reject(new Error("boom"));
 
+        const markup = options?.reply_markup;
+
+        nextMessageId += 1;
         sent.push({
           chatId,
           text,
           parseMode: options?.parse_mode,
-          keyboard: options?.reply_markup?.inline_keyboard,
+          keyboard:
+            markup && "inline_keyboard" in markup
+              ? markup.inline_keyboard
+              : undefined,
+          forceReply:
+            markup !== undefined &&
+            "force_reply" in markup &&
+            markup.force_reply,
+          messageId: nextMessageId,
         });
-        nextMessageId += 1;
 
         return Promise.resolve({ message_id: nextMessageId });
       },
@@ -240,7 +257,12 @@ function fakeApi({
 
 function writeAsk(
   questions: AskQuestion[],
-  { dueAt = 0, context = null, instance = null }: AskOptions = {},
+  {
+    dueAt = 0,
+    context = null,
+    instance = null,
+    released = undefined,
+  }: AskOptions = {},
 ): void {
   mkdirSync(asksDir(), { recursive: true });
   writeFileSync(
@@ -253,6 +275,7 @@ function writeAsk(
       instance,
       context,
       questions,
+      ...(released === undefined ? {} : { released }),
     }),
   );
 }
@@ -402,6 +425,39 @@ describe("question sending", () => {
     expect(telegram.sent.length).toBe(0);
   });
 
+  it("sends a released question during quiet hours and keeps holding a due one not released", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeFileSync(
+      join(appDir, CONFIG_FILE),
+      JSON.stringify({ quietHours: { start: "14:00", end: "16:00" } }),
+    );
+    writeAsk([SINGLE], { dueAt: Date.now() - 1000 });
+    await mirror.tick();
+
+    expect(telegram.sent.length).toBe(0);
+
+    writeAsk([SINGLE], { dueAt: Date.now(), released: true });
+    await mirror.tick();
+
+    expect(telegram.sent.map(({ text }) => text)).toEqual([
+      expect.stringContaining("Qual banco?"),
+    ]);
+  });
+
+  it("does not treat a released flag other than true as a release", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeFileSync(
+      join(appDir, CONFIG_FILE),
+      JSON.stringify({ quietHours: { start: "14:00", end: "16:00" } }),
+    );
+    writeAsk([SINGLE], { dueAt: Date.now(), released: "yes" });
+    await mirror.tick();
+
+    expect(telegram.sent.length).toBe(0);
+  });
+
   it("sends the context first, without buttons, and identifies the instance", async (): Promise<void> => {
     const { telegram, mirror } = setup();
 
@@ -494,7 +550,9 @@ describe("answer through Telegram", () => {
     expect(telegram.sent.at(-1)?.text).toBe(
       "✍️ Escreva aqui a resposta da pergunta 1 [Banco].",
     );
-    expect(await mirror.consumeText(CHAT, "MySQL")).toBe(true);
+    expect(
+      await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
+    ).toBe(true);
     expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
     expect(await mirror.consumeText(CHAT, "conversa normal")).toBe(false);
   });
@@ -733,6 +791,42 @@ function writeAskWithId(id: string, createdAt: number): void {
   );
 }
 
+describe("questions held", () => {
+  it("counts the unsent questions that are due, released or with the conversation on Telegram", (): void => {
+    const { mirror } = setup();
+
+    writeAskWithId("due-1", Date.now());
+    writeAsk([SINGLE], { dueAt: Date.now() + 60_000, released: true });
+
+    expect(mirror.held()).toBe(2);
+
+    writeAsk([SINGLE], { dueAt: Date.now() + 60_000 });
+
+    expect(mirror.held()).toBe(1);
+
+    writeTimestamp("last-inbound", Date.now() - 1000);
+
+    expect(mirror.held()).toBe(2);
+  });
+
+  it("leaves out the questions already sent, closed, expired or unreadable", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAskWithId("sent-1", Date.now());
+    await mirror.tick();
+    writeAskWithId("closed-1", Date.now());
+    writeFileSync(join(asksDir(), "closed-1.closed"), "");
+    writeAskWithId("old-1", Date.now() - 24 * 60 * 60 * 1000 - 1);
+    writeFileSync(join(asksDir(), "broken-1.json"), "{not json");
+
+    expect(mirror.held()).toBe(0);
+  });
+
+  it("holds nothing without an asks folder", (): void => {
+    expect(setup().mirror.held()).toBe(0);
+  });
+});
+
 describe("mirror cycle edges", () => {
   it("does nothing while the asks folder does not exist", async (): Promise<void> => {
     const { telegram, mirror, logs } = setup();
@@ -813,8 +907,26 @@ describe("clicks whose acknowledgment Telegram refuses", () => {
 });
 
 describe("typed answer with more than one open question", () => {
-  it("goes to the newest question waiting for a typed answer", async (): Promise<void> => {
-    const { mirror } = setup();
+  it("goes to the ask whose prompt the reply quotes", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const older = "s1-1000";
+    const newer = "s2-2000";
+
+    writeAskWithId(older, Date.now() - 1000);
+    writeAskWithId(newer, Date.now());
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${shortIdFor(older)}:0:o`).ctx);
+    const olderPrompt = otherPromptId(telegram, 1);
+
+    await mirror.handleCallback(callback(`ask:${shortIdFor(newer)}:0:o`).ctx);
+
+    expect(await mirror.consumeText(CHAT, "MySQL", olderPrompt)).toBe(true);
+    expect(existsSync(join(asksDir(), `${older}.answer.json`))).toBe(true);
+    expect(existsSync(join(asksDir(), `${newer}.answer.json`))).toBe(false);
+  });
+
+  it("sends a loose text to the channel with one notice for the newest ask waiting", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
     const older = "s1-1000";
     const newer = "s2-2000";
 
@@ -823,10 +935,428 @@ describe("typed answer with more than one open question", () => {
     await mirror.tick();
     await mirror.handleCallback(callback(`ask:${shortIdFor(older)}:0:o`).ctx);
     await mirror.handleCallback(callback(`ask:${shortIdFor(newer)}:0:o`).ctx);
+    const sentBefore = telegram.sent.length;
 
-    expect(await mirror.consumeText(CHAT, "MySQL")).toBe(true);
-    expect(existsSync(join(asksDir(), `${newer}.answer.json`))).toBe(true);
+    expect(await mirror.consumeText(CHAT, "MySQL")).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore + 1);
+    expect(telegram.sent.at(-1)?.text.startsWith("ℹ️")).toBe(true);
+    expect(existsSync(join(asksDir(), `${newer}.answer.json`))).toBe(false);
     expect(existsSync(join(asksDir(), `${older}.answer.json`))).toBe(false);
+  });
+});
+
+const SEASON: AskQuestion = {
+  question: "Qual estação?",
+  header: "Estação",
+  options: [{ label: "Verão" }, { label: "Inverno" }],
+};
+const ANIMAL: AskQuestion = {
+  question: "Qual animal?",
+  header: "Animal",
+  options: [{ label: "Cão" }, { label: "Gato" }],
+};
+
+function otherPromptId(
+  telegram: ReturnType<typeof fakeApi>,
+  questionNumber: number,
+): number {
+  const prompt = telegram.sent.findLast((message) =>
+    new RegExp(`pergunta ${questionNumber}[ .]`).test(message.text),
+  );
+
+  return prompt?.messageId ?? -1;
+}
+
+describe("typed answer of a multiple choice question", () => {
+  it("keeps the question open with the typed text marked until done", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(
+      await mirror.consumeText(CHAT, " Mobile ", otherPromptId(telegram, 1)),
+    ).toBe(true);
+    expect(existsSync(answerFile())).toBe(false);
+    expect(telegram.edits.at(-1)?.keyboard[2][0]).toEqual({
+      text: "☑️ ✍️ Mobile",
+      callback_data: `ask:${SHORT}:0:o`,
+    });
+    expect(telegram.edits.at(-1)?.keyboard[0][0].text).toBe("☑️ 1. Backend");
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
+
+    expect(readAnswers()).toEqual({
+      "Quais camadas?": "Backend, Frontend, Mobile",
+    });
+  });
+
+  it("keeps only the options still marked when one was unmarked after the typed text", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
+
+    expect(readAnswers()).toEqual({ "Quais camadas?": "Frontend, Mobile" });
+  });
+
+  it("replaces the typed text when the other answer is written again", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "Infra", otherPromptId(telegram, 1));
+
+    expect(telegram.edits.at(-1)?.keyboard[2][0].text).toBe("☑️ ✍️ Infra");
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
+
+    expect(readAnswers()).toEqual({ "Quais camadas?": "Infra" });
+  });
+
+  it("shows the replaced typed text in the prompt when Other is tapped again", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(telegram.sent.at(-1)?.text).not.toContain("🔁");
+
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(telegram.sent.at(-1)?.text).toBe(
+      "✍️ Escreva aqui a resposta da pergunta 1.\n🔁 Substitui a resposta escrita antes: “Mobile”.",
+    );
+  });
+
+  it("ignores a typed text that is only spaces in a multiple choice", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "   ", otherPromptId(telegram, 1));
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
+
+    expect(existsSync(answerFile())).toBe(false);
+  });
+
+  it("answers a single choice question with the typed text alone", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "  MySQL  ", otherPromptId(telegram, 1));
+
+    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+  });
+});
+
+describe("typed answer to the question it replies to", () => {
+  it("asks for the typed answer as a forced reply, so Telegram quotes the question being answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(telegram.sent.at(-1)).toMatchObject({
+      text: "✍️ Escreva aqui a resposta da pergunta 1 [Banco].",
+      forceReply: true,
+      keyboard: undefined,
+    });
+  });
+
+  it("sends each reply to its own question when two wait for text, and none to the channel", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+
+    expect(
+      await mirror.consumeText(CHAT, "inverno", otherPromptId(telegram, 1)),
+    ).toBe(true);
+    expect(
+      await mirror.consumeText(CHAT, "gato", otherPromptId(telegram, 2)),
+    ).toBe(true);
+    expect(readAnswers()).toEqual({
+      "Qual estação?": "inverno",
+      "Qual animal?": "gato",
+    });
+  });
+
+  it("sends a reply to the question message to the channel, with a notice about the prompt", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+
+    const seasonMessage = telegram.sent.find((message) =>
+      message.text.includes("Qual estação?"),
+    );
+
+    expect(
+      await mirror.consumeText(CHAT, "inverno", seasonMessage?.messageId),
+    ).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(
+      "ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta 1 [Estação] com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.",
+    );
+    expect(existsSync(answerFile())).toBe(false);
+
+    await mirror.consumeText(CHAT, "gato", otherPromptId(telegram, 2));
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+
+    expect(readAnswers()).toEqual({
+      "Qual estação?": "Inverno",
+      "Qual animal?": "gato",
+    });
+  });
+
+  it("sends the notice on every reply to the question message, Other tapped or not", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+
+    const seasonMessage = telegram.sent.find((message) =>
+      message.text.includes("Qual estação?"),
+    );
+    const notice =
+      "ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta 1 [Estação] com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.";
+
+    expect(
+      await mirror.consumeText(CHAT, "inverno", seasonMessage?.messageId),
+    ).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(notice);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "inverno", seasonMessage?.messageId);
+    const sentBefore = telegram.sent.length;
+
+    expect(
+      await mirror.consumeText(CHAT, "inverno", seasonMessage?.messageId),
+    ).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore + 1);
+    expect(telegram.sent.at(-1)?.text).toBe(notice);
+  });
+
+  it("sends a reply to the message of an answered question to the channel without a notice", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+
+    const seasonMessage = telegram.sent.find((message) =>
+      message.text.includes("Qual estação?"),
+    );
+    const sentBefore = telegram.sent.length;
+
+    expect(
+      await mirror.consumeText(CHAT, "verão", seasonMessage?.messageId),
+    ).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore);
+  });
+
+  it("sends a loose text to the channel with one notice for the newest when two questions wait", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+
+    expect(await mirror.consumeText(CHAT, "gato")).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(
+      "ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta 2 [Animal] com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.",
+    );
+
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText(CHAT, "inverno")).toBe(false);
+    expect(
+      telegram.sent
+        .slice(sentBefore)
+        .filter(({ text }) => text.startsWith("ℹ️")).length,
+    ).toBe(1);
+    expect(existsSync(answerFile())).toBe(false);
+  });
+
+  it("sends a loose text with one notice, then none, when one question waits", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText(CHAT, "gato")).toBe(false);
+    expect(telegram.sent.slice(sentBefore).map(({ text }) => text)).toEqual([
+      "ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta 2 [Animal] com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.",
+    ]);
+    expect(await mirror.consumeText(CHAT, "gato")).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore + 1);
+  });
+
+  it("answers with the quoted prompt after a loose text lost the wait only when Other is tapped again", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "oi");
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(
+      await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
+    ).toBe(true);
+    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+  });
+
+  it("warns and keeps the text off the channel when the reply quotes an answered question", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+    const prompt = otherPromptId(telegram, 1);
+
+    expect(await mirror.consumeText(CHAT, "verão", prompt)).toBe(true);
+    expect(telegram.sent.at(-1)?.text).toBe(
+      "⚠️ A pergunta 1 [Estação] já foi respondida com Inverno; este texto não foi usado.",
+    );
+    expect(existsSync(answerFile())).toBe(false);
+  });
+
+  it("lets a reply to an unrelated message reach the channel when no question waits for text", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+
+    expect(await mirror.consumeText(CHAT, "oi", 7)).toBe(false);
+  });
+
+  it("keeps one wait and one notice when Other is tapped twice on the same question", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText(CHAT, "gato")).toBe(false);
+    expect(await mirror.consumeText(CHAT, "gato")).toBe(false);
+    expect(
+      telegram.sent.slice(sentBefore).map(({ text }) => text.slice(0, 2)),
+    ).toEqual(["ℹ️"]);
+  });
+
+  it("does not take a reply from another chat that carries the same message id", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(
+      await mirror.consumeText("77", "MySQL", otherPromptId(telegram, 1)),
+    ).toBe(false);
+    expect(existsSync(answerFile())).toBe(false);
+  });
+
+  it("logs, without failing, when Telegram refuses the notice about the prompt", async (): Promise<void> => {
+    const { mirror, logs } = setup({
+      rejectSend: (text) => text.startsWith("ℹ️"),
+    });
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+
+    expect(await mirror.consumeText(CHAT, "gato")).toBe(false);
+    expect(logs).toContain("ask: falha ao confirmar no chat: Error: boom");
+  });
+
+  it("logs, without failing, when Telegram refuses the warning about an answered question", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({
+      rejectSend: (text) => text.startsWith("⚠️"),
+    });
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+
+    expect(
+      await mirror.consumeText(CHAT, "verão", otherPromptId(telegram, 1)),
+    ).toBe(true);
+    expect(logs).toContain("ask: falha ao confirmar no chat: Error: boom");
+  });
+
+  it("reads a sent state written without the typed answer lists as nothing waiting", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+
+    const { awaitingOther, otherPrompts, ...older } = JSON.parse(
+      readFileSync(sentStateFile(), "utf8"),
+    ) as Record<string, unknown>;
+
+    expect([awaitingOther, otherPrompts]).toEqual([[], []]);
+    writeFileSync(
+      sentStateFile(),
+      JSON.stringify({ ...older, awaitingOther: 0 }),
+    );
+
+    expect(await mirror.consumeText(CHAT, "MySQL")).toBe(false);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(
+      await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
+    ).toBe(true);
+    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+  });
+
+  it("lets a reply to an unrelated message reach the channel without a notice while a question waits", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText(CHAT, "oi", 7)).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore);
+    expect(
+      await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
+    ).toBe(true);
+    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
   });
 });
 
@@ -844,7 +1374,8 @@ const VALID_SENT_STATE = {
   shortId: SHORT,
   messages: [],
   progress: { answers: {}, selections: {} },
-  awaitingOther: null,
+  awaitingOther: [],
+  otherPrompts: [],
   completed: false,
 };
 
@@ -1256,14 +1787,19 @@ describe("typed answers the mirror takes", () => {
   });
 
   it("a button answer to another question keeps the wait for the typed one", async (): Promise<void> => {
-    const { mirror } = setup();
+    const { telegram, mirror } = setup();
 
     writeAsk([SINGLE, MULTI]);
     await mirror.tick();
     await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
     await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
 
-    expect(await mirror.consumeText(CHAT, "Mobile")).toBe(true);
+    expect(
+      await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 2)),
+    ).toBe(true);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:d`).ctx);
+
     expect(readAnswers()).toEqual({
       "Qual banco?": "Postgres",
       "Quais camadas?": "Mobile",
@@ -1278,10 +1814,90 @@ describe("typed answers the mirror takes", () => {
     await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
     writeFileSync(join(asksDir(), `${ASK_ID}.closed`), "");
 
-    expect(await mirror.consumeText(CHAT, "MySQL")).toBe(true);
+    expect(
+      await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
+    ).toBe(true);
     expect(existsSync(answerFile())).toBe(false);
     expect(telegram.sent.at(-1)?.text).toBe(
       "✍️ Escreva aqui a resposta da pergunta 1 [Banco].",
     );
+  });
+});
+
+describe("questions waiting for text", () => {
+  const noticeFor = (questionNumber: number, header: string): string =>
+    `ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta ${questionNumber} [${header}] com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.`;
+
+  it("keeps waiting for the other question when a button answers one", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+
+    expect(await mirror.consumeText(CHAT, "solto")).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(noticeFor(2, "Animal"));
+  });
+
+  it("keeps waiting for the other question when a typed text marks a multiple choice", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI, SEASON]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+
+    expect(await mirror.consumeText(CHAT, "solto")).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(noticeFor(2, "Estação"));
+  });
+
+  it("marks nothing in a multiple choice for a typed text of spaces", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.consumeText(CHAT, "   ", otherPromptId(telegram, 1));
+
+    expect(telegram.edits.at(-1)?.keyboard[2][0].text).toBe(PT.otherButton);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
+
+    expect(readAnswers()).toEqual({ "Quais camadas?": "Backend" });
+  });
+
+  it("sends the notice for the newest ask when two asks wait for text", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const newest = "s2-9000";
+
+    writeAsk([SEASON]);
+    writeAskWithId(newest, Date.now() + 1000);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${shortIdFor(newest)}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    expect(await mirror.consumeText(CHAT, "solto")).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(noticeFor(1, "Banco"));
+  });
+
+  it("counts a question at the age limit and one due at this very moment", (): void => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+
+    try {
+      vi.setSystemTime(new Date(2026, 10, 15, 12, 0));
+
+      const { mirror } = setup();
+
+      writeAskWithId("edge-1", Date.now() - 24 * 60 * 60 * 1000);
+      writeAsk([SINGLE], { dueAt: Date.now() });
+
+      expect(mirror.held()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -7,6 +7,7 @@ export const UPSTREAM_CHANGES = [
   "bun.lock",
   "package.json",
   "server.ts",
+  "skills/channel-guide/",
   "skills/configure/SKILL.md",
 ];
 export const UPSTREAM_LABEL = "upstream";

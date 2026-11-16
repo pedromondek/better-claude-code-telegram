@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -6,16 +6,30 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CONFIG_FILE,
   DEFAULT_INBOX_RETENTION_DAYS,
+  DELAY_KINDS,
   defaultAppDir,
   formatDelay,
   isQuietTime,
+  kindMinutes,
   readConfig,
   readDelayMinutes,
   readInboxRetentionDays,
   readLocale,
   readQuietHours,
   readTranscriptionSetting,
+  type DelayKind,
 } from "../config.ts";
+
+interface DelayCase {
+  name: string;
+  config: unknown;
+  env: string | null;
+  expected: Record<DelayKind, number>;
+}
+
+const DELAY_CASES = JSON.parse(
+  readFileSync(join(import.meta.dirname, "fixtures", "delays.json"), "utf8"),
+) as DelayCase[];
 
 function at(hours: number, minutes = 0): Date {
   return new Date(2026, 9, 17, hours, minutes);
@@ -143,6 +157,49 @@ describe("readLocale", () => {
   });
 });
 
+describe("readDelayMinutes › per kind, the contract shared with the bcct binary", () => {
+  it("names the three kinds the binary and the channel read", (): void => {
+    expect(DELAY_KINDS).toEqual(["questions", "permissions", "waiting"]);
+  });
+
+  it.each(DELAY_CASES)("$name", ({ config, env, expected }): void => {
+    writeConfig(config);
+
+    const environment =
+      env === null ? {} : { BETTER_CC_TELEGRAM_DELAY_MS: env };
+
+    expect(
+      Object.fromEntries(
+        DELAY_KINDS.map((kind) => [
+          kind,
+          readDelayMinutes(appDir, environment, kind) * 60_000,
+        ]),
+      ),
+    ).toEqual(expected);
+  });
+});
+
+describe("kindMinutes", () => {
+  it("takes only a finite number of minutes, 0 or more, for the kind asked", (): void => {
+    const of = (questions: unknown): number | null =>
+      kindMinutes({ delays: { questions } }, "questions");
+
+    expect(of(0)).toBe(0);
+    expect(of(2.5)).toBe(2.5);
+    expect(of(-1)).toBeNull();
+    expect(of("5")).toBeNull();
+    expect(of(Number.NaN)).toBeNull();
+    expect(of(Infinity)).toBeNull();
+    expect(of(null)).toBeNull();
+  });
+
+  it("returns null without a kind, even with a delay saved under the key undefined", (): void => {
+    expect(kindMinutes({ delays: { undefined: 5 } }, undefined)).toBeNull();
+    expect(kindMinutes({ delays: [5] }, "questions")).toBeNull();
+    expect(kindMinutes({ delays: 5 }, "questions")).toBeNull();
+  });
+});
+
 describe("readDelayMinutes", () => {
   it("uses 4 min without config", (): void => {
     expect(readDelayMinutes(appDir, {})).toBe(4);
@@ -185,18 +242,21 @@ describe("readDelayMinutes", () => {
     ).toBe(10);
   });
 
-  it("uses the default when the config asks for zero minutes", (): void => {
+  it("sends right away when the config asks for zero minutes", (): void => {
     writeConfig({ delayMinutes: 0 });
 
-    expect(readDelayMinutes(appDir, {})).toBe(4);
+    expect(readDelayMinutes(appDir, {})).toBe(0);
   });
 });
 
 describe("formatDelay", () => {
-  it("shows whole minutes as min and the rest in seconds", (): void => {
+  it("shows a minute or more in minutes plus the seconds left, and less than a minute in seconds", (): void => {
     expect(formatDelay(3)).toBe("3 min");
+    expect(formatDelay(2.5)).toBe("2 min 30 s");
+    expect(formatDelay(1.25)).toBe("1 min 15 s");
     expect(formatDelay(0.25)).toBe("15 s");
-    expect(formatDelay(1.5)).toBe("90 s");
+    expect(formatDelay(0.99)).toBe("59 s");
+    expect(formatDelay(0.999)).toBe("1 min");
   });
 
   it("shows one minute as min and no delay in seconds", (): void => {

@@ -45,6 +45,7 @@ interface WaitingPingOptions {
 export interface WaitingPingChannel {
   tick: () => Promise<void>;
   noteInbound: () => void;
+  held: () => number;
 }
 
 export const LAST_PROMPT_FILE = "last-prompt";
@@ -180,5 +181,18 @@ export function createWaitingPing({
     }
   }
 
-  return { tick, noteInbound };
+  function held(): number {
+    const onTelegram = conversationOnTelegram(appDir);
+
+    return pingFiles()
+      .map(readPing)
+      .filter(
+        (ping) =>
+          ping !== null &&
+          now() >= ping.dueAt &&
+          ((ping.instance ?? "") !== "" || !onTelegram),
+      ).length;
+  }
+
+  return { tick, noteInbound, held };
 }

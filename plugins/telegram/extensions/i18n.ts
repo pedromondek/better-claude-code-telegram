@@ -8,6 +8,26 @@ export function isLocale(value: unknown): value is Locale {
   return LOCALES.some((locale) => locale === value);
 }
 
+export interface HeldCounts {
+  questions: number;
+  notices: number;
+  permissions: number;
+}
+
+function counted(
+  count: number,
+  singular: string,
+  plural: string,
+): string | null {
+  if (count === 0) return null;
+
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function heldList(parts: (string | null)[]): string {
+  return parts.filter((part) => part !== null).join(", ");
+}
+
 const enUs = {
   whisperLanguage: "en",
   languageName: "English",
@@ -19,15 +39,27 @@ const enUs = {
   previewLabel: "Preview:",
   multiSelectHint: "Multiple choice: tap every option you want, then ✅ Done.",
   otherHint:
-    "✍️ Other answer: tap the button and type your answer here in the chat.",
+    "✍️ Other answer: tap the button and reply quoting the request it opens.",
   otherButton: "✍️ Other answer (type it)",
   doneButton: "✅ Done",
   answeredInTerminal: "Answered in the terminal",
   notAuthorized: "Not authorized.",
   questionClosed: "This question is already closed.",
   questionAlreadyAnswered: "This question was already answered.",
-  writeOtherAnswer: (questionNumber: number, header: string | null): string =>
-    `✍️ Type here the answer to question ${questionNumber}${header ? ` [${header}]` : ""}.`,
+  writeOtherAnswer: (
+    questionNumber: number,
+    header: string | null,
+    replaces: string | null,
+  ): string =>
+    `✍️ Type here the answer to question ${questionNumber}${header ? ` [${header}]` : ""}.${replaces === null ? "" : `\n🔁 Replaces the answer typed before: “${replaces}”.`}`,
+  otherNeedsPrompt: (questionNumber: number, header: string | null): string =>
+    `ℹ️ That went to Claude as a message. To answer question ${questionNumber}${header ? ` [${header}]` : ""} with text, tap “✍️ Other answer” again and reply quoting the request.`,
+  otherAlreadyAnswered: (
+    questionNumber: number,
+    header: string | null,
+    answer: string,
+  ): string =>
+    `⚠️ Question ${questionNumber}${header ? ` [${header}]` : ""} was already answered with ${answer}; this text was not used.`,
   answersDelivered:
     "✅ Answers delivered: the terminal question was answered with them.",
   askEditFailed: (error: string): string =>
@@ -50,6 +82,16 @@ const enUs = {
     `ping: failed to notify the chat: ${error}`,
   pingSent: (instance: string): string =>
     `ping: notice from [${instance}] sent`,
+  quietStarted: (end: string): string =>
+    `🌙 Quiet hours until ${end}: waiting notices, questions and permission requests stay in the terminal until then.\nTo let a question through now: /bcct:release in the terminal.\nTo turn them off: /bcct:quiet-hours.`,
+  quietEnded: ({ questions, notices, permissions }: HeldCounts): string =>
+    `☀️ Quiet hours are over. Held until now, coming here: ${heldList([
+      counted(questions, "question", "questions"),
+      counted(notices, "waiting notice", "waiting notices"),
+      counted(permissions, "permission request", "permission requests"),
+    ])}.`,
+  quietNoticeFailed: (error: string): string =>
+    `quiet hours: failed to notify the chat: ${error}`,
   permissionSentNow: (requestId: string): string =>
     `permission ${requestId}: sent right away (conversation on Telegram)`,
   permissionResolvedInTerminal: (requestId: string): string =>
@@ -67,7 +109,7 @@ const enUs = {
   transcriptionFailedChat:
     "⚠️ I couldn't transcribe the audio; it went to Claude as an attachment.",
   replyHeader: (fromBot: boolean): string =>
-    `↩️ In reply to ${fromBot ? "Claude's message" : "your message"}`,
+    `↩️ In reply to ${fromBot ? "Claude's message" : "their own message"}`,
   instanceNameSample: "name",
   mermaidUsage: (command: string): string => `Usage: ${command} <file.mmd>`,
   mermaidMissingCli:
@@ -90,15 +132,19 @@ const ptBr: Messages = {
   multiSelectHint:
     "Escolha múltipla: toque em todas que quiser e depois em ✅ Concluir.",
   otherHint:
-    "✍️ Outra resposta: toque no botão e escreva a resposta aqui no chat.",
+    "✍️ Outra resposta: toque no botão e responda citando o pedido que ele abre.",
   otherButton: "✍️ Outra resposta (escrever)",
   doneButton: "✅ Concluir",
   answeredInTerminal: "Respondida no terminal",
   notAuthorized: "Não autorizado.",
   questionClosed: "Essa pergunta já foi encerrada.",
   questionAlreadyAnswered: "Essa pergunta já foi respondida.",
-  writeOtherAnswer: (questionNumber, header) =>
-    `✍️ Escreva aqui a resposta da pergunta ${questionNumber}${header ? ` [${header}]` : ""}.`,
+  writeOtherAnswer: (questionNumber, header, replaces) =>
+    `✍️ Escreva aqui a resposta da pergunta ${questionNumber}${header ? ` [${header}]` : ""}.${replaces === null ? "" : `\n🔁 Substitui a resposta escrita antes: “${replaces}”.`}`,
+  otherNeedsPrompt: (questionNumber, header) =>
+    `ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta ${questionNumber}${header ? ` [${header}]` : ""} com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.`,
+  otherAlreadyAnswered: (questionNumber, header, answer) =>
+    `⚠️ A pergunta ${questionNumber}${header ? ` [${header}]` : ""} já foi respondida com ${answer}; este texto não foi usado.`,
   answersDelivered:
     "✅ Respostas entregues: a pergunta do terminal foi respondida com elas.",
   askEditFailed: (error) => `ask: falha ao editar botões: ${error}`,
@@ -116,6 +162,15 @@ const ptBr: Messages = {
     `⏳ ${who} está esperando você no terminal há mais de ${delay}.\n\nÚltima mensagem dele:\n\n${text}`,
   pingFailed: (error) => `ping: falha ao avisar no chat: ${error}`,
   pingSent: (instance) => `ping: aviso de [${instance}] enviado`,
+  quietStarted: (end) =>
+    `🌙 Silêncio até ${end}: avisos de espera, perguntas e pedidos de permissão ficam no terminal até lá.\nPara soltar uma pergunta agora: /bcct:release no terminal.\nPara desligar: /bcct:quiet-hours.`,
+  quietEnded: ({ questions, notices, permissions }) =>
+    `☀️ Fim do silêncio. Retido até agora, indo para cá: ${heldList([
+      counted(questions, "pergunta", "perguntas"),
+      counted(notices, "aviso de espera", "avisos de espera"),
+      counted(permissions, "pedido de permissão", "pedidos de permissão"),
+    ])}.`,
+  quietNoticeFailed: (error) => `silêncio: falha ao avisar no chat: ${error}`,
   permissionSentNow: (requestId) =>
     `permissão ${requestId}: enviada na hora (conversa no Telegram)`,
   permissionResolvedInTerminal: (requestId) =>
@@ -130,7 +185,7 @@ const ptBr: Messages = {
   transcriptionFailedChat:
     "⚠️ Não consegui transcrever o áudio; ele foi como anexo para o Claude.",
   replyHeader: (fromBot) =>
-    `↩️ Em resposta ${fromBot ? "à mensagem do Claude" : "à sua mensagem"}`,
+    `↩️ Em resposta ${fromBot ? "à mensagem do Claude" : "à própria mensagem"}`,
   instanceNameSample: "nome",
   mermaidUsage: (command) => `Uso: ${command} <arquivo.mmd>`,
   mermaidMissingCli:

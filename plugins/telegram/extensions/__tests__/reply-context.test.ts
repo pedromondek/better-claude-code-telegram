@@ -33,7 +33,7 @@ describe("withReplyContext in pt-br", () => {
         { caption: "print do erro", from: { is_bot: false } },
         PT,
       ),
-    ).toBe("↩️ Em resposta à sua mensagem:\n«print do erro»\n\nessa aqui");
+    ).toBe("↩️ Em resposta à própria mensagem:\n«print do erro»\n\nessa aqui");
   });
 });
 
@@ -60,15 +60,15 @@ describe("withReplyContext in en-us", () => {
         { caption: "error screenshot", from: { is_bot: false } },
         EN,
       ),
-    ).toBe("↩️ In reply to your message:\n«error screenshot»\n\nthis one");
+    ).toBe("↩️ In reply to their own message:\n«error screenshot»\n\nthis one");
     expect(withReplyContext("this one", { text: "hi" }, EN)).toBe(
-      "↩️ In reply to your message:\n«hi»\n\nthis one",
+      "↩️ In reply to their own message:\n«hi»\n\nthis one",
     );
   });
 
   it("trims the replied text", (): void => {
     expect(withReplyContext("x", { text: "  hi  " }, EN)).toBe(
-      "↩️ In reply to your message:\n«hi»\n\nx",
+      "↩️ In reply to their own message:\n«hi»\n\nx",
     );
   });
 });

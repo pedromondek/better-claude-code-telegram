@@ -30,6 +30,7 @@ export interface PermissionDelay {
   defer: (requestId: string, send: () => void) => void;
   tick: () => void;
   pendingCount: () => number;
+  held: () => number;
 }
 
 export function resolvedInTerminal(
@@ -48,6 +49,10 @@ export function createPermissionDelay({
 }: PermissionDelayOptions): PermissionDelay {
   const pending = new Map<string, PendingPermission>();
 
+  function permissionDelayMs(): number {
+    return readDelayMinutes(appDir, process.env, "permissions") * 60_000;
+  }
+
   function defer(requestId: string, send: () => void): void {
     const onTelegram = conversationOnTelegram(appDir);
 
@@ -63,7 +68,7 @@ export function createPermissionDelay({
 
   function tick(): void {
     const current = now();
-    const delayMs = readDelayMinutes(appDir) * 60_000;
+    const delayMs = permissionDelayMs();
     const quiet = isQuietTime(new Date(current), readQuietHours(appDir));
     const lastActivityAt = readPingTimestamp(appDir, LAST_ACTIVITY_FILE);
     const lastPromptAt = readPingTimestamp(appDir, LAST_PROMPT_FILE);
@@ -85,5 +90,18 @@ export function createPermissionDelay({
     }
   }
 
-  return { defer, tick, pendingCount: (): number => pending.size };
+  function held(): number {
+    const current = now();
+    const delayMs = permissionDelayMs();
+    const lastActivityAt = readPingTimestamp(appDir, LAST_ACTIVITY_FILE);
+    const lastPromptAt = readPingTimestamp(appDir, LAST_PROMPT_FILE);
+
+    return [...pending.values()].filter(
+      (permission) =>
+        current - permission.createdAt >= delayMs &&
+        !resolvedInTerminal(permission.createdAt, lastActivityAt, lastPromptAt),
+    ).length;
+  }
+
+  return { defer, tick, pendingCount: (): number => pending.size, held };
 }

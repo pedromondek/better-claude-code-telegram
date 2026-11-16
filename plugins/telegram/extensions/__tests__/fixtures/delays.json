@@ -1,0 +1,88 @@
+[
+  {
+    "name": "no config uses the default delay for every kind",
+    "config": {},
+    "env": null,
+    "expected": {
+      "questions": 240000,
+      "permissions": 240000,
+      "waiting": 240000
+    }
+  },
+  {
+    "name": "the delay of the setup applies to every kind without delays",
+    "config": { "delayMinutes": 5 },
+    "env": null,
+    "expected": {
+      "questions": 300000,
+      "permissions": 300000,
+      "waiting": 300000
+    }
+  },
+  {
+    "name": "a single delay of 0 sends every kind right away",
+    "config": { "delayMinutes": 0 },
+    "env": null,
+    "expected": { "questions": 0, "permissions": 0, "waiting": 0 }
+  },
+  {
+    "name": "a single delay that is null, empty or false keeps the default instead of going right away",
+    "config": { "delayMinutes": null, "delays": { "questions": null } },
+    "env": null,
+    "expected": {
+      "questions": 240000,
+      "permissions": 240000,
+      "waiting": 240000
+    }
+  },
+  {
+    "name": "a single delay written as the text 0 also goes right away",
+    "config": { "delayMinutes": "0" },
+    "env": null,
+    "expected": { "questions": 0, "permissions": 0, "waiting": 0 }
+  },
+  {
+    "name": "a kind set to 0 goes right away and the others keep the delay",
+    "config": { "delayMinutes": 5, "delays": { "questions": 0 } },
+    "env": null,
+    "expected": { "questions": 0, "permissions": 300000, "waiting": 300000 }
+  },
+  {
+    "name": "each kind takes its own minutes, fractions included",
+    "config": {
+      "delayMinutes": 5,
+      "delays": { "questions": 1, "permissions": 2, "waiting": 0.5 }
+    },
+    "env": null,
+    "expected": { "questions": 60000, "permissions": 120000, "waiting": 30000 }
+  },
+  {
+    "name": "a kind that is negative, text or null falls back to the delay of the setup",
+    "config": {
+      "delayMinutes": 2,
+      "delays": { "questions": -1, "permissions": "3", "waiting": null }
+    },
+    "env": null,
+    "expected": {
+      "questions": 120000,
+      "permissions": 120000,
+      "waiting": 120000
+    }
+  },
+  {
+    "name": "delays that are not an object are ignored",
+    "config": { "delayMinutes": 2, "delays": [0, 0, 0] },
+    "env": null,
+    "expected": {
+      "questions": 120000,
+      "permissions": 120000,
+      "waiting": 120000
+    }
+  },
+  {
+    "name": "the delay in ms of the environment wins over every kind",
+    "config": { "delays": { "questions": 3, "permissions": 0 } },
+    "env": "1500",
+    "expected": { "questions": 1500, "permissions": 1500, "waiting": 1500 }
+  }
+]

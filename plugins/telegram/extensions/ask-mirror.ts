@@ -20,11 +20,14 @@ import {
   optionAnswer,
   otherAnswer,
   parseAskCallback,
+  progressAnswer,
+  progressKeyboard,
   renderContextText,
   renderQuestionText,
-  selectionAnswer,
   shortIdFor,
   toggleSelection,
+  typeSelection,
+  typedAnswer,
   type AskProgress,
   type AskRecord,
   type KeyboardButton,
@@ -45,19 +48,32 @@ interface SentState {
   shortId: string;
   messages: SentMessage[];
   progress: AskProgress;
-  awaitingOther: number | null;
+  awaitingOther: number[];
+  otherPrompts: SentMessage[];
   completed: boolean;
+}
+
+interface OpenAsk {
+  record: AskRecord;
+  sent: SentState;
 }
 
 interface ReplyMarkup {
   inline_keyboard: { text: string; callback_data: string }[][];
 }
 
+interface ForceReplyMarkup {
+  force_reply: true;
+}
+
 interface BotApi {
   sendMessage(
     chatId: string,
     text: string,
-    options?: { reply_markup?: ReplyMarkup; parse_mode?: "HTML" },
+    options?: {
+      reply_markup?: ReplyMarkup | ForceReplyMarkup;
+      parse_mode?: "HTML";
+    },
   ): Promise<{ message_id: number }>;
   editMessageReplyMarkup(
     chatId: string,
@@ -83,8 +99,13 @@ interface AskMirrorOptions {
 
 export interface AskMirror {
   tick: () => Promise<void>;
+  held: () => number;
   handleCallback: (ctx: CallbackContext) => Promise<boolean>;
-  consumeText: (chatId: string, text: string) => Promise<boolean>;
+  consumeText: (
+    chatId: string,
+    text: string,
+    repliedMessageId?: number,
+  ) => Promise<boolean>;
 }
 
 export const SENT_SUFFIX = ".telegram.json";
@@ -110,7 +131,10 @@ function readJson(file: string): unknown {
   return value;
 }
 
-function isSentState(value: unknown): value is SentState {
+function isSentState(
+  value: unknown,
+): value is Omit<SentState, "awaitingOther" | "otherPrompts"> &
+  Partial<Record<"awaitingOther" | "otherPrompts", unknown>> {
   if (!(value instanceof Object)) return false;
 
   const sent = value as Partial<SentState>;
@@ -121,6 +145,14 @@ function isSentState(value: unknown): value is SentState {
     typeof sent.progress === "object" &&
     sent.progress !== null
   );
+}
+
+function stopWaiting(awaiting: number[], questionIndex: number): number[] {
+  return awaiting.filter((waiting) => waiting !== questionIndex);
+}
+
+function listOf<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
 }
 
 export function createAskMirror({
@@ -158,7 +190,13 @@ export function createAskMirror({
   function readSent(id: string): SentState | null {
     const value = readJson(sentFile(id));
 
-    return isSentState(value) ? value : null;
+    if (!isSentState(value)) return null;
+
+    return {
+      ...value,
+      awaitingOther: listOf<number>(value.awaitingOther),
+      otherPrompts: listOf<SentMessage>(value.otherPrompts),
+    };
   }
 
   function saveSent(id: string, sent: SentState): void {
@@ -249,7 +287,8 @@ export function createAskMirror({
       shortId,
       messages: sentMessages,
       progress: emptyProgress(),
-      awaitingOther: null,
+      awaitingOther: [],
+      otherPrompts: [],
       completed: false,
     });
     log(text.askSent(record.id, record.instance ?? "telegram"));
@@ -311,7 +350,9 @@ export function createAskMirror({
           continue;
         }
 
-        if (!sent && (now >= record.dueAt || onTelegram) && !quiet) {
+        const due = (now >= record.dueAt || onTelegram) && !quiet;
+
+        if (!sent && (record.released === true || due)) {
           await sendAsk(record);
         }
       }
@@ -340,7 +381,7 @@ export function createAskMirror({
     sent: SentState,
     chatId: string,
   ): Promise<void> {
-    saveSent(record.id, { ...sent, completed: true, awaitingOther: null });
+    saveSent(record.id, { ...sent, completed: true });
 
     if (existsSync(closedFile(record.id))) return;
 
@@ -371,8 +412,7 @@ export function createAskMirror({
     const updated: SentState = {
       ...sent,
       progress: answerQuestion(sent.progress, questionIndex, answer),
-      awaitingOther:
-        sent.awaitingOther === questionIndex ? null : sent.awaitingOther,
+      awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
     };
 
     saveSent(record.id, updated);
@@ -437,22 +477,40 @@ export function createAskMirror({
     await ctx.answerCallbackQuery().catch(() => undefined);
 
     if (parsed.action === "other") {
-      saveSent(record.id, { ...sent, awaitingOther: parsed.questionIndex });
-      await api.sendMessage(
+      const prompt = await api.sendMessage(
         chatId,
         text.writeOtherAnswer(
           parsed.questionIndex + 1,
           question.header ?? null,
+          sent.progress.typed?.[parsed.questionIndex] ?? null,
         ),
+        { reply_markup: { force_reply: true } },
       );
+
+      saveSent(record.id, {
+        ...sent,
+        awaitingOther: [
+          ...stopWaiting(sent.awaitingOther, parsed.questionIndex),
+          parsed.questionIndex,
+        ],
+        otherPrompts: [
+          ...sent.otherPrompts,
+          {
+            chatId,
+            questionIndex: parsed.questionIndex,
+            messageId: prompt.message_id,
+          },
+        ],
+      });
 
       return true;
     }
 
     if (parsed.action === "done") {
-      const answer = selectionAnswer(
+      const answer = progressAnswer(
         question,
-        sent.progress.selections[parsed.questionIndex] ?? [],
+        sent.progress,
+        parsed.questionIndex,
       );
 
       if (answer) {
@@ -478,12 +536,12 @@ export function createAskMirror({
       await editQuestionMarkup(
         updated,
         parsed.questionIndex,
-        buildKeyboard(
+        progressKeyboard(
           question,
           sent.shortId,
           parsed.questionIndex,
           text,
-          updated.progress.selections[parsed.questionIndex],
+          updated.progress,
         ),
       );
 
@@ -501,38 +559,198 @@ export function createAskMirror({
     return true;
   }
 
-  async function consumeText(chatId: string, text: string): Promise<boolean> {
-    const candidates = listAskIds()
+  function openAsks(): OpenAsk[] {
+    return listAskIds()
       .map((id) => ({ record: readRecord(id), sent: readSent(id) }))
       .filter(
-        (
-          entry,
-        ): entry is {
-          record: AskRecord;
-          sent: SentState & { awaitingOther: number };
-        } =>
-          entry.record !== null &&
-          entry.sent !== null &&
-          !entry.sent.completed &&
-          entry.sent.awaitingOther !== null,
+        (entry): entry is OpenAsk =>
+          entry.record !== null && entry.sent !== null && !entry.sent.completed,
       )
       .toSorted(
         (first, second) => second.record.createdAt - first.record.createdAt,
       );
-    const latest = candidates.at(0);
-
-    if (latest === undefined) return false;
-
-    await finalize(
-      latest.record,
-      latest.sent,
-      latest.sent.awaitingOther,
-      otherAnswer(text),
-      chatId,
-    );
-
-    return true;
   }
 
-  return { tick, handleCallback, consumeText };
+  function quotedQuestion(
+    asks: OpenAsk[],
+    chatId: string,
+    messageId: number,
+    list: "messages" | "otherPrompts",
+  ): { ask: OpenAsk; questionIndex: number } | null {
+    for (const ask of asks) {
+      const quoted = ask.sent[list].find(
+        (message) =>
+          message.chatId === chatId && message.messageId === messageId,
+      );
+
+      if (quoted) return { ask, questionIndex: quoted.questionIndex };
+    }
+
+    return null;
+  }
+
+  async function answerTyped(
+    { record, sent }: OpenAsk,
+    questionIndex: number,
+    text: string,
+    chatId: string,
+  ): Promise<void> {
+    const question = record.questions[questionIndex];
+
+    if (question.multiSelect) {
+      const typed = otherAnswer(text);
+      const updated: SentState = {
+        ...sent,
+        progress:
+          typed === ""
+            ? sent.progress
+            : typeSelection(sent.progress, questionIndex, typed),
+        awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
+      };
+
+      saveSent(record.id, updated);
+      await editQuestionMarkup(
+        updated,
+        questionIndex,
+        progressKeyboard(
+          question,
+          sent.shortId,
+          questionIndex,
+          messages(),
+          updated.progress,
+        ),
+      );
+
+      return;
+    }
+
+    await finalize(
+      record,
+      sent,
+      questionIndex,
+      typedAnswer(
+        question,
+        sent.progress.selections[questionIndex] ?? [],
+        text,
+      ),
+      chatId,
+    );
+  }
+
+  async function consumeText(
+    chatId: string,
+    text: string,
+    repliedMessageId?: number,
+  ): Promise<boolean> {
+    const asks = openAsks();
+
+    if (repliedMessageId !== undefined) {
+      const quoted = quotedQuestion(
+        asks,
+        chatId,
+        repliedMessageId,
+        "otherPrompts",
+      );
+
+      if (quoted === null) {
+        const question = quotedQuestion(
+          asks,
+          chatId,
+          repliedMessageId,
+          "messages",
+        );
+
+        if (
+          question !== null &&
+          question.ask.sent.progress.answers[question.questionIndex] ===
+            undefined
+        ) {
+          await noticeNeedsPrompt(question.ask, question.questionIndex, chatId);
+        }
+
+        return false;
+      }
+
+      const { ask, questionIndex } = quoted;
+      const answered = ask.sent.progress.answers[questionIndex];
+
+      if (answered === undefined) {
+        await answerTyped(ask, questionIndex, text, chatId);
+
+        return true;
+      }
+
+      await api
+        .sendMessage(
+          chatId,
+          messages().otherAlreadyAnswered(
+            questionIndex + 1,
+            ask.record.questions[questionIndex].header ?? null,
+            answered,
+          ),
+        )
+        .catch((error: unknown) =>
+          log(messages().askConfirmFailed(describeError(error))),
+        );
+
+      return true;
+    }
+
+    const chosen = asks
+      .flatMap((ask) =>
+        ask.sent.awaitingOther.toReversed().map((questionIndex) => ({
+          ask,
+          questionIndex,
+        })),
+      )
+      .at(0);
+
+    if (chosen !== undefined) {
+      await noticeNeedsPrompt(chosen.ask, chosen.questionIndex, chatId);
+    }
+
+    return false;
+  }
+
+  async function noticeNeedsPrompt(
+    { record, sent }: OpenAsk,
+    questionIndex: number,
+    chatId: string,
+  ): Promise<void> {
+    saveSent(record.id, {
+      ...sent,
+      awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
+    });
+
+    await api
+      .sendMessage(
+        chatId,
+        messages().otherNeedsPrompt(
+          questionIndex + 1,
+          record.questions[questionIndex].header ?? null,
+        ),
+      )
+      .catch((error: unknown) =>
+        log(messages().askConfirmFailed(describeError(error))),
+      );
+  }
+
+  function held(): number {
+    const now = Date.now();
+    const onTelegram = conversationOnTelegram(appDir);
+
+    return listAskIds().filter((id) => {
+      const record = readRecord(id);
+
+      return (
+        record !== null &&
+        readSent(id) === null &&
+        !existsSync(closedFile(id)) &&
+        now - record.createdAt <= MAX_AGE_MS &&
+        (record.released === true || now >= record.dueAt || onTelegram)
+      );
+    }).length;
+  }
+
+  return { tick, held, handleCallback, consumeText };
 }

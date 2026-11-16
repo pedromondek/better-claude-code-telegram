@@ -951,7 +951,7 @@ async function handleInbound(
   const msgId = ctx.message?.message_id
 
   extensions.noteInbound()
-  if (!downloadImage && !attachment && await extensions.consumeText(chat_id, text)) return
+  if (!downloadImage && !attachment && await extensions.consumeText(chat_id, text, ctx.message?.reply_to_message?.message_id)) return
 
   // Permission-reply intercept: if this looks like "yes xxxxx" for a
   // pending permission request, emit the structured event instead of
