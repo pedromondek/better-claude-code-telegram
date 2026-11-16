@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   existsSync,
   readdirSync,
   readFileSync,
@@ -44,6 +45,14 @@ interface SentMessage {
   messageId: number;
 }
 
+interface ClosedRequest {
+  chatId: string;
+  messageId: number;
+  questionNumber: number;
+  header: string | null;
+  closedAt: number;
+}
+
 interface SentState {
   shortId: string;
   messages: SentMessage[];
@@ -80,6 +89,7 @@ interface BotApi {
     messageId: number,
     options: { reply_markup: ReplyMarkup },
   ): Promise<unknown>;
+  deleteMessage(chatId: string, messageId: number): Promise<unknown>;
 }
 
 export interface CallbackContext {
@@ -110,8 +120,23 @@ export interface AskMirror {
 
 export const SENT_SUFFIX = ".telegram.json";
 export const ANSWER_SUFFIX = ".answer.json";
+export const CLOSED_REQUESTS_FILE = "closed-other-requests.json";
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const DELETE_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+function isClosedRequest(value: unknown): value is ClosedRequest {
+  if (!(value instanceof Object)) return false;
+
+  const request = value as Partial<ClosedRequest>;
+
+  return (
+    typeof request.chatId === "string" &&
+    typeof request.messageId === "number" &&
+    typeof request.questionNumber === "number" &&
+    typeof request.closedAt === "number"
+  );
+}
 
 function toReplyMarkup(rows: KeyboardButton[][]): ReplyMarkup {
   return {
@@ -170,6 +195,7 @@ export function createAskMirror({
   const answerFile = (id: string): string =>
     join(asksDir, `${id}${ANSWER_SUFFIX}`);
   const closedFile = (id: string): string => join(asksDir, `${id}.closed`);
+  const closedRequestsFile = join(appDir, CLOSED_REQUESTS_FILE);
 
   function listAskIds(): string[] {
     try {
@@ -207,6 +233,68 @@ export function createAskMirror({
     for (const file of [recordFile(id), sentFile(id), closedFile(id)]) {
       rmSync(file, { force: true });
     }
+  }
+
+  function readClosedRequests(now: number): ClosedRequest[] {
+    return listOf<unknown>(readJson(closedRequestsFile))
+      .filter(isClosedRequest)
+      .filter((request) => now - request.closedAt <= DELETE_WINDOW_MS);
+  }
+
+  function recordClosedRequests(
+    record: AskRecord,
+    requests: SentMessage[],
+  ): void {
+    if (requests.length === 0) return;
+
+    const now = Date.now();
+    const closed = requests.map((request) => ({
+      chatId: request.chatId,
+      messageId: request.messageId,
+      questionNumber: request.questionIndex + 1,
+      header: record.questions[request.questionIndex].header ?? null,
+      closedAt: now,
+    }));
+
+    writeFileSync(
+      closedRequestsFile,
+      JSON.stringify([...readClosedRequests(now), ...closed]),
+    );
+    chmodSync(closedRequestsFile, 0o600);
+  }
+
+  async function releaseRequests(
+    sent: SentState,
+    matches: (request: SentMessage) => boolean,
+  ): Promise<SentState> {
+    const kept: SentMessage[] = [];
+
+    for (const request of sent.otherPrompts) {
+      if (!matches(request)) {
+        kept.push(request);
+        continue;
+      }
+
+      await api
+        .deleteMessage(request.chatId, request.messageId)
+        .catch((error: unknown) => {
+          log(messages().askDeleteFailed(describeError(error)));
+          kept.push(request);
+        });
+    }
+
+    return { ...sent, otherPrompts: kept };
+  }
+
+  async function closeRequests(
+    record: AskRecord,
+    sent: SentState | null,
+  ): Promise<void> {
+    if (sent === null) return;
+
+    const released = await releaseRequests(sent, () => true);
+
+    recordClosedRequests(record, released.otherPrompts);
   }
 
   async function sendHtml(
@@ -339,12 +427,14 @@ export function createAskMirror({
             log(messages().askAnsweredInTerminal(id));
           }
 
+          await closeRequests(record, sent);
           removeAsk(id);
           rmSync(answerFile(id), { force: true });
           continue;
         }
 
         if (now - record.createdAt > MAX_AGE_MS) {
+          await closeRequests(record, sent);
           removeAsk(id);
           rmSync(answerFile(id), { force: true });
           continue;
@@ -409,11 +499,14 @@ export function createAskMirror({
     answer: string,
     chatId: string,
   ): Promise<void> {
-    const updated: SentState = {
-      ...sent,
-      progress: answerQuestion(sent.progress, questionIndex, answer),
-      awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
-    };
+    const updated = await releaseRequests(
+      {
+        ...sent,
+        progress: answerQuestion(sent.progress, questionIndex, answer),
+        awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
+      },
+      (request) => request.questionIndex === questionIndex,
+    );
 
     saveSent(record.id, updated);
     await editQuestionMarkup(updated, questionIndex, finalKeyboard(answer));
@@ -477,6 +570,10 @@ export function createAskMirror({
     await ctx.answerCallbackQuery().catch(() => undefined);
 
     if (parsed.action === "other") {
+      const released = await releaseRequests(
+        sent,
+        (request) => request.questionIndex === parsed.questionIndex,
+      );
       const prompt = await api.sendMessage(
         chatId,
         text.writeOtherAnswer(
@@ -488,13 +585,13 @@ export function createAskMirror({
       );
 
       saveSent(record.id, {
-        ...sent,
+        ...released,
         awaitingOther: [
           ...stopWaiting(sent.awaitingOther, parsed.questionIndex),
           parsed.questionIndex,
         ],
         otherPrompts: [
-          ...sent.otherPrompts,
+          ...released.otherPrompts,
           {
             chatId,
             questionIndex: parsed.questionIndex,
@@ -599,14 +696,17 @@ export function createAskMirror({
 
     if (question.multiSelect) {
       const typed = otherAnswer(text);
-      const updated: SentState = {
-        ...sent,
-        progress:
-          typed === ""
-            ? sent.progress
-            : typeSelection(sent.progress, questionIndex, typed),
-        awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
-      };
+      const updated = await releaseRequests(
+        {
+          ...sent,
+          progress:
+            typed === ""
+              ? sent.progress
+              : typeSelection(sent.progress, questionIndex, typed),
+          awaitingOther: stopWaiting(sent.awaitingOther, questionIndex),
+        },
+        (request) => request.questionIndex === questionIndex,
+      );
 
       saveSent(record.id, updated);
       await editQuestionMarkup(
@@ -660,12 +760,31 @@ export function createAskMirror({
           "messages",
         );
 
-        if (
-          question !== null &&
-          question.ask.sent.progress.answers[question.questionIndex] ===
+        if (question !== null) {
+          if (
+            question.ask.sent.progress.answers[question.questionIndex] ===
             undefined
-        ) {
-          await noticeNeedsPrompt(question.ask, question.questionIndex, chatId);
+          ) {
+            await noticeNeedsPrompt(
+              question.ask,
+              question.questionIndex,
+              chatId,
+            );
+          }
+
+          return false;
+        }
+
+        const closed = closedRequest(chatId, repliedMessageId);
+
+        if (closed !== null) {
+          await sendNotice(
+            chatId,
+            messages().otherQuestionClosed(
+              closed.questionNumber,
+              closed.header,
+            ),
+          );
         }
 
         return false;
@@ -710,6 +829,39 @@ export function createAskMirror({
     }
 
     return false;
+  }
+
+  function closedRequest(
+    chatId: string,
+    messageId: number,
+  ): Pick<ClosedRequest, "questionNumber" | "header"> | null {
+    const isRequest = (request: {
+      chatId: string;
+      messageId: number;
+    }): boolean => request.chatId === chatId && request.messageId === messageId;
+
+    for (const id of listAskIds()) {
+      const sent = readSent(id);
+      const record = readRecord(id);
+      const request = sent?.otherPrompts.find(isRequest);
+
+      if (record && request) {
+        return {
+          questionNumber: request.questionIndex + 1,
+          header: record.questions[request.questionIndex].header ?? null,
+        };
+      }
+    }
+
+    return readClosedRequests(Date.now()).find(isRequest) ?? null;
+  }
+
+  async function sendNotice(chatId: string, text: string): Promise<void> {
+    await api
+      .sendMessage(chatId, text)
+      .catch((error: unknown) =>
+        log(messages().askConfirmFailed(describeError(error))),
+      );
   }
 
   async function noticeNeedsPrompt(

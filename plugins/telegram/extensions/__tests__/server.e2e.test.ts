@@ -45,6 +45,7 @@ const HANDLED_METHODS = new Set([
   "sendPhoto",
   "sendAnimation",
   "sendDocument",
+  "deleteMessage",
 ]);
 const SENT_MESSAGE_METHODS = new Set([
   "sendMessage",
@@ -618,6 +619,60 @@ describe.skipIf(!canRun)(
       expect(String(ping.params.text)).toContain(
         "Preciso que você aprove o plano.",
       );
+    });
+
+    it("deletes the Other request when a button answers the question, so Telegram stops quoting it", async (): Promise<void> => {
+      const askId = "s3-3000";
+      const sentBefore = fork.sentMessages().length;
+      const tap = (data: string): void => {
+        fork.telegram.push({
+          callback_query: {
+            id: `cb-${data}`,
+            from: DEV,
+            chat_instance: "x",
+            data,
+            message: { message_id: 1, date: 0, chat: CHAT, text: "question" },
+          },
+        });
+      };
+
+      writeAsk(fork.appDir, askId, ["Which queue?"]);
+      await waitFor(
+        () =>
+          fork
+            .sentMessages()
+            .slice(sentBefore)
+            .find((call) => call.params.reply_markup),
+        "the new question with buttons",
+      );
+      tap(`ask:${shortIdFor(askId)}:0:o`);
+
+      const request = await waitFor(
+        () =>
+          fork
+            .sentMessages()
+            .slice(sentBefore)
+            .find((call) =>
+              String(call.params.text).startsWith(
+                "✍️ Escreva aqui a resposta da pergunta 1",
+              ),
+            ),
+        "the Other request",
+      );
+
+      tap(`ask:${shortIdFor(askId)}:0:0`);
+
+      const deleted = await waitFor(
+        () =>
+          fork.telegram.calls.find(
+            (call) =>
+              call.method === "deleteMessage" &&
+              call.params.message_id === request.messageId,
+          ),
+        "the deletion of the Other request",
+      );
+
+      expect(deleted.params.chat_id).toBe(CHAT_ID);
     });
 
     it("answers every Telegram API method the test expects and nothing else", (): void => {

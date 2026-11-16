@@ -54,6 +54,13 @@ const enUs = {
     `✍️ Type here the answer to question ${questionNumber}${header ? ` [${header}]` : ""}.${replaces === null ? "" : `\n🔁 Replaces the answer typed before: “${replaces}”.`}`,
   otherNeedsPrompt: (questionNumber: number, header: string | null): string =>
     `ℹ️ That went to Claude as a message. To answer question ${questionNumber}${header ? ` [${header}]` : ""} with text, tap “✍️ Other answer” again and reply quoting the request.`,
+  otherQuestionClosed: (
+    questionNumber: number,
+    header: string | null,
+  ): string =>
+    `ℹ️ Question ${questionNumber}${header ? ` [${header}]` : ""} is already closed; this text went to Claude as a message.`,
+  askDeleteFailed: (error: string): string =>
+    `ask: failed to delete the Other request: ${error}`,
   otherAlreadyAnswered: (
     questionNumber: number,
     header: string | null,
@@ -153,6 +160,10 @@ const ptBr: Messages = {
     `✍️ Escreva aqui a resposta da pergunta ${questionNumber}${header ? ` [${header}]` : ""}.${replaces === null ? "" : `\n🔁 Substitui a resposta escrita antes: “${replaces}”.`}`,
   otherNeedsPrompt: (questionNumber, header) =>
     `ℹ️ Isso foi como mensagem para o Claude. Para responder a pergunta ${questionNumber}${header ? ` [${header}]` : ""} com texto, toque de novo em “✍️ Outra resposta” e responda citando o pedido.`,
+  otherQuestionClosed: (questionNumber, header) =>
+    `ℹ️ A pergunta ${questionNumber}${header ? ` [${header}]` : ""} já foi encerrada; este texto foi como mensagem para o Claude.`,
+  askDeleteFailed: (error) =>
+    `ask: falha ao apagar o pedido de Outro: ${error}`,
   otherAlreadyAnswered: (questionNumber, header, answer) =>
     `⚠️ A pergunta ${questionNumber}${header ? ` [${header}]` : ""} já foi respondida com ${answer}; este texto não foi usado.`,
   answersDelivered:

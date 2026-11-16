@@ -19,6 +19,8 @@ const FUNCTION_CALLS: Record<string, unknown[]> = {
   quietEnded: [{ questions: 1, notices: 2, permissions: 0 }],
   quietNoticeFailed: ["err-sample"],
   otherAlreadyAnswered: [1, "header-sample", "answer-sample"],
+  otherQuestionClosed: [1, "header-sample"],
+  askDeleteFailed: ["err-sample"],
   askEditFailed: ["err-sample"],
   askSent: ["ask-sample", "inst-sample"],
   askAnsweredInTerminal: ["ask-sample"],
@@ -178,6 +180,18 @@ describe("typed answer notices", () => {
     );
     expect(MESSAGES["en-us"].otherNeedsPrompt(1, null)).toBe(
       "ℹ️ That went to Claude as a message. To answer question 1 with text, tap “✍️ Other answer” again and reply quoting the request.",
+    );
+  });
+
+  it("tells that a question is closed, with its header only when it has one", (): void => {
+    expect(MESSAGES["en-us"].otherQuestionClosed(2, "Animal")).toBe(
+      "ℹ️ Question 2 [Animal] is already closed; this text went to Claude as a message.",
+    );
+    expect(MESSAGES["en-us"].otherQuestionClosed(1, null)).toBe(
+      "ℹ️ Question 1 is already closed; this text went to Claude as a message.",
+    );
+    expect(MESSAGES["pt-br"].otherQuestionClosed(1, null)).toBe(
+      "ℹ️ A pergunta 1 já foi encerrada; este texto foi como mensagem para o Claude.",
     );
   });
 

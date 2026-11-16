@@ -73,6 +73,12 @@ interface SetupOptions {
   messages?: () => Messages;
   rejectSend?: (text: string) => boolean;
   failEdit?: boolean;
+  failDelete?: boolean;
+}
+
+interface DeletedMessage {
+  chatId: string;
+  messageId: number;
 }
 
 interface TextCase {
@@ -189,10 +195,13 @@ function readAnswers(): unknown {
 function fakeApi({
   rejectSend = (): boolean => false,
   failEdit = false,
-}: Pick<SetupOptions, "rejectSend" | "failEdit">): {
+  failDelete = false,
+}: Pick<SetupOptions, "rejectSend" | "failEdit" | "failDelete">): {
   sent: SentMessage[];
   edits: EditedMarkup[];
+  deleted: DeletedMessage[];
   api: {
+    deleteMessage: (chatId: string, messageId: number) => Promise<unknown>;
     sendMessage: (
       chatId: string,
       text: string,
@@ -207,12 +216,21 @@ function fakeApi({
 } {
   const sent: SentMessage[] = [];
   const edits: EditedMarkup[] = [];
+  const deleted: DeletedMessage[] = [];
   let nextMessageId = 100;
 
   return {
     sent,
     edits,
+    deleted,
     api: {
+      deleteMessage: (chatId, messageId): Promise<unknown> => {
+        if (failDelete) return Promise.reject(new Error("boom"));
+
+        deleted.push({ chatId, messageId });
+
+        return Promise.resolve(true);
+      },
       sendMessage: (chatId, text, options): Promise<{ message_id: number }> => {
         if (rejectSend(text)) return Promise.reject(new Error("boom"));
 
@@ -1233,8 +1251,8 @@ describe("typed answer to the question it replies to", () => {
     expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
   });
 
-  it("warns and keeps the text off the channel when the reply quotes an answered question", async (): Promise<void> => {
-    const { telegram, mirror } = setup();
+  it("warns and keeps the text off the channel when the reply quotes a request Telegram kept for an answered question", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
 
     writeAsk([SEASON, ANIMAL]);
     await mirror.tick();
@@ -1304,6 +1322,7 @@ describe("typed answer to the question it replies to", () => {
   it("logs, without failing, when Telegram refuses the warning about an answered question", async (): Promise<void> => {
     const { telegram, mirror, logs } = setup({
       rejectSend: (text) => text.startsWith("⚠️"),
+      failDelete: true,
     });
 
     writeAsk([SEASON, ANIMAL]);
@@ -1899,5 +1918,344 @@ describe("questions waiting for text", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("Other requests left without a reply", () => {
+  function closeInTerminal(): void {
+    writeFileSync(join(asksDir(), `${ASK_ID}.closed`), "");
+  }
+
+  it("deletes the request when a button answers the question", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+
+    expect(telegram.deleted).toEqual([{ chatId: CHAT, messageId: request }]);
+    expect(readAnswers()).toEqual({ "Qual banco?": "Postgres" });
+  });
+
+  it("deletes the previous request when Other is tapped again, and the new one once its reply is taken", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const first = otherPromptId(telegram, 1);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const second = otherPromptId(telegram, 1);
+
+    expect(telegram.deleted).toEqual([{ chatId: CHAT, messageId: first }]);
+    expect(await mirror.consumeText(CHAT, "MySQL", second)).toBe(true);
+    expect(telegram.deleted).toEqual([
+      { chatId: CHAT, messageId: first },
+      { chatId: CHAT, messageId: second },
+    ]);
+    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+  });
+
+  it("deletes the request replied to in a multiple choice as soon as the typed text is taken", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const replied = otherPromptId(telegram, 1);
+
+    await mirror.consumeText(CHAT, "Mobile", replied);
+
+    expect(telegram.deleted).toEqual([{ chatId: CHAT, messageId: replied }]);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const unanswered = otherPromptId(telegram, 1);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
+
+    expect(telegram.deleted).toEqual([
+      { chatId: CHAT, messageId: replied },
+      { chatId: CHAT, messageId: unanswered },
+    ]);
+    expect(readAnswers()).toEqual({ "Quais camadas?": "Mobile" });
+  });
+
+  it("keeps the requests of the other questions while one is answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+
+    expect(telegram.deleted).toEqual([]);
+  });
+
+  it("deletes the requests of the open questions when the terminal answers", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const season = otherPromptId(telegram, 1);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+
+    const animal = otherPromptId(telegram, 2);
+
+    closeInTerminal();
+    await mirror.tick();
+
+    expect(telegram.deleted).toEqual([
+      { chatId: CHAT, messageId: season },
+      { chatId: CHAT, messageId: animal },
+    ]);
+    expect(readdirSync(asksDir())).toEqual([]);
+  });
+
+  it("deletes the request of a question that expired", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    vi.setSystemTime(Date.now() + 24 * 60 * 60 * 1000 + 1);
+    await mirror.tick();
+
+    expect(telegram.deleted).toEqual([{ chatId: CHAT, messageId: request }]);
+  });
+
+  it("logs a request it could not delete and still records the answer", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({ failDelete: true });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+
+    expect(telegram.deleted).toEqual([]);
+    expect(logs).toContain(PT.askDeleteFailed("Error: boom"));
+    expect(readAnswers()).toEqual({ "Qual banco?": "Postgres" });
+  });
+
+  it("warns that the question is closed on a reply to a request that stayed, and sends the text to the channel", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    closeInTerminal();
+    await mirror.tick();
+
+    expect(await mirror.consumeText(CHAT, "teste 3", request)).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(PT.otherQuestionClosed(1, "Banco"));
+    expect(readdirSync(asksDir())).toEqual([]);
+  });
+
+  it("warns that the question is closed on a second reply to a request Telegram kept after it answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    await mirror.consumeText(CHAT, "MySQL", request);
+
+    expect(await mirror.consumeText(CHAT, "Oracle", request)).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(PT.otherQuestionClosed(1, "Banco"));
+
+    closeInTerminal();
+    await mirror.tick();
+
+    expect(await mirror.consumeText(CHAT, "SQLite", request)).toBe(false);
+    expect(telegram.sent.at(-1)?.text).toBe(PT.otherQuestionClosed(1, "Banco"));
+  });
+
+  it("forgets the requests of closed questions after the 48 hours Telegram allows deleting them", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    closeInTerminal();
+    await mirror.tick();
+    vi.setSystemTime(Date.now() + 48 * 60 * 60 * 1000);
+
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText(CHAT, "tarde", request)).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore + 1);
+
+    vi.setSystemTime(Date.now() + 1);
+
+    expect(await mirror.consumeText(CHAT, "tarde", request)).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore + 1);
+  });
+
+  it("gives no notice for the same message id in another chat", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    closeInTerminal();
+    await mirror.tick();
+
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText("99", "outro chat", request)).toBe(false);
+    expect(telegram.sent.length).toBe(sentBefore);
+  });
+
+  it("drops invalid and expired entries when it records a closed request", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
+    const file = join(appDir, "closed-other-requests.json");
+    const valid = {
+      chatId: CHAT,
+      messageId: 7,
+      questionNumber: 2,
+      header: null,
+      closedAt: Date.now(),
+    };
+
+    writeFileSync(
+      file,
+      JSON.stringify([
+        null,
+        5,
+        "text",
+        { ...valid, chatId: 12 },
+        { ...valid, messageId: "7" },
+        { ...valid, questionNumber: "2" },
+        { ...valid, closedAt: String(Date.now()) },
+        {
+          ...valid,
+          messageId: 8,
+          closedAt: Date.now() - 48 * 60 * 60 * 1000 - 1,
+        },
+        valid,
+      ]),
+    );
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    closeInTerminal();
+    await mirror.tick();
+
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([
+      valid,
+      {
+        chatId: CHAT,
+        messageId: otherPromptId(telegram, 1),
+        questionNumber: 1,
+        header: "Banco",
+        closedAt: Date.now(),
+      },
+    ]);
+  });
+
+  it("writes no record of closed requests when no request was open", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    closeInTerminal();
+    await mirror.tick();
+
+    expect(existsSync(join(appDir, "closed-other-requests.json"))).toBe(false);
+  });
+
+  it("keeps in the state of the ask only the requests of the other questions after a typed text is taken", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI, SEASON]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+
+    const state = JSON.parse(readFileSync(sentStateFile(), "utf8")) as {
+      otherPrompts: { questionIndex: number; messageId: number }[];
+    };
+
+    expect(state.otherPrompts).toEqual([
+      { chatId: CHAT, questionIndex: 1, messageId: otherPromptId(telegram, 2) },
+    ]);
+  });
+
+  it("logs a notice about a closed question that could not be sent", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({
+      failDelete: true,
+      rejectSend: (text) => text === PT.otherQuestionClosed(1, "Banco"),
+    });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const request = otherPromptId(telegram, 1);
+
+    closeInTerminal();
+    await mirror.tick();
+
+    expect(await mirror.consumeText(CHAT, "tarde", request)).toBe(false);
+    expect(logs).toContain(PT.askConfirmFailed("Error: boom"));
+  });
+
+  it("sends a reply to an ask that was not sent yet to the channel without failing", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+
+    expect(await mirror.consumeText(CHAT, "oi", 4242)).toBe(false);
+    expect(telegram.sent).toEqual([]);
+  });
+
+  it("keeps the record of closed requests in the app folder, private to the user, and survives a broken one", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ failDelete: true });
+
+    writeFileSync(join(appDir, "closed-other-requests.json"), "{broken");
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+    closeInTerminal();
+    await mirror.tick();
+
+    const file = join(appDir, "closed-other-requests.json");
+
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([
+      {
+        chatId: CHAT,
+        messageId: otherPromptId(telegram, 1),
+        questionNumber: 1,
+        header: "Banco",
+        closedAt: Date.now(),
+      },
+    ]);
   });
 });
