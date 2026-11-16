@@ -42,6 +42,15 @@ const HANDLED_METHODS = new Set([
   "answerCallbackQuery",
   "editMessageReplyMarkup",
   "editMessageText",
+  "sendPhoto",
+  "sendAnimation",
+  "sendDocument",
+]);
+const SENT_MESSAGE_METHODS = new Set([
+  "sendMessage",
+  "sendPhoto",
+  "sendAnimation",
+  "sendDocument",
 ]);
 
 const hasBun =
@@ -103,7 +112,8 @@ function createFakeTelegram(): FakeTelegram {
     request.on("end", () => {
       (async (): Promise<void> => {
         const method = (request.url ?? "").split("/").pop() ?? "";
-        const params = body ? parseRecord(body) : {};
+        const isJson = (request.headers["content-type"] ?? "").includes("json");
+        const params = body && isJson ? parseRecord(body) : {};
         let result: unknown = true;
 
         calls.push({ method, params });
@@ -128,7 +138,7 @@ function createFakeTelegram(): FakeTelegram {
           result = updates.splice(0);
         }
 
-        if (method === "sendMessage") {
+        if (SENT_MESSAGE_METHODS.has(method)) {
           nextMessageId += 1;
           calls[calls.length - 1].messageId = nextMessageId;
           result = {
@@ -367,6 +377,40 @@ describe.skipIf(!canRun)(
       expect(readdirSync(fork.appDir)).toEqual(
         expect.arrayContaining(["asks", "pings", "health.json"]),
       );
+    });
+
+    it("sends a gif and an mp4 as animations and a png as a photo", async (): Promise<void> => {
+      const folder = mkdtempSync(join(tmpdir(), "bcct-files-"));
+      const files = ["demo.gif", "demo.mp4", "print.png"].map((name) => {
+        const path = join(folder, name);
+
+        writeFileSync(path, "x");
+
+        return path;
+      });
+      const before = fork.telegram.calls.length;
+
+      fork.send({
+        id: 20,
+        method: "tools/call",
+        params: {
+          name: "reply",
+          arguments: { chat_id: CHAT_ID, text: "arquivos", files },
+        },
+      });
+      await waitFor(
+        () => fork.mcpMessages.find((message) => message.id === 20),
+        "the reply result",
+      );
+      rmSync(folder, { recursive: true, force: true });
+
+      expect(
+        fork.telegram.calls
+          .slice(before)
+          .map(({ method }) => method)
+          .filter((method) => SENT_MESSAGE_METHODS.has(method)),
+      ).toEqual(["sendMessage", "sendAnimation", "sendAnimation", "sendPhoto"]);
+      expect(fork.telegram.unhandled).toEqual([]);
     });
 
     it("tells Claude to write to the user in the language of the config", (): void => {

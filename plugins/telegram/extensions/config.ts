@@ -126,6 +126,28 @@ export function readInboxRetentionDays(appDir: string): number | null {
     : DEFAULT_INBOX_RETENTION_DAYS;
 }
 
+export const VISUAL_MODES = ["off", "prints", "video"] as const;
+
+export type VisualMode = (typeof VISUAL_MODES)[number];
+
+export interface Visuals {
+  visuals: VisualMode;
+  review: boolean;
+}
+
+function isVisualMode(value: unknown): value is VisualMode {
+  return VISUAL_MODES.some((mode) => mode === value);
+}
+
+export function readVisuals(appDir: string): Visuals {
+  const { visuals, visualReview } = readConfig(appDir);
+
+  return {
+    visuals: isVisualMode(visuals) ? visuals : "off",
+    review: visualReview !== false,
+  };
+}
+
 export function readTranscriptionSetting(appDir: string): unknown {
   const { transcription } = readConfig(appDir);
 

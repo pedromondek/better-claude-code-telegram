@@ -1,0 +1,187 @@
+[
+  {
+    "name": "linux reads the cache under .cache and picks the newest Chromium",
+    "platform": "linux",
+    "home": "/home/dev",
+    "env": {},
+    "tree": {
+      "/home/dev/.cache/ms-playwright": [
+        "chromium-1208",
+        "chromium-1243",
+        "firefox-1500",
+        "chromium_headless_shell-1243"
+      ],
+      "/home/dev/.cache/ms-playwright/chromium-1243": ["chrome-linux64"],
+      "/home/dev/.cache/ms-playwright/chromium-1208": ["chrome-linux"]
+    },
+    "expected": {
+      "cacheDir": "/home/dev/.cache/ms-playwright",
+      "chromium": "/home/dev/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome"
+    }
+  },
+  {
+    "name": "linux follows XDG_CACHE_HOME and the arm64 folder",
+    "platform": "linux",
+    "home": "/home/dev",
+    "env": { "XDG_CACHE_HOME": "/xdg" },
+    "tree": {
+      "/xdg/ms-playwright": ["chromium-1243"],
+      "/xdg/ms-playwright/chromium-1243": ["chrome-linux-arm64"]
+    },
+    "expected": {
+      "cacheDir": "/xdg/ms-playwright",
+      "chromium": "/xdg/ms-playwright/chromium-1243/chrome-linux-arm64/chrome"
+    }
+  },
+  {
+    "name": "PLAYWRIGHT_BROWSERS_PATH wins over the cache of the system",
+    "platform": "linux",
+    "home": "/home/dev",
+    "env": {
+      "PLAYWRIGHT_BROWSERS_PATH": "/browsers",
+      "XDG_CACHE_HOME": "/xdg"
+    },
+    "tree": {
+      "/browsers": ["chromium-1243"],
+      "/browsers/chromium-1243": ["chrome-linux64"]
+    },
+    "expected": {
+      "cacheDir": "/browsers",
+      "chromium": "/browsers/chromium-1243/chrome-linux64/chrome"
+    }
+  },
+  {
+    "name": "an empty PLAYWRIGHT_BROWSERS_PATH, or 0 for the node_modules install, keeps the cache of the system",
+    "platform": "linux",
+    "home": "/home/dev",
+    "env": { "PLAYWRIGHT_BROWSERS_PATH": "0", "XDG_CACHE_HOME": "" },
+    "tree": {},
+    "expected": {
+      "cacheDir": "/home/dev/.cache/ms-playwright",
+      "chromium": null
+    }
+  },
+  {
+    "name": "linux skips the version without a Linux folder and the one that cannot be read",
+    "platform": "linux",
+    "home": "/home/dev",
+    "env": {},
+    "tree": {
+      "/home/dev/.cache/ms-playwright": [
+        "chromium-1300",
+        "chromium-1243",
+        "chromium-1208"
+      ],
+      "/home/dev/.cache/ms-playwright/chromium-1243": ["chrome-mac-arm64"],
+      "/home/dev/.cache/ms-playwright/chromium-1208": ["chrome-linux"]
+    },
+    "expected": {
+      "cacheDir": "/home/dev/.cache/ms-playwright",
+      "chromium": "/home/dev/.cache/ms-playwright/chromium-1208/chrome-linux/chrome"
+    }
+  },
+  {
+    "name": "only chromium-<version> counts, never the headless shell or a name that only contains it",
+    "platform": "linux",
+    "home": "/home/dev",
+    "env": {},
+    "tree": {
+      "/home/dev/.cache/ms-playwright": [
+        "chromium_headless_shell-1300",
+        "old-chromium-1301",
+        "chromium-1302-partial",
+        "chromium-1208"
+      ],
+      "/home/dev/.cache/ms-playwright/chromium_headless_shell-1300": [
+        "chrome-linux"
+      ],
+      "/home/dev/.cache/ms-playwright/old-chromium-1301": ["chrome-linux"],
+      "/home/dev/.cache/ms-playwright/chromium-1302-partial": ["chrome-linux"],
+      "/home/dev/.cache/ms-playwright/chromium-1208": ["chrome-linux"]
+    },
+    "expected": {
+      "cacheDir": "/home/dev/.cache/ms-playwright",
+      "chromium": "/home/dev/.cache/ms-playwright/chromium-1208/chrome-linux/chrome"
+    }
+  },
+  {
+    "name": "macOS reads Library/Caches and opens the app inside the mac folder",
+    "platform": "darwin",
+    "home": "/Users/dev",
+    "env": { "XDG_CACHE_HOME": "/xdg" },
+    "tree": {
+      "/Users/dev/Library/Caches/ms-playwright": ["chromium-1243"],
+      "/Users/dev/Library/Caches/ms-playwright/chromium-1243": [
+        "chrome-mac-arm64"
+      ],
+      "/Users/dev/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64": [
+        "Google Chrome for Testing.app"
+      ]
+    },
+    "expected": {
+      "cacheDir": "/Users/dev/Library/Caches/ms-playwright",
+      "chromium": "/Users/dev/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+    }
+  },
+  {
+    "name": "macOS also opens the Chromium app of the older versions",
+    "platform": "darwin",
+    "home": "/Users/dev",
+    "env": {},
+    "tree": {
+      "/Users/dev/Library/Caches/ms-playwright": ["chromium-1100"],
+      "/Users/dev/Library/Caches/ms-playwright/chromium-1100": ["chrome-mac"],
+      "/Users/dev/Library/Caches/ms-playwright/chromium-1100/chrome-mac": [
+        "Chromium.app"
+      ]
+    },
+    "expected": {
+      "cacheDir": "/Users/dev/Library/Caches/ms-playwright",
+      "chromium": "/Users/dev/Library/Caches/ms-playwright/chromium-1100/chrome-mac/Chromium.app/Contents/MacOS/Chromium"
+    }
+  },
+  {
+    "name": "macOS skips a mac folder without an app",
+    "platform": "darwin",
+    "home": "/Users/dev",
+    "env": {},
+    "tree": {
+      "/Users/dev/Library/Caches/ms-playwright": ["chromium-1243"],
+      "/Users/dev/Library/Caches/ms-playwright/chromium-1243": [
+        "chrome-mac-x64"
+      ],
+      "/Users/dev/Library/Caches/ms-playwright/chromium-1243/chrome-mac-x64": [
+        "README"
+      ]
+    },
+    "expected": {
+      "cacheDir": "/Users/dev/Library/Caches/ms-playwright",
+      "chromium": null
+    }
+  },
+  {
+    "name": "Windows reads LOCALAPPDATA and picks chrome.exe",
+    "platform": "win32",
+    "home": "/Users/dev",
+    "env": { "LOCALAPPDATA": "/Local" },
+    "tree": {
+      "/Local/ms-playwright": ["chromium-1243"],
+      "/Local/ms-playwright/chromium-1243": ["chrome-win64"]
+    },
+    "expected": {
+      "cacheDir": "/Local/ms-playwright",
+      "chromium": "/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe"
+    }
+  },
+  {
+    "name": "Windows without LOCALAPPDATA uses AppData/Local of the home",
+    "platform": "win32",
+    "home": "/Users/dev",
+    "env": {},
+    "tree": {},
+    "expected": {
+      "cacheDir": "/Users/dev/AppData/Local/ms-playwright",
+      "chromium": null
+    }
+  }
+]

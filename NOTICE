@@ -7,7 +7,8 @@ external_plugins/telegram), licensed under the Apache License, Version 2.0.
 
 The files under plugins/telegram/ outside plugins/telegram/extensions/ are a
 copy of upstream version 0.0.7, with five changes: plugins/telegram/server.ts
-carries a small patch that calls the code in plugins/telegram/extensions/,
+carries a small patch that calls the code in plugins/telegram/extensions/ and
+sends .gif and .mp4 files as animations, so Telegram plays them,
 plugins/telegram/skills/configure/SKILL.md is rewritten so the bot token is
 never saved through Claude, plugins/telegram/skills/channel-guide/ is added
 with the sending details that do not fit in the 4,096 characters Claude Code

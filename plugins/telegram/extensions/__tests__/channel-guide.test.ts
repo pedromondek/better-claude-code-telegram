@@ -56,6 +56,57 @@ describe("channel guide skill › layout", () => {
   });
 });
 
+describe("channel guide skill › page capture", () => {
+  it("runs the page capture with the plugin script through the plugin root of the SKILL.md body", (): void => {
+    const command =
+      /`bun "\$\{CLAUDE_PLUGIN_ROOT\}\/([^"]+)" <spec\.json>`/u.exec(
+        SKILL_TEXT,
+      );
+
+    expect(command?.[1]).toBe("extensions/page-capture.ts");
+    expect(existsSync(join(PLUGIN_ROOT, command?.[1] ?? "missing"))).toBe(true);
+    expect(reference("illustrations.md")).toContain(
+      "The page capture named in SKILL.md",
+    );
+  });
+
+  it("shows a visual idea before building it, today next to each proposal, outlined in red in the page", (): void => {
+    const text = reference("illustrations.md");
+
+    expect(text).toContain(
+      "Every visual idea goes to the user before it is built",
+    );
+    expect(text).toContain("#e11d48, 4 px, drawn in the page");
+    expect(text).toContain("a 2x close-up when the element is small");
+    expect(text).toContain(
+      "With illustrations off, describe the idea in words",
+    );
+    expect(text).toContain("A secret never goes on a screenshot");
+  });
+});
+
+describe("channel guide skill › conversation and secretary", () => {
+  it("asks with an example on every option and the research behind the decision", (): void => {
+    const text = reference("conversation.md");
+
+    expect(text).toContain(
+      "Every option carries a concrete example of its result",
+    );
+    expect(text).toContain(
+      "the path you took, what you measured and why each discarded option left",
+    );
+    expect(text).toContain("never by the number alone");
+  });
+
+  it("relays and routes for the other sessions without editing the repository or the background workers", (): void => {
+    const text = reference("secretary.md");
+
+    expect(text).toContain("that session is the secretary");
+    expect(text).toContain("It does not edit the repository");
+    expect(text).toContain("It does not relay to background workers");
+  });
+});
+
 describe("channel guide skill › references", () => {
   it("sends tables as aligned columns in a markdownv2 code block, escaping outside it", (): void => {
     const text = reference("tables.md");
@@ -69,7 +120,7 @@ describe("channel guide skill › references", () => {
     const text = reference("images.md");
 
     expect(text).toContain(
-      "Open and check every image or video before sending it",
+      "Open and check every image before sending it, and the frame sheet of every video, since a video cannot be played here",
     );
     expect(text).toContain("in the order the text cites them");
     expect(text).toContain("recompressed");

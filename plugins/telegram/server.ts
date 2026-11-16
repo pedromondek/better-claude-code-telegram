@@ -393,7 +393,8 @@ function chunk(text: string, limit: number, mode: 'length' | 'newline'): string[
 
 // .jpg/.jpeg/.png/.gif/.webp go as photos (Telegram compresses + shows inline);
 // everything else goes as documents (raw file, no compression).
-const PHOTO_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp'])
+const PHOTO_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp'])
+const ANIMATION_EXTS = new Set(['.gif', '.mp4'])
 
 const mcp = new Server(
   { name: 'telegram', version: '1.0.0' },
@@ -601,7 +602,10 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
           const opts = reply_to != null && replyMode !== 'off'
             ? { reply_parameters: { message_id: reply_to } }
             : undefined
-          if (PHOTO_EXTS.has(ext)) {
+          if (ANIMATION_EXTS.has(ext)) {
+            const sent = await bot.api.sendAnimation(chat_id, input, opts)
+            sentIds.push(sent.message_id)
+          } else if (PHOTO_EXTS.has(ext)) {
             const sent = await bot.api.sendPhoto(chat_id, input, opts)
             sentIds.push(sent.message_id)
           } else {

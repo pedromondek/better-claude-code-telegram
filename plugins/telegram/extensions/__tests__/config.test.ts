@@ -17,7 +17,10 @@ import {
   readLocale,
   readQuietHours,
   readTranscriptionSetting,
+  readVisuals,
+  VISUAL_MODES,
   type DelayKind,
+  type Visuals,
 } from "../config.ts";
 
 interface DelayCase {
@@ -30,6 +33,16 @@ interface DelayCase {
 const DELAY_CASES = JSON.parse(
   readFileSync(join(import.meta.dirname, "fixtures", "delays.json"), "utf8"),
 ) as DelayCase[];
+
+interface VisualCase {
+  name: string;
+  config: unknown;
+  expected: Visuals;
+}
+
+const VISUAL_CASES = JSON.parse(
+  readFileSync(join(import.meta.dirname, "fixtures", "visuals.json"), "utf8"),
+) as VisualCase[];
 
 function at(hours: number, minutes = 0): Date {
   return new Date(2026, 9, 17, hours, minutes);
@@ -288,6 +301,25 @@ describe("readQuietHours", () => {
 
     writeConfig({ quietHours: { start: "22:00", end: ["08:00"] } });
     expect(readQuietHours(appDir)).toBeNull();
+  });
+});
+
+describe("readVisuals › the contract shared with the bcct binary", () => {
+  it("names the three modes the setup saves", (): void => {
+    expect(VISUAL_MODES).toEqual(["off", "prints", "video"]);
+  });
+
+  it.each(VISUAL_CASES)("$name", ({ config, expected }): void => {
+    writeConfig(config);
+
+    expect(readVisuals(appDir)).toEqual(expected);
+  });
+
+  it("keeps the illustrations off and the review on when the config is missing", (): void => {
+    expect(readVisuals(join(appDir, "missing"))).toEqual({
+      visuals: "off",
+      review: true,
+    });
   });
 });
 

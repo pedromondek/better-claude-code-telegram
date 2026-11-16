@@ -116,6 +116,16 @@ const enUs = {
     "mmdc is missing: install it with 'npm install -g @mermaid-js/mermaid-cli'.",
   mermaidFailed: (outputPath: string): string =>
     `mmdc failed to render ${outputPath}.`,
+  captureUsage: (command: string): string => `Usage: ${command} <spec.json>`,
+  captureMissingChromium:
+    "The Chromium of Playwright is missing: install it with 'npx playwright install chromium'.",
+  captureMissingFfmpeg:
+    "ffmpeg is missing for the video: install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
+  captureInvalidSpec: (detail: string): string =>
+    `The capture spec is not valid: ${detail}.`,
+  captureFailed: (detail: string): string => `The capture failed: ${detail}.`,
+  captureFfmpegFailed: (outputPath: string): string =>
+    `ffmpeg failed to write ${outputPath}.`,
 };
 
 export type Messages = typeof enUs;
@@ -191,6 +201,16 @@ const ptBr: Messages = {
   mermaidMissingCli:
     "Falta o mmdc: instale com 'npm install -g @mermaid-js/mermaid-cli'.",
   mermaidFailed: (outputPath) => `O mmdc falhou ao gerar ${outputPath}.`,
+  captureUsage: (command) => `Uso: ${command} <spec.json>`,
+  captureMissingChromium:
+    "Falta o Chromium do Playwright: instale com 'npx playwright install chromium'.",
+  captureMissingFfmpeg:
+    "Falta o ffmpeg para o vídeo: instale com 'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'.",
+  captureInvalidSpec: (detail) =>
+    `A especificação da captura não vale: ${detail}.`,
+  captureFailed: (detail) => `A captura falhou: ${detail}.`,
+  captureFfmpegFailed: (outputPath) =>
+    `O ffmpeg falhou ao gerar ${outputPath}.`,
 };
 
 export const MESSAGES: Record<Locale, Messages> = {

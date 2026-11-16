@@ -13,93 +13,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MESSAGES } from "../i18n.ts";
 import {
-  commandExists,
-  findPlaywrightChromium,
   MERMAID_SCRIPT,
   mermaidCommand,
   mmdcArgs,
   pngPathFor,
   renderMermaid,
   runAsScript,
-  runCommand,
 } from "../mermaid-png.ts";
 
 const EN = MESSAGES["en-us"];
-
-function fakeTree(tree: Record<string, string[]>): (dir: string) => string[] {
-  return (dir: string): string[] => {
-    const entries = tree[dir];
-
-    if (entries === undefined) throw new Error(`ENOENT ${dir}`);
-
-    return entries;
-  };
-}
-
-describe("findPlaywrightChromium", () => {
-  it("picks the newest Chromium from the Playwright cache", (): void => {
-    const listDir = fakeTree({
-      "/cache": [
-        "chromium-1208",
-        "chromium-1243",
-        "firefox-1500",
-        "chromium_headless_shell-1243",
-      ],
-      "/cache/chromium-1243": ["chrome-linux64"],
-      "/cache/chromium-1208": ["chrome-linux"],
-    });
-
-    expect(findPlaywrightChromium("/cache", listDir)).toBe(
-      "/cache/chromium-1243/chrome-linux64/chrome",
-    );
-  });
-
-  it("skips the version that has no Linux folder", (): void => {
-    const listDir = fakeTree({
-      "/cache": ["chromium-1243", "chromium-1208"],
-      "/cache/chromium-1243": ["chrome-mac"],
-      "/cache/chromium-1208": ["chrome-linux"],
-    });
-
-    expect(findPlaywrightChromium("/cache", listDir)).toBe(
-      "/cache/chromium-1208/chrome-linux/chrome",
-    );
-  });
-
-  it("ignores the headless shell and the folders whose name only contains chromium-<version>", (): void => {
-    const listDir = fakeTree({
-      "/cache": [
-        "chromium_headless_shell-1300",
-        "old-chromium-1301",
-        "chromium-1302-partial",
-        "chromium-1208",
-      ],
-      "/cache/chromium_headless_shell-1300": ["chrome-linux"],
-      "/cache/old-chromium-1301": ["chrome-linux"],
-      "/cache/chromium-1302-partial": ["chrome-linux"],
-      "/cache/chromium-1208": ["chrome-linux"],
-    });
-
-    expect(findPlaywrightChromium("/cache", listDir)).toBe(
-      "/cache/chromium-1208/chrome-linux/chrome",
-    );
-  });
-
-  it("skips the version whose folder cannot be read", (): void => {
-    const listDir = fakeTree({
-      "/cache": ["chromium-1243", "chromium-1208"],
-      "/cache/chromium-1208": ["chrome-linux"],
-    });
-
-    expect(findPlaywrightChromium("/cache", listDir)).toBe(
-      "/cache/chromium-1208/chrome-linux/chrome",
-    );
-  });
-
-  it("returns null when the Playwright cache does not exist", (): void => {
-    expect(findPlaywrightChromium("/no-cache", fakeTree({}))).toBeNull();
-  });
-});
 
 describe("pngPathFor", () => {
   it("swaps the .mmd extension for .png", (): void => {
@@ -137,28 +59,6 @@ describe("mermaidCommand", () => {
     expect(isAbsolute(MERMAID_SCRIPT)).toBe(true);
     expect(MERMAID_SCRIPT.endsWith("mermaid-png.ts")).toBe(true);
     expect(mermaidCommand()).toBe(`bun "${MERMAID_SCRIPT}"`);
-  });
-});
-
-describe("commandExists and runCommand", () => {
-  it("finds a command on the PATH and refuses a missing one", (): void => {
-    expect(commandExists("sh")).toBe(true);
-    expect(commandExists("bcct-no-such-command")).toBe(false);
-  });
-
-  it("returns the exit code of the command", (): void => {
-    expect(runCommand("sh", ["-c", "exit 0"])).toBe(0);
-    expect(runCommand("sh", ["-c", "exit 3"])).toBe(3);
-  });
-
-  it("gives the command no input, hides its output so the script prints only the PNG path, and shows its errors on the terminal of the script", (): void => {
-    const stdioOfTheCommand = [
-      '[ "$(readlink /proc/$$/fd/0)" = /dev/null ]',
-      '[ "$(readlink /proc/$$/fd/1)" = /dev/null ]',
-      '[ "$(readlink /proc/$$/fd/2)" = "$(readlink /proc/$PPID/fd/2)" ]',
-    ].join(" && ");
-
-    expect(runCommand("sh", ["-c", stdioOfTheCommand])).toBe(0);
   });
 });
 
@@ -256,6 +156,29 @@ describe("renderMermaid", () => {
     expect(result.code).toBe(4);
     expect(result.err).toEqual([EN.mermaidFailed(join(dir, "flow.png"))]);
     expect(run(join(dir, "flow.mmd"), { runMmdc: () => null }).code).toBe(1);
+  });
+
+  it("finds the Chromium of the Playwright cache of the system by default", (): void => {
+    const cache = join(dir, "browsers");
+    const chrome = join(cache, "chromium-1243", "chrome-linux64", "chrome");
+    let config: unknown = null;
+
+    mkdirSync(dirname(chrome), { recursive: true });
+    vi.stubEnv("PLAYWRIGHT_BROWSERS_PATH", cache);
+
+    const result = renderMermaid(join(dir, "flow.mmd"), {
+      messages: EN,
+      hasMmdc: () => true,
+      runMmdc: (args) => {
+        config = JSON.parse(readFileSync(args[1], "utf8"));
+
+        return 0;
+      },
+      out: () => undefined,
+    });
+
+    expect(result).toBe(0);
+    expect(config).toMatchObject({ executablePath: chrome });
   });
 
   it("by default runs the mmdc on the PATH and prints to the console", (): void => {

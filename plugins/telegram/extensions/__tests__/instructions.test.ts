@@ -18,7 +18,7 @@ const RULE_OPENINGS = [
   "AskUserQuestion:",
   "Waiting:",
   "Formatting on Telegram:",
-  "Tables, images, videos and drawings:",
+  "Channel guide:",
   "Other instances:",
 ];
 
@@ -108,12 +108,19 @@ describe("extensionInstructions › size", () => {
     expect(text.endsWith("\n\nEXTENSION RULES")).toBe(true);
   });
 
-  it("keeps the server instructions within 4096 characters with the longest delay per language", (): void => {
-    const lengths = ["en-us", "pt-br"].map((language) => {
-      writeConfig({ language, delayMinutes: 99_999 });
+  it("keeps the server instructions within 4096 characters with the longest settings per language", (): void => {
+    const lengths = ["en-us", "pt-br"].flatMap((language) =>
+      [true, false].map((visualReview) => {
+        writeConfig({
+          language,
+          delayMinutes: 99_999,
+          visuals: "video",
+          visualReview,
+        });
 
-      return serverInstructions(extensionInstructions(appDir)).length;
-    });
+        return serverInstructions(extensionInstructions(appDir)).length;
+      }),
+    );
 
     expect(
       lengths.filter((length) => length > CLAUDE_CODE_INSTRUCTIONS_LIMIT),
@@ -172,9 +179,31 @@ describe("extensionInstructions › channel guide", () => {
     expect(CHANNEL_GUIDE_SKILL).toBe("telegram:channel-guide");
   });
 
-  it("loads the channel guide before a table, an image, a video, a drawing or a flow", (): void => {
+  it("loads the channel guide before a decision question, a table, an image, a video or a drawing", (): void => {
+    expect(extensionInstructions(appDir).split("\n\n")).toContain(
+      "Channel guide: before a decision question, a table, an image, a video or a drawing, load the telegram:channel-guide skill.",
+    );
+  });
+
+  it("leaves the illustrations out while the setup keeps them off", (): void => {
+    writeConfig({ visuals: "off", visualReview: true });
+
+    expect(extensionInstructions(appDir)).not.toContain("Illustrations");
+  });
+
+  it("shows every visual idea as a screenshot when the setup turned the prints on", (): void => {
+    writeConfig({ visuals: "prints" });
+
     expect(extensionInstructions(appDir)).toContain(
-      "Tables, images, videos and drawings: before sending a table, an image or a video, and when a flow is easier to understand drawn, load the telegram:channel-guide skill.",
+      "load the telegram:channel-guide skill. Illustrations are on: show every visual idea as a screenshot before building it. Check each one before sending.",
+    );
+  });
+
+  it("adds the movement as a video and skips the review when the setup chose so", (): void => {
+    writeConfig({ visuals: "video", visualReview: false });
+
+    expect(extensionInstructions(appDir)).toContain(
+      "load the telegram:channel-guide skill. Illustrations are on: show every visual idea as a screenshot, and movement as a video, before building it. Send each one without reviewing it.",
     );
   });
 });

@@ -3,10 +3,29 @@ import {
   formatDelay,
   readDelayMinutes,
   readLocale,
+  readVisuals,
+  type VisualMode,
+  type Visuals,
 } from "./config.ts";
 import { messagesFor } from "./i18n.ts";
 
 export const CHANNEL_GUIDE_SKILL = "telegram:channel-guide";
+
+const ILLUSTRATION_SUBJECTS: Record<VisualMode, string> = {
+  off: "",
+  prints: "a screenshot",
+  video: "a screenshot, and movement as a video,",
+};
+
+function illustrationRule({ visuals, review }: Visuals): string {
+  if (visuals === "off") return "";
+
+  const reviewRule = review
+    ? "Check each one before sending."
+    : "Send each one without reviewing it.";
+
+  return ` Illustrations are on: show every visual idea as ${ILLUSTRATION_SUBJECTS[visuals]} before building it. ${reviewRule}`;
+}
 
 export function extensionInstructions(
   appDir: string = defaultAppDir(),
@@ -37,7 +56,7 @@ export function extensionInstructions(
     "",
     "Formatting on Telegram: never a wall of text; one idea per line, a blank line between sections, the task name and a short title first.",
     "",
-    `Tables, images, videos and drawings: before sending a table, an image or a video, and when a flow is easier to understand drawn, load the ${CHANNEL_GUIDE_SKILL} skill.`,
+    `Channel guide: before a decision question, a table, an image, a video or a drawing, load the ${CHANNEL_GUIDE_SKILL} skill.${illustrationRule(readVisuals(appDir))}`,
     "",
     `Other instances: their waiting messages and questions reach Telegram by themselves ("${waitingSample}") and their answers come back by themselves. An inbound starting with "${replySample}" that quotes [${sampleName}] goes at once to that instance by SendMessage (ListAgents by name), then is confirmed on Telegram. What an instance asks you to send starts with [<name>] and a short title (e.g. [api] Phase 2); what you noticed that it did not say goes on its own line starting with 👀. Asked for progress, report every active instance in its own section, asking them by SendMessage when what you know is stale.`,
   ].join("\n");

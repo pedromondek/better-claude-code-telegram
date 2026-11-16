@@ -38,6 +38,10 @@ const FUNCTION_CALLS: Record<string, unknown[]> = {
   replyHeader: [true],
   mermaidUsage: ["cmd-sample"],
   mermaidFailed: ["out-sample.png"],
+  captureUsage: ["cmd-sample"],
+  captureInvalidSpec: ["detail-sample"],
+  captureFailed: ["detail-sample"],
+  captureFfmpegFailed: ["out-sample.mp4"],
 };
 
 function entriesOf(locale: Locale): [string, unknown][] {
