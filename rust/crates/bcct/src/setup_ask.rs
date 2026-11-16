@@ -1,6 +1,6 @@
-use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, kind_minutes};
+use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, VisualMode, Visuals, kind_minutes};
 use crate::install::{
-    CommandsChoice, DISABLE_ANSWERS, Parsed, TRANSCRIPTION_MODELS, TranscriptionChoice,
+    CommandsChoice, DISABLE_ANSWERS, Parsed, TRANSCRIPTION_MODELS, TranscriptionChoice, VisualsPick,
 };
 use crate::js::{format_number, is_js_whitespace, js_number, js_trim};
 use crate::locale::Locale;
@@ -32,6 +32,8 @@ const OFF_ANSWER: &str = "off";
 const KEEP_ANSWER: &str = "keep";
 const NOT_ALIASES: [&str; 4] = ["n", "no", "não", "nao"];
 const YES_ALIASES: [&str; 4] = ["s", "y", "sim", "yes"];
+const REVIEW_ANSWERS: [&str; 6] = ["on", "review", "s", "y", "sim", "yes"];
+const DIRECT_ANSWERS: [&str; 6] = ["off", "direct", "n", "no", "não", "nao"];
 const LONG_DAYS: u64 = u64::MAX;
 const STATUSLINE_KEEP_INDEX: usize = 3;
 
@@ -116,6 +118,30 @@ pub fn parse_positive_days(text: &str) -> Option<f64> {
     let days = js_number(text);
 
     (is_whole_number(text) && days > 0.0).then_some(days)
+}
+
+#[must_use]
+pub fn parse_visual_mode(answer: &str) -> Option<VisualMode> {
+    let typed = js_trim(answer).to_lowercase();
+
+    if DISABLE_ANSWERS.contains(&typed.as_str()) {
+        Some(VisualMode::Off)
+    } else {
+        VisualMode::parse(&typed)
+    }
+}
+
+#[must_use]
+pub fn parse_visual_review(answer: &str) -> Option<bool> {
+    let typed = js_trim(answer).to_lowercase();
+
+    if REVIEW_ANSWERS.contains(&typed.as_str()) {
+        Some(true)
+    } else if DIRECT_ANSWERS.contains(&typed.as_str()) {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 #[must_use]
@@ -394,6 +420,99 @@ pub fn ask_inbox(
             }),
             default_hint: None,
         },
+        messages,
+        ask,
+    )
+}
+
+fn visual_mode_label(mode: VisualMode, messages: &Messages) -> &'static str {
+    let [off, prints, video] = messages.visuals_labels;
+
+    match mode {
+        VisualMode::Off => off,
+        VisualMode::Prints => prints,
+        VisualMode::Video => video,
+    }
+}
+
+pub fn ask_visual_review(
+    current: bool,
+    saved: bool,
+    messages: &'static Messages,
+    ask: &mut dyn Prompter,
+) -> Answer<bool> {
+    let [review_label, direct_label] = messages.visual_review_labels;
+    let options = vec![
+        ChoiceItem::pick(review_label, "review", true).with_aliases(&REVIEW_ANSWERS),
+        ChoiceItem::pick(direct_label, "direct", false).with_aliases(&DIRECT_ANSWERS),
+    ];
+    let index = index_of_value(&options, &current);
+
+    ask_choice(
+        ChoiceQuestion {
+            title: messages.visual_review_question.to_owned(),
+            choices: marked(options, index, saved, &|_| Vec::new(), messages),
+            index,
+            other: None,
+            default_hint: None,
+        },
+        messages,
+        ask,
+    )
+}
+
+pub fn ask_visuals(
+    current: Visuals,
+    saved: bool,
+    review_saved: bool,
+    messages: &'static Messages,
+    ask: &mut dyn Prompter,
+) -> Answer<VisualsPick> {
+    let options: Vec<ChoiceItem<VisualsPick>> = VisualMode::ALL
+        .into_iter()
+        .map(|mode| {
+            let item = ChoiceItem::pick(
+                visual_mode_label(mode, messages),
+                mode.key(),
+                VisualsPick { mode, review: None },
+            );
+
+            if mode == VisualMode::Off {
+                item.with_aliases(&DISABLE_ANSWERS)
+            } else {
+                item
+            }
+        })
+        .collect();
+    let index = index_of_value(
+        &options,
+        &VisualsPick {
+            mode: current.mode,
+            review: None,
+        },
+    );
+    let mut follow_up = |pick: VisualsPick, terminal: &mut dyn Prompter| {
+        if pick.mode == VisualMode::Off {
+            return Ok(pick);
+        }
+
+        ask_visual_review(current.review, review_saved, messages, terminal).map(|review| {
+            VisualsPick {
+                review: Some(review),
+                ..pick
+            }
+        })
+    };
+
+    ask_choice_then(
+        ChoiceQuestion {
+            title: messages.visuals_question.to_owned(),
+            choices: marked(options, index, saved, &|_| Vec::new(), messages),
+            index,
+            other: None,
+            default_hint: None,
+        },
+        Some(&mut follow_up),
         messages,
         ask,
     )
@@ -1128,5 +1247,208 @@ mod back_tests {
         assert_ne!(selects(&plain)[0].1.last().unwrap(), "← Voltar");
         assert_eq!(selects(&opened)[0].1.last().unwrap(), "← Voltar");
         assert!(!opened.back());
+    }
+}
+
+#[cfg(test)]
+mod visuals_tests {
+    use super::*;
+    use crate::messages::{EN_US, PT_BR};
+    use crate::prompt::{FakePrompter, Reply};
+
+    fn visuals(mode: VisualMode, review: bool) -> Visuals {
+        Visuals { mode, review }
+    }
+
+    fn pick(mode: VisualMode, review: Option<bool>) -> VisualsPick {
+        VisualsPick { mode, review }
+    }
+
+    fn labels(ask: &FakePrompter, call: usize) -> Vec<String> {
+        let (choices, _) = ask.calls()[call].select().unwrap();
+
+        choices.iter().map(|choice| choice.label.clone()).collect()
+    }
+
+    #[test]
+    fn lists_the_three_modes_and_asks_the_review_for_prints_and_video() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(1), Reply::Choose(1)]);
+
+        let answer = ask_visuals(
+            visuals(VisualMode::Off, true),
+            false,
+            false,
+            &PT_BR,
+            &mut ask,
+        )
+        .unwrap();
+
+        assert_eq!(answer, pick(VisualMode::Prints, Some(false)));
+        assert_eq!(labels(&ask, 0), PT_BR.visuals_labels);
+        assert_eq!(
+            labels(&ask, 1),
+            [
+                PT_BR.visual_review_labels[0],
+                PT_BR.visual_review_labels[1],
+                "← Voltar"
+            ]
+        );
+    }
+
+    #[test]
+    fn asks_no_review_when_the_visuals_go_off() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(0)]);
+
+        let answer = ask_visuals(
+            visuals(VisualMode::Video, false),
+            true,
+            true,
+            &EN_US,
+            &mut ask,
+        )
+        .unwrap();
+
+        assert_eq!(answer, pick(VisualMode::Off, None));
+        assert_eq!(ask.calls().len(), 1);
+    }
+
+    #[test]
+    fn preselects_the_saved_mode_and_the_saved_review() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default, Reply::Default]);
+
+        let answer = ask_visuals(
+            visuals(VisualMode::Video, false),
+            true,
+            true,
+            &EN_US,
+            &mut ask,
+        )
+        .unwrap();
+        let (modes, mode_index) = ask.calls()[0].select().unwrap();
+        let (reviews, review_index) = ask.calls()[1].select().unwrap();
+
+        assert_eq!(answer, pick(VisualMode::Video, Some(false)));
+        assert_eq!(mode_index, 2);
+        assert!(modes[2].previous);
+        assert_eq!(review_index, 1);
+        assert!(reviews[1].previous);
+    }
+
+    #[test]
+    fn preselects_the_default_without_marking_it_when_nothing_is_saved() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+
+        ask_visuals(
+            visuals(VisualMode::Off, true),
+            false,
+            false,
+            &EN_US,
+            &mut ask,
+        )
+        .unwrap();
+        let (modes, index) = ask.calls()[0].select().unwrap();
+
+        assert_eq!(index, 0);
+        assert!(modes.iter().all(|choice| !choice.previous));
+    }
+
+    #[test]
+    fn goes_back_to_the_list_from_the_review_with_the_cursor_on_the_mode() {
+        let mut ask =
+            FakePrompter::new(true).with_replies([Reply::Choose(2), Reply::Back, Reply::Choose(0)]);
+
+        let answer = ask_visuals(
+            visuals(VisualMode::Off, true),
+            false,
+            false,
+            &EN_US,
+            &mut ask,
+        )
+        .unwrap();
+
+        assert_eq!(answer, pick(VisualMode::Off, None));
+        assert_eq!(ask.calls()[2].select().unwrap().1, 2);
+        assert!(!ask.back());
+    }
+
+    #[test]
+    fn takes_the_typed_mode_and_the_typed_review_without_a_terminal() {
+        let mut ask = FakePrompter::new(false).with_replies([
+            Reply::Text("Video".to_owned()),
+            Reply::Text("direct".to_owned()),
+            Reply::Text("prints".to_owned()),
+            Reply::Text(String::new()),
+            Reply::Text("none".to_owned()),
+        ]);
+        let current = visuals(VisualMode::Off, true);
+
+        assert_eq!(
+            ask_visuals(current, false, false, &EN_US, &mut ask).unwrap(),
+            pick(VisualMode::Video, Some(false))
+        );
+        assert_eq!(
+            ask_visuals(current, false, false, &EN_US, &mut ask).unwrap(),
+            pick(VisualMode::Prints, Some(true))
+        );
+        assert_eq!(
+            ask_visuals(current, false, false, &EN_US, &mut ask).unwrap(),
+            pick(VisualMode::Off, None)
+        );
+        assert!(
+            ask.calls()[0]
+                .line()
+                .unwrap()
+                .contains("(off, prints, video)")
+        );
+        assert!(ask.calls()[1].line().unwrap().contains("(review, direct)"));
+        assert!(ask.calls()[3].line().unwrap().contains("[default: review]"));
+    }
+
+    #[test]
+    fn asks_again_after_a_typed_mode_that_does_not_exist() {
+        let mut ask = FakePrompter::new(false)
+            .with_replies([Reply::Text("gif".to_owned()), Reply::Text("off".to_owned())]);
+
+        assert_eq!(
+            ask_visuals(
+                visuals(VisualMode::Off, true),
+                false,
+                false,
+                &EN_US,
+                &mut ask
+            )
+            .unwrap(),
+            pick(VisualMode::Off, None)
+        );
+        assert_eq!(ask.reports().len(), 1);
+    }
+
+    #[test]
+    fn parses_the_mode_by_its_key_or_by_a_way_to_say_off() {
+        assert_eq!(parse_visual_mode(" Prints "), Some(VisualMode::Prints));
+        assert_eq!(parse_visual_mode("VIDEO"), Some(VisualMode::Video));
+
+        for off in ["off", "no", "não", "none", "0", "n"] {
+            assert_eq!(parse_visual_mode(off), Some(VisualMode::Off), "{off}");
+        }
+
+        for wrong in ["", "gif", "on", "screenshots"] {
+            assert_eq!(parse_visual_mode(wrong), None, "{wrong}");
+        }
+    }
+
+    #[test]
+    fn parses_the_review_as_on_or_off_with_the_words_of_the_question() {
+        for on in ["on", "review", " Yes ", "s", "y", "sim"] {
+            assert_eq!(parse_visual_review(on), Some(true), "{on}");
+        }
+
+        for off in ["off", "direct", "NO", "n", "não", "nao"] {
+            assert_eq!(parse_visual_review(off), Some(false), "{off}");
+        }
+
+        for wrong in ["", "maybe", "1"] {
+            assert_eq!(parse_visual_review(wrong), None, "{wrong}");
+        }
     }
 }

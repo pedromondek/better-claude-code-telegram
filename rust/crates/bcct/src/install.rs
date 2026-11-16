@@ -5,9 +5,11 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
-use serde_json::{Map, Number, Value};
+use serde_json::{Map, Number, Value, json};
 
-use crate::config::{DelayKind, read_config};
+use crate::config::{
+    DelayKind, VISUAL_REVIEW_KEY, VISUALS_KEY, VisualMode, Visuals, read_config, read_visuals,
+};
 use crate::files::{FileFailure, create_private_dir, write_private};
 use crate::health::Screen;
 use crate::journal::{ChangeKind, link_target};
@@ -21,7 +23,7 @@ use crate::self_install::Channel;
 use crate::setup::{
     CHANNEL_PLUGIN_ID, HOOKS_PLUGIN_ID, read_settings, shell_file, whisper_python_works,
 };
-use crate::setup_files::{current_inbox_days, templated_days};
+use crate::setup_files::{current_inbox_days, review_name, templated_days, visuals_text};
 use crate::shell_rc::{rc_files_without_shell_line, source_line};
 use crate::spinner::{Pending, pending};
 use crate::ui::{bold, info, note, skipped, success, warn};
@@ -295,6 +297,12 @@ pub enum TranscriptionChoice {
     Uninstall(Vec<&'static str>),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VisualsPick {
+    pub mode: VisualMode,
+    pub review: Option<bool>,
+}
+
 pub trait Asker {
     type Error;
 
@@ -313,6 +321,12 @@ pub trait Asker {
         tag: &str,
     ) -> Result<Vec<&'static str>, Self::Error>;
     fn inbox(&mut self, current: Option<f64>, saved: bool) -> Result<Option<f64>, Self::Error>;
+    fn visuals(
+        &mut self,
+        current: Visuals,
+        saved: bool,
+        review_saved: bool,
+    ) -> Result<VisualsPick, Self::Error>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -513,6 +527,7 @@ pub struct Machine<'a> {
     pub macos: bool,
     pub system: &'a System,
     pub run_installer: &'a dyn Fn(&System, &str) -> Option<i32>,
+    pub chromium: &'a dyn Fn() -> Option<PathBuf>,
 }
 
 impl std::fmt::Debug for Machine<'_> {
@@ -547,6 +562,8 @@ pub enum Kept<'v> {
     QuietHours(Option<(&'v str, &'v str)>),
     Inbox(Option<f64>),
     Transcription(Option<&'v str>),
+    Visuals(VisualsPick),
+    VisualReview(bool),
 }
 
 fn model_dir(hf_cache: &Path, model: &str) -> PathBuf {
@@ -640,6 +657,18 @@ pub fn kept_message(
 
             same.then(|| (messages.inbox_kept)(&days_text(messages, days)))
         }
+        Kept::Visuals(pick) => {
+            let same_mode =
+                config.get(VISUALS_KEY).and_then(Value::as_str) == Some(pick.mode.key());
+            let same_review = pick
+                .review
+                .is_none_or(|review| config.get(VISUAL_REVIEW_KEY) == Some(&Value::Bool(review)));
+
+            (same_mode && same_review)
+                .then(|| (messages.visuals_kept)(&visuals_text(messages, pick.mode, pick.review)))
+        }
+        Kept::VisualReview(review) => (config.get(VISUAL_REVIEW_KEY) == Some(&Value::Bool(review)))
+            .then(|| (messages.visual_review_kept)(review_name(messages, review))),
         Kept::Transcription(model) => {
             let saved = config.get("transcription")?;
             let saved_model = saved.get("model").and_then(Value::as_str);
@@ -1200,6 +1229,14 @@ impl<'r, 's, E> Install<'r, 's, E> {
         key: &str,
         value: Value,
     ) -> Result<PathBuf, Failure<E>> {
+        self.update_config_keys(app_dir, Map::from_iter([(key.to_owned(), value)]))
+    }
+
+    fn update_config_keys(
+        &mut self,
+        app_dir: &Path,
+        patch: Map<String, Value>,
+    ) -> Result<PathBuf, Failure<E>> {
         let config_file = join_path(app_dir, CONFIG_FILE);
 
         self.journal.track_dir(app_dir);
@@ -1208,7 +1245,7 @@ impl<'r, 's, E> Install<'r, 's, E> {
             .and_then(|()| self.journal.track_file(&config_file))
             .and_then(|()| {
                 let mut config = read_config(app_dir);
-                config.insert(key.to_owned(), value);
+                config.extend(patch);
 
                 write_private(
                     &link_target(&config_file),
@@ -1554,6 +1591,74 @@ impl<'r, 's, E> Install<'r, 's, E> {
         self.save_inbox_days(app_dir, days)
     }
 
+    pub fn ensure_visuals(&mut self, app_dir: &Path) -> Result<(), Failure<E>> {
+        let config = read_config(app_dir);
+        let current = read_visuals(&config);
+        let saved = config.contains_key(VISUALS_KEY);
+        let review_saved = config.contains_key(VISUAL_REVIEW_KEY);
+        let pick = self.ask(|asker| asker.visuals(current, saved, review_saved))?;
+
+        self.save_visuals(app_dir, pick)
+    }
+
+    pub fn save_visuals(&mut self, app_dir: &Path, pick: VisualsPick) -> Result<(), Failure<E>> {
+        if self.kept_setting(Kept::Visuals(pick), app_dir)? {
+            return Ok(());
+        }
+
+        let messages = self.messages;
+        let mut patch = Map::from_iter([(VISUALS_KEY.to_owned(), json!(pick.mode.key()))]);
+
+        if let Some(review) = pick.review {
+            patch.insert(VISUAL_REVIEW_KEY.to_owned(), Value::Bool(review));
+        }
+
+        let config_file = self.update_config_keys(app_dir, patch)?;
+        let line = success(
+            &(messages.visuals_saved)(
+                &visuals_text(messages, pick.mode, pick.review),
+                &config_file.to_string_lossy(),
+            ),
+            self.colorize(),
+        );
+
+        self.say_last(&line)?;
+        self.warn_missing_visual_tools(pick.mode)
+    }
+
+    pub fn save_visual_review(&mut self, app_dir: &Path, review: bool) -> Result<(), Failure<E>> {
+        if self.kept_setting(Kept::VisualReview(review), app_dir)? {
+            return Ok(());
+        }
+
+        let messages = self.messages;
+        let config_file = self.update_config(app_dir, VISUAL_REVIEW_KEY, Value::Bool(review))?;
+        let line = success(
+            &(messages.visual_review_saved)(
+                review_name(messages, review),
+                &config_file.to_string_lossy(),
+            ),
+            self.colorize(),
+        );
+
+        self.say_last(&line)
+    }
+
+    fn warn_missing_visual_tools(&mut self, mode: VisualMode) -> Result<(), Failure<E>> {
+        let messages = self.messages;
+        let colorize = self.colorize();
+
+        if mode != VisualMode::Off && (self.machine.chromium)().is_none() {
+            self.say(&warn(messages.chromium_missing_warning, colorize));
+        }
+
+        if mode == VisualMode::Video && !self.machine.system.has_command("ffmpeg") {
+            self.say(&warn(messages.ffmpeg_missing_warning, colorize));
+        }
+
+        self.ready_to_wait()
+    }
+
     pub fn save_inbox_days(&mut self, app_dir: &Path, days: Option<f64>) -> Result<(), Failure<E>> {
         let messages = self.messages;
         let config_file = self.update_config(
@@ -1631,6 +1736,8 @@ mod tests {
         transcription: Result<TranscriptionChoice, String>,
         remove: Result<Vec<&'static str>, String>,
         inbox: Result<Option<f64>, String>,
+        visuals: Result<VisualsPick, String>,
+        visuals_asked: Vec<(Visuals, bool, bool)>,
     }
 
     impl Default for Scripted {
@@ -1641,6 +1748,8 @@ mod tests {
                 transcription: Err(STOP.to_owned()),
                 remove: Err(STOP.to_owned()),
                 inbox: Err(STOP.to_owned()),
+                visuals: Err(STOP.to_owned()),
+                visuals_asked: Vec::new(),
             }
         }
     }
@@ -1676,6 +1785,16 @@ mod tests {
 
         fn inbox(&mut self, _current: Option<f64>, _saved: bool) -> Result<Option<f64>, String> {
             self.inbox.clone()
+        }
+
+        fn visuals(
+            &mut self,
+            current: Visuals,
+            saved: bool,
+            review_saved: bool,
+        ) -> Result<VisualsPick, String> {
+            self.visuals_asked.push((current, saved, review_saved));
+            self.visuals.clone()
         }
     }
 
@@ -1735,6 +1854,7 @@ mod tests {
         system: System,
         terminal: Option<crate::spinner::Terminal>,
         installer: Option<String>,
+        chromium: Option<PathBuf>,
     }
 
     impl World {
@@ -1762,6 +1882,7 @@ mod tests {
                 system,
                 terminal: None,
                 installer: None,
+                chromium: None,
             }
         }
 
@@ -1797,6 +1918,7 @@ mod tests {
                 macos: false,
                 system: &self.system,
                 run_installer: &installer,
+                chromium: &|| self.chromium.clone(),
             };
             let mut err = Vec::new();
             let mut screen = Screen {
@@ -2892,6 +3014,344 @@ mod tests {
             )))
         );
         assert!(!app.join(CONFIG_FILE).exists());
+    }
+
+    fn pick(mode: VisualMode, review: Option<bool>) -> VisualsPick {
+        VisualsPick { mode, review }
+    }
+
+    fn saving_visuals(
+        world: &World,
+        config: Option<&str>,
+        chosen: VisualsPick,
+    ) -> (Result<(), Failure<String>>, String, Scripted) {
+        let app = world.path("app");
+
+        if let Some(config) = config {
+            fs::create_dir_all(&app).unwrap();
+            fs::write(app.join(CONFIG_FILE), config).unwrap();
+        }
+
+        let mut asker = Scripted {
+            visuals: Ok(chosen),
+            ..Scripted::default()
+        };
+        let mut out = Vec::new();
+        let result = world.run(&mut asker, &mut Recorded::default(), &mut out, |install| {
+            install.ensure_visuals(&app)
+        });
+
+        (result, String::from_utf8(out).unwrap(), asker)
+    }
+
+    #[test]
+    fn asks_for_the_visuals_saved_and_saves_the_pick_with_the_review() {
+        let world = World::new(&[]);
+        let (result, shown, asker) = saving_visuals(
+            &world,
+            Some("{\"visuals\":\"prints\",\"visualReview\":false}"),
+            pick(VisualMode::Video, Some(true)),
+        );
+        let config = read_config(&world.path("app"));
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(
+            asker.visuals_asked,
+            [(
+                Visuals {
+                    mode: VisualMode::Prints,
+                    review: false
+                },
+                true,
+                true
+            )]
+        );
+        assert_eq!(config.get("visuals"), Some(&Value::from("video")));
+        assert_eq!(config.get("visualReview"), Some(&Value::Bool(true)));
+        assert!(shown.starts_with(&format!(
+            "✔ {}",
+            (EN_US.visuals_saved)(
+                "screenshots and video · with review",
+                &world.path("app/better-cc-telegram.json").to_string_lossy()
+            )
+        )));
+    }
+
+    #[test]
+    fn asks_for_the_visuals_off_with_the_review_on_when_nothing_is_saved() {
+        let world = World::new(&[]);
+        let (result, shown, asker) = saving_visuals(&world, None, pick(VisualMode::Off, None));
+        let config = read_config(&world.path("app"));
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(
+            asker.visuals_asked,
+            [(
+                Visuals {
+                    mode: VisualMode::Off,
+                    review: true
+                },
+                false,
+                false
+            )]
+        );
+        assert_eq!(config.get("visuals"), Some(&Value::from("off")));
+        assert_eq!(config.get("visualReview"), None);
+        assert!(shown.contains("• off\n"));
+        assert!(!shown.contains("missing"));
+    }
+
+    #[test]
+    fn keeps_the_review_saved_when_the_visuals_go_off() {
+        let world = World::new(&[]);
+        let (result, _, _) = saving_visuals(
+            &world,
+            Some("{\"visuals\":\"video\",\"visualReview\":false}"),
+            pick(VisualMode::Off, None),
+        );
+        let config = read_config(&world.path("app"));
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(config.get("visuals"), Some(&Value::from("off")));
+        assert_eq!(config.get("visualReview"), Some(&Value::Bool(false)));
+    }
+
+    #[test]
+    fn warns_about_the_chromium_and_the_ffmpeg_that_the_video_needs() {
+        let world = World::new(&[]);
+        let (result, shown, _) = saving_visuals(&world, None, pick(VisualMode::Video, Some(true)));
+
+        assert_eq!(result, Ok(()));
+        assert!(shown.contains(&format!("⚠ {}\n", EN_US.chromium_missing_warning)));
+        assert!(shown.ends_with(&format!("⚠ {}\n", EN_US.ffmpeg_missing_warning)));
+    }
+
+    #[test]
+    fn warns_only_about_the_chromium_when_the_visuals_are_prints() {
+        let world = World::new(&[]);
+        let (result, shown, _) = saving_visuals(&world, None, pick(VisualMode::Prints, Some(true)));
+
+        assert_eq!(result, Ok(()));
+        assert!(shown.ends_with(&format!("⚠ {}\n", EN_US.chromium_missing_warning)));
+        assert!(!shown.contains("ffmpeg"));
+    }
+
+    #[test]
+    fn does_not_warn_when_the_chromium_and_the_ffmpeg_are_there() {
+        let mut world = World::new(&[("ffmpeg", "exit 0")]);
+        world.chromium = Some(PathBuf::from("/cache/chrome"));
+
+        let (result, shown, _) = saving_visuals(&world, None, pick(VisualMode::Video, Some(true)));
+
+        assert_eq!(result, Ok(()));
+        assert!(!shown.contains('⚠'));
+    }
+
+    #[test]
+    fn keeps_the_visuals_when_the_mode_and_the_review_are_the_same() {
+        let world = World::new(&[]);
+        let config = "{\"visuals\":\"video\",\"visualReview\":false}";
+        let (result, shown, _) =
+            saving_visuals(&world, Some(config), pick(VisualMode::Video, Some(false)));
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(
+            shown,
+            format!(
+                "○ {}\n",
+                (EN_US.visuals_kept)("screenshots and video · sent directly")
+            )
+        );
+        assert_eq!(
+            fs::read_to_string(world.path("app").join(CONFIG_FILE)).unwrap(),
+            config
+        );
+    }
+
+    #[test]
+    fn keeps_the_mode_without_a_review_when_none_was_asked() {
+        let world = World::new(&[]);
+        let (_, shown, _) = saving_visuals(
+            &world,
+            Some("{\"visuals\":\"prints\"}"),
+            pick(VisualMode::Prints, None),
+        );
+
+        assert_eq!(
+            shown,
+            format!("○ {}\n", (EN_US.visuals_kept)("screenshots only"))
+        );
+    }
+
+    #[test]
+    fn saves_the_visuals_when_only_the_review_or_only_the_mode_changed() {
+        for (config, chosen) in [
+            (
+                "{\"visuals\":\"video\",\"visualReview\":false}",
+                pick(VisualMode::Video, Some(true)),
+            ),
+            (
+                "{\"visuals\":\"prints\",\"visualReview\":true}",
+                pick(VisualMode::Video, Some(true)),
+            ),
+            (
+                "{\"visuals\":\"video\"}",
+                pick(VisualMode::Video, Some(true)),
+            ),
+            ("{\"visuals\":3}", pick(VisualMode::Off, None)),
+        ] {
+            let world = World::new(&[]);
+            let (result, shown, _) = saving_visuals(&world, Some(config), chosen);
+
+            assert_eq!(result, Ok(()), "{config}");
+            assert!(shown.starts_with("✔ "), "{config}");
+        }
+    }
+
+    #[test]
+    fn saves_the_review_alone_and_keeps_it_when_it_is_the_same() {
+        let world = World::new(&[]);
+        let app = world.path("app");
+        let save = |review: bool| {
+            let mut out = Vec::new();
+            let result = world.run(
+                &mut Scripted::default(),
+                &mut Recorded::default(),
+                &mut out,
+                |install| install.save_visual_review(&app, review),
+            );
+
+            (result, String::from_utf8(out).unwrap())
+        };
+
+        let (first, shown) = save(false);
+
+        assert_eq!(first, Ok(()));
+        assert_eq!(
+            read_config(&app).get("visualReview"),
+            Some(&Value::Bool(false))
+        );
+        assert!(shown.starts_with(&format!(
+            "✔ {}",
+            (EN_US.visual_review_saved)("sent directly", &app.join(CONFIG_FILE).to_string_lossy())
+        )));
+
+        let (second, kept) = save(false);
+
+        assert_eq!(second, Ok(()));
+        assert_eq!(
+            kept,
+            format!("○ {}\n", (EN_US.visual_review_kept)("sent directly"))
+        );
+
+        let (third, shown) = save(true);
+
+        assert_eq!(third, Ok(()));
+        assert_eq!(
+            read_config(&app).get("visualReview"),
+            Some(&Value::Bool(true))
+        );
+        assert!(shown.contains("• with review\n"));
+    }
+
+    #[test]
+    fn a_visuals_config_that_cannot_be_saved_stops_with_the_file() {
+        let world = World::new(&[]);
+        let folder = world.path("folder");
+        fs::create_dir_all(folder.join(CONFIG_FILE)).unwrap();
+        let mut out = Vec::new();
+
+        let result = world.run(
+            &mut Scripted::default(),
+            &mut Recorded::default(),
+            &mut out,
+            |install| install.save_visuals(&folder, pick(VisualMode::Prints, None)),
+        );
+
+        assert_eq!(
+            result,
+            Err(Failure::Failed((EN_US.file_not_saved)(
+                &folder.join(CONFIG_FILE).to_string_lossy()
+            )))
+        );
+    }
+
+    #[test]
+    fn a_visuals_question_that_fails_stops_the_step() {
+        let world = World::new(&[]);
+        let mut out = Vec::new();
+
+        assert_eq!(
+            world.run(
+                &mut Scripted::default(),
+                &mut Recorded::default(),
+                &mut out,
+                |install| install.ensure_visuals(&world.path("app"))
+            ),
+            Err(Failure::Asking(STOP.to_owned()))
+        );
+    }
+
+    #[test]
+    fn a_screen_that_cannot_show_a_visuals_line_stops_the_step() {
+        for (needle, chosen) in [
+            ("Illustrations on Telegram:", pick(VisualMode::Off, None)),
+            (
+                "Chromium of Playwright",
+                pick(VisualMode::Prints, Some(true)),
+            ),
+            ("ffmpeg is missing", pick(VisualMode::Video, Some(true))),
+        ] {
+            let mut asker = Scripted::default();
+
+            assert_eq!(
+                screen_failure(needle, &[], &mut asker, |install, world| {
+                    install.save_visuals(&world.path("app"), chosen)
+                }),
+                Err(Failure::Screen),
+                "{needle}"
+            );
+        }
+
+        assert_eq!(
+            screen_failure(
+                "Illustrations on Telegram kept",
+                &[],
+                &mut Scripted::default(),
+                |install, world| {
+                    fs::create_dir_all(world.path("app")).unwrap();
+                    fs::write(world.path("app").join(CONFIG_FILE), "{\"visuals\":\"off\"}")
+                        .unwrap();
+                    install.save_visuals(&world.path("app"), pick(VisualMode::Off, None))
+                }
+            ),
+            Err(Failure::Screen)
+        );
+        assert_eq!(
+            screen_failure(
+                "Review before sending",
+                &[],
+                &mut Scripted::default(),
+                |install, world| install.save_visual_review(&world.path("app"), true)
+            ),
+            Err(Failure::Screen)
+        );
+    }
+
+    #[test]
+    fn does_not_keep_the_review_when_the_saved_one_is_not_a_boolean() {
+        let config = serde_json::json!({"visualReview": "yes"});
+
+        assert_eq!(
+            kept_message(
+                Kept::VisualReview(true),
+                config.as_object().unwrap(),
+                Path::new("/app"),
+                Path::new("/hub"),
+                &EN_US,
+            ),
+            None
+        );
     }
 
     #[test]

@@ -990,6 +990,24 @@
   ],
   "settingTexts": [
     {
+      "key": "visuals",
+      "value": { "value": "video" },
+      "en": "screenshots and video",
+      "pt": "prints e vídeo"
+    },
+    {
+      "key": "visuals",
+      "value": { "value": "gif" },
+      "en": "gif",
+      "pt": "gif"
+    },
+    {
+      "key": "visualReview",
+      "value": { "value": false },
+      "en": "sent directly",
+      "pt": "envio direto"
+    },
+    {
       "key": "language",
       "value": { "absent": true },
       "en": "not set",

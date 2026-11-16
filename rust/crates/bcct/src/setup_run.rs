@@ -10,17 +10,18 @@ use std::time::Duration;
 
 use serde_json::{Map, Number, Value, json};
 
+use crate::browser::{Platform, playwright_chromium, read_dir_names};
 use crate::changes::{
     ChangeContext, DELAY_ICON, INBOX_ICON, LANGUAGE_ICON, PLUGIN_ICON, QUIET_HOURS_ICON,
-    STATUSLINE_ICON, TRANSCRIPTION_ICON, describe_changes, quiet_hours_text,
+    STATUSLINE_ICON, TRANSCRIPTION_ICON, VISUALS_ICON, describe_changes, quiet_hours_text,
 };
-use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, read_config};
+use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, Visuals, read_config, read_visuals};
 use crate::files::{FileFailure, create_private_dir, read_json, write_private};
 use crate::health::{self, Screen};
 use crate::hook::now_ms;
 use crate::install::{
     self, ClaudeUndo, CommandsChoice, DISABLE_ANSWERS, Declined, Install, Kept, Parsed, System,
-    Tool, TranscriptionChoice, declined_report, huggingface_cache_dir, kept_message,
+    Tool, TranscriptionChoice, VisualsPick, declined_report, huggingface_cache_dir, kept_message,
     marketplace_source, parse_inbox_days, parse_transcription_model, remove_path,
 };
 use crate::journal::{Change, ChangeKind, Journal, UndoAction};
@@ -43,8 +44,9 @@ use crate::setup::{
 use crate::setup_ask::{
     DelayPick, QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language,
     ask_our_statusline, ask_pairing_choice, ask_quiet_hours, ask_remove_models,
-    ask_statusline_choice, ask_transcription, kinds_summary, parse_delay_minutes, parse_kinds,
-    parse_locale, parse_quiet_hours, quiet_answer, saved_kinds, single_delay, statusline_example,
+    ask_statusline_choice, ask_transcription, ask_visuals, kinds_summary, parse_delay_minutes,
+    parse_kinds, parse_locale, parse_quiet_hours, parse_visual_mode, parse_visual_review,
+    quiet_answer, saved_kinds, single_delay, statusline_example,
 };
 use crate::setup_files::{
     CUSTOMIZED_KEY, ConfigError, Printer, SetupFiles, StatuslineChoice, apply_statusline,
@@ -72,13 +74,15 @@ const PAIRING_ICON: &str = "🔗";
 const PATH_ICON: &str = "💻";
 const DELAYS_KEY: &str = "delays";
 pub const SET_FLAG: &str = "--set";
-const SETTABLE_STEPS: [&str; 7] = [
+const SETTABLE_STEPS: [&str; 9] = [
     "language",
     "delay",
     "delays",
     "quiet-hours",
     "transcription",
     "inbox",
+    "visuals",
+    "visual-review",
     "statusline",
 ];
 const STATUSLINE_CHOICES: [(&str, StatuslineChoice); 5] = [
@@ -101,12 +105,13 @@ pub enum Section {
     QuietHours,
     Transcription,
     Inbox,
+    Visuals,
     Statusline,
     Path,
     Health,
 }
 
-pub const SETUP_SECTIONS: [Section; 10] = [
+pub const SETUP_SECTIONS: [Section; 11] = [
     Section::Language,
     Section::Plugin,
     Section::Token,
@@ -115,6 +120,7 @@ pub const SETUP_SECTIONS: [Section; 10] = [
     Section::QuietHours,
     Section::Transcription,
     Section::Inbox,
+    Section::Visuals,
     Section::Statusline,
     Section::Path,
 ];
@@ -131,6 +137,7 @@ impl Section {
             Self::QuietHours => "quiet-hours",
             Self::Transcription => "transcription",
             Self::Inbox => "inbox",
+            Self::Visuals => "visuals",
             Self::Statusline => "statusline",
             Self::Path => "path",
             Self::Health => "health",
@@ -149,6 +156,7 @@ impl Section {
             Self::QuietHours => (QUIET_HOURS_ICON, titles.quiet_hours),
             Self::Transcription => (TRANSCRIPTION_ICON, titles.transcription),
             Self::Inbox => (INBOX_ICON, titles.inbox),
+            Self::Visuals => (VISUALS_ICON, titles.visuals),
             Self::Statusline => (STATUSLINE_ICON, titles.statusline),
             Self::Path => (PATH_ICON, titles.path),
             Self::Health => (HEALTH_ICON, titles.health),
@@ -374,6 +382,15 @@ impl install::Asker for Questions<'_> {
     fn inbox(&mut self, current: Option<f64>, saved: bool) -> Result<Option<f64>, PromptError> {
         ask_inbox(current, saved, self.messages, &mut *self.ask)
     }
+
+    fn visuals(
+        &mut self,
+        current: Visuals,
+        saved: bool,
+        review_saved: bool,
+    ) -> Result<VisualsPick, PromptError> {
+        ask_visuals(current, saved, review_saved, self.messages, &mut *self.ask)
+    }
 }
 
 impl Prompts for Questions<'_> {
@@ -560,6 +577,8 @@ impl<'a> Setup<'a> {
     ) -> Result<T, Stop> {
         self.ready()?;
 
+        let var = self.var;
+        let home = &self.home;
         let machine = install::Machine {
             home: &self.home,
             app_dir: &self.paths.app_dir,
@@ -570,6 +589,7 @@ impl<'a> Setup<'a> {
             macos: self.macos,
             system: &self.system,
             run_installer: &|system, command| system.run_installer(command),
+            chromium: &|| playwright_chromium(Platform::current(), home, var, &read_dir_names),
         };
         let mut screen = self.output.screen();
         let mut journal = InstallJournal {
@@ -1042,6 +1062,10 @@ impl<'a> Setup<'a> {
             self.installing(messages, ask, |install| install.ensure_inbox(&app_dir))?;
         }
 
+        if self.begin(Section::Visuals, &steps, messages) {
+            self.installing(messages, ask, |install| install.ensure_visuals(&app_dir))?;
+        }
+
         if self.begin(Section::Statusline, &steps, messages) {
             self.ensure_statusline(messages, ask)?;
         }
@@ -1054,9 +1078,14 @@ impl<'a> Setup<'a> {
             self.final_check(messages)?;
         }
 
-        let needs_reopen = [Section::Plugin, Section::Token, Section::Pairing]
-            .iter()
-            .any(|section| sections.contains(section));
+        let needs_reopen = [
+            Section::Plugin,
+            Section::Token,
+            Section::Pairing,
+            Section::Visuals,
+        ]
+        .iter()
+        .any(|section| sections.contains(section));
         let done = if runs_all {
             messages.done_all
         } else if needs_reopen {
@@ -1066,6 +1095,10 @@ impl<'a> Setup<'a> {
         };
 
         self.output.line(&format!("\n{}", success(done, colorize)));
+
+        if runs_all {
+            self.output.line(messages.secretary_tip);
+        }
 
         Ok(())
     }
@@ -1230,6 +1263,24 @@ impl<'a> Setup<'a> {
 
                 self.installing(messages, ask, |install| {
                     install.save_inbox_days(&app_dir, days)
+                })
+            }
+            "visuals" => {
+                let mode = parse_visual_mode(value).ok_or_else(|| invalid(hints.visuals))?;
+                let app_dir = self.paths.app_dir.clone();
+                let pick = VisualsPick { mode, review: None };
+
+                self.installing(messages, ask, |install| {
+                    install.save_visuals(&app_dir, pick)
+                })
+            }
+            "visual-review" => {
+                let review =
+                    parse_visual_review(value).ok_or_else(|| invalid(hints.visual_review))?;
+                let app_dir = self.paths.app_dir.clone();
+
+                self.installing(messages, ask, |install| {
+                    install.save_visual_review(&app_dir, review)
                 })
             }
             _ => {
@@ -1612,6 +1663,8 @@ pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>)
         )
     });
 
+    let visuals = read_visuals(&config);
+
     json!({
         "language": setup_locale(&paths.app_dir, var).as_str(),
         "delayMinutes": number(delay_minutes),
@@ -1626,6 +1679,8 @@ pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>)
             .cloned()
             .unwrap_or(Value::Null),
         "inboxRetentionDays": current_inbox_days(&paths.app_dir).map_or(Value::Null, number),
+        "visuals": visuals.mode.key(),
+        "visualReview": visuals.review,
         "statusline": statusline_state_name(statusline_state(paths)),
         "token": token,
         "pairedAccounts": accounts,

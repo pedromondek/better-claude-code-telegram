@@ -4,6 +4,178 @@
   "processes": {
     "steps": [
       {
+        "name": "visuals off on a fresh machine",
+        "runs": [{ "args": ["visuals"], "input": "off\n", "env": {} }],
+        "results": [
+          {
+            "status": 0,
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🖼 1/1 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n✔ Done. Reopen 'claude --telegram' for it to apply.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "700" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"visuals\": \"off\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "visuals prints with the review in pt-br",
+        "runs": [
+          { "args": ["visuals"], "input": "prints\nreview\n", "env": {} }
+        ],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"pt-br\"\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🖼 1/1 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: Revisão antes de enviar (review, direct) [padrão: review]: ✔ Ilustrações no Telegram:\n  • só prints · com revisão\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n⚠ Falta o Chromium do Playwright: instale com 'npx playwright install chromium'.\n\n✔ Pronto. Reabra o 'claude --telegram' para valer.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"pt-br\",\n  \"visuals\": \"prints\",\n  \"visualReview\": true\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "visuals video sent directly warns about the missing tools",
+        "runs": [
+          { "args": ["visuals"], "input": "video\ndirect\n", "env": {} }
+        ],
+        "results": [
+          {
+            "status": 0,
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🖼 1/1 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: Review before sending (review, direct) [default: review]: ✔ Illustrations on Telegram:\n  • screenshots and video · sent directly\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n⚠ The Chromium of Playwright is missing: install it with 'npx playwright install chromium'.\n⚠ ffmpeg is missing for the video: install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.\n\n✔ Done. Reopen 'claude --telegram' for it to apply.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "700" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"visuals\": \"video\",\n  \"visualReview\": false\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "visuals refuses an unknown mode and then keeps the default",
+        "runs": [{ "args": ["visuals"], "input": "gif\n\n", "env": {} }],
+        "results": [
+          {
+            "status": 0,
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🖼 1/1 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: They cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n✔ Done. Reopen 'claude --telegram' for it to apply.\n",
+            "stderr": "✘ 'gif' is not valid. Use:\n  • off, prints, video\n"
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "700" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"visuals\": \"off\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "visuals kept with Enter",
+        "runs": [{ "args": ["visuals"], "input": "\n\n", "env": {} }],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"prints\",\n  \"visualReview\": false\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🖼 1/1 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: prints]: Review before sending (review, direct) [default: direct]: ○ Illustrations on Telegram kept:\n  • screenshots only · sent directly\n\n✔ Done. Reopen 'claude --telegram' for it to apply.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"prints\",\n  \"visualReview\": false\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "visuals off keeps the review saved",
+        "runs": [{ "args": ["visuals"], "input": "off\n", "env": {} }],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"video\",\n  \"visualReview\": false\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🖼 1/1 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: video]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n✔ Done. Reopen 'claude --telegram' for it to apply.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"off\",\n  \"visualReview\": false\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "visuals run after the inbox in the order of the setup",
+        "runs": [
+          { "args": ["VISUALS", "inbox"], "input": "\noff\n", "env": {} }
+        ],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"en-us\"\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 📥 1/2 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 2/2 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n✔ Done. Reopen 'claude --telegram' for it to apply.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"en-us\",\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
         "name": "language in pt-br keeps the rest of the config",
         "runs": [{ "args": ["language"], "input": "pt-br\n", "env": {} }],
         "files": {
@@ -1974,7 +2146,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ Unknown step:\n  • modelo\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, statusline, path\n"
+            "stderr": "✘ Unknown step:\n  • modelo\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, visuals, statusline, path\n"
           }
         ],
         "claudeCalls": [],
@@ -1994,7 +2166,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ Unknown step:\n  • modelo, --nope\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, statusline, path\n"
+            "stderr": "✘ Unknown step:\n  • modelo, --nope\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, visuals, statusline, path\n"
           }
         ],
         "claudeCalls": [],
@@ -2015,7 +2187,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ Etapa desconhecida:\n  • modelo\nUse uma ou mais destas (sem nenhuma, roda todas):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, statusline, path\n"
+            "stderr": "✘ Etapa desconhecida:\n  • modelo\nUse uma ou mais destas (sem nenhuma, roda todas):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, visuals, statusline, path\n"
           }
         ],
         "claudeCalls": [],
@@ -2038,7 +2210,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ Unknown step:\n  • --dry-run\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, statusline, path\n"
+            "stderr": "✘ Unknown step:\n  • --dry-run\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, visuals, statusline, path\n"
           }
         ],
         "claudeCalls": [],
@@ -2056,7 +2228,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ Unknown step:\n  • --help\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, statusline, path\n"
+            "stderr": "✘ Unknown step:\n  • --help\nUse one or more of these (none runs them all):\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, visuals, statusline, path\n"
           }
         ],
         "claudeCalls": [],
@@ -2677,7 +2849,7 @@
           { "status": 0, "stdout": "", "stderr": "" },
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"custom\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"custom\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           },
           {
@@ -2763,7 +2935,7 @@
           },
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"other\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"other\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           }
         ],
@@ -2823,7 +2995,7 @@
           },
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"custom-pending\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"custom-pending\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           },
           {
@@ -2833,7 +3005,7 @@
           },
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"custom\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"custom\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           },
           {
@@ -2843,7 +3015,7 @@
           },
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"ours-after\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"ours-after\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           }
         ],
@@ -2975,6 +3147,193 @@
     ],
     "set": [
       {
+        "name": "--set visuals prints",
+        "runs": [
+          { "args": ["--set", "visuals", "prints"], "input": "", "env": {} }
+        ],
+        "results": [
+          {
+            "status": 0,
+            "stdout": "✔ Illustrations on Telegram:\n  • screenshots only\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n⚠ The Chromium of Playwright is missing: install it with 'npx playwright install chromium'.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "700" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"visuals\": \"prints\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "--set visuals video in pt-br keeps the review",
+        "runs": [
+          { "args": ["--set", "visuals", "VIDEO"], "input": "", "env": {} }
+        ],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"pt-br\",\n  \"visualReview\": false\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "✔ Ilustrações no Telegram:\n  • prints e vídeo\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n⚠ Falta o Chromium do Playwright: instale com 'npx playwright install chromium'.\n⚠ Falta o ffmpeg para o vídeo: instale com 'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"pt-br\",\n  \"visualReview\": false,\n  \"visuals\": \"video\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "--set visuals kept",
+        "runs": [
+          { "args": ["--set", "visuals", "off"], "input": "", "env": {} }
+        ],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"off\"\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "○ Illustrations on Telegram kept:\n  • off\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"off\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "--set an invalid visuals",
+        "runs": [
+          { "args": ["--set", "visuals", "gif"], "input": "", "env": {} }
+        ],
+        "results": [
+          {
+            "status": 1,
+            "stdout": "",
+            "stderr": "✘ 'gif' is not valid for --set visuals. Use:\n  • off, prints or video\nNothing was changed.\n"
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": { "home/.claude/": { "mode": "750" } }
+      },
+      {
+        "name": "--set visual-review off and on",
+        "runs": [
+          { "args": ["--set", "visual-review", "off"], "input": "", "env": {} },
+          { "args": ["--set", "visual-review", "off"], "input": "", "env": {} },
+          { "args": ["--set", "visual-review", "on"], "input": "", "env": {} }
+        ],
+        "results": [
+          {
+            "status": 0,
+            "stdout": "✔ Review before sending:\n  • sent directly\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n",
+            "stderr": ""
+          },
+          {
+            "status": 0,
+            "stdout": "○ Review before sending kept:\n  • sent directly\n",
+            "stderr": ""
+          },
+          {
+            "status": 0,
+            "stdout": "✔ Review before sending:\n  • with review\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "700" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"visualReview\": true\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "--set an invalid visual-review in pt-br",
+        "runs": [
+          {
+            "args": ["--set", "visual-review", "maybe"],
+            "input": "",
+            "env": {}
+          }
+        ],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"pt-br\"\n}\n"
+        },
+        "results": [
+          {
+            "status": 1,
+            "stdout": "",
+            "stderr": "✘ 'maybe' não vale para --set visual-review. Use:\n  • on ou off\nNada foi alterado.\n"
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"pt-br\"\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
+        "name": "--show with the visuals saved",
+        "runs": [{ "args": ["--show"], "input": "", "env": {} }],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"video\",\n  \"visualReview\": false\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"video\",\n  \"visualReview\": false,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"language\": \"en-us\",\n  \"visuals\": \"video\",\n  \"visualReview\": false\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
         "name": "--show lists the delay of each kind, with the single delay for a missing one",
         "runs": [{ "args": ["--show"], "input": "", "env": {} }],
         "files": {
@@ -2983,7 +3342,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 5,\n  \"delays\": {\n    \"questions\": 0,\n    \"permissions\": 5,\n    \"waiting\": 5\n  },\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 5,\n  \"delays\": {\n    \"questions\": 0,\n    \"permissions\": 5,\n    \"waiting\": 5\n  },\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           }
         ],
@@ -3456,7 +3815,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ 'token' cannot be set with --set, only language, delay, delays, quiet-hours, transcription, inbox, statusline. The token, the pairing and the plugins go through 'npx @pedromondek/better-claude-code-telegram' in your own terminal.\n"
+            "stderr": "✘ 'token' cannot be set with --set, only language, delay, delays, quiet-hours, transcription, inbox, visuals, visual-review, statusline. The token, the pairing and the plugins go through 'npx @pedromondek/better-claude-code-telegram' in your own terminal.\n"
           }
         ],
         "claudeCalls": [],
@@ -3474,7 +3833,7 @@
           {
             "status": 1,
             "stdout": "",
-            "stderr": "✘ '' cannot be set with --set, only language, delay, delays, quiet-hours, transcription, inbox, statusline. The token, the pairing and the plugins go through 'npx @pedromondek/better-claude-code-telegram' in your own terminal.\n"
+            "stderr": "✘ '' cannot be set with --set, only language, delay, delays, quiet-hours, transcription, inbox, visuals, visual-review, statusline. The token, the pairing and the plugins go through 'npx @pedromondek/better-claude-code-telegram' in your own terminal.\n"
           }
         ],
         "claudeCalls": [],
@@ -3779,7 +4138,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           }
         ],
@@ -3803,7 +4162,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"delays\": null,\n  \"quietHours\": {\n    \"start\": \"22:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": \"small\",\n  \"inboxRetentionDays\": null,\n  \"statusline\": \"ours\",\n  \"token\": true,\n  \"pairedAccounts\": 1\n}\n",
+            "stdout": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"delays\": null,\n  \"quietHours\": {\n    \"start\": \"22:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": \"small\",\n  \"inboxRetentionDays\": null,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"ours\",\n  \"token\": true,\n  \"pairedAccounts\": 1\n}\n",
             "stderr": ""
           }
         ],
@@ -3843,7 +4202,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"ours-after\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"ours-after\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           }
         ],
@@ -3868,7 +4227,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"other\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": null,\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"other\",\n  \"token\": false,\n  \"pairedAccounts\": 0\n}\n",
             "stderr": ""
           }
         ],
@@ -3895,7 +4254,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": \"x\",\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 2\n}\n",
+            "stdout": "{\n  \"language\": \"en-us\",\n  \"delayMinutes\": 4,\n  \"delays\": null,\n  \"quietHours\": \"x\",\n  \"transcription\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\",\n  \"visualReview\": true,\n  \"statusline\": \"none\",\n  \"token\": false,\n  \"pairedAccounts\": 2\n}\n",
             "stderr": ""
           }
         ],
@@ -5022,7 +5381,7 @@
         "runs": [
           {
             "args": [],
-            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\ns\n\n",
+            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\nprints\nreview\ns\n\n",
             "env": {}
           }
         ],
@@ -5030,7 +5389,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/11 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/12 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: Revisão antes de enviar (review, direct) [padrão: review]: ✔ Ilustrações no Telegram:\n  • só prints · com revisão\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n⚠ Falta o Chromium do Playwright: instale com 'npx playwright install chromium'.\n\n── 📊 10/12 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✘ Chromium (prints): não encontrado. Rode 'npx playwright install chromium'.\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           }
         ],
@@ -5098,11 +5457,10 @@
           { "method": "getChat", "params": { "chat_id": "42" } }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "700" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10\n}\n",
+            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10,\n  \"visuals\": \"prints\",\n  \"visualReview\": true\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "700" },
@@ -5116,7 +5474,7 @@
             "mode": "600"
           },
           "home/.claude/settings.json": {
-            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  },\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"{root}/home/.claude/better-claude-code-telegram/bin/bcct\\\" statusline\"\n  }\n}\n",
+            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  },\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"{root}/home/.claude/better-claude-code-telegram/bin/bcct\\\" statusline\"\n  }\n}",
             "mode": "644"
           },
           "home/.zshrc": {
@@ -5130,21 +5488,21 @@
         "runs": [
           {
             "args": [],
-            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\ns\n\n",
+            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\noff\ns\n\n",
             "env": {}
           },
-          { "args": [], "input": "\n\n\n\n\n\n\n\n\n\n\n", "env": {} }
+          { "args": [], "input": "\n\n\n\n\n\n\n\n\n\n\n\n", "env": {} }
         ],
         "telegram": {},
         "results": [
           {
             "status": 0,
-            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/11 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/12 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: ✔ Ilustrações no Telegram:\n  • desligadas\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n○ Chromium (prints): desligado\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           },
           {
             "status": 0,
-            "stdout": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: pt-br]: ○ Idioma mantido:\n  • pt-br\n\n── 🧩 2/11 Plugins ──\n✔ Conferido:\n  ✔ Marketplace registrado\n  ✔ 2 de 2 plugins obrigatórios instalados\n  ✔ 1 de 1 plugin opcional instalado\n(opcional) Os comandos /bcct: já estão no Claude Code. O que fazer com eles? (keep, remove) [padrão: keep]: ○ Marketplace 'better-claude-code-telegram' já registrado.\n○ Plugin 'telegram@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já instalado.\n○ Plugin 'bcct@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram@better-claude-code-telegram' já desativado fora do 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já ativado em todas as instâncias.\n○ Plugin 'bcct@better-claude-code-telegram' já ativado em todas as instâncias.\n○ {root}/home/.zshrc já carrega o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nUsar o bot salvo, @e2e_bot? (s/n) [padrão: s] ○ Regra de segurança já ativa:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nO bot já está pareado com @dev (id 42). O que fazer? (keep, replace) [padrão: keep]: ○ Bot já pareado com @dev (id 42).\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 5]: ○ Tempo de espera mantido:\n  • 5 min\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 23:00-07:00, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: 23:00-07:00]: ○ Silêncio mantido:\n  • 23:00-07:00\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: off]: ○ Transcrição local continua desligada.\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 10, 14, 30, off, N) [padrão: 10]: ○ Arquivos recebidos mantidos:\n  • apagados depois de 10 dia(s)\n\n── 📊 9/11 Statusline ──\nO indicador do Telegram (📱 (Principal) Telegram conectado) já está na sua statusline. O que fazer com ele? (keep, remove) [padrão: keep]: ○ Statusline mantida com o indicador do Telegram.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: pt-br]: ○ Idioma mantido:\n  • pt-br\n\n── 🧩 2/12 Plugins ──\n✔ Conferido:\n  ✔ Marketplace registrado\n  ✔ 2 de 2 plugins obrigatórios instalados\n  ✔ 1 de 1 plugin opcional instalado\n(opcional) Os comandos /bcct: já estão no Claude Code. O que fazer com eles? (keep, remove) [padrão: keep]: ○ Marketplace 'better-claude-code-telegram' já registrado.\n○ Plugin 'telegram@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já instalado.\n○ Plugin 'bcct@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram@better-claude-code-telegram' já desativado fora do 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já ativado em todas as instâncias.\n○ Plugin 'bcct@better-claude-code-telegram' já ativado em todas as instâncias.\n○ {root}/home/.zshrc já carrega o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nUsar o bot salvo, @e2e_bot? (s/n) [padrão: s] ○ Regra de segurança já ativa:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nO bot já está pareado com @dev (id 42). O que fazer? (keep, replace) [padrão: keep]: ○ Bot já pareado com @dev (id 42).\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 5]: ○ Tempo de espera mantido:\n  • 5 min\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 23:00-07:00, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: 23:00-07:00]: ○ Silêncio mantido:\n  • 23:00-07:00\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: off]: ○ Transcrição local continua desligada.\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 10, 14, 30, off, N) [padrão: 10]: ○ Arquivos recebidos mantidos:\n  • apagados depois de 10 dia(s)\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: ○ Ilustrações no Telegram mantidas:\n  • desligadas\n\n── 📊 10/12 Statusline ──\nO indicador do Telegram (📱 (Principal) Telegram conectado) já está na sua statusline. O que fazer com ele? (keep, remove) [padrão: keep]: ○ Statusline mantida com o indicador do Telegram.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n○ Chromium (prints): desligado\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           }
         ],
@@ -5219,11 +5577,10 @@
           { "method": "getChat", "params": { "chat_id": "42" } }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "700" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10\n}\n",
+            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10,\n  \"visuals\": \"off\"\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "700" },
@@ -5237,7 +5594,7 @@
             "mode": "600"
           },
           "home/.claude/settings.json": {
-            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  },\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"{root}/home/.claude/better-claude-code-telegram/bin/bcct\\\" statusline\"\n  }\n}\n",
+            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  },\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"{root}/home/.claude/better-claude-code-telegram/bin/bcct\\\" statusline\"\n  }\n}",
             "mode": "644"
           },
           "home/.zshrc": {
@@ -5251,21 +5608,25 @@
         "runs": [
           {
             "args": [],
-            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\ns\n\n",
+            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\noff\ns\n\n",
             "env": {}
           },
-          { "args": [], "input": "\n\n\nreplace\ns\n\n\n\n\n\n\n\n", "env": {} }
+          {
+            "args": [],
+            "input": "\n\n\nreplace\ns\n\n\n\n\n\n\n\n\n",
+            "env": {}
+          }
         ],
         "telegram": {},
         "results": [
           {
             "status": 0,
-            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/11 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/12 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: ✔ Ilustrações no Telegram:\n  • desligadas\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n○ Chromium (prints): desligado\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           },
           {
             "status": 0,
-            "stdout": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: pt-br]: ○ Idioma mantido:\n  • pt-br\n\n── 🧩 2/11 Plugins ──\n✔ Conferido:\n  ✔ Marketplace registrado\n  ✔ 2 de 2 plugins obrigatórios instalados\n  ✔ 1 de 1 plugin opcional instalado\n(opcional) Os comandos /bcct: já estão no Claude Code. O que fazer com eles? (keep, remove) [padrão: keep]: ○ Marketplace 'better-claude-code-telegram' já registrado.\n○ Plugin 'telegram@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já instalado.\n○ Plugin 'bcct@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram@better-claude-code-telegram' já desativado fora do 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já ativado em todas as instâncias.\n○ Plugin 'bcct@better-claude-code-telegram' já ativado em todas as instâncias.\n○ {root}/home/.zshrc já carrega o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nUsar o bot salvo, @e2e_bot? (s/n) [padrão: s] ○ Regra de segurança já ativa:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nO bot já está pareado com @dev (id 42). O que fazer? (keep, replace) [padrão: keep]: Para parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 5]: ○ Tempo de espera mantido:\n  • 5 min\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 23:00-07:00, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: 23:00-07:00]: ○ Silêncio mantido:\n  • 23:00-07:00\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: off]: ○ Transcrição local continua desligada.\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 10, 14, 30, off, N) [padrão: 10]: ○ Arquivos recebidos mantidos:\n  • apagados depois de 10 dia(s)\n\n── 📊 9/11 Statusline ──\nO indicador do Telegram (📱 (Principal) Telegram conectado) já está na sua statusline. O que fazer com ele? (keep, remove) [padrão: keep]: ○ Statusline mantida com o indicador do Telegram.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: pt-br]: ○ Idioma mantido:\n  • pt-br\n\n── 🧩 2/12 Plugins ──\n✔ Conferido:\n  ✔ Marketplace registrado\n  ✔ 2 de 2 plugins obrigatórios instalados\n  ✔ 1 de 1 plugin opcional instalado\n(opcional) Os comandos /bcct: já estão no Claude Code. O que fazer com eles? (keep, remove) [padrão: keep]: ○ Marketplace 'better-claude-code-telegram' já registrado.\n○ Plugin 'telegram@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já instalado.\n○ Plugin 'bcct@better-claude-code-telegram' já instalado.\n○ Plugin 'telegram@better-claude-code-telegram' já desativado fora do 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' já ativado em todas as instâncias.\n○ Plugin 'bcct@better-claude-code-telegram' já ativado em todas as instâncias.\n○ {root}/home/.zshrc já carrega o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nUsar o bot salvo, @e2e_bot? (s/n) [padrão: s] ○ Regra de segurança já ativa:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nO bot já está pareado com @dev (id 42). O que fazer? (keep, replace) [padrão: keep]: Para parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 5]: ○ Tempo de espera mantido:\n  • 5 min\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 23:00-07:00, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: 23:00-07:00]: ○ Silêncio mantido:\n  • 23:00-07:00\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: off]: ○ Transcrição local continua desligada.\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 10, 14, 30, off, N) [padrão: 10]: ○ Arquivos recebidos mantidos:\n  • apagados depois de 10 dia(s)\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: ○ Ilustrações no Telegram mantidas:\n  • desligadas\n\n── 📊 10/12 Statusline ──\nO indicador do Telegram (📱 (Principal) Telegram conectado) já está na sua statusline. O que fazer com ele? (keep, remove) [padrão: keep]: ○ Statusline mantida com o indicador do Telegram.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n○ Chromium (prints): desligado\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           }
         ],
@@ -5358,11 +5719,10 @@
           { "method": "getChat", "params": { "chat_id": "42" } }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "700" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10\n}\n",
+            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10,\n  \"visuals\": \"off\"\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "700" },
@@ -5376,7 +5736,7 @@
             "mode": "600"
           },
           "home/.claude/settings.json": {
-            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  },\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"{root}/home/.claude/better-claude-code-telegram/bin/bcct\\\" statusline\"\n  }\n}\n",
+            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  },\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"{root}/home/.claude/better-claude-code-telegram/bin/bcct\\\" statusline\"\n  }\n}",
             "mode": "644"
           },
           "home/.zshrc": {
@@ -5956,7 +6316,7 @@
         "runs": [
           {
             "args": [],
-            "input": "\n\nn\n123456:E2E-FAKE-TOKEN\n\n\n\n\n\n\n\n\n",
+            "input": "\n\nn\n123456:E2E-FAKE-TOKEN\n\n\n\n\n\n\n\n\n\n",
             "env": {}
           }
         ],
@@ -5979,7 +6339,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ○ Language kept:\n  • en-us\n\n── 🧩 2/11 Plugins ──\n✔ Checked:\n  ✔ Marketplace registered\n  ✔ 2 of 2 required plugins installed\n  ✔ 1 of 1 optional plugin installed\n(optional) The /bcct: commands are already in Claude Code. What should happen to them? (keep, remove) [default: keep]: ○ Marketplace 'better-claude-code-telegram' already registered.\n○ Plugin 'telegram@better-claude-code-telegram' already installed.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already installed.\n○ Plugin 'bcct@better-claude-code-telegram' already installed.\n○ Plugin 'telegram@better-claude-code-telegram' already disabled outside 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already enabled in every instance.\n○ Plugin 'bcct@better-claude-code-telegram' already enabled in every instance.\n○ {root}/home/.zshrc already loads 'claude --telegram'.\n\n── 🔑 3/11 Bot token ──\nUse the saved bot, @e2e_bot? (y/n) [default: y] Bot token (from @BotFather; hidden while you type): \n✔ Token of bot @e2e_bot saved in {root}/home/.claude/channels/telegram/.env.\n✔ Security rule added:\n  • Claude Code may not read {root}/home/.claude/channels/telegram/.env, the file that holds the bot token (deny rule in {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pairing ──\nThe bot is already paired with @dev (id 42). What now? (keep, replace) [default: keep]: ○ Bot already paired with @dev (id 42).\n\n── ⏳ 5/11 Wait time ──\nMinutes without an answer in the terminal before going to Telegram (0, 1, 3, 4, 5, 10, 15, kind, N) [default: 4]: ✔ Delay of 4 min saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Quiet hours ──\nQuiet hours, when nothing goes to Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [default: off]: ✔ Quiet hours off saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Audio transcription ──\nTurns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.\nLocal voice transcription (off, base, small, medium) [default: off]: ○ Local transcription stays off.\n\n── 📥 8/11 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Status line ──\nClaude Code's footer (status line) can show whether Telegram is connected, like this:\n  • 📱 (Main) Telegram connected\nShow it? (y/n) [default: n] Status line left unchanged.\n\n── 💻 10/11 bcct command in the terminal ──\nAdd the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx? (y/n) [default: n] bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Final check ──\nInstall\n✔ Node: Node {node}\n✔ claude: found\n✔ bun: found\n✔ Git: 2.43.0\n✔ Plugins: installed\n✘ Launcher: no launcher in {root}/home/.claude/better-claude-code-telegram/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n○ Version: nothing to compare (see Launcher and Plugins)\n✔ Shell: loaded by {root}/home/.zshrc\n○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\nTelegram\n✔ Bot token: @e2e_bot\n✔ Groups: the bot cannot be added to groups\n✔ Pairing: paired with one account (@dev (id 42))\n○ Connection: 'claude --telegram' is not open\nSecurity\n✔ Running as root: no, runs as a regular user (as recommended)\n✔ Token protection: Claude cannot read the bot token\n✔ Settings: valid\nExtras\n○ Transcription: off\n○ Diagrams (mmdc): missing\n○ Status line: no status line\n⚠ Some checks failed. Fix what is marked with ✘ and run 'npx @pedromondek/better-claude-code-telegram health' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n",
+            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ○ Language kept:\n  • en-us\n\n── 🧩 2/12 Plugins ──\n✔ Checked:\n  ✔ Marketplace registered\n  ✔ 2 of 2 required plugins installed\n  ✔ 1 of 1 optional plugin installed\n(optional) The /bcct: commands are already in Claude Code. What should happen to them? (keep, remove) [default: keep]: ○ Marketplace 'better-claude-code-telegram' already registered.\n○ Plugin 'telegram@better-claude-code-telegram' already installed.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already installed.\n○ Plugin 'bcct@better-claude-code-telegram' already installed.\n○ Plugin 'telegram@better-claude-code-telegram' already disabled outside 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already enabled in every instance.\n○ Plugin 'bcct@better-claude-code-telegram' already enabled in every instance.\n○ {root}/home/.zshrc already loads 'claude --telegram'.\n\n── 🔑 3/12 Bot token ──\nUse the saved bot, @e2e_bot? (y/n) [default: y] Bot token (from @BotFather; hidden while you type): \n✔ Token of bot @e2e_bot saved in {root}/home/.claude/channels/telegram/.env.\n✔ Security rule added:\n  • Claude Code may not read {root}/home/.claude/channels/telegram/.env, the file that holds the bot token (deny rule in {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pairing ──\nThe bot is already paired with @dev (id 42). What now? (keep, replace) [default: keep]: ○ Bot already paired with @dev (id 42).\n\n── ⏳ 5/12 Wait time ──\nMinutes without an answer in the terminal before going to Telegram (0, 1, 3, 4, 5, 10, 15, kind, N) [default: 4]: ✔ Delay of 4 min saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Quiet hours ──\nQuiet hours, when nothing goes to Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [default: off]: ✔ Quiet hours off saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Audio transcription ──\nTurns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.\nLocal voice transcription (off, base, small, medium) [default: off]: ○ Local transcription stays off.\n\n── 📥 8/12 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Status line ──\nClaude Code's footer (status line) can show whether Telegram is connected, like this:\n  • 📱 (Main) Telegram connected\nShow it? (y/n) [default: n] Status line left unchanged.\n\n── 💻 11/12 bcct command in the terminal ──\nAdd the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx? (y/n) [default: n] bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Final check ──\nInstall\n✔ Node: Node {node}\n✔ claude: found\n✔ bun: found\n✔ Git: 2.43.0\n✔ Plugins: installed\n✘ Launcher: no launcher in {root}/home/.claude/better-claude-code-telegram/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n○ Version: nothing to compare (see Launcher and Plugins)\n✔ Shell: loaded by {root}/home/.zshrc\n○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\nTelegram\n✔ Bot token: @e2e_bot\n✔ Groups: the bot cannot be added to groups\n✔ Pairing: paired with one account (@dev (id 42))\n○ Connection: 'claude --telegram' is not open\nSecurity\n✔ Running as root: no, runs as a regular user (as recommended)\n✔ Token protection: Claude cannot read the bot token\n✔ Settings: valid\nExtras\n○ Transcription: off\n○ Diagrams (mmdc): missing\n○ Chromium (screenshots): off\n○ ffmpeg (video): off\n○ Status line: no status line\n⚠ Some checks failed. Fix what is marked with ✘ and run 'npx @pedromondek/better-claude-code-telegram health' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.md\n",
             "stderr": ""
           }
         ],
@@ -5997,11 +6357,10 @@
           { "method": "getChat", "params": { "chat_id": "42" } }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"en-us\",\n  \"transcription\": null,\n  \"delayMinutes\": 4,\n  \"quietHours\": null,\n  \"inboxRetentionDays\": 7\n}\n",
+            "content": "{\n  \"language\": \"en-us\",\n  \"transcription\": null,\n  \"delayMinutes\": 4,\n  \"quietHours\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\"\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "750" },
@@ -6015,7 +6374,7 @@
             "mode": "600"
           },
           "home/.claude/settings.json": {
-            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  }\n}\n",
+            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  }\n}",
             "mode": "600"
           },
           "home/.zshrc": {
@@ -6026,7 +6385,9 @@
       },
       {
         "name": "the health finds a failure at the end",
-        "runs": [{ "args": [], "input": "\n\n\n\n\n\n\n\n\n\n\n", "env": {} }],
+        "runs": [
+          { "args": [], "input": "\n\n\n\n\n\n\n\n\n\n\n\n", "env": {} }
+        ],
         "claude": {
           "marketplaces": ["better-claude-code-telegram"],
           "plugins": [
@@ -6046,7 +6407,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ○ Language kept:\n  • en-us\n\n── 🧩 2/11 Plugins ──\n✔ Checked:\n  ✔ Marketplace registered\n  ✔ 2 of 2 required plugins installed\n  ✔ 1 of 1 optional plugin installed\n(optional) The /bcct: commands are already in Claude Code. What should happen to them? (keep, remove) [default: keep]: ○ Marketplace 'better-claude-code-telegram' already registered.\n○ Plugin 'telegram@better-claude-code-telegram' already installed.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already installed.\n○ Plugin 'bcct@better-claude-code-telegram' already installed.\n○ Plugin 'telegram@better-claude-code-telegram' already disabled outside 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already enabled in every instance.\n○ Plugin 'bcct@better-claude-code-telegram' already enabled in every instance.\n○ {root}/home/.zshrc already loads 'claude --telegram'.\n\n── 🔑 3/11 Bot token ──\nUse the saved bot, @e2e_bot? (y/n) [default: y] ✔ Security rule added:\n  • Claude Code may not read {root}/home/.claude/channels/telegram/.env, the file that holds the bot token (deny rule in {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pairing ──\nThe bot is already paired with @dev (id 1), @dev (id 2). What now? (keep, replace) [default: keep]: ○ Bot already paired with @dev (id 1), @dev (id 2).\n\n── ⏳ 5/11 Wait time ──\nMinutes without an answer in the terminal before going to Telegram (0, 1, 3, 4, 5, 10, 15, kind, N) [default: 4]: ✔ Delay of 4 min saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Quiet hours ──\nQuiet hours, when nothing goes to Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [default: off]: ✔ Quiet hours off saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Audio transcription ──\nTurns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.\nLocal voice transcription (off, base, small, medium) [default: off]: ○ Local transcription stays off.\n\n── 📥 8/11 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Status line ──\nClaude Code's footer (status line) can show whether Telegram is connected, like this:\n  • 📱 (Main) Telegram connected\nShow it? (y/n) [default: n] Status line left unchanged.\n\n── 💻 10/11 bcct command in the terminal ──\nAdd the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx? (y/n) [default: n] bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Final check ──\nInstall\n✔ Node: Node {node}\n✔ claude: found\n✔ bun: found\n✔ Git: 2.43.0\n✔ Plugins: installed\n✘ Launcher: no launcher in {root}/home/.claude/better-claude-code-telegram/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n○ Version: nothing to compare (see Launcher and Plugins)\n✔ Shell: loaded by {root}/home/.zshrc\n○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\nTelegram\n✔ Bot token: @e2e_bot\n✔ Groups: the bot cannot be added to groups\n✘ Pairing: access.json lets 2 Telegram accounts talk to the bot, but it only talks to one. Run 'npx @pedromondek/better-claude-code-telegram pairing' to keep only yours.\n○ Connection: 'claude --telegram' is not open\nSecurity\n✔ Running as root: no, runs as a regular user (as recommended)\n✔ Token protection: Claude cannot read the bot token\n✔ Settings: valid\nExtras\n○ Transcription: off\n○ Diagrams (mmdc): missing\n○ Status line: no status line\n⚠ Some checks failed. Fix what is marked with ✘ and run 'npx @pedromondek/better-claude-code-telegram health' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n",
+            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ○ Language kept:\n  • en-us\n\n── 🧩 2/12 Plugins ──\n✔ Checked:\n  ✔ Marketplace registered\n  ✔ 2 of 2 required plugins installed\n  ✔ 1 of 1 optional plugin installed\n(optional) The /bcct: commands are already in Claude Code. What should happen to them? (keep, remove) [default: keep]: ○ Marketplace 'better-claude-code-telegram' already registered.\n○ Plugin 'telegram@better-claude-code-telegram' already installed.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already installed.\n○ Plugin 'bcct@better-claude-code-telegram' already installed.\n○ Plugin 'telegram@better-claude-code-telegram' already disabled outside 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already enabled in every instance.\n○ Plugin 'bcct@better-claude-code-telegram' already enabled in every instance.\n○ {root}/home/.zshrc already loads 'claude --telegram'.\n\n── 🔑 3/12 Bot token ──\nUse the saved bot, @e2e_bot? (y/n) [default: y] ✔ Security rule added:\n  • Claude Code may not read {root}/home/.claude/channels/telegram/.env, the file that holds the bot token (deny rule in {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pairing ──\nThe bot is already paired with @dev (id 1), @dev (id 2). What now? (keep, replace) [default: keep]: ○ Bot already paired with @dev (id 1), @dev (id 2).\n\n── ⏳ 5/12 Wait time ──\nMinutes without an answer in the terminal before going to Telegram (0, 1, 3, 4, 5, 10, 15, kind, N) [default: 4]: ✔ Delay of 4 min saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Quiet hours ──\nQuiet hours, when nothing goes to Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [default: off]: ✔ Quiet hours off saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Audio transcription ──\nTurns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.\nLocal voice transcription (off, base, small, medium) [default: off]: ○ Local transcription stays off.\n\n── 📥 8/12 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Status line ──\nClaude Code's footer (status line) can show whether Telegram is connected, like this:\n  • 📱 (Main) Telegram connected\nShow it? (y/n) [default: n] Status line left unchanged.\n\n── 💻 11/12 bcct command in the terminal ──\nAdd the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx? (y/n) [default: n] bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Final check ──\nInstall\n✔ Node: Node {node}\n✔ claude: found\n✔ bun: found\n✔ Git: 2.43.0\n✔ Plugins: installed\n✘ Launcher: no launcher in {root}/home/.claude/better-claude-code-telegram/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n○ Version: nothing to compare (see Launcher and Plugins)\n✔ Shell: loaded by {root}/home/.zshrc\n○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\nTelegram\n✔ Bot token: @e2e_bot\n✔ Groups: the bot cannot be added to groups\n✘ Pairing: access.json lets 2 Telegram accounts talk to the bot, but it only talks to one. Run 'npx @pedromondek/better-claude-code-telegram pairing' to keep only yours.\n○ Connection: 'claude --telegram' is not open\nSecurity\n✔ Running as root: no, runs as a regular user (as recommended)\n✔ Token protection: Claude cannot read the bot token\n✔ Settings: valid\nExtras\n○ Transcription: off\n○ Diagrams (mmdc): missing\n○ Chromium (screenshots): off\n○ ffmpeg (video): off\n○ Status line: no status line\n⚠ Some checks failed. Fix what is marked with ✘ and run 'npx @pedromondek/better-claude-code-telegram health' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.md\n",
             "stderr": ""
           }
         ],
@@ -6063,11 +6424,10 @@
           { "method": "getMe", "params": {} }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"en-us\",\n  \"transcription\": null,\n  \"delayMinutes\": 4,\n  \"quietHours\": null,\n  \"inboxRetentionDays\": 7\n}\n",
+            "content": "{\n  \"language\": \"en-us\",\n  \"transcription\": null,\n  \"delayMinutes\": 4,\n  \"quietHours\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\"\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "750" },
@@ -6081,7 +6441,7 @@
             "mode": "600"
           },
           "home/.claude/settings.json": {
-            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  }\n}\n",
+            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  }\n}",
             "mode": "600"
           },
           "home/.zshrc": {
@@ -6126,7 +6486,7 @@
       },
       {
         "name": "the health stops when the bot answers nothing",
-        "runs": [{ "args": [], "input": "\n\n\n\n\n\n\n\n\n\n", "env": {} }],
+        "runs": [{ "args": [], "input": "\n\n\n\n\n\n\n\n\n\n\n", "env": {} }],
         "claude": {
           "marketplaces": ["better-claude-code-telegram"],
           "plugins": [
@@ -6146,7 +6506,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ○ Language kept:\n  • en-us\n\n── 🧩 2/11 Plugins ──\n✔ Checked:\n  ✔ Marketplace registered\n  ✔ 2 of 2 required plugins installed\n  ✔ 1 of 1 optional plugin installed\n(optional) The /bcct: commands are already in Claude Code. What should happen to them? (keep, remove) [default: keep]: ○ Marketplace 'better-claude-code-telegram' already registered.\n○ Plugin 'telegram@better-claude-code-telegram' already installed.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already installed.\n○ Plugin 'bcct@better-claude-code-telegram' already installed.\n○ Plugin 'telegram@better-claude-code-telegram' already disabled outside 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already enabled in every instance.\n○ Plugin 'bcct@better-claude-code-telegram' already enabled in every instance.\n○ {root}/home/.zshrc already loads 'claude --telegram'.\n\n── 🔑 3/11 Bot token ──\nUse the saved bot, @e2e_bot? (y/n) [default: y] ✔ Security rule added:\n  • Claude Code may not read {root}/home/.claude/channels/telegram/.env, the file that holds the bot token (deny rule in {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pairing ──\nThe bot is already paired with @dev (id 42). What now? (keep, replace) [default: keep]: ○ Bot already paired with @dev (id 42).\n\n── ⏳ 5/11 Wait time ──\nMinutes without an answer in the terminal before going to Telegram (0, 1, 3, 4, 5, 10, 15, kind, N) [default: 4]: ✔ Delay of 4 min saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Quiet hours ──\nQuiet hours, when nothing goes to Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [default: off]: ✔ Quiet hours off saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Audio transcription ──\nTurns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.\nLocal voice transcription (off, base, small, medium) [default: off]: ○ Local transcription stays off.\n\n── 📥 8/11 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Status line ──\nClaude Code's footer (status line) can show whether Telegram is connected, like this:\n  • 📱 (Main) Telegram connected\nShow it? (y/n) [default: n] Status line left unchanged.\n\n── 💻 10/11 bcct command in the terminal ──\nAdd the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx? (y/n) [default: n] bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Final check ──\nInstall\n✔ Node: Node {node}\n✔ claude: found\n✔ bun: found\n✔ Git: 2.43.0\n✔ Plugins: installed\n✘ Launcher: no launcher in {root}/home/.claude/better-claude-code-telegram/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n○ Version: nothing to compare (see Launcher and Plugins)\n✔ Shell: loaded by {root}/home/.zshrc\n○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\nTelegram\n✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\n○ Groups: needs a working bot token\n✔ Pairing: paired with one account (@dev (id 42))\n○ Connection: 'claude --telegram' is not open\nSecurity\n✔ Running as root: no, runs as a regular user (as recommended)\n✔ Token protection: Claude cannot read the bot token\n✔ Settings: valid\nExtras\n○ Transcription: off\n○ Diagrams (mmdc): missing\n○ Status line: no status line\n⚠ Some checks failed. Fix what is marked with ✘ and run 'npx @pedromondek/better-claude-code-telegram health' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n",
+            "stdout": "Press Enter on an empty answer to keep the default or the existing setting.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ○ Language kept:\n  • en-us\n\n── 🧩 2/12 Plugins ──\n✔ Checked:\n  ✔ Marketplace registered\n  ✔ 2 of 2 required plugins installed\n  ✔ 1 of 1 optional plugin installed\n(optional) The /bcct: commands are already in Claude Code. What should happen to them? (keep, remove) [default: keep]: ○ Marketplace 'better-claude-code-telegram' already registered.\n○ Plugin 'telegram@better-claude-code-telegram' already installed.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already installed.\n○ Plugin 'bcct@better-claude-code-telegram' already installed.\n○ Plugin 'telegram@better-claude-code-telegram' already disabled outside 'claude --telegram'.\n○ Plugin 'telegram-hooks@better-claude-code-telegram' already enabled in every instance.\n○ Plugin 'bcct@better-claude-code-telegram' already enabled in every instance.\n○ {root}/home/.zshrc already loads 'claude --telegram'.\n\n── 🔑 3/12 Bot token ──\nUse the saved bot, @e2e_bot? (y/n) [default: y] ✔ Security rule added:\n  • Claude Code may not read {root}/home/.claude/channels/telegram/.env, the file that holds the bot token (deny rule in {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pairing ──\nThe bot is already paired with @dev (id 42). What now? (keep, replace) [default: keep]: ○ Bot already paired with @dev (id 42).\n\n── ⏳ 5/12 Wait time ──\nMinutes without an answer in the terminal before going to Telegram (0, 1, 3, 4, 5, 10, 15, kind, N) [default: 4]: ✔ Delay of 4 min saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Quiet hours ──\nQuiet hours, when nothing goes to Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [default: off]: ✔ Quiet hours off saved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Audio transcription ──\nTurns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.\nLocal voice transcription (off, base, small, medium) [default: off]: ○ Local transcription stays off.\n\n── 📥 8/12 Received files ──\nDays to keep the photos and files received on Telegram before deleting them (1, 3, 7, 14, 30, off, N) [default: 7]: ✔ Received files:\n  • deleted after 7 day(s)\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Illustrations on Telegram ──\nThey cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: ✔ Illustrations on Telegram:\n  • off\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Status line ──\nClaude Code's footer (status line) can show whether Telegram is connected, like this:\n  • 📱 (Main) Telegram connected\nShow it? (y/n) [default: n] Status line left unchanged.\n\n── 💻 11/12 bcct command in the terminal ──\nAdd the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx? (y/n) [default: n] bcct stays off your PATH. To use it directly later, run 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Final check ──\nInstall\n✔ Node: Node {node}\n✔ claude: found\n✔ bun: found\n✔ Git: 2.43.0\n✔ Plugins: installed\n✘ Launcher: no launcher in {root}/home/.claude/better-claude-code-telegram/bin. Run 'npx @pedromondek/better-claude-code-telegram'.\n○ Version: nothing to compare (see Launcher and Plugins)\n✔ Shell: loaded by {root}/home/.zshrc\n○ bcct on PATH: off (optional). Run 'npx @pedromondek/better-claude-code-telegram path'.\n✔ App folder: writable\n✔ Hooks: no recent failures\nTelegram\n✘ Bot token: Telegram answered getMe without the bot data. Try again in a moment.\n○ Groups: needs a working bot token\n✔ Pairing: paired with one account (@dev (id 42))\n○ Connection: 'claude --telegram' is not open\nSecurity\n✔ Running as root: no, runs as a regular user (as recommended)\n✔ Token protection: Claude cannot read the bot token\n✔ Settings: valid\nExtras\n○ Transcription: off\n○ Diagrams (mmdc): missing\n○ Chromium (screenshots): off\n○ ffmpeg (video): off\n○ Status line: no status line\n⚠ Some checks failed. Fix what is marked with ✘ and run 'npx @pedromondek/better-claude-code-telegram health' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.md\n",
             "stderr": ""
           }
         ],
@@ -6163,11 +6523,10 @@
           { "method": "getChat", "params": { "chat_id": "42" } }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"en-us\",\n  \"transcription\": null,\n  \"delayMinutes\": 4,\n  \"quietHours\": null,\n  \"inboxRetentionDays\": 7\n}\n",
+            "content": "{\n  \"language\": \"en-us\",\n  \"transcription\": null,\n  \"delayMinutes\": 4,\n  \"quietHours\": null,\n  \"inboxRetentionDays\": 7,\n  \"visuals\": \"off\"\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "750" },
@@ -6181,7 +6540,7 @@
             "mode": "600"
           },
           "home/.claude/settings.json": {
-            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  }\n}\n",
+            "content": "{\n  \"enabledPlugins\": {\n    \"telegram@better-claude-code-telegram\": false,\n    \"telegram-hooks@better-claude-code-telegram\": true,\n    \"bcct@better-claude-code-telegram\": true\n  },\n  \"permissions\": {\n    \"deny\": [\n      \"Read(~/.claude/channels/telegram/.env)\"\n    ]\n  }\n}",
             "mode": "600"
           },
           "home/.zshrc": {
@@ -6197,7 +6556,7 @@
         "runs": [
           {
             "args": [],
-            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\ns\n\n",
+            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\noff\ns\n\n",
             "env": {}
           },
           { "args": ["--uninstall"], "input": "n\n", "env": {} }
@@ -6206,7 +6565,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/11 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/12 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: ✔ Ilustrações no Telegram:\n  • desligadas\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n○ Chromium (prints): desligado\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           },
           {
@@ -6303,11 +6662,10 @@
           { "method": "getChat", "params": { "chat_id": "42" } }
         ],
         "after": {
-          "home/": { "mode": "755" },
           "home/.claude/": { "mode": "750" },
           "home/.claude/better-claude-code-telegram/": { "mode": "700" },
           "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
-            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10\n}\n",
+            "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 5,\n  \"quietHours\": {\n    \"start\": \"23:00\",\n    \"end\": \"07:00\"\n  },\n  \"transcription\": null,\n  \"inboxRetentionDays\": 10,\n  \"visuals\": \"off\"\n}\n",
             "mode": "600"
           },
           "home/.claude/channels/": { "mode": "700" },
@@ -6329,7 +6687,7 @@
         "runs": [
           {
             "args": [],
-            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\ns\n\n",
+            "input": "pt-br\ns\ns\n123456:E2E-FAKE-TOKEN\ns\n5\n23:00-07:00\nnão\n10\noff\ns\n\n",
             "env": {}
           },
           { "args": ["--uninstall"], "input": "s\n", "env": {} }
@@ -6338,7 +6696,7 @@
         "results": [
           {
             "status": 0,
-            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/11 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/11 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/11 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/11 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/11 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/11 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/11 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/11 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 9/11 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 10/11 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 11/11 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n",
+            "stdout": "[en-us] Press Enter on an empty answer to keep the default or the existing setting. / [pt-br] Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.\n\n── 🌐 1/12 Language / Idioma ──\nLanguage / Idioma (en-us, pt-br) [default / padrão: en-us]: ✔ Idioma pt-br salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🧩 2/12 Plugins ──\n○ Conferido:\n  ○ Marketplace ainda não registrado\n  ○ 0 de 2 plugins obrigatórios instalados\n  ○ 0 de 1 plugin opcional instalado\nPara concluir esta etapa, o setup precisa:\n  • registrar o marketplace 'better-claude-code-telegram' a partir desta pasta\n  • instalar o plugin 'telegram@better-claude-code-telegram' para o seu usuário\n  • instalar o plugin 'telegram-hooks@better-claude-code-telegram' para o seu usuário\n  • acrescentar em {root}/home/.zshrc a linha que carrega o 'claude --telegram'\nSeguir com a instalação? (s/n) [padrão: s] (opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)? (s/n) [padrão: s] ✔ Marketplace 'better-claude-code-telegram' registrado.\n✔ Plugin 'telegram@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'bcct@better-claude-code-telegram' instalado para o seu usuário.\n✔ Plugin 'telegram@better-claude-code-telegram' desativado fora do 'claude --telegram'.\n✔ Plugin 'telegram-hooks@better-claude-code-telegram' ativado em todas as instâncias.\n✔ Plugin 'bcct@better-claude-code-telegram' ativado em todas as instâncias.\n✔ {root}/home/.zshrc passou a carregar o 'claude --telegram'.\n\n── 🔑 3/12 Token do bot ──\nToken do bot (do @BotFather; não aparece no terminal): \n✔ Token do bot @e2e_bot salvo em {root}/home/.claude/channels/telegram/.env.\n✔ Adicionada regra de segurança:\n  • o Claude Code não pode ler {root}/home/.claude/channels/telegram/.env, o arquivo com o token do bot (regra deny em {root}/home/.claude/settings.json)\n\n── 🔗 4/12 Pareamento ──\nPara parear, abra este link e toque em Iniciar:\n  • https://t.me/e2e_bot?start={code}\nOu mande este código para @e2e_bot:\n  • {code}\nAguardando até 3 min. Só a mensagem com esse código pareia.\nParear com @dev (id 42)? (s/n) [padrão: s] ✔ Pareado com @dev; só essa conta fala com o bot.\n\n── ⏳ 5/12 Tempo de espera ──\nMinutos sem resposta no terminal antes de levar ao Telegram (0, 1, 3, 4, 5, 10, 15, tipo, N) [padrão: 4]: ✔ Espera de 5 min salva em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🌙 6/12 Silêncio ──\nHorário de silêncio, sem mensagens no Telegram (off, 18:00-08:00, 18:00-07:00, 22:00-07:00, 00:00-07:00, HH:MM-HH:MM) [padrão: off]: ✔ Silêncio 23:00-07:00 salvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🎤 7/12 Transcrição de áudio ──\nTransforma em texto, aqui na sua máquina, os áudios que você manda pelo Telegram, para o Claude ler o que você falou.\nTranscrição local dos áudios (off, base, small, medium) [padrão: base]: ✔ Transcrição desligada:\n  • o áudio chega ao Claude como anexo\n\n── 📥 8/12 Arquivos recebidos ──\nDias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar (1, 3, 7, 14, 30, off, N) [padrão: 7]: ✔ Arquivos recebidos:\n  • apagados depois de 10 dia(s)\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 🖼 9/12 Ilustrações no Telegram ──\nGastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: ✔ Ilustrações no Telegram:\n  • desligadas\nSalvo em {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\n\n── 📊 10/12 Statusline ──\nO rodapé do Claude Code (statusline) pode mostrar se o Telegram está conectado, assim:\n  • 📱 (Principal) Telegram conectado\nMostrar? (s/n) [padrão: n] ✔ Statusline configurada em {root}/home/.claude/settings.json.\n\n── 💻 11/12 Comando bcct no terminal ──\nAdicionar o comando bcct ao PATH, para usar 'bcct setup', 'bcct health' e os outros direto no terminal, sem o npx? (s/n) [padrão: n] bcct fora do PATH. Para usar direto depois, rode 'npx @pedromondek/better-claude-code-telegram path'.\n\n── 🩺 12/12 Verificação final ──\nInstalação\n✔ Node: Node {node}\n✔ claude: encontrado\n✔ bun: encontrado\n✔ Git: 2.43.0\n✔ Plugins: instalados\n✘ Launcher: sem launcher em {root}/home/.claude/better-claude-code-telegram/bin. Rode 'npx @pedromondek/better-claude-code-telegram'.\n○ Versão: sem como comparar (veja Launcher e Plugins)\n✔ Shell: carregado por {root}/home/.zshrc\n○ bcct no PATH: fora (opcional). Rode 'npx @pedromondek/better-claude-code-telegram path'.\n✔ Pasta do app: gravável\n✔ Hooks: sem falhas recentes\nTelegram\n✔ Token do bot: @e2e_bot\n✔ Grupos: o bot não entra em grupos\n✔ Pareamento: pareado com uma conta (@dev (id 42))\n○ Conexão: o 'claude --telegram' não está aberto\nSegurança\n✔ Execução como root: não, roda como usuário comum (o recomendado)\n✔ Proteção do token: o Claude não consegue ler o token do bot\n✔ Configurações: válidas\nExtras\n○ Transcrição: desligado\n○ Mermaid (mmdc): não encontrado\n○ Chromium (prints): desligado\n○ ffmpeg (vídeo): desligado\n✔ Statusline: indicador do Telegram ligado\n⚠ Algumas verificações falharam. Corrija o que está com ✘ e rode 'npx @pedromondek/better-claude-code-telegram health' de novo.\n\n✔ Pronto. Abra um terminal novo e rode 'claude --telegram'.\n💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md\n",
             "stderr": ""
           },
           {
@@ -7076,6 +7434,156 @@
     ]
   },
   "questions": [
+    {
+      "ask": "visuals",
+      "current": "off",
+      "review": true,
+      "replies": [2, 0],
+      "locale": "pt-br",
+      "calls": [
+        {
+          "title": "Gastam mais tokens: o Claude tira prints e grava vídeo.",
+          "index": 0,
+          "choices": [
+            { "label": "Desligadas", "heading": false, "previous": false },
+            {
+              "label": "Só prints (hoje × proposta, área em vermelho)",
+              "heading": false,
+              "previous": false
+            },
+            {
+              "label": "Prints e vídeo de transição",
+              "heading": false,
+              "previous": false
+            }
+          ]
+        },
+        {
+          "title": "Revisão antes de enviar",
+          "index": 0,
+          "choices": [
+            {
+              "label": "Claude confere cada imagem antes de enviar (mais tokens)",
+              "heading": false,
+              "previous": false
+            },
+            { "label": "Envia direto", "heading": false, "previous": false },
+            { "label": "← Voltar", "heading": false, "previous": false }
+          ]
+        }
+      ],
+      "errors": [],
+      "value": { "mode": "video", "review": true }
+    },
+    {
+      "ask": "visuals",
+      "current": "video",
+      "review": false,
+      "saved": true,
+      "reviewSaved": true,
+      "replies": [1, 1],
+      "locale": "en-us",
+      "calls": [
+        {
+          "title": "They cost more tokens: Claude takes screenshots and records video.",
+          "index": 2,
+          "choices": [
+            { "label": "Off", "heading": false, "previous": false },
+            {
+              "label": "Screenshots only (today × proposal, area in red)",
+              "heading": false,
+              "previous": false
+            },
+            {
+              "label": "Screenshots and transition video (previously chosen)",
+              "heading": false,
+              "previous": true
+            }
+          ]
+        },
+        {
+          "title": "Review before sending",
+          "index": 1,
+          "choices": [
+            {
+              "label": "Claude checks each image before sending (more tokens)",
+              "heading": false,
+              "previous": false
+            },
+            {
+              "label": "Send directly (previously chosen)",
+              "heading": false,
+              "previous": true
+            },
+            { "label": "← Back", "heading": false, "previous": false }
+          ]
+        }
+      ],
+      "errors": [],
+      "value": { "mode": "prints", "review": false }
+    },
+    {
+      "ask": "visuals",
+      "current": "prints",
+      "review": true,
+      "replies": [0],
+      "locale": "en-us",
+      "calls": [
+        {
+          "title": "They cost more tokens: Claude takes screenshots and records video.",
+          "index": 1,
+          "choices": [
+            { "label": "Off", "heading": false, "previous": false },
+            {
+              "label": "Screenshots only (today × proposal, area in red)",
+              "heading": false,
+              "previous": false
+            },
+            {
+              "label": "Screenshots and transition video",
+              "heading": false,
+              "previous": false
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "value": { "mode": "off", "review": null }
+    },
+    {
+      "ask": "visuals",
+      "current": "off",
+      "review": true,
+      "piped": true,
+      "replies": ["prints", "off"],
+      "locale": "en-us",
+      "calls": [
+        {
+          "line": "They cost more tokens: Claude takes screenshots and records video. (off, prints, video) [default: off]: "
+        },
+        { "line": "Review before sending (review, direct) [default: review]: " }
+      ],
+      "errors": [],
+      "value": { "mode": "prints", "review": false }
+    },
+    {
+      "ask": "visuals",
+      "current": "off",
+      "review": true,
+      "piped": true,
+      "replies": ["gif", "off"],
+      "locale": "pt-br",
+      "calls": [
+        {
+          "line": "Gastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: "
+        },
+        {
+          "line": "Gastam mais tokens: o Claude tira prints e grava vídeo. (off, prints, video) [padrão: off]: "
+        }
+      ],
+      "errors": ["✘ 'gif' não vale. Use:\n  • off, prints, video"],
+      "value": { "mode": "off", "review": null }
+    },
     {
       "ask": "delay",
       "current": 5,
@@ -10759,6 +11267,33 @@
   ],
   "terminal": [
     {
+      "name": "the illustrations and the review chosen on the lists and undone",
+      "args": ["visuals", "statusline"],
+      "files": {
+        "home/.claude/settings.json": "{",
+        "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"language\": \"en-us\",\n  \"visualReview\": true\n}\n"
+      },
+      "keys": [
+        "\u001b[B",
+        "\u001b[B",
+        "\r",
+        "\u001b[B",
+        "\r",
+        "\u001b[A",
+        "\r"
+      ],
+      "output": "<<<\u001b[2mPress Enter on an empty answer to keep the default or the existing setting.\u001b[22m\r\n\r\n\u001b[2m──\u001b[22m 🖼 \u001b[35m\u001b[1m1\u001b[22m\u001b[39m\u001b[2m/2\u001b[22m \u001b[35m\u001b[1mIllustrations on Telegram\u001b[22m\u001b[39m \u001b[2m──\u001b[22m\r\n\u001b[?25l\u001b[1mThey cost more tokens: Claude takes screenshots and records video.\u001b[22m\r\n\u001b[36m\u001b[1m❯ Off\u001b[22m\u001b[39m\r\n  Screenshots only (today × proposal, area in red)\r\n  Screenshots and transition video\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[4A\r\u001b[0J  Off\r\n\u001b[36m\u001b[1m❯ Screenshots only (today × proposal, area in red)\u001b[22m\u001b[39m\r\n  Screenshots and transition video\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[4A\r\u001b[0J  Off\r\n  Screenshots only (today × proposal, area in red)\r\n\u001b[36m\u001b[1m❯ Screenshots and transition video\u001b[22m\u001b[39m\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[4A\r\u001b[0J\u001b[36m❯ Screenshots and transition video\u001b[39m\r\n\u001b[?25h\u001b[?25l\u001b[1mReview before sending\u001b[22m\r\n\u001b[36m\u001b[1m❯ Claude checks each image before sending (more tokens) (previously chosen)\u001b[22m\u001b[39m\r\n  Send directly\r\n  ← Back\r\n\u001b[2m↑/↓ to move · Enter to confirm · ← or Esc goes back\u001b[22m\r\n\u001b[4A\r\u001b[0J\u001b[32m  Claude checks each image before sending (more tokens) (previously chosen)\u001b[39m\r\n\u001b[36m\u001b[1m❯ Send directly\u001b[22m\u001b[39m\r\n  ← Back\r\n\u001b[2m↑/↓ to move · Enter to confirm · ← or Esc goes back\u001b[22m\r\n\u001b[4A\r\u001b[0J\u001b[36m❯ Send directly\u001b[39m\r\n\u001b[?25h\u001b[32m✔ Illustrations on Telegram:\r\n  • screenshots and video · sent directly\r\nSaved in {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json.\u001b[39m\r\n\u001b[33m⚠ The Chromium of Playwright is missing: install it with 'npx playwright install chromium'.\u001b[39m\r\n\u001b[33m⚠ ffmpeg is missing for the video: install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.\u001b[39m\r\n\r\n\u001b[2m──\u001b[22m 📊 \u001b[35m\u001b[1m2\u001b[22m\u001b[39m\u001b[2m/2\u001b[22m \u001b[35m\u001b[1mStatus line\u001b[22m\u001b[39m \u001b[2m──\u001b[22m\r\n\u001b[31m✘ {root}/home/.claude/settings.json is not a valid JSON object. Fix it and run the setup again; nothing was changed.\u001b[39m\r\nSo far the setup has:\r\n  • changed {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json\r\n    – \u001b[34m🖼 Illustrations on Telegram\u001b[39m: \u001b[2mnot set\u001b[22m → \u001b[32mscreenshots and video\u001b[39m\r\n    – \u001b[34m🖼 Review before sending\u001b[39m: \u001b[2mwith review\u001b[22m → \u001b[32msent directly\u001b[39m\r\n\u001b[?25l\u001b[1mUndo what the setup did?\u001b[22m\r\n  Undo everything\r\n\u001b[36m\u001b[1m❯ Keep it as it is\u001b[22m\u001b[39m\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[3A\r\u001b[0J\u001b[36m\u001b[1m❯ Undo everything\u001b[22m\u001b[39m\r\n  Keep it as it is\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[3A\r\u001b[0J\u001b[36m❯ Undo everything\u001b[39m\r\n\u001b[?25h\u001b[36m⠋\u001b[39m \u001b[2mUndoing: changed {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json…\u001b[22m\r\u001b[2K\u001b[32m✔ Undone:\r\n  • changed {root}/home/.claude/better-claude-code-telegram/better-cc-telegram.json\u001b[39m\r\n\u001b[32m✔ Everything the setup did was undone.\u001b[39m\r\n[exit=1]\r\n",
+      "after": {
+        "home/.claude/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"language\": \"en-us\",\n  \"visualReview\": true\n}\n",
+          "mode": "600"
+        },
+        "home/.claude/settings.json": { "content": "{", "mode": "600" }
+      }
+    },
+    {
       "name": "a step answered with Enter",
       "args": ["delay"],
       "keys": ["\r"],
@@ -11015,7 +11550,7 @@
       "name": "an unknown step",
       "args": ["modelo"],
       "keys": [],
-      "output": "<<<\u001b[31m✘ Unknown step:\r\n  • modelo\r\nUse one or more of these (none runs them all):\r\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, statusline, path\u001b[39m\r\nNothing was changed.\r\n[exit=1]\r\n",
+      "output": "<<<\u001b[31m✘ Unknown step:\r\n  • modelo\r\nUse one or more of these (none runs them all):\r\n  • language, plugin, token, pairing, delay, quiet-hours, transcription, inbox, visuals, statusline, path\u001b[39m\r\nNothing was changed.\r\n[exit=1]\r\n",
       "after": {
         "home/": { "mode": "755" },
         "home/.claude/": { "mode": "750" }

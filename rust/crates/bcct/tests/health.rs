@@ -1833,3 +1833,171 @@ fn a_json_fix_that_fails_is_listed_as_skipped_with_its_error() {
         json!([{"id": "shell", "reason": "permission denied"}])
     );
 }
+
+fn fake_chromium(browsers: &Path) {
+    let version = browsers.join("chromium-1243");
+
+    if cfg!(target_os = "macos") {
+        std::fs::create_dir_all(version.join("chrome-mac-arm64/Chromium.app")).unwrap();
+    } else {
+        std::fs::create_dir_all(version.join("chrome-linux64")).unwrap();
+    }
+}
+
+fn visual_checks(config: &str, with_chromium: bool, with_ffmpeg: bool) -> (u8, Value) {
+    let root = sandbox();
+    let browsers = root.path().join("browsers");
+    let variables = HashMap::from([
+        ("HOME".to_owned(), root.path().as_os_str().to_owned()),
+        (
+            "CLAUDE_CONFIG_DIR".to_owned(),
+            root.path().join("claude").into_os_string(),
+        ),
+        (
+            "PLAYWRIGHT_BROWSERS_PATH".to_owned(),
+            browsers.clone().into_os_string(),
+        ),
+    ]);
+    let var = lookup(&variables);
+    let app_dir = bcct::setup::SetupPaths::resolve(&var, root.path()).app_dir;
+
+    std::fs::create_dir_all(&app_dir).unwrap();
+    std::fs::write(app_dir.join("better-cc-telegram.json"), config).unwrap();
+
+    if with_chromium {
+        fake_chromium(&browsers);
+    }
+
+    let machine = Machine {
+        var: &var,
+        home: root.path(),
+        uid: None,
+        now: 0,
+        node_version: &|| None,
+        git_version: &|| None,
+        has_command: &|name| with_ffmpeg && name == "ffmpeg",
+        claude_output: &|_| String::new(),
+        python_works: &|_| false,
+        fetch: &|_, _| None,
+        update: &|_| Ok(()),
+    };
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    let mut screen = Screen {
+        out: &mut out,
+        err: &mut err,
+        terminal: None,
+        colorize_out: false,
+        colorize_err: false,
+        spin: &|_, _| None,
+    };
+    let status = run(
+        &["--json".to_owned(), "extras".to_owned()],
+        &machine,
+        &mut screen,
+    );
+    let results: Value = serde_json::from_slice(&out).unwrap();
+    let checks = results
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| ["chromium", "ffmpeg"].contains(&entry["check"].as_str().unwrap()))
+        .cloned()
+        .collect();
+
+    (status, Value::Array(checks))
+}
+
+fn visual_entry(check: &str, status: &str, detail: &str) -> Value {
+    json!({"group": "extras", "check": check, "status": status, "detail": detail})
+}
+
+const CHROMIUM_MISSING: &str = "missing. Run 'npx playwright install chromium'.";
+const FFMPEG_MISSING: &str = "missing. Install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.";
+
+#[test]
+fn skips_the_chromium_and_the_ffmpeg_checks_while_the_visuals_are_off() {
+    for config in ["{}", "{\"visuals\":\"off\"}", "{\"visuals\":\"gif\"}"] {
+        let (status, checks) = visual_checks(config, false, false);
+
+        assert_eq!(status, 0, "{config}");
+        assert_eq!(
+            checks,
+            json!([
+                visual_entry("chromium", "off", "off"),
+                visual_entry("ffmpeg", "off", "off")
+            ]),
+            "{config}"
+        );
+    }
+}
+
+#[test]
+fn fails_the_chromium_check_with_the_install_command_for_prints() {
+    let (status, checks) = visual_checks("{\"visuals\":\"prints\"}", false, false);
+
+    assert_eq!(status, 1);
+    assert_eq!(
+        checks,
+        json!([
+            visual_entry("chromium", "fail", CHROMIUM_MISSING),
+            visual_entry("ffmpeg", "off", "off")
+        ])
+    );
+}
+
+#[test]
+fn passes_the_chromium_check_for_prints_when_it_is_installed() {
+    let (status, checks) = visual_checks("{\"visuals\":\"prints\"}", true, false);
+
+    assert_eq!(status, 0);
+    assert_eq!(
+        checks,
+        json!([
+            visual_entry("chromium", "ok", "found"),
+            visual_entry("ffmpeg", "off", "off")
+        ])
+    );
+}
+
+#[test]
+fn fails_the_ffmpeg_check_with_the_install_commands_for_video() {
+    let (status, checks) = visual_checks("{\"visuals\":\"video\"}", true, false);
+
+    assert_eq!(status, 1);
+    assert_eq!(
+        checks,
+        json!([
+            visual_entry("chromium", "ok", "found"),
+            visual_entry("ffmpeg", "fail", FFMPEG_MISSING)
+        ])
+    );
+}
+
+#[test]
+fn passes_both_checks_for_video_with_the_chromium_and_the_ffmpeg() {
+    let (status, checks) = visual_checks("{\"visuals\":\"video\"}", true, true);
+
+    assert_eq!(status, 0);
+    assert_eq!(
+        checks,
+        json!([
+            visual_entry("chromium", "ok", "found"),
+            visual_entry("ffmpeg", "ok", "found")
+        ])
+    );
+}
+
+#[test]
+fn fails_both_checks_for_video_without_the_chromium_and_the_ffmpeg() {
+    let (status, checks) = visual_checks("{\"visuals\":\"video\"}", false, false);
+
+    assert_eq!(status, 1);
+    assert_eq!(
+        checks,
+        json!([
+            visual_entry("chromium", "fail", CHROMIUM_MISSING),
+            visual_entry("ffmpeg", "fail", FFMPEG_MISSING)
+        ])
+    );
+}

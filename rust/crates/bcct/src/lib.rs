@@ -1,3 +1,4 @@
+pub mod browser;
 pub mod changes;
 pub mod config;
 pub mod files;

@@ -28,6 +28,7 @@ pub(super) const MESSAGES: Messages = Messages {
         quiet_hours: "Silêncio",
         transcription: "Transcrição de áudio",
         inbox: "Arquivos recebidos",
+        visuals: "Ilustrações no Telegram",
         statusline: "Statusline",
         path: "Comando bcct no terminal",
         health: "Verificação final",
@@ -120,6 +121,8 @@ pub(super) const MESSAGES: Messages = Messages {
         quiet_hours: "HH:MM-HH:MM (por exemplo 22:00-08:00) ou off",
         transcription: "base, small, medium ou off",
         inbox: "os dias, maiores que 0, ou off",
+        visuals: "off, prints ou video",
+        visual_review: "on ou off",
         statusline: "on, after, replace, custom ou off",
     },
     inbox_question: "Dias para manter as fotos e arquivos recebidos pelo Telegram antes de apagar",
@@ -131,6 +134,33 @@ pub(super) const MESSAGES: Messages = Messages {
         format!("Arquivos recebidos:\n  • {retention}\nSalvo em {file}.")
     },
     inbox_kept: |retention| format!("Arquivos recebidos mantidos:\n  • {retention}"),
+    visuals_question: "Gastam mais tokens: o Claude tira prints e grava vídeo.",
+    visuals_labels: [
+        "Desligadas",
+        "Só prints (hoje × proposta, área em vermelho)",
+        "Prints e vídeo de transição",
+    ],
+    visuals_names: ["desligadas", "só prints", "prints e vídeo"],
+    visual_review_question: "Revisão antes de enviar",
+    visual_review_labels: [
+        "Claude confere cada imagem antes de enviar (mais tokens)",
+        "Envia direto",
+    ],
+    visual_review_names: ["com revisão", "envio direto"],
+    visuals_saved: |summary, file| {
+        format!("Ilustrações no Telegram:\n  • {summary}\nSalvo em {file}.")
+    },
+    visuals_kept: |summary| format!("Ilustrações no Telegram mantidas:\n  • {summary}"),
+    visual_review_saved: |summary, file| {
+        format!("Revisão antes de enviar:\n  • {summary}\nSalva em {file}.")
+    },
+    visual_review_kept: |summary| format!("Revisão antes de enviar mantida:\n  • {summary}"),
+    chromium_missing_warning: concat!(
+        "Falta o Chromium do Playwright: instale com '",
+        crate::chromium_install_command!(),
+        "'."
+    ),
+    ffmpeg_missing_warning: "Falta o ffmpeg para o vídeo: instale com 'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'.",
     language_kept: |locale| format!("Idioma mantido:\n  • {locale}"),
     delay_kept: |minutes| format!("Tempo de espera mantido:\n  • {}", format_delay(minutes)),
     quiet_kept: |value| format!("Silêncio mantido:\n  • {value}"),
@@ -184,6 +214,8 @@ pub(super) const MESSAGES: Messages = Messages {
         config: "Configurações",
         transcription: "Transcrição",
         mermaid: "Mermaid (mmdc)",
+        chromium: "Chromium (prints)",
+        ffmpeg: "ffmpeg (vídeo)",
         statusline: "Statusline",
         launcher: "Launcher",
         version: "Versão",
@@ -243,6 +275,12 @@ pub(super) const MESSAGES: Messages = Messages {
         off: "desligado",
         model: |model| format!("modelo {model}"),
         broken: |command| format!("o ambiente Python não funciona. Rode '{command}'."),
+        chromium_missing: concat!(
+            "não encontrado. Rode '",
+            crate::chromium_install_command!(),
+            "'."
+        ),
+        ffmpeg_missing: "não encontrado. Instale com 'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'.",
         statusline: StatuslineDetail {
             ours: "indicador do Telegram ligado",
             ours_after: "indicador do Telegram depois da sua statusline",
@@ -594,6 +632,11 @@ pub(super) const MESSAGES: Messages = Messages {
             "{file} não é um objeto JSON válido. Corrija e rode o setup de novo; nada foi alterado."
         )
     },
+    secretary_tip: concat!(
+        "💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: ",
+        crate::repository_url!(),
+        "/blob/main/docs/secretary/secretary.pt-br.md"
+    ),
     done_all: "Pronto. Abra um terminal novo e rode 'claude --telegram'.",
     done_reopen: "Pronto. Reabra o 'claude --telegram' para valer.",
     done_live: "Pronto. Já vale para as próximas mensagens, sem reabrir nada.",

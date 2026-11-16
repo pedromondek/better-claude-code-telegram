@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value, json};
 
+use crate::browser::{Platform, playwright_chromium, read_dir_names};
+use crate::config::{VisualMode, read_visuals};
 use crate::files::read_json;
 use crate::health_fix::{FixRequest, FixRun, parse_only, run_fix};
 use crate::hook::Abort;
@@ -138,7 +140,13 @@ impl Group {
             ],
             Self::Telegram => &[Check::Token, Check::Groups, Check::Pairing, Check::Polling],
             Self::Security => &[Check::User, Check::Protection, Check::Config],
-            Self::Extras => &[Check::Transcription, Check::Mermaid, Check::Statusline],
+            Self::Extras => &[
+                Check::Transcription,
+                Check::Mermaid,
+                Check::Chromium,
+                Check::Ffmpeg,
+                Check::Statusline,
+            ],
         }
     }
 }
@@ -165,6 +173,8 @@ pub enum Check {
     Config,
     Transcription,
     Mermaid,
+    Chromium,
+    Ffmpeg,
     Statusline,
 }
 
@@ -192,6 +202,8 @@ impl Check {
             Self::Config => "config",
             Self::Transcription => "transcription",
             Self::Mermaid => "mermaid",
+            Self::Chromium => "chromium",
+            Self::Ffmpeg => "ffmpeg",
             Self::Statusline => "statusline",
         }
     }
@@ -221,6 +233,8 @@ impl Check {
             Self::Config => labels.config,
             Self::Transcription => labels.transcription,
             Self::Mermaid => labels.mermaid,
+            Self::Chromium => labels.chromium,
+            Self::Ffmpeg => labels.ffmpeg,
             Self::Statusline => labels.statusline,
         }
     }
@@ -436,6 +450,8 @@ impl Checks<'_> {
             Check::Config => self.config(),
             Check::Transcription => self.transcription(),
             Check::Mermaid => self.mermaid(),
+            Check::Chromium => self.chromium(),
+            Check::Ffmpeg => self.ffmpeg(),
             Check::Statusline => self.statusline(),
         }
     }
@@ -861,6 +877,45 @@ impl Checks<'_> {
             ok(detail.found)
         } else {
             off(detail.missing)
+        }
+    }
+
+    fn visual_mode(&self) -> VisualMode {
+        read_visuals(&crate::config::read_config(&self.paths.app_dir)).mode
+    }
+
+    fn chromium(&self) -> Verdict {
+        let detail = self.messages.health_detail;
+
+        if self.visual_mode() == VisualMode::Off {
+            return off(detail.off);
+        }
+
+        let found = playwright_chromium(
+            Platform::current(),
+            self.machine.home,
+            self.machine.var,
+            &read_dir_names,
+        );
+
+        if found.is_some() {
+            ok(detail.found)
+        } else {
+            failed(detail.chromium_missing)
+        }
+    }
+
+    fn ffmpeg(&self) -> Verdict {
+        let detail = self.messages.health_detail;
+
+        if self.visual_mode() != VisualMode::Video {
+            return off(detail.off);
+        }
+
+        if (self.machine.has_command)("ffmpeg") {
+            ok(detail.found)
+        } else {
+            failed(detail.ffmpeg_missing)
         }
     }
 

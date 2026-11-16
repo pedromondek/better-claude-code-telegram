@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Number, Value};
 
-use crate::config::{DEFAULT_INBOX_RETENTION_DAYS, read_config};
+use crate::config::{DEFAULT_INBOX_RETENTION_DAYS, VisualMode, read_config};
 use crate::files::{FileFailure, create_private_dir, write_private};
 use crate::journal::{Journal, link_target};
 use crate::js::{
@@ -241,6 +241,28 @@ pub fn inbox_text(days: Option<&Value>, messages: &Messages) -> String {
         || messages.inbox_forever.to_owned(),
         |days| templated_days(messages, &js_template(days)),
     )
+}
+
+#[must_use]
+pub fn review_name(messages: &Messages, review: bool) -> &'static str {
+    let [with_review, sent_directly] = messages.visual_review_names;
+
+    if review { with_review } else { sent_directly }
+}
+
+#[must_use]
+pub fn visuals_text(messages: &Messages, mode: VisualMode, review: Option<bool>) -> String {
+    let [off, prints, video] = messages.visuals_names;
+    let name = match mode {
+        VisualMode::Off => off,
+        VisualMode::Prints => prints,
+        VisualMode::Video => video,
+    };
+
+    match review {
+        Some(review) => format!("{name} · {}", review_name(messages, review)),
+        None => name.to_owned(),
+    }
 }
 
 #[must_use]

@@ -94,6 +94,52 @@ pub fn delay_ms_for(config: &Map<String, Value>, env_delay: Option<&str>, kind: 
     })
 }
 
+pub const VISUALS_KEY: &str = "visuals";
+pub const VISUAL_REVIEW_KEY: &str = "visualReview";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VisualMode {
+    Off,
+    Prints,
+    Video,
+}
+
+impl VisualMode {
+    pub const ALL: [Self; 3] = [Self::Off, Self::Prints, Self::Video];
+
+    #[must_use]
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Prints => "prints",
+            Self::Video => "video",
+        }
+    }
+
+    #[must_use]
+    pub fn parse(key: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|mode| mode.key() == key)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Visuals {
+    pub mode: VisualMode,
+    pub review: bool,
+}
+
+#[must_use]
+pub fn read_visuals(config: &Map<String, Value>) -> Visuals {
+    Visuals {
+        mode: config
+            .get(VISUALS_KEY)
+            .and_then(Value::as_str)
+            .and_then(VisualMode::parse)
+            .unwrap_or(VisualMode::Off),
+        review: config.get(VISUAL_REVIEW_KEY) != Some(&Value::Bool(false)),
+    }
+}
+
 #[must_use]
 pub fn js_to_number(value: &Value) -> f64 {
     match value {
@@ -187,6 +233,47 @@ mod tests {
                     "{label}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn reads_the_visuals_like_the_channel() {
+        let cases: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../../plugins/telegram/extensions/__tests__/fixtures/visuals.json"
+        ))
+        .unwrap();
+
+        assert_eq!(
+            VisualMode::ALL.map(VisualMode::key),
+            ["off", "prints", "video"]
+        );
+        assert_eq!(cases.len(), 7);
+
+        for case in &cases {
+            let visuals = read_visuals(&config(case["config"].clone()));
+            let label = case["name"].to_string();
+
+            assert_eq!(
+                visuals.mode.key(),
+                case["expected"]["visuals"].as_str().unwrap(),
+                "{label}"
+            );
+            assert_eq!(
+                visuals.review,
+                case["expected"]["review"].as_bool().unwrap(),
+                "{label}"
+            );
+        }
+    }
+
+    #[test]
+    fn parses_a_visual_mode_only_by_its_key() {
+        for mode in VisualMode::ALL {
+            assert_eq!(VisualMode::parse(mode.key()), Some(mode));
+        }
+
+        for key in ["", "Prints", " video", "gif", "on"] {
+            assert_eq!(VisualMode::parse(key), None, "{key:?}");
         }
     }
 

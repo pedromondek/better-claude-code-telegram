@@ -2,13 +2,14 @@ use std::path::Path;
 
 use serde_json::{Map, Value};
 
+use crate::config::{VISUAL_REVIEW_KEY, VISUALS_KEY, VisualMode};
 use crate::journal::{Change, Journal};
 use crate::js::{js_basename, js_template, js_truthy, ordered_entries, parse_json, stringify};
 use crate::messages::Messages;
 use crate::paths::CONFIG_FILE;
 use crate::settings::{ENABLED_PLUGINS, PERMISSIONS, STATUS_LINE, deny_includes};
 use crate::setup::{StatuslineKind, read_text, statusline_kind};
-use crate::setup_files::{templated_days, templated_delay};
+use crate::setup_files::{review_name, templated_days, templated_delay, visuals_text};
 use crate::ui::{green, info, note};
 
 pub const LANGUAGE_ICON: &str = "🌐";
@@ -17,6 +18,7 @@ pub const DELAY_ICON: &str = "⏳";
 pub const QUIET_HOURS_ICON: &str = "🌙";
 pub const TRANSCRIPTION_ICON: &str = "🎤";
 pub const INBOX_ICON: &str = "📥";
+pub const VISUALS_ICON: &str = "🖼";
 pub const STATUSLINE_ICON: &str = "📊";
 pub const SECURITY_RULE_ICON: &str = "🔒";
 
@@ -42,14 +44,18 @@ enum ConfigKey {
     QuietHours,
     Transcription,
     Inbox,
+    Visuals,
+    VisualReview,
 }
 
-const CONFIG_KEYS: [(&str, ConfigKey); 5] = [
+const CONFIG_KEYS: [(&str, ConfigKey); 7] = [
     ("language", ConfigKey::Language),
     ("delayMinutes", ConfigKey::Delay),
     ("quietHours", ConfigKey::QuietHours),
     ("transcription", ConfigKey::Transcription),
     ("inboxRetentionDays", ConfigKey::Inbox),
+    (VISUALS_KEY, ConfigKey::Visuals),
+    (VISUAL_REVIEW_KEY, ConfigKey::VisualReview),
 ];
 
 #[must_use]
@@ -93,6 +99,15 @@ fn config_setting_text(key: ConfigKey, value: Option<&Value>, messages: &Message
         ConfigKey::Inbox if value.is_null() => messages.inbox_forever.to_owned(),
         ConfigKey::Inbox => templated_days(messages, &js_template(value)),
         ConfigKey::Language => js_template(value),
+        ConfigKey::Visuals => {
+            let mode = value.as_str().and_then(VisualMode::parse);
+
+            mode.map_or_else(
+                || js_template(value),
+                |mode| visuals_text(messages, mode, None),
+            )
+        }
+        ConfigKey::VisualReview => review_name(messages, value != &Value::Bool(false)).to_owned(),
     }
 }
 
@@ -286,6 +301,8 @@ fn step_title(key: ConfigKey, messages: &Messages) -> (&'static str, &'static st
         ConfigKey::QuietHours => (QUIET_HOURS_ICON, titles.quiet_hours),
         ConfigKey::Transcription => (TRANSCRIPTION_ICON, titles.transcription),
         ConfigKey::Inbox => (INBOX_ICON, titles.inbox),
+        ConfigKey::Visuals => (VISUALS_ICON, titles.visuals),
+        ConfigKey::VisualReview => (VISUALS_ICON, messages.visual_review_question),
     }
 }
 
@@ -346,4 +363,50 @@ pub fn describe_changes(
     }
 
     Ok(described.join(CHANGE_SEPARATOR))
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+    use crate::messages::{EN_US, PT_BR};
+
+    #[test]
+    fn names_the_visual_mode_in_the_language_of_the_setup() {
+        let text =
+            |value: Value, messages: &Messages| setting_text(VISUALS_KEY, Some(&value), messages);
+
+        assert_eq!(text(json!("off"), &EN_US), "off");
+        assert_eq!(text(json!("prints"), &EN_US), "screenshots only");
+        assert_eq!(text(json!("video"), &PT_BR), "prints e vídeo");
+        assert_eq!(text(json!("gif"), &EN_US), "gif");
+        assert_eq!(text(json!(3), &EN_US), "3");
+        assert_eq!(setting_text(VISUALS_KEY, None, &EN_US), EN_US.not_set);
+    }
+
+    #[test]
+    fn names_the_review_as_with_review_unless_it_is_the_boolean_false() {
+        let text = |value: Value, messages: &Messages| {
+            setting_text(VISUAL_REVIEW_KEY, Some(&value), messages)
+        };
+
+        assert_eq!(text(json!(false), &EN_US), "sent directly");
+        assert_eq!(text(json!(false), &PT_BR), "envio direto");
+        assert_eq!(text(json!(true), &EN_US), "with review");
+        assert_eq!(text(json!("false"), &EN_US), "with review");
+        assert_eq!(setting_text(VISUAL_REVIEW_KEY, None, &PT_BR), PT_BR.not_set);
+    }
+
+    #[test]
+    fn titles_the_visual_keys_with_the_icon_of_the_step_and_their_own_name() {
+        assert_eq!(
+            step_title(ConfigKey::Visuals, &EN_US),
+            (VISUALS_ICON, "Illustrations on Telegram")
+        );
+        assert_eq!(
+            step_title(ConfigKey::VisualReview, &PT_BR),
+            (VISUALS_ICON, "Revisão antes de enviar")
+        );
+    }
 }

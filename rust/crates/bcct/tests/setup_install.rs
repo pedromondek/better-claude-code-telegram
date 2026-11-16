@@ -12,13 +12,14 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 
+use bcct::config::Visuals;
 use bcct::health::Screen;
 use bcct::install::{
     Asker, ClaudeUndo, CommandsChoice, Declined, Failure, Install, Installed, Journal, Kept,
     MARKETPLACE_NAME, MERMAID_UNINSTALL_COMMAND, Machine, PLUGIN_IDS, Parsed, PluginChoice, System,
-    TRANSCRIPTION_MODELS, Tool, TranscriptionChoice, declined_report, huggingface_cache_dir,
-    installer_for, manual_uninstall_commands, parse_inbox_days, parse_transcription_model,
-    plugin_plan,
+    TRANSCRIPTION_MODELS, Tool, TranscriptionChoice, VisualsPick, declined_report,
+    huggingface_cache_dir, installer_for, manual_uninstall_commands, parse_inbox_days,
+    parse_transcription_model, plugin_plan,
 };
 use bcct::journal::ChangeKind;
 use bcct::js::format_number;
@@ -156,6 +157,15 @@ impl Asker for FakeAsker {
         }));
 
         Ok(self.next().as_f64())
+    }
+
+    fn visuals(
+        &mut self,
+        _current: Visuals,
+        _saved: bool,
+        _review_saved: bool,
+    ) -> Result<VisualsPick, String> {
+        Err("the fixture asks nothing about the visuals".to_owned())
     }
 }
 
@@ -400,6 +410,7 @@ fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
         macos: false,
         system: &system,
         run_installer: &run_installer,
+        chromium: &|| None,
     };
     let colorize = scenario["colorize"] == json!(true);
     let mut out_writer = out.clone();
@@ -537,6 +548,7 @@ fn stopped_by(
         macos: false,
         system: &system,
         run_installer: &|system: &System, command: &str| system.run_installer(command),
+        chromium: &|| None,
     };
     let mut out = Failing(needle);
     let mut err = Vec::new();

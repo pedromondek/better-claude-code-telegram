@@ -28,6 +28,7 @@ pub(super) const MESSAGES: Messages = Messages {
         quiet_hours: "Quiet hours",
         transcription: "Audio transcription",
         inbox: "Received files",
+        visuals: "Illustrations on Telegram",
         statusline: "Status line",
         path: "bcct command in the terminal",
         health: "Final check",
@@ -120,6 +121,8 @@ pub(super) const MESSAGES: Messages = Messages {
         quiet_hours: "HH:MM-HH:MM (for example 22:00-08:00) or off",
         transcription: "base, small, medium or off",
         inbox: "the days, greater than 0, or off",
+        visuals: "off, prints or video",
+        visual_review: "on or off",
         statusline: "on, after, replace, custom or off",
     },
     inbox_question: "Days to keep the photos and files received on Telegram before deleting them",
@@ -129,6 +132,33 @@ pub(super) const MESSAGES: Messages = Messages {
     inbox_custom_hint: "a whole number of days greater than 0",
     inbox_saved: |retention, file| format!("Received files:\n  • {retention}\nSaved in {file}."),
     inbox_kept: |retention| format!("Received files kept:\n  • {retention}"),
+    visuals_question: "They cost more tokens: Claude takes screenshots and records video.",
+    visuals_labels: [
+        "Off",
+        "Screenshots only (today × proposal, area in red)",
+        "Screenshots and transition video",
+    ],
+    visuals_names: ["off", "screenshots only", "screenshots and video"],
+    visual_review_question: "Review before sending",
+    visual_review_labels: [
+        "Claude checks each image before sending (more tokens)",
+        "Send directly",
+    ],
+    visual_review_names: ["with review", "sent directly"],
+    visuals_saved: |summary, file| {
+        format!("Illustrations on Telegram:\n  • {summary}\nSaved in {file}.")
+    },
+    visuals_kept: |summary| format!("Illustrations on Telegram kept:\n  • {summary}"),
+    visual_review_saved: |summary, file| {
+        format!("Review before sending:\n  • {summary}\nSaved in {file}.")
+    },
+    visual_review_kept: |summary| format!("Review before sending kept:\n  • {summary}"),
+    chromium_missing_warning: concat!(
+        "The Chromium of Playwright is missing: install it with '",
+        crate::chromium_install_command!(),
+        "'."
+    ),
+    ffmpeg_missing_warning: "ffmpeg is missing for the video: install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
     language_kept: |locale| format!("Language kept:\n  • {locale}"),
     delay_kept: |minutes| format!("Wait time kept:\n  • {}", format_delay(minutes)),
     quiet_kept: |value| format!("Quiet hours kept:\n  • {value}"),
@@ -182,6 +212,8 @@ pub(super) const MESSAGES: Messages = Messages {
         config: "Settings",
         transcription: "Transcription",
         mermaid: "Diagrams (mmdc)",
+        chromium: "Chromium (screenshots)",
+        ffmpeg: "ffmpeg (video)",
         statusline: "Status line",
         launcher: "Launcher",
         version: "Version",
@@ -235,6 +267,8 @@ pub(super) const MESSAGES: Messages = Messages {
         off: "off",
         model: |model| format!("model {model}"),
         broken: |command| format!("the Python environment does not work. Run '{command}'."),
+        chromium_missing: concat!("missing. Run '", crate::chromium_install_command!(), "'."),
+        ffmpeg_missing: "missing. Install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
         statusline: StatuslineDetail {
             ours: "Telegram indicator on",
             ours_after: "Telegram indicator after your status line",
@@ -582,6 +616,11 @@ pub(super) const MESSAGES: Messages = Messages {
             "{file} is not a valid JSON object. Fix it and run the setup again; nothing was changed."
         )
     },
+    secretary_tip: concat!(
+        "💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: ",
+        crate::repository_url!(),
+        "/blob/main/docs/secretary/secretary.md"
+    ),
     done_all: "Done. Open a new terminal and run 'claude --telegram'.",
     done_reopen: "Done. Reopen 'claude --telegram' for it to apply.",
     done_live: "Done. It applies to the next messages, nothing to reopen.",

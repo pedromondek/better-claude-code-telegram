@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use bcct::config::{VisualMode, Visuals};
 use bcct::install::{CommandsChoice, TranscriptionChoice};
 use bcct::js::{parse_json, stringify, stringify_pretty};
 use bcct::locale::Locale;
@@ -29,7 +30,7 @@ use bcct::setup::{command_on_path, shell_script};
 use bcct::setup_ask::{
     DelayPick, QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language,
     ask_our_statusline, ask_pairing_choice, ask_quiet_hours, ask_remove_models,
-    ask_statusline_choice, ask_transcription,
+    ask_statusline_choice, ask_transcription, ask_visuals,
 };
 use bcct::setup_files::StatuslineChoice;
 use bcct::setup_telegram::PairingChoice;
@@ -53,6 +54,7 @@ fn fixture() -> Value {
 }
 
 const HEALTH_COMMAND: &str = "npx @pedromondek/better-claude-code-telegram health";
+const SECRETARY_TIP: &str = "💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.md";
 
 fn without_the_shell_script(mut tree: Tree, root: &Path, name: &str) -> Tree {
     let loads = tree
@@ -881,7 +883,7 @@ fn a_bot_answer_without_data_fails_only_its_check_and_the_setup_finishes() {
             );
             assert!(
                 result.stdout.ends_with(&format!(
-                    "⚠ Some checks failed. Fix what is marked with ✘ and run '{HEALTH_COMMAND}' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n"
+                    "⚠ Some checks failed. Fix what is marked with ✘ and run '{HEALTH_COMMAND}' again.\n\n✔ Done. Open a new terminal and run 'claude --telegram'.\n{SECRETARY_TIP}\n"
                 )),
                 "{name}: {}",
                 result.stdout
@@ -1044,6 +1046,16 @@ fn asked(entry: &Value, ask: &mut FakePrompter) -> Result<Value, PromptError> {
             DelayPick::Kinds(kinds) => json!(kinds),
         },
         "inbox" => json!(ask_inbox(entry["current"].as_f64(), saved, messages, ask)?),
+        "visuals" => {
+            let current = Visuals {
+                mode: VisualMode::parse(text(entry, "current")).unwrap(),
+                review: entry["review"].as_bool().unwrap(),
+            };
+            let review_saved = entry["reviewSaved"].as_bool() == Some(true);
+            let pick = ask_visuals(current, saved, review_saved, messages, ask)?;
+
+            json!({ "mode": pick.mode.key(), "review": pick.review })
+        }
         "quiet" => {
             let current = range_of(&entry["current"]);
 

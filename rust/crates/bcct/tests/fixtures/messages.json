@@ -178,6 +178,52 @@
     "inboxKept": [
       { "args": ["alpha 1"], "out": "Received files kept:\n  • alpha 1" }
     ],
+    "stepTitles.visuals": "Illustrations on Telegram",
+    "settingHints.visuals": "off, prints or video",
+    "settingHints.visual-review": "on or off",
+    "visualsQuestion": "They cost more tokens: Claude takes screenshots and records video.",
+    "visualsLabels.0": "Off",
+    "visualsLabels.1": "Screenshots only (today × proposal, area in red)",
+    "visualsLabels.2": "Screenshots and transition video",
+    "visualsNames.0": "off",
+    "visualsNames.1": "screenshots only",
+    "visualsNames.2": "screenshots and video",
+    "visualReviewQuestion": "Review before sending",
+    "visualReviewLabels.0": "Claude checks each image before sending (more tokens)",
+    "visualReviewLabels.1": "Send directly",
+    "visualReviewNames.0": "with review",
+    "visualReviewNames.1": "sent directly",
+    "visualsSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Illustrations on Telegram:\n  • alpha 1\nSaved in beta 'two'."
+      }
+    ],
+    "visualsKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Illustrations on Telegram kept:\n  • alpha 1"
+      }
+    ],
+    "visualReviewSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Review before sending:\n  • alpha 1\nSaved in beta 'two'."
+      }
+    ],
+    "visualReviewKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Review before sending kept:\n  • alpha 1"
+      }
+    ],
+    "chromiumMissingWarning": "The Chromium of Playwright is missing: install it with 'npx playwright install chromium'.",
+    "ffmpegMissingWarning": "ffmpeg is missing for the video: install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
+    "healthLabels.chromium": "Chromium (screenshots)",
+    "healthLabels.ffmpeg": "ffmpeg (video)",
+    "healthDetail.chromiumMissing": "missing. Run 'npx playwright install chromium'.",
+    "healthDetail.ffmpegMissing": "missing. Install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
+    "secretaryTip": "💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.md",
     "languageKept": [
       { "args": ["alpha 1"], "out": "Language kept:\n  • alpha 1" }
     ],
@@ -1388,6 +1434,52 @@
         "out": "Arquivos recebidos mantidos:\n  • alpha 1"
       }
     ],
+    "stepTitles.visuals": "Ilustrações no Telegram",
+    "settingHints.visuals": "off, prints ou video",
+    "settingHints.visual-review": "on ou off",
+    "visualsQuestion": "Gastam mais tokens: o Claude tira prints e grava vídeo.",
+    "visualsLabels.0": "Desligadas",
+    "visualsLabels.1": "Só prints (hoje × proposta, área em vermelho)",
+    "visualsLabels.2": "Prints e vídeo de transição",
+    "visualsNames.0": "desligadas",
+    "visualsNames.1": "só prints",
+    "visualsNames.2": "prints e vídeo",
+    "visualReviewQuestion": "Revisão antes de enviar",
+    "visualReviewLabels.0": "Claude confere cada imagem antes de enviar (mais tokens)",
+    "visualReviewLabels.1": "Envia direto",
+    "visualReviewNames.0": "com revisão",
+    "visualReviewNames.1": "envio direto",
+    "visualsSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Ilustrações no Telegram:\n  • alpha 1\nSalvo em beta 'two'."
+      }
+    ],
+    "visualsKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Ilustrações no Telegram mantidas:\n  • alpha 1"
+      }
+    ],
+    "visualReviewSaved": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Revisão antes de enviar:\n  • alpha 1\nSalva em beta 'two'."
+      }
+    ],
+    "visualReviewKept": [
+      {
+        "args": ["alpha 1"],
+        "out": "Revisão antes de enviar mantida:\n  • alpha 1"
+      }
+    ],
+    "chromiumMissingWarning": "Falta o Chromium do Playwright: instale com 'npx playwright install chromium'.",
+    "ffmpegMissingWarning": "Falta o ffmpeg para o vídeo: instale com 'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'.",
+    "healthLabels.chromium": "Chromium (prints)",
+    "healthLabels.ffmpeg": "ffmpeg (vídeo)",
+    "healthDetail.chromiumMissing": "não encontrado. Rode 'npx playwright install chromium'.",
+    "healthDetail.ffmpegMissing": "não encontrado. Instale com 'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'.",
+    "secretaryTip": "💡 Dica: deixe uma sessão do Claude Code só para o Telegram (a secretária), ou entregue o Telegram ao seu orquestrador: https://github.com/pedromondek/better-claude-code-telegram/blob/main/docs/secretary/secretary.pt-br.md",
     "languageKept": [
       { "args": ["alpha 1"], "out": "Idioma mantido:\n  • alpha 1" }
     ],

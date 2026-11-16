@@ -27,6 +27,7 @@ const SKILL_SUBCOMMANDS = {
   statusline: "setup",
   transcription: "setup",
   update: "update",
+  visuals: "setup",
 };
 
 function skills() {
@@ -59,6 +60,7 @@ describe("bcct skills", () => {
         "transcription",
         "uninstall",
         "update",
+        "visuals",
       ].toSorted(),
     );
   });
@@ -230,6 +232,24 @@ describe("bcct skills", () => {
       '`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set delays <questions>/<permissions>/<waiting>`',
     );
     expect(delay?.text).toContain("0 means right away");
+  });
+
+  it("asks the illustrations and the review, saying they cost tokens, and saves both through --set", () => {
+    const visuals = skills().find(({ name }) => name === "visuals");
+
+    expect(visuals?.frontmatter).toContain(
+      'argument-hint: "[off | prints | video] [review | direct]"',
+    );
+    expect(visuals?.text).toContain("saying that they cost more tokens");
+    expect(visuals?.text).toContain(
+      '`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set visuals <off|prints|video>`',
+    );
+    expect(visuals?.text).toContain(
+      '`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set visual-review <on|off>`',
+    );
+    expect(visuals?.text).toContain(
+      "(`/mcp reconnect plugin:telegram:telegram` in that session)",
+    );
   });
 
   it("switches the language of the Telegram replies in the session without a reconnect", () => {
