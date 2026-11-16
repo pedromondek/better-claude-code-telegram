@@ -46,9 +46,11 @@ export function telegramSegment(env = process.env, now = Date.now()) {
     now - timeOf(readJsonFile(join(appDir, LAUNCH_FILE)), "launchedAt") <
     TELEGRAM_LAUNCH_GRACE_MS;
 
-  return launching
-    ? `${YELLOW}${messages.statusConnecting(role)}${RESET}`
-    : `${RED}${messages.statusDown(role)}${RESET}`;
+  if (launching) return `${YELLOW}${messages.statusConnecting(role)}${RESET}`;
+
+  return fresh
+    ? `${RED}${messages.statusDown(role)}${RESET}`
+    : `${RED}${messages.statusDownHere(role)}${RESET}`;
 }
 
 export function joinStatusline(previousOutput, segment) {

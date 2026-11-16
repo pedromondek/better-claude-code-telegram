@@ -27,6 +27,7 @@ import {
 
 const HEALTH = join(import.meta.dirname, "..", "health.mjs");
 const EN = MESSAGES["en-us"];
+const PT = MESSAGES["pt-br"];
 const NOW = 1_000_000;
 
 let workDir;
@@ -330,6 +331,43 @@ describe("runHealth", () => {
     expect(results.transcription.status).toBe("off");
     expect(results.mermaid.status).toBe("off");
     expect(results.statusline.status).toBe("off");
+  });
+
+  it("fails inside 'claude --telegram' when the channel server is down, naming the reconnect command", async () => {
+    writeHealthyMachine();
+    rmSync(join(appDir, "health.json"));
+
+    const inside = byCheck(
+      await runHealth(
+        ["telegram"],
+        EN,
+        healthyDeps({ telegramInstance: true }),
+      ),
+    );
+    const outside = byCheck(await runHealth(["telegram"], EN, healthyDeps()));
+
+    expect(inside.polling).toMatchObject({
+      status: "fail",
+      detail:
+        "the channel server is not running in this instance; type /mcp reconnect all",
+    });
+    expect(outside.polling.status).toBe("off");
+    expect(PT.healthDetail.downHere).toBe(
+      "o servidor do canal não está rodando nesta instância; digite /mcp reconnect all",
+    );
+  });
+
+  it("reads from BETTER_CC_TELEGRAM whether it runs inside 'claude --telegram'", async () => {
+    writeHealthyMachine();
+    rmSync(join(appDir, "health.json"));
+    vi.stubEnv("BETTER_CC_TELEGRAM", "1");
+
+    const { telegramInstance, ...deps } = healthyDeps();
+
+    expect(telegramInstance).toBeUndefined();
+    expect(
+      byCheck(await runHealth(["telegram"], EN, deps)).polling.status,
+    ).toBe("fail");
   });
 
   it("says the connection is coming up right after 'claude --telegram' opens, without failing, and down once the grace is over", async () => {

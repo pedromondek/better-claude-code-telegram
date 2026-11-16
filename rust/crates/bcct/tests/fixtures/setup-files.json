@@ -1113,8 +1113,8 @@
     {
       "key": "delayMinutes",
       "value": { "value": 0 },
-      "en": "0 min",
-      "pt": "0 min"
+      "en": "right away",
+      "pt": "na hora"
     },
     {
       "key": "delayMinutes",
@@ -1125,8 +1125,8 @@
     {
       "key": "delayMinutes",
       "value": { "value": 1.5 },
-      "en": "1.5 min",
-      "pt": "1.5 min"
+      "en": "1 min 30 s",
+      "pt": "1 min 30 s"
     },
     {
       "key": "delayMinutes",
@@ -1143,8 +1143,8 @@
     {
       "key": "delayMinutes",
       "value": { "value": 0.000001 },
-      "en": "0.000001 min",
-      "pt": "0.000001 min"
+      "en": "0 s",
+      "pt": "0 s"
     },
     {
       "key": "delayMinutes",
@@ -10459,7 +10459,7 @@
       ],
       "originals": [],
       "described": {
-        "value": "alterou {root}/app/better-cc-telegram.json\n    – \u001b[34m🌐 Language / Idioma\u001b[39m: \u001b[2mnão definido\u001b[22m → \u001b[32mpt-br\u001b[39m\n    – \u001b[34m⏳ Tempo de espera\u001b[39m: \u001b[2mnão definido\u001b[22m → \u001b[32m1.5 min\u001b[39m\n    – \u001b[34m🎤 Transcrição de áudio\u001b[39m: \u001b[2mbase\u001b[22m → \u001b[32mnão definido\u001b[39m\n    – \u001b[34m📥 Arquivos recebidos\u001b[39m: \u001b[2mapagados depois de 7 dia(s)\u001b[22m → \u001b[32mmantidos para sempre\u001b[39m\n  • criou {root}/claude/settings.json\n    – \u001b[34m📊 statusline\u001b[39m: \u001b[2msem statusline\u001b[22m → \u001b[32moutra statusline, sem o indicador\u001b[39m"
+        "value": "alterou {root}/app/better-cc-telegram.json\n    – \u001b[34m🌐 Language / Idioma\u001b[39m: \u001b[2mnão definido\u001b[22m → \u001b[32mpt-br\u001b[39m\n    – \u001b[34m⏳ Tempo de espera\u001b[39m: \u001b[2mnão definido\u001b[22m → \u001b[32m1 min 30 s\u001b[39m\n    – \u001b[34m🎤 Transcrição de áudio\u001b[39m: \u001b[2mbase\u001b[22m → \u001b[32mnão definido\u001b[39m\n    – \u001b[34m📥 Arquivos recebidos\u001b[39m: \u001b[2mapagados depois de 7 dia(s)\u001b[22m → \u001b[32mmantidos para sempre\u001b[39m\n  • criou {root}/claude/settings.json\n    – \u001b[34m📊 statusline\u001b[39m: \u001b[2msem statusline\u001b[22m → \u001b[32moutra statusline, sem o indicador\u001b[39m"
       },
       "events": [
         "start {root}/claude/settings.json",

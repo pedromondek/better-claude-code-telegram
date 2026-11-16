@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MESSAGES, messagesFor } from "../lib/messages.mjs";
+
+const ARGUMENTS_NOT_TEXT = new Set(["yesNoHint", "delayKept"]);
 import { NPM_PACKAGE, SETUP_COMMAND } from "../lib/package.constants.mjs";
 import {
   CONFIG_FILE,
@@ -110,7 +112,8 @@ describe("MESSAGES parity", () => {
     (locale) => {
       const ignoring = flatten(MESSAGES[locale])
         .filter(
-          ([key, value]) => typeof value === "function" && key !== "yesNoHint",
+          ([key, value]) =>
+            typeof value === "function" && !ARGUMENTS_NOT_TEXT.has(key),
         )
         .filter(([, value]) => {
           const args = sampleArgs(value.length);
@@ -309,5 +312,17 @@ describe("readLocale", () => {
     writeConfigFile("{not json");
 
     expect(readLocale(workDir)).toBe("en-us");
+  });
+});
+
+describe("delay in the setup messages", () => {
+  it("shows a delay that is not a whole number of minutes in seconds, as the channel does", () => {
+    expect(MESSAGES["en-us"].delayKept(0.1)).toBe("Wait time kept:\n  • 6 s");
+    expect(MESSAGES["pt-br"].delaySaved(1.5, "c.json")).toBe(
+      "Espera de 90 s salva em c.json.",
+    );
+    expect(MESSAGES["en-us"].delaySaved(4, "c.json")).toBe(
+      "Delay of 4 min saved in c.json.",
+    );
   });
 });

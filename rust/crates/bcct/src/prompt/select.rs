@@ -93,6 +93,7 @@ pub enum SelectKey {
     Moved,
     Confirmed(usize),
     Cancelled,
+    Back,
 }
 
 #[derive(Debug)]
@@ -177,9 +178,10 @@ impl<'a> Select<'a> {
         let moved = match key.code {
             KeyCode::Up | KeyCode::Char('k' | 'K') => self.step(false),
             KeyCode::Down | KeyCode::Char('j' | 'J') => self.step(true),
-            KeyCode::Enter if self.current < self.choices.len() => {
+            KeyCode::Enter | KeyCode::Right if self.current < self.choices.len() => {
                 return SelectKey::Confirmed(self.current);
             }
+            KeyCode::Esc | KeyCode::Left => return SelectKey::Back,
             _ => false,
         };
 

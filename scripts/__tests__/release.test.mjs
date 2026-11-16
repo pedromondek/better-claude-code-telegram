@@ -25,7 +25,12 @@ function asksDir() {
 
 function writeAsk(
   id,
-  { sessionId = "s1", dueAt = NOW + 60_000, instance = "api" } = {},
+  {
+    sessionId = "s1",
+    dueAt = NOW + 60_000,
+    instance = "api",
+    released = undefined,
+  } = {},
 ) {
   mkdirSync(asksDir(), { recursive: true });
   writeFileSync(
@@ -38,12 +43,17 @@ function writeAsk(
       instance,
       context: null,
       questions: [{ question: "Qual banco?", header: "Banco", options: [] }],
+      ...(released === undefined ? {} : { released }),
     }),
   );
 }
 
+function readRecord(id) {
+  return JSON.parse(readFileSync(join(asksDir(), `${id}.json`), "utf8"));
+}
+
 function readDueAt(id) {
-  return JSON.parse(readFileSync(join(asksDir(), `${id}.json`), "utf8")).dueAt;
+  return readRecord(id).dueAt;
 }
 
 function runRelease(args = [], language = null) {
@@ -79,13 +89,23 @@ afterEach(() => {
 });
 
 describe("releasePendingAsks", () => {
-  it("moves the dueAt of a pending question to now and returns it", () => {
+  it("moves the dueAt of a pending question to now, marks it released and returns it", () => {
     writeAsk("s1-1");
 
     const released = releasePendingAsks(appDir, "", NOW);
 
     expect(released.map((ask) => ask.id)).toEqual(["s1-1"]);
     expect(readDueAt("s1-1")).toBe(NOW);
+    expect(readRecord("s1-1").released).toBe(true);
+  });
+
+  it("releases a due question held by quiet hours so the mirror sends it anyway", () => {
+    writeAsk("held-1", { dueAt: NOW - 1 });
+
+    const released = releasePendingAsks(appDir, "", NOW);
+
+    expect(released.map((ask) => ask.id)).toEqual(["held-1"]);
+    expect(readRecord("held-1")).toMatchObject({ dueAt: NOW, released: true });
   });
 
   it("keeps the file readable only by the user", () => {
@@ -106,8 +126,8 @@ describe("releasePendingAsks", () => {
     expect(readDueAt("xyz-1")).toBe(NOW + 60_000);
   });
 
-  it("skips a question that is already due, already sent, closed or answered", () => {
-    writeAsk("due-1", { dueAt: NOW - 1 });
+  it("skips a question that is already released, already sent, closed or answered", () => {
+    writeAsk("released-1", { dueAt: NOW - 1, released: true });
     writeAsk("sent-1");
     writeFileSync(join(asksDir(), "sent-1.telegram.json"), "{}");
     writeAsk("closed-1");

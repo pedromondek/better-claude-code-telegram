@@ -217,8 +217,10 @@ function telegramChecks(messages, deps) {
 
       if (launching) return { status: "off", detail: detail.connecting };
 
-      return fresh
-        ? { status: "fail", detail: detail.down }
+      if (fresh) return { status: "fail", detail: detail.down };
+
+      return deps.telegramInstance
+        ? { status: "fail", detail: detail.downHere }
         : { status: "off", detail: detail.notOpen };
     },
   };
@@ -324,6 +326,7 @@ export async function runHealth(
     describeAccounts = (token, userIds) =>
       pairedAccounts(userIds, token, messages),
     uid = process.getuid?.(),
+    telegramInstance = process.env.BETTER_CC_TELEGRAM === "1",
     now = Date.now(),
     onGroup = () => {},
     onStart = () => {},
@@ -332,6 +335,7 @@ export async function runHealth(
 ) {
   const deps = {
     uid,
+    telegramInstance,
     stateDir,
     appDir,
     home: home ?? process.env.HOME,

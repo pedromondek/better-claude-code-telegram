@@ -203,8 +203,37 @@ fn context(env: &Value, root: &Path) -> Context {
     Context::resolve(&|name| variables.get(name).cloned(), &root.join("home"))
 }
 
+struct Handled {
+    threw: bool,
+    returned: Value,
+    files: Tree,
+}
+
+fn handled(scenario: &Value, now: u64, alive: f64) -> Handled {
+    let root = tempfile::tempdir().unwrap();
+    let hidden = materialize(root.path(), scenario["files"].as_object().unwrap());
+    let ctx = context(&scenario["env"], root.path());
+    let input = read_input(&mut substitute(text(scenario, "stdin"), root.path()).as_bytes());
+    let result = Mode::parse(text(scenario, "mode")).map_or(Ok(None), |mode| {
+        handle_event(mode, &input, &ctx, now, &|pid| {
+            pid.to_bits() == alive.to_bits()
+        })
+    });
+    let returned = match &result {
+        Err(_) => Value::Null,
+        Ok(Some(ask)) => Value::String(stringify(&ask.record)),
+        Ok(None) => Value::String("null".to_owned()),
+    };
+
+    Handled {
+        threw: result.is_err(),
+        returned,
+        files: snapshot(root.path(), &hidden),
+    }
+}
+
 #[test]
-fn every_scenario_leaves_the_same_files_and_returns_the_same_record_as_the_javascript_hook() {
+fn leaves_the_files_and_returns_the_record_the_fixture_recorded() {
     let fixture = fixture();
     let now = fixture["now"].as_u64().unwrap();
     let alive = fixture["alivePid"].as_f64().unwrap();
@@ -215,31 +244,82 @@ fn every_scenario_leaves_the_same_files_and_returns_the_same_record_as_the_javas
 
     for scenario in scenarios {
         let name = text(scenario, "name");
-        let root = tempfile::tempdir().unwrap();
-        let hidden = materialize(root.path(), scenario["files"].as_object().unwrap());
-        let ctx = context(&scenario["env"], root.path());
-        let input = read_input(&mut substitute(text(scenario, "stdin"), root.path()).as_bytes());
-        let result = Mode::parse(text(scenario, "mode")).map_or(Ok(None), |mode| {
-            handle_event(mode, &input, &ctx, now, &|pid| {
-                pid.to_bits() == alive.to_bits()
-            })
-        });
+        let outcome = handled(scenario, now, alive);
 
-        let threw = scenario["threw"].as_bool().unwrap();
-        let returned = match &result {
-            Err(_) => Value::Null,
-            Ok(Some(ask)) => Value::String(stringify(&ask.record)),
-            Ok(None) => Value::String("null".to_owned()),
-        };
-
-        assert_eq!(result.is_err(), threw, "{name}: threw");
-        assert_eq!(returned, scenario["returned"], "{name}: returned");
         assert_eq!(
-            snapshot(root.path(), &hidden),
+            outcome.threw,
+            scenario["threw"].as_bool().unwrap(),
+            "{name}: threw"
+        );
+        assert_eq!(outcome.returned, scenario["returned"], "{name}: returned");
+        assert_eq!(
+            outcome.files,
             expected_tree(&scenario["after"], &scenario["written"], &default_mode),
             "{name}: files"
         );
     }
+}
+
+fn blessing() -> bool {
+    std::env::var_os("BCCT_BLESS").is_some_and(|flag| flag == "1")
+}
+
+#[test]
+fn blessing_rewrites_the_hook_fixture_from_the_binary() {
+    if !blessing() {
+        return;
+    }
+
+    let mut fixture = fixture();
+    let now = fixture["now"].as_u64().unwrap();
+    let alive = fixture["alivePid"].as_f64().unwrap();
+    let default_mode = default_file_mode();
+
+    for scenario in fixture["scenarios"].as_array_mut().unwrap() {
+        let outcome = handled(scenario, now, alive);
+
+        scenario["threw"] = Value::Bool(outcome.threw);
+        scenario["returned"] = outcome.returned;
+
+        if outcome.files != expected_tree(&scenario["after"], &scenario["written"], &default_mode) {
+            scenario["written"] = Value::Array(Vec::new());
+            scenario["after"] = outcome
+                .files
+                .iter()
+                .map(|(path, (content, mode))| {
+                    let mut entry = Map::new();
+
+                    if let Some(content) = content {
+                        entry.insert("content".to_owned(), Value::String(content.clone()));
+                    }
+
+                    entry.insert("mode".to_owned(), Value::String(mode.clone()));
+                    (path.clone(), Value::Object(entry))
+                })
+                .collect::<Map<String, Value>>()
+                .into();
+        }
+    }
+
+    for entry in fixture["delays"].as_array_mut().unwrap() {
+        let config = match serde_json::from_str::<Value>(text(entry, "config")) {
+            Ok(Value::Object(map)) => map,
+            _ => Map::new(),
+        };
+        let computed = delay_ms(&config, entry["env"].as_str());
+
+        if computed.to_bits() != js_number(text(entry, "out")).to_bits() {
+            entry["out"] = Value::String(stringify(&serde_json::json!(computed)));
+        }
+    }
+
+    fs::write(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/hook.json"),
+        stringify(&fixture)
+            .replace('\u{2028}', "\\u2028")
+            .replace('\u{2029}', "\\u2029"),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -284,7 +364,7 @@ fn the_bot_gate_asks_about_the_same_pids_and_answers_like_telegram_active() {
 }
 
 #[test]
-fn the_delay_is_computed_like_delay_ms() {
+fn computes_each_delay_the_fixture_recorded() {
     let fixture = fixture();
 
     for entry in list(&fixture, "delays") {

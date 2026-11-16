@@ -18,6 +18,7 @@ const GREEN = "\u001B[32m";
 const RED = "\u001B[31m";
 const YELLOW = "\u001B[33m";
 const RESET = "\u001B[0m";
+const MAIN_DOWN_HERE = "📱 (Main) Telegram down · type /mcp reconnect all";
 
 let appDir;
 let homeDir;
@@ -86,10 +87,10 @@ afterEach(() => {
 describe("telegramSegment in pt-br", () => {
   const language = "pt-br";
 
-  it("returns null for the secondary and Telegram fora for the main without health.json", () => {
+  it("returns null for the secondary and the Telegram fora notice for the main, without health.json", () => {
     expect(plainSegment({ main: false, language })).toBeNull();
     expect(plainSegment({ main: true, language })).toBe(
-      "📱 (Principal) Telegram fora",
+      "📱 (Principal) Telegram fora · digite /mcp reconnect all",
     );
   });
 
@@ -119,11 +120,9 @@ describe("telegramSegment in pt-br", () => {
 describe("telegramSegment in en-us", () => {
   const language = "en-us";
 
-  it("returns null for the secondary and down for the main without health.json", () => {
+  it("returns null for the secondary and the down notice for the main, without health.json", () => {
     expect(plainSegment({ main: false, language })).toBeNull();
-    expect(plainSegment({ main: true, language })).toBe(
-      "📱 (Main) Telegram down",
-    );
+    expect(plainSegment({ main: true, language })).toBe(MAIN_DOWN_HERE);
   });
 
   it("shows connected on both when the bot polls and the health is fresh", () => {
@@ -172,7 +171,7 @@ describe("telegramSegment health states", () => {
     writeHealth({ polling: true, checkedAt: NOW - TELEGRAM_HEALTH_TTL_MS - 1 });
 
     expect(plainSegment({ main: false })).toBeNull();
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
   });
 
   it("treats a health exactly at the TTL as stale", () => {
@@ -194,28 +193,28 @@ describe("telegramSegment health states", () => {
 
   it("returns null for the secondary and down for the main when health.json is absent", () => {
     expect(plainSegment({ main: false })).toBeNull();
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
   });
 
   it("treats an invalid health.json as absent", () => {
     writeFileSync(join(appDir, "health.json"), "{not json");
 
     expect(plainSegment({ main: false })).toBeNull();
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
   });
 
   it("treats a non-object health.json as absent", () => {
     writeFileSync(join(appDir, "health.json"), "42");
 
     expect(plainSegment({ main: false })).toBeNull();
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
   });
 
   it("treats a health without checkedAt as stale", () => {
     writeHealth({ polling: true });
 
     expect(plainSegment({ main: false })).toBeNull();
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
   });
 
   it("shows down on both when polling is false even with a fresh health", () => {
@@ -270,11 +269,11 @@ describe("telegramSegment health states", () => {
   it("ignores a launch file without a valid time", () => {
     writeFileSync(join(appDir, "launch.json"), "{not json");
 
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
 
     writeFileSync(join(appDir, "launch.json"), JSON.stringify({}));
 
-    expect(plainSegment({ main: true })).toBe("📱 (Main) Telegram down");
+    expect(plainSegment({ main: true })).toBe(MAIN_DOWN_HERE);
   });
 
   it("wraps connecting in yellow", () => {
@@ -352,28 +351,26 @@ describe("statusline.mjs --after-previous", () => {
   it("runs the previous status line with the same input and adds ours at the end of its last line", () => {
     expect(
       runAfterPrevious({ type: "command", command: "cat; printf ' | mine'" }),
-    ).toBe('{"model":"x"} | mine │ 📱 (Main) Telegram down');
+    ).toBe(`{"model":"x"} | mine │ ${MAIN_DOWN_HERE}`);
   });
 
   it("keeps every row of the previous status line and adds ours to the last one", () => {
     expect(
       runAfterPrevious({ type: "command", command: "printf 'one\\ntwo\\n'" }),
-    ).toBe("one\ntwo │ 📱 (Main) Telegram down");
+    ).toBe(`one\ntwo │ ${MAIN_DOWN_HERE}`);
   });
 
   it("shows only ours when the previous status line is gone or prints nothing", () => {
-    expect(runAfterPrevious(null)).toBe("📱 (Main) Telegram down");
+    expect(runAfterPrevious(null)).toBe(MAIN_DOWN_HERE);
     expect(runAfterPrevious({ type: "command", command: "exit 3" })).toBe(
-      "📱 (Main) Telegram down",
+      MAIN_DOWN_HERE,
     );
   });
 });
 
 describe("statusline.mjs as a process", () => {
   it("prints the segment for the main instance without health.json", () => {
-    expect(runScript({ main: true, language: "en-us" })).toBe(
-      "📱 (Main) Telegram down",
-    );
+    expect(runScript({ main: true, language: "en-us" })).toBe(MAIN_DOWN_HERE);
   });
 
   it("prints nothing for the secondary instance without health.json", () => {

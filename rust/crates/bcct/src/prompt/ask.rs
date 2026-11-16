@@ -189,13 +189,42 @@ fn value_at<T: Clone>(choices: &[ChoiceItem<T>], index: usize) -> Answer<T> {
         .ok_or_else(no_value)
 }
 
+pub fn with_back<T>(
+    ask: &mut dyn Prompter,
+    step: impl FnOnce(&mut dyn Prompter) -> Answer<T>,
+) -> Answer<T> {
+    let before = ask.back();
+
+    ask.set_back(true);
+
+    let answer = step(ask);
+
+    ask.set_back(before);
+    answer
+}
+
+#[must_use]
+pub fn back_prompt(prompt: &str, hint: &str) -> String {
+    let body = prompt.trim_end();
+
+    body.strip_suffix(':').map_or_else(
+        || format!("{body} ({hint}) "),
+        |label| format!("{label} · {hint}{}", &prompt[label.len()..]),
+    )
+}
+
 fn typed_answer(
     ask: &mut dyn Prompter,
     prompt: &str,
     messages: &'static Messages,
 ) -> Answer<String> {
     let colorize = ask.colors().out;
-    let typed = ask.line(&question(prompt, colorize), messages)?;
+    let prompt = if ask.back() {
+        back_prompt(prompt, messages.back_hint)
+    } else {
+        prompt.to_owned()
+    };
+    let typed = ask.line(&question(&prompt, colorize), messages)?;
 
     Ok(js_trim(&typed).to_owned())
 }
@@ -259,8 +288,19 @@ pub fn ask_validated<T>(
     }
 }
 
+pub type Then<'a, T> = dyn FnMut(T, &mut dyn Prompter) -> Answer<T> + 'a;
+
 pub fn ask_choice<T: Clone>(
     spec: ChoiceQuestion<'_, T>,
+    messages: &'static Messages,
+    ask: &mut dyn Prompter,
+) -> Answer<T> {
+    ask_choice_then(spec, None, messages, ask)
+}
+
+pub fn ask_choice_then<T: Clone>(
+    spec: ChoiceQuestion<'_, T>,
+    mut then: Option<&mut Then<'_, T>>,
     messages: &'static Messages,
     ask: &mut dyn Prompter,
 ) -> Answer<T> {
@@ -279,13 +319,39 @@ pub fn ask_choice<T: Clone>(
             options.push(Choice::new(&other.label));
         }
 
+        let back_at = ask.back().then(|| {
+            options.push(Choice::new(messages.back_label));
+            options.len() - 1
+        });
         let shown = question(&title, ask.colors().out);
-        let picked = ask.select(&shown, &options, index, messages)?;
+        let mut index = index;
 
-        return match other.as_mut() {
-            Some(other) if picked == choices.len() => (other.ask_on_terminal)(ask),
-            _ => value_at(&choices, picked),
-        };
+        loop {
+            let picked = ask.select(&shown, &options, index, messages)?;
+
+            if back_at == Some(picked) {
+                return Err(PromptError::Back);
+            }
+
+            let answer = match other.as_mut() {
+                Some(other) if picked == choices.len() => {
+                    with_back(ask, |terminal| (other.ask_on_terminal)(terminal))
+                }
+                _ => {
+                    let value = value_at(&choices, picked)?;
+
+                    match then.as_mut() {
+                        Some(then) => with_back(ask, |terminal| then(value, terminal)),
+                        None => Ok(value),
+                    }
+                }
+            };
+
+            match answer {
+                Err(PromptError::Back) => index = picked,
+                answer => return answer,
+            }
+        }
     }
 
     let answers = choices
@@ -304,12 +370,19 @@ pub fn ask_choice<T: Clone>(
     loop {
         let typed = typed_answer(ask, &prompt, messages)?.to_lowercase();
 
-        if typed.is_empty() {
-            return value_at(&choices, index);
-        }
+        let found = if typed.is_empty() {
+            choices.get(index)
+        } else {
+            choices.iter().find(|choice| choice.answers_to(&typed))
+        };
 
-        if let Some(found) = choices.iter().find(|choice| choice.answers_to(&typed)) {
-            return found.value().cloned().ok_or_else(no_value);
+        if let Some(found) = found {
+            let value = found.value().cloned().ok_or_else(no_value)?;
+
+            return match then.as_mut() {
+                Some(then) => then(value, ask),
+                None => Ok(value),
+            };
         }
 
         if let Some(value) = other.as_ref().and_then(|other| (other.parse)(&typed)) {
@@ -320,10 +393,46 @@ pub fn ask_choice<T: Clone>(
     }
 }
 
+pub type OwnItem<'a, T> = dyn Fn(&[ChoiceItem<T>], T) -> Option<(usize, ChoiceItem<T>)> + 'a;
+
+pub struct Own<'a, T> {
+    pub same: &'a dyn Fn(&T, &T) -> bool,
+    pub item: &'a OwnItem<'a, T>,
+}
+
+impl<T> std::fmt::Debug for Own<'_, T> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.debug_struct("Own").finish_non_exhaustive()
+    }
+}
+
 fn same_value_zero(left: f64, right: f64) -> bool {
     left.partial_cmp(&right)
         .is_some_and(std::cmp::Ordering::is_eq)
         || (left.is_nan() && right.is_nan())
+}
+
+#[must_use]
+pub fn with_own<T>(
+    mut choices: Vec<ChoiceItem<T>>,
+    current: T,
+    own: &Own<'_, T>,
+) -> Vec<ChoiceItem<T>> {
+    if choices
+        .iter()
+        .filter_map(ChoiceItem::value)
+        .any(|value| (own.same)(value, &current))
+    {
+        return choices;
+    }
+
+    let Own { item: build, .. } = own;
+
+    if let Some((position, item)) = build(&choices, current) {
+        choices.insert(position, item);
+    }
+
+    choices
 }
 
 #[must_use]
@@ -332,21 +441,30 @@ pub fn number_choices(
     current: Option<f64>,
     label: &dyn Fn(f64) -> String,
 ) -> Vec<ChoiceItem<f64>> {
-    let mut values = presets.to_vec();
+    let pick = |value: f64| ChoiceItem::pick(&label(value), &format_number(value), value);
+    let choices = presets.iter().map(|value| pick(*value)).collect();
+    let Some(current) = current else {
+        return choices;
+    };
 
-    if let Some(current) = current
-        && !presets
-            .iter()
-            .any(|preset| same_value_zero(*preset, current))
-    {
-        values.push(current);
-        values.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
+    let mut choices = with_own(
+        choices,
+        current,
+        &Own {
+            same: &|left, right| same_value_zero(*left, *right),
+            item: &|choices, value| Some((choices.len(), pick(value))),
+        },
+    );
+
+    if choices.len() > presets.len() {
+        choices.sort_by(|left, right| {
+            left.value()
+                .partial_cmp(&right.value())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
-    values
-        .into_iter()
-        .map(|value| ChoiceItem::pick(&label(value), &format_number(value), value))
-        .collect()
+    choices
 }
 
 #[must_use]
@@ -383,4 +501,287 @@ pub fn marked<T>(
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod then_tests {
+    use super::*;
+    use crate::locale::Locale;
+    use crate::messages::messages_for;
+    use crate::prompt::{FakeCall, FakePrompter, Reply};
+
+    fn messages() -> &'static Messages {
+        messages_for(Locale::EnUs)
+    }
+
+    fn letters() -> Vec<ChoiceItem<char>> {
+        vec![
+            ChoiceItem::pick("a", "a", 'a'),
+            ChoiceItem::pick("b", "b", 'b'),
+        ]
+    }
+
+    fn question_of(
+        choices: Vec<ChoiceItem<char>>,
+        index: usize,
+        other: Option<Other<'_, char>>,
+    ) -> ChoiceQuestion<'_, char> {
+        ChoiceQuestion {
+            title: "Pick".to_owned(),
+            choices,
+            index,
+            other,
+            default_hint: None,
+        }
+    }
+
+    fn parse_z(text: &str) -> Option<char> {
+        (text == "z").then_some('z')
+    }
+
+    fn typed_z(ask: &mut dyn Prompter) -> Answer<char> {
+        let text = ask.line("Letter: ", messages())?;
+
+        Ok(text.chars().next().unwrap_or('z'))
+    }
+
+    fn other_with<'a>(
+        parse: &'a dyn Fn(&str) -> Option<char>,
+        ask_on_terminal: &'a mut dyn FnMut(&mut dyn Prompter) -> Answer<char>,
+    ) -> Other<'a, char> {
+        Other {
+            label: "Other".to_owned(),
+            answer: "z".to_owned(),
+            parse,
+            ask_on_terminal,
+        }
+    }
+
+    fn labels(ask: &FakePrompter) -> Vec<&str> {
+        ask.calls()
+            .iter()
+            .filter_map(FakeCall::select)
+            .flat_map(|(choices, _)| choices.iter().map(|choice| choice.label.as_str()))
+            .collect()
+    }
+
+    #[test]
+    fn asks_on_the_terminal_when_the_other_option_is_picked() {
+        let mut typed = typed_z;
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(2)]);
+        let other = other_with(&parse_z, &mut typed);
+
+        let answer = ask_choice_then(
+            question_of(letters(), 0, Some(other)),
+            None,
+            messages(),
+            &mut ask,
+        );
+
+        assert_eq!(answer.unwrap(), 'z');
+        assert_eq!(labels(&ask), ["a", "b", "Other"]);
+    }
+
+    #[test]
+    fn returns_the_value_of_the_picked_choice() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(1)]);
+
+        let answer = ask_choice_then(question_of(letters(), 0, None), None, messages(), &mut ask);
+
+        assert_eq!(answer.unwrap(), 'b');
+        assert_eq!(labels(&ask), ["a", "b"]);
+    }
+
+    #[test]
+    fn goes_back_when_the_back_option_is_picked() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(2)]);
+
+        ask.set_back(true);
+
+        let answer = ask_choice_then(question_of(letters(), 0, None), None, messages(), &mut ask);
+
+        assert!(matches!(answer, Err(PromptError::Back)));
+        assert_eq!(labels(&ask), ["a", "b", messages().back_label]);
+    }
+
+    #[test]
+    fn asks_the_choice_again_at_the_option_when_the_step_goes_back() {
+        let mut seen = Vec::new();
+        let mut step = |value: char, _: &mut dyn Prompter| {
+            seen.push(value);
+
+            if seen.len() == 1 {
+                Err(PromptError::Back)
+            } else {
+                Ok(value.to_ascii_uppercase())
+            }
+        };
+        let mut ask =
+            FakePrompter::new(true).with_replies([Reply::Choose(1), Reply::Choose(1), Reply::End]);
+
+        let answer = ask_choice_then(
+            question_of(letters(), 0, None),
+            Some(&mut step),
+            messages(),
+            &mut ask,
+        );
+        let indexes: Vec<usize> = ask
+            .calls()
+            .iter()
+            .filter_map(FakeCall::select)
+            .map(|(_, index)| index)
+            .collect();
+
+        assert_eq!(answer.unwrap(), 'B');
+        assert_eq!(seen, ['b', 'b']);
+        assert_eq!(indexes, [0, 1]);
+    }
+
+    #[test]
+    fn fails_when_the_picked_choice_holds_no_value() {
+        let choices = vec![ChoiceItem::heading("h"), ChoiceItem::pick("a", "a", 'a')];
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(0)]);
+
+        let answer = ask_choice_then(question_of(choices, 1, None), None, messages(), &mut ask);
+
+        assert!(
+            matches!(answer, Err(PromptError::Io(error)) if error.kind() == io::ErrorKind::InvalidInput)
+        );
+    }
+
+    #[test]
+    fn runs_the_step_on_the_typed_answer() {
+        let mut step = |value: char, _: &mut dyn Prompter| Ok(value.to_ascii_uppercase());
+        let mut ask = FakePrompter::new(false).with_replies([Reply::Text("b".to_owned())]);
+
+        let answer = ask_choice_then(
+            question_of(letters(), 0, None),
+            Some(&mut step),
+            messages(),
+            &mut ask,
+        );
+        let prompt = ask
+            .calls()
+            .iter()
+            .find_map(FakeCall::line)
+            .unwrap()
+            .to_owned();
+
+        assert_eq!(answer.unwrap(), 'B');
+        assert!(prompt.contains("(a, b)"), "{prompt}");
+    }
+
+    #[test]
+    fn takes_the_default_choice_when_nothing_is_typed() {
+        let mut ask = FakePrompter::new(false).with_replies([Reply::Text(String::new())]);
+
+        let answer = ask_choice_then(question_of(letters(), 1, None), None, messages(), &mut ask);
+
+        assert_eq!(answer.unwrap(), 'b');
+    }
+
+    #[test]
+    fn fails_when_the_default_choice_holds_no_value() {
+        let choices = vec![ChoiceItem::heading("h"), ChoiceItem::pick("a", "a", 'a')];
+        let mut ask = FakePrompter::new(false).with_replies([Reply::Text(String::new())]);
+
+        let answer = ask_choice_then(question_of(choices, 0, None), None, messages(), &mut ask);
+
+        assert!(
+            matches!(answer, Err(PromptError::Io(error)) if error.kind() == io::ErrorKind::InvalidInput)
+        );
+    }
+
+    #[test]
+    fn reports_the_answers_that_fit_nothing_and_parses_the_other_one() {
+        let mut typed = typed_z;
+        let mut ask = FakePrompter::new(false).with_replies([
+            Reply::Text("q".to_owned()),
+            Reply::Text("z".to_owned()),
+            Reply::End,
+        ]);
+        let other = other_with(&parse_z, &mut typed);
+
+        let answer = ask_choice_then(
+            question_of(letters(), 0, Some(other)),
+            None,
+            messages(),
+            &mut ask,
+        );
+
+        assert_eq!(answer.unwrap(), 'z');
+        let reports = ask.reports();
+
+        assert_eq!(reports.len(), 1);
+        assert!(reports[0].contains("'q' is not valid"));
+    }
+}
+
+#[cfg(test)]
+mod own_tests {
+    use super::*;
+
+    fn letters() -> Vec<ChoiceItem<char>> {
+        vec![
+            ChoiceItem::heading("h"),
+            ChoiceItem::pick("a", "a", 'a'),
+            ChoiceItem::pick("c", "c", 'c'),
+        ]
+    }
+
+    fn labels(choices: &[ChoiceItem<char>]) -> Vec<&str> {
+        choices.iter().map(ChoiceItem::label).collect()
+    }
+
+    fn own_at_end(choices: &[ChoiceItem<char>], value: char) -> Option<(usize, ChoiceItem<char>)> {
+        let text = value.to_string();
+
+        (value != '-').then(|| (choices.len(), ChoiceItem::pick(&text, &text, value)))
+    }
+
+    #[test]
+    fn adds_the_value_of_its_own_only_when_no_option_has_it() {
+        let own = Own {
+            same: &PartialEq::eq,
+            item: &own_at_end,
+        };
+
+        assert_eq!(labels(&with_own(letters(), 'a', &own)), ["h", "a", "c"]);
+        assert_eq!(
+            labels(&with_own(letters(), 'b', &own)),
+            ["h", "a", "c", "b"]
+        );
+        assert_eq!(labels(&with_own(letters(), '-', &own)), ["h", "a", "c"]);
+    }
+
+    #[test]
+    fn puts_the_back_hint_before_the_colon_or_after_the_prompt() {
+        assert_eq!(back_prompt("Dias: ", "Esc"), "Dias · Esc: ");
+        assert_eq!(back_prompt("Dias:", "Esc"), "Dias · Esc:");
+        assert_eq!(back_prompt("Nome ", "Esc"), "Nome (Esc) ");
+    }
+
+    #[test]
+    fn describes_own_without_its_closures() {
+        let own = Own {
+            same: &PartialEq::eq,
+            item: &own_at_end,
+        };
+
+        assert_eq!(format!("{own:?}"), "Own { .. }");
+    }
+
+    #[test]
+    fn matches_the_options_with_the_comparison_given() {
+        let own = Own {
+            same: &|left: &char, right: &char| left.eq_ignore_ascii_case(right),
+            item: &own_at_end,
+        };
+
+        assert_eq!(labels(&with_own(letters(), 'C', &own)), ["h", "a", "c"]);
+        assert_eq!(
+            labels(&with_own(letters(), 'B', &own)),
+            ["h", "a", "c", "B"]
+        );
+    }
 }

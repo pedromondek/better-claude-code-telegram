@@ -1,11 +1,19 @@
 import { SETUP_COMMAND } from "./package.constants.mjs";
 import { DEFAULT_LOCALE, LOCALES } from "./state.mjs";
 
+export function formatDelay(minutes) {
+  return minutes >= 1 && Number.isInteger(minutes)
+    ? `${minutes} min`
+    : `${Math.round(minutes * 60)} s`;
+}
+
 const enUs = {
   statusMain: "(Main)",
   statusSecondary: "(Secondary)",
   statusConnected: (role) => `📱 ${role} Telegram connected`,
   statusDown: (role) => `📱 ${role} Telegram down`,
+  statusDownHere: (role) =>
+    `📱 ${role} Telegram down · type /mcp reconnect all`,
   statusConnecting: (role) => `📱 ${role} Telegram connecting…`,
   stepLabels: { token: "bot token", pairing: "pairing" },
   stepTitles: {
@@ -105,7 +113,7 @@ const enUs = {
     `Received files:\n  • ${retention}\nSaved in ${file}.`,
   inboxKept: (retention) => `Received files kept:\n  • ${retention}`,
   languageKept: (locale) => `Language kept:\n  • ${locale}`,
-  delayKept: (minutes) => `Wait time kept:\n  • ${minutes} min`,
+  delayKept: (minutes) => `Wait time kept:\n  • ${formatDelay(minutes)}`,
   quietKept: (value) => `Quiet hours kept:\n  • ${value}`,
   transcriptionModelKept: (model) =>
     `Local transcription kept with the ${model} model, already installed.`,
@@ -189,6 +197,8 @@ const enUs = {
     notOpen: "'claude --telegram' is not open",
     connecting: "connecting; 'claude --telegram' was just opened",
     down: "the bot stopped receiving messages; reopen 'claude --telegram'",
+    downHere:
+      "the channel server is not running in this instance; type /mcp reconnect all",
     protected: "Claude cannot read the bot token",
     unprotected: (command) =>
       `Claude can read the bot token. Run '${command}'.`,
@@ -381,7 +391,8 @@ const enUs = {
   delayLabel: (minutes) => `${minutes} min`,
   delayCustomPrompt: "Minutes (greater than 0): ",
   delayCustomHint: "a number of minutes greater than 0",
-  delaySaved: (minutes, file) => `Delay of ${minutes} min saved in ${file}.`,
+  delaySaved: (minutes, file) =>
+    `Delay of ${formatDelay(minutes)} saved in ${file}.`,
   quietQuestion: "Quiet hours, when nothing goes to Telegram",
   quietOffLabel: "Off",
   quietPresets: {
@@ -639,6 +650,8 @@ const ptBr = {
   statusSecondary: "(Secundário)",
   statusConnected: (role) => `📱 ${role} Telegram conectado`,
   statusDown: (role) => `📱 ${role} Telegram fora`,
+  statusDownHere: (role) =>
+    `📱 ${role} Telegram fora · digite /mcp reconnect all`,
   statusConnecting: (role) => `📱 ${role} Telegram conectando…`,
   stepLabels: { token: "token do bot", pairing: "pareamento" },
   stepTitles: {
@@ -738,7 +751,8 @@ const ptBr = {
     `Arquivos recebidos:\n  • ${retention}\nSalvo em ${file}.`,
   inboxKept: (retention) => `Arquivos recebidos mantidos:\n  • ${retention}`,
   languageKept: (locale) => `Idioma mantido:\n  • ${locale}`,
-  delayKept: (minutes) => `Tempo de espera mantido:\n  • ${minutes} min`,
+  delayKept: (minutes) =>
+    `Tempo de espera mantido:\n  • ${formatDelay(minutes)}`,
   quietKept: (value) => `Silêncio mantido:\n  • ${value}`,
   transcriptionModelKept: (model) =>
     `Transcrição local mantida com o modelo ${model}, já instalado.`,
@@ -822,6 +836,8 @@ const ptBr = {
     notOpen: "o 'claude --telegram' não está aberto",
     connecting: "conectando; o 'claude --telegram' acabou de abrir",
     down: "o bot parou de receber mensagens; reabra o 'claude --telegram'",
+    downHere:
+      "o servidor do canal não está rodando nesta instância; digite /mcp reconnect all",
     protected: "o Claude não consegue ler o token do bot",
     unprotected: (command) =>
       `o Claude consegue ler o token do bot. Rode '${command}'.`,
@@ -1014,7 +1030,8 @@ const ptBr = {
   delayLabel: (minutes) => `${minutes} min`,
   delayCustomPrompt: "Minutos (maior que 0): ",
   delayCustomHint: "um número de minutos maior que 0",
-  delaySaved: (minutes, file) => `Espera de ${minutes} min salva em ${file}.`,
+  delaySaved: (minutes, file) =>
+    `Espera de ${formatDelay(minutes)} salva em ${file}.`,
   quietQuestion: "Horário de silêncio, sem mensagens no Telegram",
   quietOffLabel: "Desligado",
   quietPresets: {

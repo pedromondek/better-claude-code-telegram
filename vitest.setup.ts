@@ -43,5 +43,6 @@ process.env.HOME = isolated.home;
 process.env.USERPROFILE = isolated.home;
 delete process.env.CLAUDE_CONFIG_DIR;
 delete process.env.TELEGRAM_STATE_DIR;
+delete process.env.BETTER_CC_TELEGRAM;
 
 afterAll(isolated.remove);

@@ -6,6 +6,12 @@
       { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram connected" }
     ],
     "statusDown": [{ "args": ["alpha 1"], "out": "📱 alpha 1 Telegram down" }],
+    "statusDownHere": [
+      {
+        "args": ["alpha 1"],
+        "out": "📱 alpha 1 Telegram down · type /mcp reconnect all"
+      }
+    ],
     "statusConnecting": [
       { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram connecting…" }
     ],
@@ -69,6 +75,8 @@
       { "args": ["alpha 1"], "out": "[default / padrão: alpha 1]" }
     ],
     "selectHint": "↑/↓ to move · Enter to confirm",
+    "backHint": "← or Esc goes back",
+    "backLabel": "← Back",
     "yes": "Yes",
     "no": "No",
     "custom": "Custom",
@@ -144,11 +152,11 @@
     "invalidSetting": [
       {
         "args": ["alpha 1", "beta 'two'", "gamma/3"],
-        "out": "'beta 'two'' is not a valid alpha 1. Use:\n  • gamma/3\nNothing was changed."
+        "out": "'beta 'two'' is not valid for --set alpha 1. Use:\n  • gamma/3\nNothing was changed."
       }
     ],
     "settingHints.language": "en-us or pt-br",
-    "settingHints.delay": "the minutes, greater than 0 (for example 3)",
+    "settingHints.delay": "the minutes, 0 or more (for example 3, or 0 for right away)",
     "settingHints.quiet-hours": "HH:MM-HH:MM (for example 22:00-08:00) or off",
     "settingHints.transcription": "base, small, medium or off",
     "settingHints.inbox": "the days, greater than 0, or off",
@@ -175,7 +183,19 @@
     ],
     "delayKept": [
       { "args": [3], "out": "Wait time kept:\n  • 3 min" },
-      { "args": [1.5], "out": "Wait time kept:\n  • 1.5 min" }
+      { "args": [1.5], "out": "Wait time kept:\n  • 1 min 30 s" }
+    ],
+    "delaysKept": [
+      {
+        "args": ["questions right away · permission requests 4 min"],
+        "out": "Delay per kind kept:\n  • questions right away · permission requests 4 min"
+      }
+    ],
+    "delaysSaved": [
+      {
+        "args": ["questions right away", "alpha 1"],
+        "out": "Delay per kind saved in alpha 1:\n  • questions right away"
+      }
     ],
     "quietKept": [
       { "args": ["alpha 1"], "out": "Quiet hours kept:\n  • alpha 1" }
@@ -312,6 +332,7 @@
     "healthDetail.notOpen": "'claude --telegram' is not open",
     "healthDetail.connecting": "connecting; 'claude --telegram' was just opened",
     "healthDetail.down": "the bot stopped receiving messages; reopen 'claude --telegram'",
+    "healthDetail.downHere": "the channel server is not running in this instance; type /mcp reconnect all",
     "healthDetail.protected": "Claude cannot read the bot token",
     "healthDetail.unprotected": [
       {
@@ -737,10 +758,10 @@
     "delayQuestion": "Minutes without an answer in the terminal before going to Telegram",
     "delayLabel": [
       { "args": [3], "out": "3 min" },
-      { "args": [1.5], "out": "1.5 min" }
+      { "args": [1.5], "out": "1 min 30 s" }
     ],
-    "delayCustomPrompt": "Minutes (greater than 0): ",
-    "delayCustomHint": "a number of minutes greater than 0",
+    "delayCustomPrompt": "Minutes (0 = right away): ",
+    "delayCustomHint": "a number of minutes, 0 or more",
     "delaySaved": [
       {
         "args": [3, "config.json"],
@@ -748,7 +769,7 @@
       },
       {
         "args": [1.5, "config.json"],
-        "out": "Delay of 1.5 min saved in config.json."
+        "out": "Delay of 1 min 30 s saved in config.json."
       }
     ],
     "quietQuestion": "Quiet hours, when nothing goes to Telegram",
@@ -1189,6 +1210,12 @@
       { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram conectado" }
     ],
     "statusDown": [{ "args": ["alpha 1"], "out": "📱 alpha 1 Telegram fora" }],
+    "statusDownHere": [
+      {
+        "args": ["alpha 1"],
+        "out": "📱 alpha 1 Telegram fora · digite /mcp reconnect all"
+      }
+    ],
     "statusConnecting": [
       { "args": ["alpha 1"], "out": "📱 alpha 1 Telegram conectando…" }
     ],
@@ -1252,6 +1279,8 @@
       { "args": ["alpha 1"], "out": "[default / padrão: alpha 1]" }
     ],
     "selectHint": "↑/↓ para escolher · Enter para confirmar",
+    "backHint": "← ou Esc volta",
+    "backLabel": "← Voltar",
     "yes": "Sim",
     "no": "Não",
     "custom": "Customizado",
@@ -1330,11 +1359,11 @@
     "invalidSetting": [
       {
         "args": ["alpha 1", "beta 'two'", "gamma/3"],
-        "out": "'beta 'two'' não vale para alpha 1. Use:\n  • gamma/3\nNada foi alterado."
+        "out": "'beta 'two'' não vale para --set alpha 1. Use:\n  • gamma/3\nNada foi alterado."
       }
     ],
     "settingHints.language": "en-us ou pt-br",
-    "settingHints.delay": "os minutos, maiores que 0 (por exemplo 3)",
+    "settingHints.delay": "os minutos, 0 ou mais (por exemplo 3, ou 0 para na hora)",
     "settingHints.quiet-hours": "HH:MM-HH:MM (por exemplo 22:00-08:00) ou off",
     "settingHints.transcription": "base, small, medium ou off",
     "settingHints.inbox": "os dias, maiores que 0, ou off",
@@ -1364,7 +1393,19 @@
     ],
     "delayKept": [
       { "args": [3], "out": "Tempo de espera mantido:\n  • 3 min" },
-      { "args": [1.5], "out": "Tempo de espera mantido:\n  • 1.5 min" }
+      { "args": [1.5], "out": "Tempo de espera mantido:\n  • 1 min 30 s" }
+    ],
+    "delaysKept": [
+      {
+        "args": ["perguntas na hora · pedidos de permissão 4 min"],
+        "out": "Atraso por tipo mantido:\n  • perguntas na hora · pedidos de permissão 4 min"
+      }
+    ],
+    "delaysSaved": [
+      {
+        "args": ["perguntas na hora", "alpha 1"],
+        "out": "Atraso por tipo salvo em alpha 1:\n  • perguntas na hora"
+      }
     ],
     "quietKept": [
       { "args": ["alpha 1"], "out": "Silêncio mantido:\n  • alpha 1" }
@@ -1501,6 +1542,7 @@
     "healthDetail.notOpen": "o 'claude --telegram' não está aberto",
     "healthDetail.connecting": "conectando; o 'claude --telegram' acabou de abrir",
     "healthDetail.down": "o bot parou de receber mensagens; reabra o 'claude --telegram'",
+    "healthDetail.downHere": "o servidor do canal não está rodando nesta instância; digite /mcp reconnect all",
     "healthDetail.protected": "o Claude não consegue ler o token do bot",
     "healthDetail.unprotected": [
       {
@@ -1929,10 +1971,10 @@
     "delayQuestion": "Minutos sem resposta no terminal antes de levar ao Telegram",
     "delayLabel": [
       { "args": [3], "out": "3 min" },
-      { "args": [1.5], "out": "1.5 min" }
+      { "args": [1.5], "out": "1 min 30 s" }
     ],
-    "delayCustomPrompt": "Minutos (maior que 0): ",
-    "delayCustomHint": "um número de minutos maior que 0",
+    "delayCustomPrompt": "Minutos (0 = na hora): ",
+    "delayCustomHint": "um número de minutos, 0 ou mais",
     "delaySaved": [
       {
         "args": [3, "config.json"],
@@ -1940,7 +1982,7 @@
       },
       {
         "args": [1.5, "config.json"],
-        "out": "Espera de 1.5 min salva em config.json."
+        "out": "Espera de 1 min 30 s salva em config.json."
       }
     ],
     "quietQuestion": "Horário de silêncio, sem mensagens no Telegram",

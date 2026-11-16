@@ -8797,12 +8797,12 @@
       },
       "files": { "app/better-cc-telegram.json": "{\"delayMinutes\":0}" },
       "threw": false,
-      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "700" },
         "app/asks/s1-1700000000123.json": {
-          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -8810,7 +8810,7 @@
           "mode": "600"
         }
       },
-      "written": ["app/asks/s1-1700000000123.json"]
+      "written": []
     },
     {
       "name": "delay: minutes zero with env \"5000\"",
@@ -8878,12 +8878,12 @@
       },
       "files": { "app/better-cc-telegram.json": "{\"delayMinutes\":0}" },
       "threw": false,
-      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "700" },
         "app/asks/s1-1700000000123.json": {
-          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -8891,7 +8891,7 @@
           "mode": "600"
         }
       },
-      "written": ["app/asks/s1-1700000000123.json"]
+      "written": []
     },
     {
       "name": "delay: minutes zero with env \"abc\"",
@@ -8905,12 +8905,12 @@
       },
       "files": { "app/better-cc-telegram.json": "{\"delayMinutes\":0}" },
       "threw": false,
-      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "700" },
         "app/asks/s1-1700000000123.json": {
-          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -8918,7 +8918,7 @@
           "mode": "600"
         }
       },
-      "written": ["app/asks/s1-1700000000123.json"]
+      "written": []
     },
     {
       "name": "delay: minutes zero with env \"\"",
@@ -8932,12 +8932,12 @@
       },
       "files": { "app/better-cc-telegram.json": "{\"delayMinutes\":0}" },
       "threw": false,
-      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "700" },
         "app/asks/s1-1700000000123.json": {
-          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -8945,7 +8945,7 @@
           "mode": "600"
         }
       },
-      "written": ["app/asks/s1-1700000000123.json"]
+      "written": []
     },
     {
       "name": "delay: minutes zero with env \"  \"",
@@ -8959,12 +8959,12 @@
       },
       "files": { "app/better-cc-telegram.json": "{\"delayMinutes\":0}" },
       "threw": false,
-      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "700" },
         "app/asks/s1-1700000000123.json": {
-          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -8972,7 +8972,7 @@
           "mode": "600"
         }
       },
-      "written": ["app/asks/s1-1700000000123.json"]
+      "written": []
     },
     {
       "name": "delay: minutes zero with env \" 1500.5 \"",
@@ -9067,12 +9067,12 @@
       },
       "files": { "app/better-cc-telegram.json": "{\"delayMinutes\":0}" },
       "threw": false,
-      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+      "returned": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "700" },
         "app/asks/s1-1700000000123.json": {
-          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
+          "content": "{\"id\":\"s1-1700000000123\",\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"instance\":null,\"context\":null,\"questions\":[{\"question\":\"Which database?\",\"header\":\"Database\",\"multiSelect\":false,\"options\":[{\"label\":\"Postgres\",\"description\":\"Relational\"},{\"label\":\"Redis\",\"preview\":\"cache\"}]}]}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -9080,7 +9080,7 @@
           "mode": "600"
         }
       },
-      "written": ["app/asks/s1-1700000000123.json"]
+      "written": []
     },
     {
       "name": "delay: minutes zero with env \"1e21\"",
@@ -9129,11 +9129,11 @@
         },
         "app/pings/": { "mode": "700" },
         "app/pings/s1.json": {
-          "content": "{\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000240123,\"text\":\"waiting\",\"instance\":null}",
+          "content": "{\"sessionId\":\"s1\",\"createdAt\":1700000000123,\"dueAt\":1700000000123,\"text\":\"waiting\",\"instance\":null}",
           "mode": "600"
         }
       },
-      "written": ["app/pings/s1.json"]
+      "written": []
     },
     {
       "name": "delay: minutes negative with env undefined",
@@ -15389,6 +15389,119 @@
       "written": []
     },
     {
+      "name": "prompt on telegram: prompt with a message from another Claude session as the hook receives it",
+      "mode": "prompt",
+      "stdin": "{\"session_id\":\"tg\",\"prompt\":\"<cross-session-message from=\\\"uds:/tmp/peer.sock\\\" from-name=\\\"api\\\" from-mode=\\\"prompting\\\">\\nhi\\n</cross-session-message>\"}",
+      "env": {
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/pings/tg.json": "{}",
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"tg\"}"
+      },
+      "threw": false,
+      "returned": "null",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"tg\"}",
+          "mode": "600"
+        },
+        "app/pings/": { "mode": "750" },
+        "app/pings/tg.json": { "content": "{}", "mode": "600" }
+      },
+      "written": []
+    },
+    {
+      "name": "prompt on bot: prompt with a message from another Claude session as the hook receives it",
+      "mode": "prompt",
+      "stdin": "{\"session_id\":\"tg\",\"prompt\":\"<cross-session-message from=\\\"uds:/tmp/peer.sock\\\" from-name=\\\"api\\\" from-mode=\\\"prompting\\\">\\nhi\\n</cross-session-message>\"}",
+      "env": {
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app"
+      },
+      "files": {
+        "app/pings/tg.json": "{}",
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"tg\"}",
+        "state/bot.pid": "4242"
+      },
+      "threw": false,
+      "returned": "null",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"tg\"}",
+          "mode": "600"
+        },
+        "app/pings/": { "mode": "750" },
+        "app/pings/tg.json": { "content": "{}", "mode": "600" },
+        "state/": { "mode": "750" },
+        "state/bot.pid": { "content": "4242", "mode": "600" }
+      },
+      "written": []
+    },
+    {
+      "name": "prompt on telegram: prompt with text that starts like the cross-session tag without its attributes",
+      "mode": "prompt",
+      "stdin": "{\"session_id\":\"tg\",\"prompt\":\"<cross-session-message>\"}",
+      "env": {
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app",
+        "BETTER_CC_TELEGRAM": "1"
+      },
+      "files": {
+        "app/pings/tg.json": "{}",
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"tg\"}"
+      },
+      "threw": false,
+      "returned": "null",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.closed": { "content": "", "mode": "644" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"tg\"}",
+          "mode": "600"
+        },
+        "app/pings/": { "mode": "750" },
+        "app/pings/last-prompt": { "content": "1700000000123", "mode": "600" }
+      },
+      "written": ["app/asks/a.closed", "app/pings/last-prompt"]
+    },
+    {
+      "name": "prompt on bot: prompt with text that starts like the cross-session tag without its attributes",
+      "mode": "prompt",
+      "stdin": "{\"session_id\":\"tg\",\"prompt\":\"<cross-session-message>\"}",
+      "env": {
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app"
+      },
+      "files": {
+        "app/pings/tg.json": "{}",
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"tg\"}",
+        "state/bot.pid": "4242"
+      },
+      "threw": false,
+      "returned": "null",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.closed": { "content": "", "mode": "644" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"tg\"}",
+          "mode": "600"
+        },
+        "app/pings/": { "mode": "750" },
+        "state/": { "mode": "750" },
+        "state/bot.pid": { "content": "4242", "mode": "600" }
+      },
+      "written": ["app/asks/a.closed"]
+    },
+    {
       "name": "prompt on telegram: prompt with a cross-session idle notice",
       "mode": "prompt",
       "stdin": "{\"session_id\":\"tg\",\"prompt\":\"[Cross-session idle notice] peer is idle\"}",
@@ -18721,16 +18834,16 @@
     },
     { "env": "1.5", "config": "{\"delayMinutes\":\"3\"}", "out": "1.5" },
     { "env": "  7  ", "config": "{\"delayMinutes\":\"3\"}", "out": "7" },
-    { "env": null, "config": "{\"delayMinutes\":0}", "out": "240000" },
+    { "env": null, "config": "{\"delayMinutes\":0}", "out": "0" },
     { "env": "5000", "config": "{\"delayMinutes\":0}", "out": "5000" },
     { "env": "0", "config": "{\"delayMinutes\":0}", "out": "0" },
-    { "env": "-1", "config": "{\"delayMinutes\":0}", "out": "240000" },
-    { "env": "abc", "config": "{\"delayMinutes\":0}", "out": "240000" },
-    { "env": "", "config": "{\"delayMinutes\":0}", "out": "240000" },
-    { "env": "   ", "config": "{\"delayMinutes\":0}", "out": "240000" },
+    { "env": "-1", "config": "{\"delayMinutes\":0}", "out": "0" },
+    { "env": "abc", "config": "{\"delayMinutes\":0}", "out": "0" },
+    { "env": "", "config": "{\"delayMinutes\":0}", "out": "0" },
+    { "env": "   ", "config": "{\"delayMinutes\":0}", "out": "0" },
     { "env": "1e3", "config": "{\"delayMinutes\":0}", "out": "1000" },
     { "env": "0x10", "config": "{\"delayMinutes\":0}", "out": "16" },
-    { "env": "Infinity", "config": "{\"delayMinutes\":0}", "out": "240000" },
+    { "env": "Infinity", "config": "{\"delayMinutes\":0}", "out": "0" },
     { "env": "1.5", "config": "{\"delayMinutes\":0}", "out": "1.5" },
     { "env": "  7  ", "config": "{\"delayMinutes\":0}", "out": "7" },
     { "env": null, "config": "{\"delayMinutes\":-2}", "out": "240000" },

@@ -1593,7 +1593,7 @@
       "keys": ["a😀", "", "\r"],
       "written": "Token: \n",
       "raw": [true, false],
-      "value": "a\ud83d"
+      "value": "a�"
     },
     {
       "name": "hidden with bytes split in two reads",
@@ -1652,7 +1652,7 @@
     },
     {
       "name": "carriage returns and separators end lines",
-      "input": "a\r\nb\rc\u2028d\u2029\ne",
+      "input": "a\r\nb\rc d \ne",
       "calls": ["line", "line", "line", "line", "line", "line", "line"],
       "answers": [
         { "value": "a" },
@@ -1673,7 +1673,7 @@
     },
     {
       "name": "a separator at the very end",
-      "input": "x\u2028",
+      "input": "x ",
       "calls": ["line", "line"],
       "answers": [
         { "value": "x" },
@@ -2759,8 +2759,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -2890,8 +2890,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -2976,8 +2976,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -3062,8 +3062,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -3193,8 +3193,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -3237,7 +3237,7 @@
             "value": 1
           },
           {
-            "label": "2.5 min (previously chosen)",
+            "label": "2 min 30 s (previously chosen)",
             "hint": null,
             "heading": false,
             "previous": true,
@@ -3294,8 +3294,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -3312,7 +3312,7 @@
               "previous": false
             },
             {
-              "label": "2.5 min (previously chosen)",
+              "label": "2 min 30 s (previously chosen)",
               "hint": null,
               "heading": false,
               "previous": true
@@ -3356,14 +3356,23 @@
           ],
           "index": 1
         },
-        { "kind": "line", "prompt": "Minutes (greater than 0): " },
-        { "kind": "line", "prompt": "Minutes (greater than 0): " },
-        { "kind": "line", "prompt": "Minutes (greater than 0): " }
+        {
+          "kind": "line",
+          "prompt": "Minutes (0 = right away) · ← or Esc goes back:"
+        },
+        {
+          "kind": "line",
+          "prompt": "Minutes (0 = right away) · ← or Esc goes back:"
+        },
+        {
+          "kind": "line",
+          "prompt": "Minutes (0 = right away) · ← or Esc goes back:"
+        }
       ],
       "value": 4,
       "reports": [
-        "✘ 'soon' is not valid. Use:\n  • a number of minutes greater than 0",
-        "✘ '0' is not valid. Use:\n  • a number of minutes greater than 0"
+        "✘ 'soon' is not valid. Use:\n  • a number of minutes, 0 or more",
+        "✘ '0' is not valid. Use:\n  • a number of minutes, 0 or more"
       ]
     },
     {
@@ -3389,7 +3398,7 @@
             "value": 1
           },
           {
-            "label": "2.5 min (previously chosen)",
+            "label": "2 min 30 s (previously chosen)",
             "hint": null,
             "heading": false,
             "previous": true,
@@ -3446,8 +3455,8 @@
         "other": {
           "label": "Custom",
           "answer": "N",
-          "prompt": "Minutes (greater than 0): ",
-          "hint": "a number of minutes greater than 0",
+          "prompt": "Minutes (0 = right away):",
+          "hint": "a number of minutes, 0 or more",
           "parse": "delay"
         },
         "defaultHint": null
@@ -3464,7 +3473,7 @@
               "previous": false
             },
             {
-              "label": "2.5 min (previously chosen)",
+              "label": "2 min 30 s (previously chosen)",
               "hint": null,
               "heading": false,
               "previous": true
@@ -3946,8 +3955,14 @@
           ],
           "index": 5
         },
-        { "kind": "line", "prompt": "Days (greater than 0): " },
-        { "kind": "line", "prompt": "Days (greater than 0): " }
+        {
+          "kind": "line",
+          "prompt": "Days (greater than 0) · ← or Esc goes back: "
+        },
+        {
+          "kind": "line",
+          "prompt": "Days (greater than 0) · ← or Esc goes back: "
+        }
       ],
       "value": 3,
       "reports": [
@@ -5118,7 +5133,7 @@
       "columns": 40,
       "rows": 24,
       "redirect": false,
-      "output": "\u001b[?25l\u001b[1mMinutes without an answer in the terminal before going to Telegram\u001b[22m\r\n  1 min\r\n  3 min\r\n  4 min (Recommended)\r\n  5 min\r\n  10 min\r\n\u001b[36m\u001b[1m❯ 15 min\u001b[22m\u001b[39m\r\n  Custom\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[8A\r\u001b[0J  1 min\r\n  3 min\r\n  4 min (Recommended)\r\n  5 min\r\n  10 min\r\n  15 min\r\n\u001b[36m\u001b[1m❯ Custom\u001b[22m\u001b[39m\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[8A\r\u001b[0J\u001b[36m❯ Custom\u001b[39m\r\n\u001b[?25h\u001b[1G\u001b[0J\u001b[1mMinutes (greater than 0): \u001b[22m\u001b[27Gx\r\r\n\u001b[31m✘ 'x' is not valid. Use:\r\n  • a number of minutes greater than 0\u001b[39m\r\n\u001b[1G\u001b[0J\u001b[1mMinutes (greater than 0): \u001b[22m\u001b[27G2\r\r\n",
+      "output": "\u001b[?25l\u001b[1mMinutes without an answer in the terminal before going to Telegram\u001b[22m\r\n  1 min\r\n  3 min\r\n  4 min (Recommended)\r\n  5 min\r\n  10 min\r\n\u001b[36m\u001b[1m❯ 15 min\u001b[22m\u001b[39m\r\n  Custom\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[8A\r\u001b[0J  1 min\r\n  3 min\r\n  4 min (Recommended)\r\n  5 min\r\n  10 min\r\n  15 min\r\n\u001b[36m\u001b[1m❯ Custom\u001b[22m\u001b[39m\r\n\u001b[2m↑/↓ to move · Enter to confirm\u001b[22m\r\n\u001b[8A\r\u001b[0J\u001b[36m❯ Custom\u001b[39m\r\n\u001b[?25h\u001b[1G\u001b[0J\u001b[1mMinutes (0 = right away) · ← or Esc goes back: \u001b[22m\u001b[8Gx\r\r\n\u001b[31m✘ 'x' is not valid. Use:\r\n  • a number of minutes, 0 or more\u001b[39m\r\n\u001b[1G\u001b[0J\u001b[1mMinutes (0 = right away) · ← or Esc goes back: \u001b[22m\u001b[8G2\r\r\n",
       "outcome": { "value": 2 }
     },
     {

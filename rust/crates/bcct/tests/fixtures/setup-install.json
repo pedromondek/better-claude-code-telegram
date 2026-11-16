@@ -12599,7 +12599,7 @@
       "value": true,
       "error": null,
       "path": "{root}/bin:{sys}",
-      "stdout": "○ Wait time kept:\n  • 2.5 min\n",
+      "stdout": "○ Wait time kept:\n  • 2 min 30 s\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },

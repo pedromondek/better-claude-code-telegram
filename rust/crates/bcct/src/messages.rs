@@ -1,6 +1,7 @@
 mod en_us;
 mod pt_br;
 
+use crate::js::format_number;
 use crate::locale::Locale;
 
 #[derive(Debug, Clone, Copy)]
@@ -53,6 +54,7 @@ pub struct ChangeKinds {
 pub struct SettingHints {
     pub language: &'static str,
     pub delay: &'static str,
+    pub delays: &'static str,
     pub quiet_hours: &'static str,
     pub transcription: &'static str,
     pub inbox: &'static str,
@@ -130,6 +132,7 @@ pub struct HealthDetail {
     pub not_open: &'static str,
     pub connecting: &'static str,
     pub down: &'static str,
+    pub down_here: &'static str,
     pub protected: &'static str,
     pub unprotected: fn(&str) -> String,
     pub valid: &'static str,
@@ -228,6 +231,7 @@ pub struct Messages {
     pub status_secondary: &'static str,
     pub status_connected: fn(&str) -> String,
     pub status_down: fn(&str) -> String,
+    pub status_down_here: fn(&str) -> String,
     pub status_connecting: fn(&str) -> String,
     pub step_labels: StepLabels,
     pub step_titles: StepTitles,
@@ -243,6 +247,8 @@ pub struct Messages {
     pub default_hint: fn(&str) -> String,
     pub language_default_hint: fn(&str) -> String,
     pub select_hint: &'static str,
+    pub back_hint: &'static str,
+    pub back_label: &'static str,
     pub yes: &'static str,
     pub no: &'static str,
     pub custom: &'static str,
@@ -391,7 +397,18 @@ pub struct Messages {
     pub delay_label: fn(f64) -> String,
     pub delay_custom_prompt: &'static str,
     pub delay_custom_hint: &'static str,
+    pub delay_right_away_label: &'static str,
     pub delay_saved: fn(f64, &str) -> String,
+    pub delay_per_kind: &'static str,
+    pub delay_per_kind_answer: &'static str,
+    pub delay_kinds_info: &'static str,
+    pub delay_kind_labels: [&'static str; 3],
+    pub delay_kind_prompt: fn(&str) -> String,
+    pub delay_kind_hint: &'static str,
+    pub delay_right_away: &'static str,
+    pub delays_saved: fn(&str, &str) -> String,
+    pub delays_kept: fn(&str) -> String,
+    pub delays_cleared: &'static str,
     pub quiet_question: &'static str,
     pub quiet_off_label: &'static str,
     pub quiet_presets: QuietPresets,
@@ -560,5 +577,41 @@ pub fn messages_for(locale: Locale) -> &'static Messages {
     match locale {
         Locale::EnUs => &EN_US,
         Locale::PtBr => &PT_BR,
+    }
+}
+
+#[must_use]
+pub fn format_delay(minutes: f64) -> String {
+    let total_seconds = (minutes * 60.0).round();
+    let whole_minutes = (total_seconds / 60.0).floor();
+    let seconds = total_seconds - whole_minutes * 60.0;
+
+    let minutes_text = format_number(whole_minutes);
+    let seconds_text = format_number(seconds);
+
+    if whole_minutes == 0.0 {
+        format!("{seconds_text} s")
+    } else if seconds == 0.0 {
+        format!("{minutes_text} min")
+    } else {
+        format!("{minutes_text} min {seconds_text} s")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_delay;
+
+    #[test]
+    fn shows_minutes_plus_the_seconds_left_and_under_a_minute_in_seconds() {
+        assert_eq!(format_delay(4.0), "4 min");
+        assert_eq!(format_delay(1.0), "1 min");
+        assert_eq!(format_delay(60.0), "60 min");
+        assert_eq!(format_delay(2.5), "2 min 30 s");
+        assert_eq!(format_delay(1.25), "1 min 15 s");
+        assert_eq!(format_delay(0.1), "6 s");
+        assert_eq!(format_delay(0.99), "59 s");
+        assert_eq!(format_delay(0.999), "1 min");
+        assert_eq!(format_delay(0.0), "0 s");
     }
 }

@@ -1,10 +1,11 @@
 use crate::package::SETUP_COMMAND;
+use crate::setup_run::SET_FLAG;
 
 use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
     HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels, UpdateTexts,
+    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels, UpdateTexts, format_delay,
 };
 
 pub(super) const MESSAGES: Messages = Messages {
@@ -12,6 +13,7 @@ pub(super) const MESSAGES: Messages = Messages {
     status_secondary: "(Secundário)",
     status_connected: |role| format!("📱 {role} Telegram conectado"),
     status_down: |role| format!("📱 {role} Telegram fora"),
+    status_down_here: |role| format!("📱 {role} Telegram fora · digite /mcp reconnect all"),
     status_connecting: |role| format!("📱 {role} Telegram conectando…"),
     step_labels: StepLabels {
         token: "token do bot",
@@ -60,6 +62,8 @@ pub(super) const MESSAGES: Messages = Messages {
     default_hint: |value| format!("[padrão: {value}]"),
     language_default_hint: |value| format!("[default / padrão: {value}]"),
     select_hint: "↑/↓ para escolher · Enter para confirmar",
+    back_hint: "← ou Esc volta",
+    back_label: "← Voltar",
     yes: "Sim",
     no: "Não",
     custom: "Customizado",
@@ -107,11 +111,12 @@ pub(super) const MESSAGES: Messages = Messages {
     },
     tools_declined: |tools| format!("Nada foi instalado; {tools} continua faltando no PATH."),
     invalid_setting: |step, value, hint| {
-        format!("'{value}' não vale para {step}. Use:\n  • {hint}\nNada foi alterado.")
+        format!("'{value}' não vale para {SET_FLAG} {step}. Use:\n  • {hint}\nNada foi alterado.")
     },
     setting_hints: SettingHints {
         language: "en-us ou pt-br",
-        delay: "os minutos, maiores que 0 (por exemplo 3)",
+        delay: "os minutos, 0 ou mais (por exemplo 3, ou 0 para na hora)",
+        delays: "perguntas/permissões/aviso de espera em minutos, 0 ou mais (por exemplo 0/4/4), ou off",
         quiet_hours: "HH:MM-HH:MM (por exemplo 22:00-08:00) ou off",
         transcription: "base, small, medium ou off",
         inbox: "os dias, maiores que 0, ou off",
@@ -127,7 +132,7 @@ pub(super) const MESSAGES: Messages = Messages {
     },
     inbox_kept: |retention| format!("Arquivos recebidos mantidos:\n  • {retention}"),
     language_kept: |locale| format!("Idioma mantido:\n  • {locale}"),
-    delay_kept: |minutes| format!("Tempo de espera mantido:\n  • {minutes} min"),
+    delay_kept: |minutes| format!("Tempo de espera mantido:\n  • {}", format_delay(minutes)),
     quiet_kept: |value| format!("Silêncio mantido:\n  • {value}"),
     transcription_model_kept: |model| {
         format!("Transcrição local mantida com o modelo {model}, já instalado.")
@@ -230,6 +235,7 @@ pub(super) const MESSAGES: Messages = Messages {
         not_open: "o 'claude --telegram' não está aberto",
         connecting: "conectando; o 'claude --telegram' acabou de abrir",
         down: "o bot parou de receber mensagens; reabra o 'claude --telegram'",
+        down_here: "o servidor do canal não está rodando nesta instância; digite /mcp reconnect all",
         protected: "o Claude não consegue ler o token do bot",
         unprotected: |command| format!("o Claude consegue ler o token do bot. Rode '{command}'."),
         valid: "válidas",
@@ -461,10 +467,21 @@ pub(super) const MESSAGES: Messages = Messages {
     paired_chat_message: "Pareado com o Claude Code.\n\nRode 'claude --telegram' para conversar por aqui.",
     paired_with: |label| format!("Pareado com {label}; só essa conta fala com o bot."),
     delay_question: "Minutos sem resposta no terminal antes de levar ao Telegram",
-    delay_label: |minutes| format!("{minutes} min"),
-    delay_custom_prompt: "Minutos (maior que 0): ",
-    delay_custom_hint: "um número de minutos maior que 0",
-    delay_saved: |minutes, file| format!("Espera de {minutes} min salva em {file}."),
+    delay_label: format_delay,
+    delay_custom_prompt: "Minutos (0 = na hora): ",
+    delay_custom_hint: "um número de minutos, 0 ou mais",
+    delay_right_away_label: "Na hora",
+    delay_per_kind: "Por tipo…",
+    delay_per_kind_answer: "tipo",
+    delay_kinds_info: "perguntas, permissões e aviso de espera",
+    delay_kind_labels: ["Perguntas", "Pedidos de permissão", "Aviso de espera"],
+    delay_kind_prompt: |kind| format!("{kind}, em minutos (0 = na hora): "),
+    delay_kind_hint: "um número de minutos, 0 ou mais",
+    delay_right_away: "na hora",
+    delays_saved: |summary, file| format!("Atraso por tipo salvo em {file}:\n  • {summary}"),
+    delays_kept: |summary| format!("Atraso por tipo mantido:\n  • {summary}"),
+    delays_cleared: "Atraso por tipo desligado: o atraso único vale para tudo.",
+    delay_saved: |minutes, file| format!("Espera de {} salva em {file}.", format_delay(minutes)),
     quiet_question: "Horário de silêncio, sem mensagens no Telegram",
     quiet_off_label: "Desligado",
     quiet_presets: QuietPresets {

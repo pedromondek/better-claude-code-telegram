@@ -15,8 +15,9 @@ use crate::messages::Messages;
 use crate::ui::should_colorize;
 
 pub use ask::{
-    ChoiceItem, ChoiceQuestion, Other, ask_choice, ask_hidden, ask_validated, ask_yes_no,
-    index_of_value, marked, number_choices,
+    ChoiceItem, ChoiceQuestion, Other, Own, OwnItem, Then, ask_choice, ask_choice_then, ask_hidden,
+    ask_validated, ask_yes_no, back_prompt, index_of_value, marked, number_choices, with_back,
+    with_own,
 };
 pub use console::{Console, Input, StdConsole};
 pub use fake::{FakeCall, FakePrompter, Reply};
@@ -80,15 +81,22 @@ pub enum PromptError {
     Ended(&'static str),
     Aborted(&'static str),
     Interrupted(&'static str),
+    Back,
     Io(io::Error),
 }
 
 pub const CTRL_D_ABORT: &str = "Aborted with Ctrl+D";
+const BACK: &str = "back";
 
 impl PromptError {
     #[must_use]
     pub fn is_cancelled(&self) -> bool {
         matches!(self, Self::Cancelled(_))
+    }
+
+    #[must_use]
+    pub fn is_back(&self) -> bool {
+        matches!(self, Self::Back)
     }
 
     #[must_use]
@@ -104,6 +112,7 @@ impl fmt::Display for PromptError {
             | Self::Ended(message)
             | Self::Aborted(message)
             | Self::Interrupted(message) => formatter.write_str(message),
+            Self::Back => formatter.write_str(BACK),
             Self::Io(error) => error.fmt(formatter),
         }
     }
@@ -121,6 +130,12 @@ pub trait Prompter {
     fn interactive(&self) -> bool;
 
     fn colors(&self) -> Colors;
+
+    fn back(&self) -> bool {
+        false
+    }
+
+    fn set_back(&mut self, _allowed: bool) {}
 
     fn line(&mut self, prompt: &str, messages: &'static Messages) -> Answer<String>;
 

@@ -57,6 +57,7 @@ impl Shared {
 struct FakeAsker {
     answers: VecDeque<Value>,
     asks: Vec<Value>,
+    messages: &'static Messages,
 }
 
 impl FakeAsker {
@@ -115,7 +116,13 @@ impl Asker for FakeAsker {
         Ok(match answer {
             Value::Null => TranscriptionChoice::Off,
             Value::String(name) => TranscriptionChoice::Model(model(&name)),
-            _ => TranscriptionChoice::Uninstall,
+            _ if installed.len() == 1 => TranscriptionChoice::Uninstall(installed.to_vec()),
+            _ => {
+                let in_use = current.filter(|_| saved);
+                let tag = self.messages.model_in_use;
+
+                TranscriptionChoice::Uninstall(self.remove_models(installed, in_use, tag)?)
+            }
         })
     }
 
@@ -410,6 +417,7 @@ fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
     let mut asker = FakeAsker {
         answers: list(scenario, "answers").iter().cloned().collect(),
         asks: Vec::new(),
+        messages: messages_of(scenario),
     };
     let (value, error) = {
         let mut install = Install::new(
@@ -544,6 +552,7 @@ fn stopped_by(
     let mut asker = FakeAsker {
         answers: answers.iter().cloned().collect(),
         asks: Vec::new(),
+        messages: messages_for(Locale::EnUs),
     };
     let mut install = Install::new(
         &machine,

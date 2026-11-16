@@ -7,7 +7,9 @@ use serde_json::{Map, Number, Value};
 use crate::config::{DEFAULT_INBOX_RETENTION_DAYS, read_config};
 use crate::files::{FileFailure, create_private_dir, write_private};
 use crate::journal::{Journal, link_target};
-use crate::js::{join_path, js_template, js_truthy, stringify, stringify_pretty};
+use crate::js::{
+    join_path, js_number, js_template, js_trim, js_truthy, stringify, stringify_pretty,
+};
 use crate::messages::Messages;
 use crate::paths::{CONFIG_FILE, PREVIOUS_STATUSLINE_FILE};
 use crate::settings::{
@@ -35,7 +37,7 @@ const DAYS_PER_ERA: i64 = 146_097;
 const YEARS_PER_ERA: i64 = 400;
 const FIRST_MONTH_AFTER_FEBRUARY: i64 = 10;
 const DAYS_SENTINEL: u64 = u64::MAX;
-const DELAY_SENTINEL: &str = "NaN";
+const MINUTES_UNIT: &str = "min";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigError {
@@ -190,6 +192,21 @@ pub fn update_config(
     Ok(config_file)
 }
 
+pub fn remove_config_key(
+    app_dir: &Path,
+    key: &str,
+    journal: &mut Journal,
+) -> Result<PathBuf, FileFailure> {
+    let config_file = join_path(app_dir, CONFIG_FILE);
+    let mut config = read_config(app_dir);
+
+    if config.remove(key).is_some() {
+        save_app_file(app_dir, &config_file, &pretty_line(config), journal)?;
+    }
+
+    Ok(config_file)
+}
+
 fn pretty_line(config: Map<String, Value>) -> Vec<u8> {
     format!("{}\n", stringify_pretty(&Value::Object(config))).into_bytes()
 }
@@ -233,7 +250,15 @@ pub fn templated_days(messages: &Messages, text: &str) -> String {
 
 #[must_use]
 pub fn templated_delay(messages: &Messages, text: &str) -> String {
-    (messages.delay_label)(f64::NAN).replacen(DELAY_SENTINEL, text, 1)
+    let minutes = js_number(text);
+
+    if minutes == 0.0 && !js_trim(text).is_empty() {
+        messages.delay_right_away.to_owned()
+    } else if minutes.is_finite() && !js_trim(text).is_empty() {
+        (messages.delay_label)(minutes)
+    } else {
+        format!("{text} {MINUTES_UNIT}")
+    }
 }
 
 pub fn save_inbox_days(
@@ -541,6 +566,73 @@ pub fn remove_our_settings(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn leaves_the_config_untouched_when_the_key_to_remove_is_missing() {
+        let folder = tempfile::tempdir().unwrap();
+        let config_file = folder.path().join(CONFIG_FILE);
+        let mut journal = Journal::new();
+
+        fs::write(&config_file, "{\"language\":\"pt-br\"}").unwrap();
+
+        let removed = remove_config_key(folder.path(), "delays", &mut journal).unwrap();
+
+        assert_eq!(removed, config_file);
+        assert_eq!(
+            fs::read_to_string(&config_file).unwrap(),
+            "{\"language\":\"pt-br\"}"
+        );
+        assert_eq!(journal.changes(), Vec::new());
+    }
+
+    #[test]
+    fn removes_the_config_key_and_keeps_the_other_keys() {
+        let folder = tempfile::tempdir().unwrap();
+        let config_file = folder.path().join(CONFIG_FILE);
+        let mut journal = Journal::new();
+
+        fs::write(&config_file, "{\"language\":\"pt-br\",\"delays\":[1,2,3]}").unwrap();
+
+        let removed = remove_config_key(folder.path(), "delays", &mut journal).unwrap();
+        let saved: Value =
+            serde_json::from_str(&fs::read_to_string(&config_file).unwrap()).unwrap();
+
+        assert_eq!(removed, config_file);
+        assert_eq!(saved, serde_json::json!({"language": "pt-br"}));
+        assert_eq!(
+            journal.changes(),
+            [crate::journal::Change {
+                kind: crate::journal::ChangeKind::FileChanged,
+                target: fs::canonicalize(&config_file)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
+            }]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fails_to_remove_the_config_key_when_the_config_cannot_be_saved() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let folder = tempfile::tempdir().unwrap();
+        let config_file = folder.path().join(CONFIG_FILE);
+        let mut journal = Journal::new();
+
+        fs::write(&config_file, "{\"delays\":[1,2,3]}").unwrap();
+        fs::set_permissions(folder.path(), fs::Permissions::from_mode(0o500)).unwrap();
+
+        let removed = remove_config_key(folder.path(), "delays", &mut journal);
+
+        fs::set_permissions(folder.path(), fs::Permissions::from_mode(0o700)).unwrap();
+
+        assert!(removed.is_err());
+        assert_eq!(
+            fs::read_to_string(&config_file).unwrap(),
+            "{\"delays\":[1,2,3]}"
+        );
+    }
 
     #[test]
     fn iso_time_matches_the_js_date_format() {

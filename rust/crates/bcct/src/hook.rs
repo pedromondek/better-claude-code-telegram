@@ -6,18 +6,17 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Number, Value, json};
 
-use crate::config::{DELAY_ENV, delay_ms, read_config};
+use crate::config::{DELAY_ENV, DelayKind, delay_ms_for, read_config};
 use crate::files::{create_private_dir, read_json, write_private};
 use crate::hook_failures;
 use crate::js::{
     is_js_whitespace, join_path, js_number, js_string, js_trim, js_truthy, normalize_path,
     parse_json, stringify,
 };
-use crate::paths::Paths;
+use crate::paths::{Paths, TELEGRAM_FLAG};
 
 pub const ANSWER_POLL: Duration = Duration::from_millis(1000);
 
-const TELEGRAM_FLAG: &str = "BETTER_CC_TELEGRAM";
 const TRANSCRIPT_TAIL_BYTES: usize = 4_194_304;
 const LAST_PROMPT_FILE: &str = "last-prompt";
 const DEFAULT_SESSION: &str = "session";
@@ -26,8 +25,9 @@ const SKIPPED_SUFFIXES: [&str; 2] = [".telegram.json", ".answer.json"];
 const LABEL_SESSION_UNITS: usize = 4;
 const DEFAULT_FOLDER_LABEL: &str = "claude";
 const LOWEST_REAL_PID: f64 = 1.0;
-const NOT_TYPED_PROMPT_PREFIXES: [&str; 3] = [
+const NOT_TYPED_PROMPT_PREFIXES: [&str; 4] = [
     "Another Claude session sent a message:",
+    "<cross-session-message ",
     "[Cross-session ",
     "<channel source=\"plugin:telegram",
 ];
@@ -395,7 +395,10 @@ fn build_ask(
         session.map_or(Value::Null, |name| Value::String(name.to_owned())),
     );
     record.insert("createdAt".to_owned(), number(created));
-    record.insert("dueAt".to_owned(), number(created + due_delay(ctx)));
+    record.insert(
+        "dueAt".to_owned(),
+        number(created + due_delay(ctx, DelayKind::Questions)),
+    );
     record.insert("instance".to_owned(), instance.unwrap_or(Value::Null));
     record.insert(
         "context".to_owned(),
@@ -409,8 +412,8 @@ fn build_ask(
     }))
 }
 
-fn due_delay(ctx: &Context) -> f64 {
-    delay_ms(&read_config(&ctx.app_dir), ctx.delay_env.as_deref())
+fn due_delay(ctx: &Context, kind: DelayKind) -> f64 {
+    delay_ms_for(&read_config(&ctx.app_dir), ctx.delay_env.as_deref(), kind)
 }
 
 fn permission(
@@ -460,7 +463,10 @@ fn stop(
         Value::String(session.unwrap_or(DEFAULT_SESSION).to_owned()),
     );
     ping.insert("createdAt".to_owned(), number(created));
-    ping.insert("dueAt".to_owned(), number(created + due_delay(ctx)));
+    ping.insert(
+        "dueAt".to_owned(),
+        number(created + due_delay(ctx, DelayKind::Waiting)),
+    );
     ping.insert("text".to_owned(), Value::String(text.to_owned()));
     ping.insert("instance".to_owned(), instance.unwrap_or(Value::Null));
 
@@ -792,6 +798,38 @@ mod tests {
         fn flush(&mut self) -> io::Result<()> {
             Err(io::ErrorKind::BrokenPipe.into())
         }
+    }
+
+    #[test]
+    fn waits_the_delay_of_each_kind() {
+        let folder = tempfile::tempdir().unwrap();
+        let ctx = context_in(folder.path(), &[]);
+        let app = folder.path().join("app");
+        let now = 1_000_000;
+
+        fs::create_dir_all(&app).unwrap();
+        fs::write(
+            app.join(crate::paths::CONFIG_FILE),
+            r#"{"delayMinutes":4,"delays":{"questions":0,"waiting":10}}"#,
+        )
+        .unwrap();
+
+        let ask = handle_event(Mode::Permission, &ask_input(), &ctx, now, &|_| true)
+            .unwrap()
+            .unwrap();
+        handle_event(
+            Mode::Stop,
+            &json!({"session_id": "s1", "last_assistant_message": "ok?"}),
+            &ctx,
+            now,
+            &|_| true,
+        )
+        .unwrap();
+        let ping: Value =
+            serde_json::from_str(&fs::read_to_string(app.join("pings/s1.json")).unwrap()).unwrap();
+
+        assert_eq!(ask.record["dueAt"].as_f64(), Some(1_000_000.0));
+        assert_eq!(ping["dueAt"].as_f64(), Some(1_600_000.0));
     }
 
     #[test]

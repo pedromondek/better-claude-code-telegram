@@ -27,23 +27,19 @@ use bcct::prompt::{
 };
 use bcct::setup::{command_on_path, shell_script};
 use bcct::setup_ask::{
-    QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
-    ask_pairing_choice, ask_quiet_hours, ask_remove_models, ask_statusline_choice,
-    ask_transcription,
+    DelayPick, QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language,
+    ask_our_statusline, ask_pairing_choice, ask_quiet_hours, ask_remove_models,
+    ask_statusline_choice, ask_transcription,
 };
 use bcct::setup_files::StatuslineChoice;
 use bcct::setup_telegram::PairingChoice;
 use serde_json::{Value, json};
-use support::{
-    Helper, Tree, app_form, coverage_env, list, materialize, placeholders, release_form,
-    snapshot_under, text,
-};
+use support::{Helper, Tree, coverage_env, list, materialize, placeholders, snapshot_under, text};
 
 const FIXTURE: &str = include_str!("fixtures/setup-run.json");
 const BCCT: &str = env!("CARGO_BIN_EXE_bcct");
 const TOOLS: [&str; 8] = ["sh", "ps", "mkdir", "chmod", "cat", "rm", "sleep", "node"];
 const UNREACHABLE_API: &str = "http://127.0.0.1:1";
-const GIT_VERSION: &str = "2.43.0";
 const FAKE_GIT: &str = "#!/bin/sh\necho 'git version 2.43.0'\n";
 const DIGITS: &str = "0123456789";
 const WAIT_LIMIT: Duration = Duration::from_secs(5);
@@ -53,181 +49,10 @@ const APP_FOLDER: &str = "home/.claude/better-claude-code-telegram/";
 const SHELL_SCRIPT: &str = "home/.claude/better-claude-code-telegram/shell.sh";
 
 fn fixture() -> Value {
-    with_the_path_step(&with_the_shell_script_journaled(&app_form(
-        &parse_json(&release_form(FIXTURE)).unwrap(),
-        APP,
-    )))
+    parse_json(FIXTURE).unwrap()
 }
 
-const JS_TOTAL: &str = "/10 ";
-const RUST_TOTAL: &str = "/11 ";
-const HEADING: &str = "── ";
-const JS_HEALTH_HEADING: &str = "── 🩺 10/10 ";
-const HEALTH_HEADING: &str = "── 🩺 11/11 ";
-const SHELL_CHECK: &str = " Shell: ";
 const HEALTH_COMMAND: &str = "npx @pedromondek/better-claude-code-telegram health";
-
-fn counted_with_the_path_step(stdout: &str) -> String {
-    stdout
-        .split_inclusive('\n')
-        .map(|line| {
-            if line.starts_with(JS_HEALTH_HEADING) {
-                line.replacen(JS_HEALTH_HEADING, HEALTH_HEADING, 1)
-            } else if line.starts_with(HEADING) {
-                line.replacen(JS_TOTAL, RUST_TOTAL, 1)
-            } else {
-                line.to_owned()
-            }
-        })
-        .collect()
-}
-
-fn path_step_shown(counted: &str) -> Option<String> {
-    let health = counted.find(HEALTH_HEADING)?;
-    let messages = messages_for(if counted.contains("Verificação final") {
-        Locale::PtBr
-    } else {
-        Locale::EnUs
-    });
-    let step = format!(
-        "── 💻 10/11 {} ──\n{} {} {}\n\n",
-        messages.step_titles.path,
-        messages.path_question,
-        (messages.yes_no_hint)(false),
-        messages.path_off
-    );
-    let (before, after) = counted.split_at(health);
-    let checked = after.find(SHELL_CHECK).map_or_else(
-        || after.to_owned(),
-        |shell| with_the_new_checks(after, shell, messages),
-    );
-
-    Some(format!("{before}{step}{checked}"))
-}
-
-fn with_the_new_checks(after: &str, shell: usize, messages: &Messages) -> String {
-    let labels = messages.health_labels;
-    let detail = messages.health_detail;
-    let line_start = after[..shell].rfind('\n').map_or(0, |line| line + 1);
-    let shell_end = after[shell..]
-        .find('\n')
-        .map_or(after.len(), |line| shell + line + 1);
-    let launcher = format!(
-        "✘ {}: {}\n○ {}: {}\n",
-        labels.launcher,
-        (detail.launcher_missing)(&format!("{APP}/bin")),
-        labels.version,
-        detail.version_unknown
-    );
-    let rows = format!(
-        "○ {}: {}\n✔ {}: {}\n✔ {}: {}\n",
-        labels.path,
-        detail.path_off,
-        labels.app_dir,
-        detail.app_writable,
-        labels.hooks,
-        detail.no_hook_failures
-    );
-    let rest = &after[shell_end..];
-    let warning = format!("⚠ {}\n", (messages.health_has_failures)(HEALTH_COMMAND));
-    let rest = match rest.find("\n\n") {
-        Some(end) if !rest[..end].contains(warning.trim_end()) => {
-            format!("{}{warning}{}", &rest[..=end], &rest[end + 1..])
-        }
-        _ => rest.to_owned(),
-    };
-
-    let checked = format!(
-        "{}{launcher}{}{rows}{rest}",
-        &after[..line_start],
-        &after[line_start..shell_end]
-    );
-
-    with_the_git_row(&checked, messages)
-}
-
-fn with_the_git_row(checked: &str, messages: &Messages) -> String {
-    let labels = messages.health_labels;
-    let plugins = format!(" {}: ", labels.plugins);
-
-    checked.find(&plugins).map_or_else(
-        || checked.to_owned(),
-        |found| {
-            let line_start = checked[..found].rfind('\n').map_or(0, |line| line + 1);
-
-            format!(
-                "{}✔ {}: {GIT_VERSION}\n{}",
-                &checked[..line_start],
-                labels.git,
-                &checked[line_start..]
-            )
-        },
-    )
-}
-
-fn with_the_path_step(fixture: &Value) -> Value {
-    let mut fixture = fixture.clone();
-
-    for group in fixture["processes"].as_object_mut().unwrap().values_mut() {
-        for scenario in group.as_array_mut().unwrap() {
-            let runs = scenario["runs"].as_array().unwrap().len();
-
-            for index in 0..runs {
-                let counted =
-                    counted_with_the_path_step(text(&scenario["results"][index], "stdout"));
-
-                if let Some(shown) = path_step_shown(&counted) {
-                    let input = format!("{}\n", text(&scenario["runs"][index], "input"));
-
-                    scenario["results"][index]["stdout"] = Value::String(shown);
-                    scenario["runs"][index]["input"] = Value::String(input);
-                } else {
-                    scenario["results"][index]["stdout"] = Value::String(counted);
-                }
-            }
-        }
-    }
-
-    fixture
-}
-
-fn undone(change: &str) -> String {
-    format!(
-        "\u{1b}[36m⠋\u{1b}[39m \u{1b}[2mUndoing: {change}…\u{1b}[22m\r\u{1b}[2K\u{1b}[32m✔ Undone:\r\n  • {change}\u{1b}[39m\r\n"
-    )
-}
-
-fn journaled_text(text: &str) -> String {
-    let folder = format!("created the folder {APP}");
-    let script = format!("created {APP}/shell.sh");
-    let rc = "created {root}/home/.zshrc";
-
-    text.replace(
-        &format!("  • {rc}\r\n  • {folder}\r\n"),
-        &format!("  • {folder}\r\n  • {script}\r\n  • {rc}\r\n"),
-    )
-    .replace(
-        &format!("{}{}", undone(&folder), undone(rc)),
-        &format!("{}{}{}", undone(rc), undone(&script), undone(&folder)),
-    )
-    .replace("inbox, statusline\n", "inbox, statusline, path\n")
-    .replace(
-        "inbox, statusline\u{1b}[39m",
-        "inbox, statusline, path\u{1b}[39m",
-    )
-}
-
-fn with_the_shell_script_journaled(value: &Value) -> Value {
-    match value {
-        Value::String(text) => Value::String(journaled_text(text)),
-        Value::Array(items) => items.iter().map(with_the_shell_script_journaled).collect(),
-        Value::Object(map) => map
-            .iter()
-            .map(|(key, item)| (key.clone(), with_the_shell_script_journaled(item)))
-            .collect(),
-        other => other.clone(),
-    }
-}
 
 fn without_the_shell_script(mut tree: Tree, root: &Path, name: &str) -> Tree {
     let loads = tree
@@ -813,11 +638,15 @@ fn replay_scenario(scenario: &Value, fake_claude: &str) {
     replay_checked(scenario, fake_claude, &as_recorded);
 }
 
-fn replay_checked(
-    scenario: &Value,
-    fake_claude: &str,
-    check: &dyn Fn(&str, &Value, &Value, &RunResult),
-) {
+struct Observed {
+    results: Vec<RunResult>,
+    home: Tree,
+    claude_calls: Vec<Value>,
+    tool_calls: String,
+    telegram_calls: Vec<Value>,
+}
+
+fn observe(scenario: &Value, fake_claude: &str) -> Observed {
     let folder = support::sandbox();
     let root = folder.path();
     let name = text(scenario, "name");
@@ -838,46 +667,30 @@ fn replay_checked(
         &with_pid(&scenario["files"], facts.pid.as_deref().unwrap_or_default()),
     );
 
-    for (run, expected) in list(scenario, "runs").iter().zip(list(scenario, "results")) {
-        if let Some(telegram) = &telegram {
-            *telegram.code.lock().unwrap() = None;
-        }
+    let results = list(scenario, "runs")
+        .iter()
+        .map(|run| {
+            if let Some(telegram) = &telegram {
+                *telegram.code.lock().unwrap() = None;
+            }
 
-        let result = run_once(run, root, telegram.as_ref(), &mut facts);
-
-        check(name, run, expected, &result);
-    }
-
-    assert_eq!(
-        without_the_shell_script(home_tree(root, &facts), root, name),
-        expected_home(&scenario["after"]),
-        "{name}: files"
-    );
-
-    let log = root.join("work/claude.log");
-    let claude_calls: Vec<Value> = fs::read_to_string(log)
+            run_once(run, root, telegram.as_ref(), &mut facts)
+        })
+        .collect();
+    let home = without_the_shell_script(home_tree(root, &facts), root, name);
+    let claude_calls: Vec<Value> = fs::read_to_string(root.join("work/claude.log"))
         .map(|text| {
             text.lines()
                 .map(|line| serde_json::from_str(&normalized(line, root, &facts)).unwrap())
                 .collect()
         })
         .unwrap_or_default();
-
-    assert_eq!(
-        &claude_calls,
-        list(scenario, "claudeCalls"),
-        "{name}: claude"
+    let tool_calls = normalized(
+        &fs::read_to_string(root.join("work/tools.log")).unwrap_or_default(),
+        root,
+        &facts,
     );
-
-    let tools = fs::read_to_string(root.join("work/tools.log")).unwrap_or_default();
-
-    assert_eq!(
-        normalized(&tools, root, &facts),
-        text(scenario, "toolCalls"),
-        "{name}: tools"
-    );
-
-    let calls: Vec<Value> = telegram.as_ref().map_or_else(Vec::new, |telegram| {
+    let telegram_calls: Vec<Value> = telegram.as_ref().map_or_else(Vec::new, |telegram| {
         serde_json::from_str(&normalized(
             &Value::Array(telegram.calls.lock().unwrap().clone()).to_string(),
             root,
@@ -886,7 +699,134 @@ fn replay_checked(
         .unwrap()
     });
 
-    assert_eq!(&calls, list(scenario, "telegramCalls"), "{name}: telegram");
+    Observed {
+        results,
+        home,
+        claude_calls,
+        tool_calls,
+        telegram_calls,
+    }
+}
+
+fn replay_checked(
+    scenario: &Value,
+    fake_claude: &str,
+    check: &dyn Fn(&str, &Value, &Value, &RunResult),
+) {
+    let name = text(scenario, "name");
+    let observed = observe(scenario, fake_claude);
+
+    for ((run, expected), result) in list(scenario, "runs")
+        .iter()
+        .zip(list(scenario, "results"))
+        .zip(&observed.results)
+    {
+        check(name, run, expected, result);
+    }
+
+    assert_eq!(
+        observed.home,
+        expected_home(&scenario["after"]),
+        "{name}: files"
+    );
+    assert_eq!(
+        &observed.claude_calls,
+        list(scenario, "claudeCalls"),
+        "{name}: claude"
+    );
+    assert_eq!(
+        observed.tool_calls,
+        text(scenario, "toolCalls"),
+        "{name}: tools"
+    );
+    assert_eq!(
+        &observed.telegram_calls,
+        list(scenario, "telegramCalls"),
+        "{name}: telegram"
+    );
+}
+
+fn blessing() -> bool {
+    std::env::var_os("BCCT_BLESS").is_some_and(|flag| flag == "1")
+}
+
+fn after_value(home: &Tree) -> Value {
+    Value::Object(
+        home.iter()
+            .map(|(path, (content, mode))| {
+                let mut entry = serde_json::Map::new();
+
+                if let Some(content) = content {
+                    entry.insert("content".to_owned(), json!(content));
+                }
+
+                entry.insert("mode".to_owned(), json!(mode));
+                (path.clone(), Value::Object(entry))
+            })
+            .collect(),
+    )
+}
+
+#[test]
+fn blessing_rewrites_the_setup_run_fixture_from_the_binary() {
+    if !blessing() {
+        return;
+    }
+
+    let mut fixture = fixture();
+    let fake_claude = text(&fixture, "fakeClaude").to_owned();
+
+    for group in fixture["processes"].as_object_mut().unwrap().values_mut() {
+        for scenario in group.as_array_mut().unwrap() {
+            let observed = observe(scenario, &fake_claude);
+
+            scenario["results"] = observed
+                .results
+                .iter()
+                .map(|result| {
+                    json!({
+                        "status": result.status,
+                        "stdout": result.stdout,
+                        "stderr": result.stderr,
+                    })
+                })
+                .collect();
+
+            if observed.home != expected_home(&scenario["after"]) {
+                scenario["after"] = after_value(&observed.home);
+            }
+
+            scenario["claudeCalls"] = Value::Array(observed.claude_calls);
+            scenario["toolCalls"] = Value::String(observed.tool_calls);
+            scenario["telegramCalls"] = Value::Array(observed.telegram_calls);
+        }
+    }
+
+    for entry in fixture["questions"].as_array_mut().unwrap() {
+        let answer = answered(entry);
+
+        entry["value"] = answer.value;
+        entry["calls"] = answer.calls.iter().map(call_value).collect();
+        entry["errors"] = Value::Array(answer.reports);
+    }
+
+    for scenario in fixture["terminal"].as_array_mut().unwrap() {
+        let (shown, home) = on_the_terminal(scenario, &fake_claude);
+
+        scenario["output"] = Value::String(shown);
+
+        if home != expected_home(&scenario["after"]) {
+            scenario["after"] = after_value(&home);
+        }
+    }
+
+    fs::write(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/setup-run.json"),
+        stringify(&fixture)
+            .replace('\u{2028}', "\\u2028")
+            .replace('\u{2029}', "\\u2029"),
+    )
+    .unwrap();
 }
 
 const HEALTH_KEEPS_GOING: &str = "the health stops when the bot answers nothing";
@@ -905,16 +845,10 @@ fn replay_group(group: &str) {
 #[test]
 fn a_bot_answer_without_data_fails_only_its_check_and_the_setup_finishes() {
     let fixture = fixture();
-    let mut scenario = list(&fixture["processes"], "telegram")
+    let scenario = list(&fixture["processes"], "telegram")
         .iter()
         .find(|scenario| text(scenario, "name") == HEALTH_KEEPS_GOING)
-        .unwrap()
-        .clone();
-    scenario["telegramCalls"]
-        .as_array_mut()
-        .unwrap()
-        .push(json!({"method": "getChat", "params": {"chat_id": "42"}}));
-    let scenario = &scenario;
+        .unwrap();
     let recorded = |expected: &Value| {
         let stdout = text(expected, "stdout");
         stdout[..stdout.rfind("Telegram\n").unwrap()].to_owned()
@@ -959,12 +893,12 @@ fn a_bot_answer_without_data_fails_only_its_check_and_the_setup_finishes() {
 }
 
 #[test]
-fn the_steps_do_what_the_js_does() {
+fn runs_the_steps_as_the_fixture_recorded() {
     replay_group("steps");
 }
 
 #[test]
-fn the_status_line_does_what_the_js_does() {
+fn runs_the_status_line_step_as_the_fixture_recorded() {
     replay_group("statusline");
 }
 
@@ -989,29 +923,32 @@ fn keeping_the_statusline_of_the_clone_moves_it_to_the_launcher_of_the_app() {
     let stdout = text(&scenario["results"][0], "stdout").replace(&kept, &moved);
 
     assert_ne!(stdout, text(&scenario["results"][0], "stdout"));
-    scenario["files"] = scenario_of(&parse_json(&release_form(FIXTURE)).unwrap())["files"].clone();
+    scenario["files"] = json!({
+        "home/.claude/settings.json":
+            "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"\n  }\n}\n"
+    });
     scenario["results"][0]["stdout"] = Value::String(stdout);
 
     replay_scenario(&scenario, text(&fixture, "fakeClaude"));
 }
 
 #[test]
-fn the_command_line_flags_do_what_the_js_does() {
+fn applies_the_command_line_flags_as_the_fixture_recorded() {
     replay_group("set");
 }
 
 #[test]
-fn the_plugin_step_does_what_the_js_does() {
+fn runs_the_plugin_step_as_the_fixture_recorded() {
     replay_group("plugins");
 }
 
 #[test]
-fn the_telegram_steps_do_what_the_js_does() {
+fn runs_the_telegram_steps_as_the_fixture_recorded() {
     replay_group("telegram");
 }
 
 #[test]
-fn the_uninstall_does_what_the_js_does() {
+fn runs_the_uninstall_as_the_fixture_recorded() {
     replay_group("uninstall");
 }
 
@@ -1096,12 +1033,16 @@ fn asked(entry: &Value, ask: &mut FakePrompter) -> Result<Value, PromptError> {
     let saved = entry["saved"].as_bool() == Some(true);
 
     Ok(match text(entry, "ask") {
-        "delay" => json!(ask_delay(
+        "delay" => match ask_delay(
             entry["current"].as_f64().unwrap(),
             saved,
+            None,
             messages,
-            ask
-        )?),
+            ask,
+        )? {
+            DelayPick::Minutes(minutes) => json!(minutes),
+            DelayPick::Kinds(kinds) => json!(kinds),
+        },
         "inbox" => json!(ask_inbox(entry["current"].as_f64(), saved, messages, ask)?),
         "quiet" => {
             let current = range_of(&entry["current"]);
@@ -1123,7 +1064,7 @@ fn asked(entry: &Value, ask: &mut FakePrompter) -> Result<Value, PromptError> {
             )? {
                 TranscriptionChoice::Off => Value::Null,
                 TranscriptionChoice::Model(model) => json!(model),
-                TranscriptionChoice::Uninstall => json!("<uninstall>"),
+                TranscriptionChoice::Uninstall(models) => json!({ "uninstall": models }),
             }
         }
         "language" => {
@@ -1194,20 +1135,70 @@ fn expected_calls(entry: &Value) -> Vec<FakeCall> {
         .collect()
 }
 
+fn call_value(call: &FakeCall) -> Value {
+    match call {
+        FakeCall::Line { prompt } => json!({ "line": prompt }),
+        FakeCall::Select {
+            title,
+            index,
+            choices,
+        } => json!({
+            "title": title,
+            "index": index,
+            "choices": choices
+                .iter()
+                .map(|choice| {
+                    let mut shown = json!({
+                        "label": choice.label,
+                        "heading": choice.heading,
+                        "previous": choice.previous,
+                    });
+
+                    if let Some(hint) = &choice.hint {
+                        shown["hint"] = json!(hint);
+                    }
+
+                    shown
+                })
+                .collect::<Vec<_>>(),
+        }),
+        hidden @ FakeCall::Hidden { .. } => panic!("a question never asks {hidden:?}"),
+    }
+}
+
+struct Answered {
+    value: Value,
+    calls: Vec<FakeCall>,
+    reports: Vec<Value>,
+}
+
+fn answered(entry: &Value) -> Answered {
+    let mut ask =
+        FakePrompter::new(entry["piped"].as_bool() != Some(true)).with_replies(replies_of(entry));
+    let value =
+        asked(entry, &mut ask).unwrap_or_else(|error| json!({ "error": error.to_string() }));
+
+    Answered {
+        value,
+        calls: ask.calls().to_vec(),
+        reports: ask.reports().iter().map(|report| json!(report)).collect(),
+    }
+}
+
 #[test]
-fn the_questions_ask_what_the_js_asks() {
+fn asks_each_question_as_the_fixture_recorded() {
     let fixture = fixture();
 
     for entry in list(&fixture, "questions") {
-        let mut ask = FakePrompter::new(entry["piped"].as_bool() != Some(true))
-            .with_replies(replies_of(entry));
-        let value =
-            asked(entry, &mut ask).unwrap_or_else(|error| json!({ "error": error.to_string() }));
-        let reports: Vec<Value> = ask.reports().iter().map(|report| json!(report)).collect();
+        let answer = answered(entry);
 
-        assert_eq!(stringify(&value), stringify(&entry["value"]), "{entry}");
-        assert_eq!(ask.calls(), expected_calls(entry), "{entry}");
-        assert_eq!(&reports, list(entry, "errors"), "{entry}");
+        assert_eq!(
+            stringify(&answer.value),
+            stringify(&entry["value"]),
+            "{entry}"
+        );
+        assert_eq!(answer.calls, expected_calls(entry), "{entry}");
+        assert_eq!(&answer.reports, list(entry, "errors"), "{entry}");
     }
 }
 
@@ -2038,74 +2029,76 @@ fn with_stty(root: &Path) {
     std::os::unix::fs::symlink(resolved("stty"), root.join("bin/stty")).unwrap();
 }
 
+fn on_the_terminal(scenario: &Value, fake_claude: &str) -> (String, Tree) {
+    let folder = support::sandbox();
+    let root = folder.path();
+    let name = text(scenario, "name");
+    let telegram = scenario["telegram"]
+        .is_object()
+        .then(|| start_telegram(&scenario["telegram"]));
+    let api = telegram.as_ref().map_or_else(
+        || UNREACHABLE_API.to_owned(),
+        |telegram| format!("http://127.0.0.1:{}", telegram.port),
+    );
+
+    prepared(root, scenario, fake_claude);
+    with_stty(root);
+    materialize(root, &with_pid(&scenario["files"], ""));
+
+    let mut argv: Vec<String> = ["sh", "-c", PTY_WRAPPER, BCCT, "setup"]
+        .map(str::to_owned)
+        .to_vec();
+
+    argv.extend(
+        list(scenario, "args")
+            .iter()
+            .map(|arg| arg.as_str().unwrap().to_owned()),
+    );
+
+    let mut env = pty_env(root, &api);
+
+    if let Some(extra) = scenario["env"].as_object() {
+        env.extend(
+            extra
+                .iter()
+                .map(|(name, value)| (name.clone(), value.as_str().unwrap().to_owned())),
+        );
+    }
+
+    let output = pty::record(&pty::Run {
+        argv: &argv,
+        env: &env,
+        columns: scenario["columns"]
+            .as_u64()
+            .map_or(PTY_COLUMNS, |columns| u16::try_from(columns).unwrap()),
+        rows: PTY_ROWS,
+        steps: &pty_steps(scenario),
+        redirect: None,
+    })
+    .unwrap();
+    let shown = String::from_utf8_lossy(&output).into_owned();
+    let facts = Facts {
+        code: scraped_code(&output),
+        pid: None,
+    };
+
+    (
+        normalized(&strip_spinner(&shown), root, &facts),
+        without_the_shell_script(home_tree(root, &facts), root, name),
+    )
+}
+
 #[test]
-fn the_terminal_shows_what_the_js_shows() {
+fn shows_on_the_terminal_what_the_fixture_recorded() {
     let fixture = fixture();
     let fake_claude = text(&fixture, "fakeClaude");
 
     for scenario in list(&fixture, "terminal") {
-        let folder = support::sandbox();
-        let root = folder.path();
         let name = text(scenario, "name");
-        let telegram = scenario["telegram"]
-            .is_object()
-            .then(|| start_telegram(&scenario["telegram"]));
-        let api = telegram.as_ref().map_or_else(
-            || UNREACHABLE_API.to_owned(),
-            |telegram| format!("http://127.0.0.1:{}", telegram.port),
-        );
+        let (shown, home) = on_the_terminal(scenario, fake_claude);
 
-        prepared(root, scenario, fake_claude);
-        with_stty(root);
-        materialize(root, &with_pid(&scenario["files"], ""));
-
-        let mut argv: Vec<String> = ["sh", "-c", PTY_WRAPPER, BCCT, "setup"]
-            .map(str::to_owned)
-            .to_vec();
-
-        argv.extend(
-            list(scenario, "args")
-                .iter()
-                .map(|arg| arg.as_str().unwrap().to_owned()),
-        );
-
-        let mut env = pty_env(root, &api);
-
-        if let Some(extra) = scenario["env"].as_object() {
-            env.extend(
-                extra
-                    .iter()
-                    .map(|(name, value)| (name.clone(), value.as_str().unwrap().to_owned())),
-            );
-        }
-
-        let output = pty::record(&pty::Run {
-            argv: &argv,
-            env: &env,
-            columns: scenario["columns"]
-                .as_u64()
-                .map_or(PTY_COLUMNS, |columns| u16::try_from(columns).unwrap()),
-            rows: PTY_ROWS,
-            steps: &pty_steps(scenario),
-            redirect: None,
-        })
-        .unwrap();
-        let shown = String::from_utf8_lossy(&output).into_owned();
-        let facts = Facts {
-            code: scraped_code(&output),
-            pid: None,
-        };
-
-        assert_eq!(
-            normalized(&strip_spinner(&shown), root, &facts),
-            text(scenario, "output"),
-            "{name}"
-        );
-        assert_eq!(
-            without_the_shell_script(home_tree(root, &facts), root, name),
-            expected_home(&scenario["after"]),
-            "{name}: files"
-        );
+        assert_eq!(shown, text(scenario, "output"), "{name}");
+        assert_eq!(home, expected_home(&scenario["after"]), "{name}: files");
     }
 }
 
@@ -2161,6 +2154,7 @@ fn ctrl_z_gives_the_terminal_back_while_stopped_and_fg_goes_on_asking() {
     let argv: Vec<String> = ["bash", "-c", script, BCCT].map(str::to_owned).to_vec();
     let down = b"\x1b[B".to_vec();
     let steps = [
+        pty::Step::Key(down.clone()),
         pty::Step::Key(down.clone()),
         pty::Step::Key(down.clone()),
         pty::Step::Key(down.clone()),

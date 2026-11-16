@@ -13,7 +13,7 @@ use crate::js::{
     join_path, js_key_count, js_length, js_template, js_trim, js_truthy, stringify_pretty,
 };
 use crate::messages::{Messages, messages_for};
-use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE};
+use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE, TELEGRAM_FLAG};
 use crate::prompt::{Prompter, create_prompter};
 use crate::self_install::Store;
 use crate::setup::{
@@ -771,6 +771,8 @@ impl Checks<'_> {
             off(detail.connecting)
         } else if fresh {
             failed(detail.down)
+        } else if self.text_var(TELEGRAM_FLAG).as_deref() == Some("1") {
+            failed(detail.down_here)
         } else {
             off(detail.not_open)
         }

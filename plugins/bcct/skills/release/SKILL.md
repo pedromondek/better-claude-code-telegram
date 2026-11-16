@@ -1,6 +1,6 @@
 ---
 name: release
-description: Send to Telegram right away the AskUserQuestion questions still waiting for the delay, from every instance or only one session.
+description: Send to Telegram right away the AskUserQuestion questions still waiting for the delay or held by the quiet hours, from every instance or only one session.
 argument-hint: "[session id prefix]"
 disable-model-invocation: true
 allowed-tools:

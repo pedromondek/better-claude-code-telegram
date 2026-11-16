@@ -1,20 +1,20 @@
-use crate::config::DEFAULT_DELAY_MINUTES;
+use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, kind_minutes};
 use crate::install::{
     CommandsChoice, DISABLE_ANSWERS, Parsed, TRANSCRIPTION_MODELS, TranscriptionChoice,
 };
 use crate::js::{format_number, is_js_whitespace, js_number, js_trim};
 use crate::locale::Locale;
-use crate::messages::Messages;
+use crate::messages::{Messages, format_delay};
 use crate::prompt::{
-    Answer, ChoiceItem, ChoiceQuestion, Other, Prompter, ask_choice, ask_validated, index_of_value,
-    marked, number_choices,
+    Answer, ChoiceItem, ChoiceQuestion, Other, Own, PromptError, Prompter, ask_choice,
+    ask_choice_then, ask_validated, index_of_value, marked, number_choices, with_own,
 };
 use crate::setup_files::StatuslineChoice;
 use crate::setup_telegram::PairingChoice;
 
 pub type QuietRange = (String, String);
 
-const DELAY_PRESETS: [f64; 6] = [1.0, 3.0, 4.0, 5.0, 10.0, 15.0];
+const DELAY_PRESETS: [f64; 7] = [0.0, 1.0, 3.0, 4.0, 5.0, 10.0, 15.0];
 const INBOX_PRESETS: [f64; 5] = [1.0, 3.0, 7.0, 14.0, 30.0];
 const QUIET_RANGES: [(&str, &str); 4] = [
     ("18:00", "08:00"),
@@ -45,7 +45,7 @@ pub fn parse_delay_minutes(answer: &str) -> Option<f64> {
     let trimmed = js_trim(answer);
     let minutes = js_number(&trimmed.replacen(',', ".", 1));
 
-    (!trimmed.is_empty() && minutes.is_finite() && minutes > 0.0).then_some(minutes)
+    (!trimmed.is_empty() && minutes.is_finite() && minutes >= 0.0).then_some(minutes)
 }
 
 fn is_clock(text: &str) -> bool {
@@ -163,34 +163,129 @@ pub fn ask_language(
     )
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DelayPick {
+    Minutes(f64),
+    Kinds([f64; 3]),
+}
+
+#[must_use]
+pub fn delay_text(minutes: f64, messages: &Messages) -> String {
+    if minutes == 0.0 {
+        messages.delay_right_away.to_owned()
+    } else {
+        format_delay(minutes)
+    }
+}
+
+#[must_use]
+pub fn kinds_summary(kinds: [f64; 3], messages: &Messages) -> String {
+    messages
+        .delay_kind_labels
+        .iter()
+        .zip(kinds)
+        .map(|(label, minutes)| {
+            format!("{} {}", label.to_lowercase(), delay_text(minutes, messages))
+        })
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
+#[must_use]
+pub fn parse_kinds(answer: &str) -> Option<[f64; 3]> {
+    let parts: Vec<f64> = answer
+        .split('/')
+        .map(parse_delay_minutes)
+        .collect::<Option<_>>()?;
+
+    parts.try_into().ok()
+}
+
+#[must_use]
+pub fn single_delay(kinds: [f64; 3]) -> Option<f64> {
+    let [first, ..] = kinds;
+
+    kinds
+        .iter()
+        .all(|minutes| {
+            minutes
+                .partial_cmp(&first)
+                .is_some_and(std::cmp::Ordering::is_eq)
+        })
+        .then_some(first)
+}
+
+#[must_use]
+pub fn saved_kinds(
+    config: &serde_json::Map<String, serde_json::Value>,
+    base: f64,
+) -> Option<[f64; 3]> {
+    config
+        .get("delays")
+        .filter(|delays| delays.is_object())
+        .map(|_| DelayKind::ALL.map(|kind| kind_minutes(config, kind).unwrap_or(base)))
+}
+
 pub fn ask_delay(
     current: f64,
     saved: bool,
+    kinds: Option<[f64; 3]>,
     messages: &'static Messages,
     ask: &mut dyn Prompter,
-) -> Answer<f64> {
-    let options = number_choices(&DELAY_PRESETS, Some(current), &|minutes| {
-        (messages.delay_label)(minutes)
-    });
-    let index = index_of_value(&options, &current);
-    let recommended = |choice: &ChoiceItem<f64>| {
-        if choice.value() == Some(&DEFAULT_DELAY_MINUTES) {
+) -> Answer<DelayPick> {
+    let mut options: Vec<ChoiceItem<DelayPick>> =
+        number_choices(&DELAY_PRESETS, Some(current), &|minutes| {
+            if minutes == 0.0 {
+                messages.delay_right_away_label.to_owned()
+            } else {
+                (messages.delay_label)(minutes)
+            }
+        })
+        .into_iter()
+        .map(|choice| choice.map_value(DelayPick::Minutes))
+        .collect();
+    let index = if kinds.is_some() {
+        options.len()
+    } else {
+        index_of_value(&options, &DelayPick::Minutes(current))
+    };
+    let recommended = |choice: &ChoiceItem<DelayPick>| {
+        if choice.value() == Some(&DelayPick::Minutes(DEFAULT_DELAY_MINUTES)) {
             vec![messages.recommended.to_owned()]
         } else {
             Vec::new()
         }
     };
+    let parse_minutes = |answer: &str| parse_delay_minutes(answer).map(DelayPick::Minutes);
     let mut typed = |terminal: &mut dyn Prompter| {
         ask_validated(
             messages.delay_custom_prompt,
-            &parse_delay_minutes,
+            &parse_minutes,
             messages.delay_custom_hint,
             messages,
             terminal,
         )
     };
+    let info = kinds.map_or_else(
+        || messages.delay_kinds_info.to_owned(),
+        |kinds| kinds_summary(kinds, messages),
+    );
 
-    ask_choice(
+    options.push(
+        ChoiceItem::pick(
+            messages.delay_per_kind,
+            messages.delay_per_kind_answer,
+            DelayPick::Kinds(kinds.unwrap_or([current; 3])),
+        )
+        .with_hint(&info),
+    );
+
+    let mut per_kind = |pick: DelayPick, terminal: &mut dyn Prompter| match pick {
+        DelayPick::Kinds(start) => ask_delay_kinds(start, messages, terminal).map(DelayPick::Kinds),
+        minutes @ DelayPick::Minutes(_) => Ok(minutes),
+    };
+
+    ask_choice_then(
         ChoiceQuestion {
             title: messages.delay_question.to_owned(),
             choices: marked(options, index, saved, &recommended, messages),
@@ -198,14 +293,56 @@ pub fn ask_delay(
             other: Some(Other {
                 label: messages.custom.to_owned(),
                 answer: OTHER_ANSWER.to_owned(),
-                parse: &parse_delay_minutes,
+                parse: &parse_minutes,
                 ask_on_terminal: &mut typed,
             }),
             default_hint: None,
         },
+        Some(&mut per_kind),
         messages,
         ask,
     )
+}
+
+pub fn ask_delay_kinds(
+    current: [f64; 3],
+    messages: &'static Messages,
+    ask: &mut dyn Prompter,
+) -> Answer<[f64; 3]> {
+    let mut kinds = current;
+    let mut position = 0;
+
+    while let (Some(label), Some(slot)) = (
+        messages.delay_kind_labels.get(position),
+        kinds.get_mut(position),
+    ) {
+        let keep = *slot;
+        let parse = |answer: &str| {
+            if js_trim(answer).is_empty() {
+                Some(keep)
+            } else {
+                parse_delay_minutes(answer)
+            }
+        };
+        let answer = ask_validated(
+            &(messages.delay_kind_prompt)(label),
+            &parse,
+            messages.delay_kind_hint,
+            messages,
+            ask,
+        );
+
+        match answer {
+            Ok(minutes) => {
+                *slot = minutes;
+                position += 1;
+            }
+            Err(PromptError::Back) if position > 0 => position -= 1,
+            Err(error) => return Err(error),
+        }
+    }
+
+    Ok(kinds)
 }
 
 fn inbox_label(messages: &Messages, days: f64) -> String {
@@ -301,8 +438,7 @@ pub fn ask_quiet_hours(
         names.night,
         names.late_night,
     ];
-    let range = current.map(range_text);
-    let presets: Vec<ChoiceItem<Option<QuietRange>>> = labels
+    let presets = labels
         .into_iter()
         .zip(QUIET_RANGES)
         .map(|(label, (start, end))| {
@@ -310,24 +446,23 @@ pub fn ask_quiet_hours(
 
             ChoiceItem::pick(label, &answer, Some((start.to_owned(), end.to_owned())))
                 .with_hint(&answer)
-        })
-        .collect();
-    let own = current.filter(|_| {
-        !QUIET_RANGES
-            .iter()
-            .any(|(start, end)| Some(format!("{start}-{end}")) == range)
-    });
-    let mut options: Vec<ChoiceItem<Option<QuietRange>>> = vec![
-        ChoiceItem::pick(messages.quiet_off_label, OFF_ANSWER, None).with_aliases(&DISABLE_ANSWERS),
-    ];
+        });
+    let off =
+        ChoiceItem::pick(messages.quiet_off_label, OFF_ANSWER, None).with_aliases(&DISABLE_ANSWERS);
+    let options = with_own(
+        [off].into_iter().chain(presets).collect(),
+        current.cloned(),
+        &Own {
+            same: &PartialEq::eq,
+            item: &|_, own| {
+                own.map(|own| {
+                    let text = range_text(&own);
 
-    options.extend(own.map(|own| {
-        let text = range_text(own);
-
-        ChoiceItem::pick(&text, &text, Some(own.clone()))
-    }));
-    options.extend(presets);
-
+                    (1, ChoiceItem::pick(&text, &text, Some(own)))
+                })
+            },
+        },
+    );
     let index = index_of_value(&options, &current.cloned());
     let mut typed = |terminal: &mut dyn Prompter| ask_quiet_range(messages, terminal);
 
@@ -383,7 +518,7 @@ pub fn ask_transcription(
         options.push(ChoiceItem::pick(
             messages.transcription_uninstall,
             "uninstall",
-            TranscriptionChoice::Uninstall,
+            TranscriptionChoice::Uninstall(Vec::new()),
         ));
         options.push(ChoiceItem::heading(
             messages.transcription_installed_heading,
@@ -405,8 +540,19 @@ pub fn ask_transcription(
 
     let chosen = current.map_or(TranscriptionChoice::Off, TranscriptionChoice::Model);
     let index = index_of_value(&options, &chosen);
+    let in_use = current.filter(|_| saved);
+    let mut removal = |choice: TranscriptionChoice, terminal: &mut dyn Prompter| match choice {
+        TranscriptionChoice::Uninstall(_) if installed.len() == 1 => {
+            Ok(TranscriptionChoice::Uninstall(installed.to_vec()))
+        }
+        TranscriptionChoice::Uninstall(_) => {
+            ask_remove_models(installed, in_use, messages.model_in_use, messages, terminal)
+                .map(TranscriptionChoice::Uninstall)
+        }
+        other => Ok(other),
+    };
 
-    ask_choice(
+    ask_choice_then(
         ChoiceQuestion {
             title: messages.transcription_question.to_owned(),
             choices: marked(options, index, saved, &|_| Vec::new(), messages),
@@ -414,6 +560,7 @@ pub fn ask_transcription(
             other: None,
             default_hint: None,
         },
+        Some(&mut removal),
         messages,
         ask,
     )
@@ -616,4 +763,370 @@ pub fn ask_remove_models(
         messages,
         ask,
     )
+}
+
+#[cfg(test)]
+mod delay_tests {
+    use super::*;
+    use crate::messages::{EN_US, PT_BR};
+    use crate::prompt::{FakeCall, FakePrompter, Reply};
+
+    fn per_kind_choice(ask: &FakePrompter) -> crate::prompt::Choice {
+        let (choices, _) = ask.calls()[0].select().unwrap();
+
+        choices[choices.len() - 2].clone()
+    }
+
+    #[test]
+    fn marks_the_preset_as_current_when_a_typed_value_matches_it() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default, Reply::Default]);
+
+        ask_delay(5.0, true, None, &PT_BR, &mut ask).unwrap();
+        ask_delay(0.0, true, None, &PT_BR, &mut ask).unwrap();
+
+        for call in ask.calls() {
+            let (choices, index) = call.select().unwrap();
+
+            assert_eq!(choices.len(), DELAY_PRESETS.len() + 2);
+            assert!(choices[index].previous);
+        }
+    }
+
+    #[test]
+    fn offers_right_away_first_and_takes_a_typed_zero() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(0)]);
+        let mut typed = FakePrompter::new(false).with_replies([Reply::Text("0".to_owned())]);
+
+        let picked = ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap();
+        let first = ask.calls()[0].select().unwrap().0[0].label.clone();
+
+        assert_eq!(picked, DelayPick::Minutes(0.0));
+        assert_eq!(first, "Na hora");
+        assert_eq!(
+            ask_delay(4.0, true, None, &PT_BR, &mut typed).unwrap(),
+            DelayPick::Minutes(0.0)
+        );
+    }
+
+    #[test]
+    fn offers_per_kind_before_custom_with_the_kinds_beside_it() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(7)]);
+
+        let picked = ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap();
+        let shown = per_kind_choice(&ask);
+
+        assert_eq!(picked, DelayPick::Kinds([4.0; 3]));
+        assert_eq!(shown.label, "Por tipo…");
+        assert_eq!(
+            shown.hint.as_deref(),
+            Some("perguntas, permissões e aviso de espera")
+        );
+    }
+
+    #[test]
+    fn keeps_per_kind_as_the_default_when_saved_with_its_values_beside_it() {
+        let mut ask = FakePrompter::new(true).with_replies([
+            Reply::Default,
+            Reply::Text(String::new()),
+            Reply::Text(String::new()),
+            Reply::Text(String::new()),
+            Reply::Choose(3),
+        ]);
+
+        let kept = ask_delay(4.0, true, Some([0.0, 4.0, 1.5]), &EN_US, &mut ask).unwrap();
+        let single = ask_delay(4.0, true, Some([0.0, 4.0, 1.5]), &EN_US, &mut ask).unwrap();
+
+        assert_eq!(kept, DelayPick::Kinds([0.0, 4.0, 1.5]));
+        assert_eq!(single, DelayPick::Minutes(4.0));
+        assert!(per_kind_choice(&ask).previous);
+        assert_eq!(
+            per_kind_choice(&ask).hint.as_deref(),
+            Some("questions right away · permission requests 4 min · waiting notice 1 min 30 s")
+        );
+    }
+
+    #[test]
+    fn takes_the_typed_kind_answer_or_minutes_without_a_terminal() {
+        let mut ask = FakePrompter::new(false).with_replies([
+            Reply::Text("tipo".to_owned()),
+            Reply::Text("0".to_owned()),
+            Reply::Text(String::new()),
+            Reply::Text("10".to_owned()),
+            Reply::Text("7".to_owned()),
+        ]);
+
+        assert_eq!(
+            ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap(),
+            DelayPick::Kinds([0.0, 4.0, 10.0])
+        );
+        assert!(ask.calls().iter().all(|call| {
+            call.line()
+                .is_none_or(|prompt| !prompt.contains("Esc volta"))
+        }));
+        assert_eq!(
+            ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap(),
+            DelayPick::Minutes(7.0)
+        );
+    }
+
+    #[test]
+    fn asks_each_kind_keeping_the_current_value_on_an_empty_answer() {
+        let mut ask = FakePrompter::new(false).with_replies([
+            Reply::Text("0".to_owned()),
+            Reply::Text(String::new()),
+            Reply::Text("-1".to_owned()),
+            Reply::Text("2,5".to_owned()),
+        ]);
+
+        let kinds = ask_delay_kinds([4.0, 4.0, 4.0], &PT_BR, &mut ask).unwrap();
+        let prompts: Vec<&str> = ask.calls().iter().filter_map(FakeCall::line).collect();
+
+        assert_eq!(kinds, [0.0, 4.0, 2.5]);
+        assert_eq!(prompts.len(), 4);
+        assert!(prompts[0].contains("Perguntas, em minutos (0 = na hora): "));
+        assert!(prompts[2].contains("Aviso de espera, em minutos (0 = na hora): "));
+        assert_eq!(ask.reports().len(), 1);
+    }
+
+    #[test]
+    fn describes_zero_as_right_away_and_the_rest_like_the_channel() {
+        assert_eq!(delay_text(0.0, &PT_BR), "na hora");
+        assert_eq!(delay_text(4.0, &PT_BR), "4 min");
+        assert_eq!(delay_text(0.1, &EN_US), "6 s");
+    }
+
+    #[test]
+    fn merges_the_kinds_into_one_delay_only_when_all_match() {
+        assert_eq!(single_delay([4.0, 4.0, 4.0]), Some(4.0));
+        assert_eq!(single_delay([0.0, 0.0, 0.0]), Some(0.0));
+        assert_eq!(single_delay([2.5, 2.5, 2.5]), Some(2.5));
+        assert_eq!(single_delay([4.0, 4.0, 5.0]), None);
+        assert_eq!(single_delay([0.0, 4.0, 4.0]), None);
+        assert_eq!(single_delay([4.0, 3.0, 4.0]), None);
+    }
+}
+
+#[cfg(test)]
+mod repeated_option_tests {
+    use super::*;
+    use crate::messages::PT_BR;
+    use crate::prompt::{Choice, FakePrompter, Reply};
+
+    fn shown(ask: &FakePrompter) -> (Vec<Choice>, usize) {
+        let (choices, index) = ask.calls()[0].select().unwrap();
+
+        (choices.to_vec(), index)
+    }
+
+    fn starting_with(choices: &[Choice], label: &str) -> usize {
+        choices
+            .iter()
+            .filter(|choice| choice.label.starts_with(label))
+            .count()
+    }
+
+    fn current_is(choices: &[Choice], index: usize, label: &str) {
+        assert!(choices[index].label.starts_with(label), "{choices:?}");
+        assert!(choices[index].previous);
+        assert_eq!(choices.iter().filter(|choice| choice.previous).count(), 1);
+    }
+
+    #[test]
+    fn marks_the_inbox_preset_as_current_when_a_typed_value_matches_it() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+
+        ask_inbox(Some(7.0), true, &PT_BR, &mut ask).unwrap();
+        let (choices, index) = shown(&ask);
+
+        assert_eq!(choices.len(), INBOX_PRESETS.len() + 2);
+        current_is(&choices, index, &inbox_label(&PT_BR, 7.0));
+    }
+
+    #[test]
+    fn lists_an_inbox_value_of_its_own_once_beside_the_presets() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+
+        ask_inbox(Some(2.0), true, &PT_BR, &mut ask).unwrap();
+        let (choices, index) = shown(&ask);
+        let own = inbox_label(&PT_BR, 2.0);
+
+        assert_eq!(choices.len(), INBOX_PRESETS.len() + 3);
+        assert_eq!(starting_with(&choices, &own), 1);
+        current_is(&choices, index, &own);
+    }
+
+    #[test]
+    fn marks_the_quiet_preset_as_current_when_a_typed_range_matches_it() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+        let range = ("00:00".to_owned(), "07:00".to_owned());
+
+        ask_quiet_hours(Some(&range), true, &PT_BR, &mut ask).unwrap();
+        let (choices, index) = shown(&ask);
+
+        assert_eq!(choices.len(), QUIET_RANGES.len() + 2);
+        assert_eq!(starting_with(&choices, "00:00-07:00"), 0);
+        current_is(&choices, index, PT_BR.quiet_presets.late_night);
+    }
+
+    #[test]
+    fn lists_a_quiet_range_of_its_own_once_beside_the_presets() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+        let range = ("01:00".to_owned(), "06:00".to_owned());
+
+        ask_quiet_hours(Some(&range), true, &PT_BR, &mut ask).unwrap();
+        let (choices, index) = shown(&ask);
+
+        assert_eq!(choices.len(), QUIET_RANGES.len() + 3);
+        assert_eq!(starting_with(&choices, "01:00-06:00"), 1);
+        current_is(&choices, index, "01:00-06:00");
+    }
+
+    #[test]
+    fn keeps_the_typed_quiet_range_as_the_preset_it_matches() {
+        let mut terminal = FakePrompter::new(true).with_replies([
+            Reply::Choose(QUIET_RANGES.len() + 1),
+            Reply::Text("0:00".to_owned()),
+            Reply::Text("7:00".to_owned()),
+            Reply::End,
+        ]);
+        let late_night = Some(("00:00".to_owned(), "07:00".to_owned()));
+
+        assert_eq!(quiet_answer(" 00:00 - 07:00 "), Some(late_night.clone()));
+        assert_eq!(
+            ask_quiet_hours(None, false, &PT_BR, &mut terminal).unwrap(),
+            late_night
+        );
+    }
+}
+
+#[cfg(test)]
+mod back_tests {
+    use super::*;
+    use crate::messages::PT_BR;
+    use crate::prompt::{FakeCall, FakePrompter, Reply, with_back};
+
+    const BACK_HINT: &str = " · ← ou Esc volta: ";
+
+    fn selects(ask: &FakePrompter) -> Vec<(usize, Vec<String>)> {
+        ask.calls()
+            .iter()
+            .filter_map(FakeCall::select)
+            .map(|(choices, index)| {
+                (
+                    index,
+                    choices.iter().map(|choice| choice.label.clone()).collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn lines(ask: &FakePrompter) -> Vec<String> {
+        ask.calls()
+            .iter()
+            .filter_map(FakeCall::line)
+            .map(str::to_owned)
+            .collect()
+    }
+
+    #[test]
+    fn goes_back_to_the_list_from_the_custom_delay_with_the_cursor_on_it() {
+        let custom = DELAY_PRESETS.len() + 1;
+        let mut ask = FakePrompter::new(true).with_replies([
+            Reply::Choose(custom),
+            Reply::Back,
+            Reply::Choose(3),
+        ]);
+
+        assert_eq!(
+            ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap(),
+            DelayPick::Minutes(4.0)
+        );
+        assert_eq!(selects(&ask).len(), 2);
+        assert_eq!(selects(&ask)[1].0, custom);
+        assert_eq!(lines(&ask), [format!("Minutos (0 = na hora){BACK_HINT}")]);
+        assert!(!ask.back());
+    }
+
+    #[test]
+    fn steps_back_one_kind_keeping_what_was_typed() {
+        let mut ask = FakePrompter::new(true).with_replies([
+            Reply::Choose(7),
+            Reply::Text("0".to_owned()),
+            Reply::Back,
+            Reply::Text(String::new()),
+            Reply::Text("5".to_owned()),
+            Reply::Text("10".to_owned()),
+        ]);
+
+        assert_eq!(
+            ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap(),
+            DelayPick::Kinds([0.0, 5.0, 10.0])
+        );
+
+        let prompts = lines(&ask);
+
+        assert_eq!(prompts.len(), 5);
+        assert_eq!(prompts[0], prompts[2]);
+        assert!(prompts[0].starts_with("Perguntas"));
+        assert!(prompts.iter().all(|prompt| prompt.ends_with(BACK_HINT)));
+    }
+
+    #[test]
+    fn goes_back_to_the_list_from_the_first_kind() {
+        let mut ask =
+            FakePrompter::new(true).with_replies([Reply::Choose(7), Reply::Back, Reply::Choose(0)]);
+
+        assert_eq!(
+            ask_delay(4.0, true, None, &PT_BR, &mut ask).unwrap(),
+            DelayPick::Minutes(0.0)
+        );
+        assert_eq!(selects(&ask)[1].0, 7);
+    }
+
+    #[test]
+    fn goes_back_to_the_list_from_the_custom_inbox_and_quiet_hours() {
+        let inbox_custom = INBOX_PRESETS.len() + 1;
+        let quiet_custom = QUIET_RANGES.len() + 1;
+        let mut inbox = FakePrompter::new(true).with_replies([
+            Reply::Choose(inbox_custom),
+            Reply::Back,
+            Reply::Choose(2),
+        ]);
+        let mut quiet = FakePrompter::new(true).with_replies([
+            Reply::Choose(quiet_custom),
+            Reply::Text("01:00".to_owned()),
+            Reply::Back,
+            Reply::Choose(0),
+        ]);
+
+        assert_eq!(
+            ask_inbox(None, false, &PT_BR, &mut inbox).unwrap(),
+            Some(7.0)
+        );
+        assert_eq!(selects(&inbox)[1].0, inbox_custom);
+        assert_eq!(
+            ask_quiet_hours(None, false, &PT_BR, &mut quiet).unwrap(),
+            None
+        );
+        assert_eq!(selects(&quiet)[1].0, quiet_custom);
+        assert_eq!(lines(&quiet).len(), 2);
+    }
+
+    #[test]
+    fn offers_back_only_in_a_list_opened_by_an_option() {
+        let models = ["base", "small"];
+        let mut plain = FakePrompter::new(true).with_replies([Reply::Default]);
+        let mut opened = FakePrompter::new(true).with_replies([Reply::Last]);
+
+        ask_remove_models(&models, None, "x", &PT_BR, &mut plain).unwrap();
+
+        let answer = with_back(&mut opened, |ask| {
+            ask_remove_models(&models, None, "x", &PT_BR, ask)
+        });
+
+        assert!(answer.unwrap_err().is_back());
+        assert_ne!(selects(&plain)[0].1.last().unwrap(), "← Voltar");
+        assert_eq!(selects(&opened)[0].1.last().unwrap(), "← Voltar");
+        assert!(!opened.back());
+    }
 }

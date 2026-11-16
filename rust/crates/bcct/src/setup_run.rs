@@ -14,14 +14,14 @@ use crate::changes::{
     ChangeContext, DELAY_ICON, INBOX_ICON, LANGUAGE_ICON, PLUGIN_ICON, QUIET_HOURS_ICON,
     STATUSLINE_ICON, TRANSCRIPTION_ICON, describe_changes, quiet_hours_text,
 };
-use crate::config::{DEFAULT_DELAY_MINUTES, read_config};
+use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, read_config};
 use crate::files::{FileFailure, create_private_dir, read_json, write_private};
 use crate::health::{self, Screen};
 use crate::hook::now_ms;
 use crate::install::{
-    self, ClaudeUndo, CommandsChoice, Declined, Install, Kept, Parsed, System, Tool,
-    TranscriptionChoice, declined_report, huggingface_cache_dir, kept_message, marketplace_source,
-    parse_inbox_days, parse_transcription_model, remove_path,
+    self, ClaudeUndo, CommandsChoice, DISABLE_ANSWERS, Declined, Install, Kept, Parsed, System,
+    Tool, TranscriptionChoice, declined_report, huggingface_cache_dir, kept_message,
+    marketplace_source, parse_inbox_days, parse_transcription_model, remove_path,
 };
 use crate::journal::{Change, ChangeKind, Journal, UndoAction};
 use crate::js::{join_path, js_length, js_string, js_trim, js_truthy, stringify_pretty};
@@ -41,15 +41,15 @@ use crate::setup::{
     telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
-    QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language, ask_our_statusline,
-    ask_pairing_choice, ask_quiet_hours, ask_remove_models, ask_statusline_choice,
-    ask_transcription, parse_delay_minutes, parse_locale, parse_quiet_hours, quiet_answer,
-    statusline_example,
+    DelayPick, QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language,
+    ask_our_statusline, ask_pairing_choice, ask_quiet_hours, ask_remove_models,
+    ask_statusline_choice, ask_transcription, kinds_summary, parse_delay_minutes, parse_kinds,
+    parse_locale, parse_quiet_hours, quiet_answer, saved_kinds, single_delay, statusline_example,
 };
 use crate::setup_files::{
     CUSTOMIZED_KEY, ConfigError, Printer, SetupFiles, StatuslineChoice, apply_statusline,
-    current_inbox_days, ensure_env_denied, remove_our_settings, statusline_custom_left,
-    update_config,
+    current_inbox_days, ensure_env_denied, remove_config_key, remove_our_settings,
+    statusline_custom_left, update_config,
 };
 use crate::setup_telegram::{
     self, PairingChoice, Prompts, TelegramSetup, Tracks, ensure_pairing, ensure_token,
@@ -70,9 +70,12 @@ const HEALTH_ICON: &str = "🩺";
 const TOKEN_ICON: &str = "🔑";
 const PAIRING_ICON: &str = "🔗";
 const PATH_ICON: &str = "💻";
-const SETTABLE_STEPS: [&str; 6] = [
+const DELAYS_KEY: &str = "delays";
+pub const SET_FLAG: &str = "--set";
+const SETTABLE_STEPS: [&str; 7] = [
     "language",
     "delay",
+    "delays",
     "quiet-hours",
     "transcription",
     "inbox",
@@ -685,17 +688,23 @@ impl<'a> Setup<'a> {
             .filter(|minutes| !minutes.is_null())
             .map(js_string)
             .unwrap_or_default();
-        let current = parse_delay_minutes(&typed).unwrap_or(DEFAULT_DELAY_MINUTES);
-        let saved = config.contains_key("delayMinutes");
+        let single = parse_delay_minutes(&typed).unwrap_or(DEFAULT_DELAY_MINUTES);
+        let saved = config.contains_key("delayMinutes") || config.contains_key(DELAYS_KEY);
+        let saved_kinds = saved_kinds(&config, single);
+        let current = saved_kinds.and_then(single_delay).unwrap_or(single);
+        let kinds = saved_kinds.filter(|kinds| single_delay(*kinds).is_none());
 
         self.ready()?;
 
-        let minutes = ask_delay(current, saved, messages, ask)?;
-
-        self.save_delay(minutes, messages)
+        match ask_delay(current, saved, kinds, messages, ask)? {
+            DelayPick::Minutes(minutes) => self.save_delay(minutes, messages),
+            DelayPick::Kinds(kinds) => self.save_kinds(kinds, messages),
+        }
     }
 
     fn save_delay(&mut self, minutes: f64, messages: &Messages) -> Result<(), Stop> {
+        self.clear_kinds(messages)?;
+
         if self.kept_setting(Kept::Delay(minutes), messages) {
             return Ok(());
         }
@@ -706,6 +715,54 @@ impl<'a> Setup<'a> {
             .printer(messages)
             .success(&(messages.delay_saved)(
                 minutes,
+                &config_file.to_string_lossy(),
+            ));
+
+        Ok(())
+    }
+
+    fn clear_kinds(&mut self, messages: &Messages) -> Result<(), Stop> {
+        if !read_config(&self.paths.app_dir).contains_key(DELAYS_KEY) {
+            return Ok(());
+        }
+
+        remove_config_key(&self.paths.app_dir, DELAYS_KEY, &mut self.journal)
+            .map_err(|failure| Stop::Failed(failure.message(messages)))?;
+        self.output
+            .printer(messages)
+            .success(messages.delays_cleared);
+
+        Ok(())
+    }
+
+    fn save_kinds(&mut self, kinds: [f64; 3], messages: &Messages) -> Result<(), Stop> {
+        if let Some(minutes) = single_delay(kinds) {
+            return self.save_delay(minutes, messages);
+        }
+
+        let summary = kinds_summary(kinds, messages);
+
+        if self.kept_setting(
+            Kept::Delays {
+                kinds,
+                summary: &summary,
+            },
+            messages,
+        ) {
+            return Ok(());
+        }
+
+        let delays: Map<String, Value> = DelayKind::ALL
+            .iter()
+            .zip(kinds)
+            .map(|(kind, minutes)| (kind.key().to_owned(), number(minutes)))
+            .collect();
+        let config_file = self.save_setting(DELAYS_KEY, Value::Object(delays), messages)?;
+
+        self.output
+            .printer(messages)
+            .success(&(messages.delays_saved)(
+                &summary,
                 &config_file.to_string_lossy(),
             ));
 
@@ -1127,6 +1184,15 @@ impl<'a> Setup<'a> {
 
                 self.save_delay(minutes, messages)
             }
+            "delays" => {
+                if DISABLE_ANSWERS.contains(&js_trim(value).to_lowercase().as_str()) {
+                    return self.clear_kinds(messages);
+                }
+
+                let kinds = parse_kinds(value).ok_or_else(|| invalid(hints.delays))?;
+
+                self.save_kinds(kinds, messages)
+            }
             "quiet-hours" => {
                 let quiet = quiet_answer(value).ok_or_else(|| invalid(hints.quiet_hours))?;
 
@@ -1535,9 +1601,21 @@ pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>)
         .and_then(js_length)
         .unwrap_or_default();
 
+    let delay_minutes = parse_delay_minutes(&delay).unwrap_or(DEFAULT_DELAY_MINUTES);
+    let delays = saved_kinds(&config, delay_minutes).map_or(Value::Null, |kinds| {
+        Value::Object(
+            DelayKind::ALL
+                .iter()
+                .zip(kinds)
+                .map(|(kind, minutes)| (kind.key().to_owned(), number(minutes)))
+                .collect(),
+        )
+    });
+
     json!({
         "language": setup_locale(&paths.app_dir, var).as_str(),
-        "delayMinutes": number(parse_delay_minutes(&delay).unwrap_or(DEFAULT_DELAY_MINUTES)),
+        "delayMinutes": number(delay_minutes),
+        "delays": delays,
         "quietHours": config
             .get("quietHours")
             .cloned()
@@ -1577,7 +1655,7 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
 
             match first {
                 Some("--uninstall") => setup.run_uninstall(&mut *terminal),
-                Some("--set") => {
+                Some(SET_FLAG) => {
                     let word = |index: usize| args.get(index).map_or("", String::as_str);
 
                     setup.run_set(word(1), word(2), &mut *terminal)
@@ -1689,6 +1767,37 @@ mod tests {
         std::fs::write(&settings, r#"{"permissions":{"deny":5}}"#).unwrap();
 
         assert!(setup.described(&[change], messages).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stops_with_the_failure_when_the_delays_cannot_be_cleared() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(Locale::EnUs);
+        let result = {
+            let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+            let app_dir = setup.paths.app_dir.clone();
+
+            std::fs::create_dir_all(&app_dir).unwrap();
+            std::fs::write(
+                app_dir.join(crate::paths::CONFIG_FILE),
+                r#"{"delays":[1,2,3]}"#,
+            )
+            .unwrap();
+            std::fs::set_permissions(&app_dir, std::fs::Permissions::from_mode(0o500)).unwrap();
+
+            let result = setup.clear_kinds(messages);
+
+            std::fs::set_permissions(&app_dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+            result
+        };
+
+        assert!(matches!(result, Err(Stop::Failed(text)) if text.contains("Could not save")));
+        assert_eq!(out, Vec::<u8>::new());
     }
 
     struct Refusing;

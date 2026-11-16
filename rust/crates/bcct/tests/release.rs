@@ -91,7 +91,7 @@ fn the_released_records_are_the_ones_read_before_the_new_due_time() {
     assert_eq!(released, vec![json!({"id": "a", "dueAt": 200, "x": 1})]);
     assert_eq!(
         fs::read_to_string(asks.join("a.json")).unwrap(),
-        r#"{"id":"a","dueAt":100,"x":1}"#
+        r#"{"id":"a","dueAt":100,"x":1,"released":true}"#
     );
 }
 

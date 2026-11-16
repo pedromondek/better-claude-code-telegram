@@ -10,7 +10,7 @@ use crate::files::read_json;
 use crate::hook::{millis, now_ms};
 use crate::js::{join_path, js_truthy, normalize_path};
 use crate::messages::messages_for;
-use crate::paths::{HEALTH_FILE, LAUNCH_FILE, PREVIOUS_STATUSLINE_FILE, Paths};
+use crate::paths::{HEALTH_FILE, LAUNCH_FILE, PREVIOUS_STATUSLINE_FILE, Paths, TELEGRAM_FLAG};
 
 pub const TELEGRAM_HEALTH_TTL_MS: f64 = 15_000.0;
 pub const TELEGRAM_LAUNCH_GRACE_MS: f64 = 60_000.0;
@@ -19,7 +19,6 @@ const RESET: &str = "\u{1b}[0m";
 const GREEN: &str = "\u{1b}[32m";
 const RED: &str = "\u{1b}[31m";
 const YELLOW: &str = "\u{1b}[33m";
-const TELEGRAM_FLAG: &str = "BETTER_CC_TELEGRAM";
 const SEPARATOR: &str = " │ ";
 const FAILURE: u8 = 1;
 
@@ -73,8 +72,10 @@ pub fn telegram_segment(
 
     Some(if launching {
         format!("{YELLOW}{}{RESET}", (messages.status_connecting)(role))
-    } else {
+    } else if fresh {
         format!("{RED}{}{RESET}", (messages.status_down)(role))
+    } else {
+        format!("{RED}{}{RESET}", (messages.status_down_here)(role))
     })
 }
 

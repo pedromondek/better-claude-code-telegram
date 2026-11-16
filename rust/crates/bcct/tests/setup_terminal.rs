@@ -4,9 +4,11 @@ mod support;
 
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsString;
+use std::fs;
 use std::io::{self, Cursor};
+use std::path::{Path, PathBuf};
 
-use bcct::js::{js_number, parse_json};
+use bcct::js::{js_number, parse_json, stringify};
 use bcct::messages::{EN_US, Messages, PT_BR};
 use bcct::prompt::{
     Answer, Choice, ChoiceItem, ChoiceQuestion, Colors, Console, FakeCall, FakePrompter,
@@ -26,6 +28,14 @@ const RECOMMENDED_DELAY: f64 = 4.0;
 
 fn fixture() -> Value {
     parse_json(FIXTURE).unwrap()
+}
+
+fn fixture_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/setup-terminal.json")
+}
+
+fn blessing() -> bool {
+    std::env::var_os("BCCT_BLESS").is_some_and(|flag| flag == "1")
 }
 
 fn messages(locale: &str) -> &'static Messages {
@@ -76,6 +86,9 @@ fn error_json(error: &PromptError) -> Value {
         }
         PromptError::Io(_) => {
             json!({ "message": "network", "cancelled": false, "interrupted": false })
+        }
+        PromptError::Back => {
+            json!({ "message": "back", "cancelled": false, "interrupted": false })
         }
     }
 }
@@ -253,6 +266,7 @@ fn key_event(name: &str) -> KeyEvent {
         "backspace" => plain(KeyCode::Backspace),
         "enter" | "newline" => plain(KeyCode::Enter),
         "tab" => plain(KeyCode::Tab),
+        "escape" => plain(KeyCode::Esc),
         "shift-tab" => with(KeyCode::BackTab, KeyModifiers::SHIFT),
         "shift-left" => with(KeyCode::Left, KeyModifiers::SHIFT),
         "shift-delete" => with(KeyCode::Delete, KeyModifiers::SHIFT),
@@ -629,52 +643,77 @@ fn parse_days(typed: &str) -> Option<Value> {
         .map(|days| json!(days))
 }
 
+fn asked_choice(entry: &Value) -> (Answer<Value>, FakePrompter) {
+    let messages = messages(text(entry, "locale"));
+    let spec = &entry["spec"];
+    let other_spec = &spec["other"];
+    let parse: &dyn Fn(&str) -> Option<Value> = if other_spec["parse"] == "days" {
+        &parse_days
+    } else {
+        &parse_minutes
+    };
+    let custom_prompt = other_spec["prompt"].as_str().unwrap_or_default().to_owned();
+    let custom_hint = other_spec["hint"].as_str().unwrap_or_default().to_owned();
+    let mut ask_custom =
+        |ask: &mut dyn Prompter| ask_validated(&custom_prompt, parse, &custom_hint, messages, ask);
+    let other = other_spec.as_object().map(|_| Other {
+        label: text(other_spec, "label").to_owned(),
+        answer: text(other_spec, "answer").to_owned(),
+        parse,
+        ask_on_terminal: &mut ask_custom,
+    });
+    let question = ChoiceQuestion {
+        title: text(spec, "title").to_owned(),
+        choices: spec["choices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(item_of)
+            .collect(),
+        index: usize::try_from(spec["index"].as_u64().unwrap()).unwrap(),
+        other,
+        default_hint: (spec["defaultHint"] == "language").then_some(messages.language_default_hint),
+    };
+    let mut fake = fake_of(entry);
+
+    assert_eq!(
+        format!("{question:?}").contains("Other"),
+        other_spec.is_object()
+    );
+
+    let answer = ask_choice(question, messages, &mut fake);
+
+    (answer, fake)
+}
+
+#[test]
+fn blessing_rewrites_the_terminal_choices_from_the_binary() {
+    if !blessing() {
+        return;
+    }
+
+    let path = fixture_path();
+    let mut fixture = parse_json(&fs::read_to_string(&path).unwrap()).unwrap();
+
+    for entry in fixture["choices"].as_array_mut().unwrap() {
+        let (_, fake) = asked_choice(entry);
+
+        entry["calls"] = fake.calls().iter().map(call_json).collect();
+        entry["reports"] = fake.reports().iter().map(|line| json!(line)).collect();
+    }
+
+    fs::write(path, stringify(&fixture)).unwrap();
+}
+
 #[test]
 fn ask_choice_asks_and_validates_like_the_js() {
     let fixture = fixture();
 
     for entry in list(&fixture, "choices") {
         let name = text(entry, "name");
-        let messages = messages(text(entry, "locale"));
-        let spec = &entry["spec"];
-        let other_spec = &spec["other"];
-        let parse: &dyn Fn(&str) -> Option<Value> = if other_spec["parse"] == "days" {
-            &parse_days
-        } else {
-            &parse_minutes
-        };
-        let custom_prompt = other_spec["prompt"].as_str().unwrap_or_default().to_owned();
-        let custom_hint = other_spec["hint"].as_str().unwrap_or_default().to_owned();
-        let mut ask_custom = |ask: &mut dyn Prompter| {
-            ask_validated(&custom_prompt, parse, &custom_hint, messages, ask)
-        };
-        let other = other_spec.as_object().map(|_| Other {
-            label: text(other_spec, "label").to_owned(),
-            answer: text(other_spec, "answer").to_owned(),
-            parse,
-            ask_on_terminal: &mut ask_custom,
-        });
-        let question = ChoiceQuestion {
-            title: text(spec, "title").to_owned(),
-            choices: spec["choices"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(item_of)
-                .collect(),
-            index: usize::try_from(spec["index"].as_u64().unwrap()).unwrap(),
-            other,
-            default_hint: (spec["defaultHint"] == "language")
-                .then_some(messages.language_default_hint),
-        };
-        let mut fake = fake_of(entry);
+        let (answer, fake) = asked_choice(entry);
 
-        assert_eq!(
-            format!("{question:?}").contains("Other"),
-            other_spec.is_object()
-        );
-
-        check_outcome(name, ask_choice(question, messages, &mut fake), entry);
+        check_outcome(name, answer, entry);
         check_calls(name, &fake, entry);
 
         let reports: Vec<Value> = fake.reports().iter().map(|line| json!(line)).collect();
@@ -885,6 +924,10 @@ fn number_choices_find_the_current_value_like_includes() {
         answers(number_choices(&[3.0, 1.0], None, &label)),
         ["3", "1"]
     );
+    assert_eq!(
+        answers(number_choices(&[3.0, 1.0], Some(1.0), &label)),
+        ["3", "1"]
+    );
 }
 
 #[test]
@@ -1052,6 +1095,23 @@ fn the_fake_answers_in_order_and_refuses_an_answer_of_the_wrong_kind() {
 }
 
 #[test]
+fn keeps_going_back_off_without_a_terminal() {
+    let mut prompter = PipedPrompter::new(
+        Cursor::new(Vec::new()),
+        Vec::new(),
+        Vec::new(),
+        Colors::default(),
+    );
+
+    prompter.set_back(true);
+
+    assert!(!prompter.back());
+    assert_eq!(PromptError::Back.to_string(), "back");
+    assert!(PromptError::Back.is_back());
+    assert!(!PromptError::Cancelled("x").is_back());
+}
+
+#[test]
 fn without_a_terminal_there_is_no_selection_and_errors_go_to_stderr() {
     let mut prompter = PipedPrompter::new(
         Cursor::new(Vec::new()),
@@ -1148,6 +1208,103 @@ fn a_suspended_question_gives_the_terminal_back_and_redraws_with_the_size_it_fin
     assert_eq!(
         prompter.console().written,
         "\u{1b}[1G\u{1b}[0JQ? \u{1b}[4Ga<suspended>\u{1b}[1G\u{1b}[0JQ? a\u{1b}[2G\r\n"
+    );
+}
+
+#[test]
+fn goes_back_with_esc_or_left_only_when_going_back_is_on() {
+    let mut line = scripted(vec![
+        Step::Key(key_event("escape")),
+        Step::Key(key_event("left")),
+        Step::Key(key_event("a")),
+        Step::Key(key_event("enter")),
+        Step::Key(key_event("escape")),
+        Step::Key(key_event("left")),
+    ]);
+    let mut choose = scripted(vec![
+        Step::Key(key_event("escape")),
+        Step::Key(key_event("left")),
+        Step::Key(key_event("enter")),
+        Step::Key(key_event("escape")),
+        Step::Key(key_event("left")),
+    ]);
+
+    assert_eq!(line.line("Q? ", &EN_US).unwrap(), "a");
+    line.set_back(true);
+    assert!(line.back());
+    assert!(matches!(line.line("Q? ", &EN_US), Err(PromptError::Back)));
+    assert!(matches!(line.line("Q? ", &EN_US), Err(PromptError::Back)));
+    assert_eq!(line.console().raw, [true, false, true, false, true, false]);
+    assert!(line.console().written.ends_with("\r\n"));
+
+    assert_eq!(
+        choose.select("S", &[Choice::new("a")], 0, &EN_US).unwrap(),
+        0
+    );
+    assert!(!choose.console().written.contains("Esc goes back"));
+    choose.set_back(true);
+    assert!(matches!(
+        choose.select("S", &[Choice::new("a")], 0, &EN_US),
+        Err(PromptError::Back)
+    ));
+    assert!(matches!(
+        choose.select("S", &[Choice::new("a")], 0, &EN_US),
+        Err(PromptError::Back)
+    ));
+    assert!(
+        choose
+            .console()
+            .written
+            .contains("↑/↓ to move · Enter to confirm · ← or Esc goes back")
+    );
+}
+
+#[test]
+fn passes_going_back_through_the_guard_and_keeps_it_after_asking_to_leave() {
+    let mut fake = FakePrompter::new(true).with_replies([
+        Reply::Back,
+        Reply::Cancel,
+        Reply::Choose(0),
+        Reply::Text("x".to_owned()),
+    ]);
+    let mut guard = GuardCancel::new(&mut fake);
+
+    assert!(!guard.back());
+    guard.set_back(true);
+    assert!(guard.back());
+    assert!(matches!(guard.line("Q? ", &EN_US), Err(PromptError::Back)));
+    assert_eq!(guard.line("Q? ", &EN_US).unwrap(), "x");
+    assert!(guard.back());
+    guard.set_back(false);
+    assert!(!fake.back());
+}
+
+#[test]
+fn moves_left_in_a_typed_line_until_the_start() {
+    let mut line = scripted(vec![
+        Step::Key(key_event("a")),
+        Step::Key(key_event("b")),
+        Step::Key(key_event("left")),
+        Step::Key(key_event("x")),
+        Step::Key(key_event("enter")),
+    ]);
+
+    line.set_back(true);
+    assert_eq!(line.line("Q? ", &EN_US).unwrap(), "axb");
+}
+
+#[test]
+fn confirms_a_choice_with_the_right_arrow() {
+    let mut choose = scripted(vec![
+        Step::Key(key_event("down")),
+        Step::Key(key_event("right")),
+    ]);
+
+    assert_eq!(
+        choose
+            .select("S", &[Choice::new("a"), Choice::new("b")], 0, &EN_US)
+            .unwrap(),
+        1
     );
 }
 

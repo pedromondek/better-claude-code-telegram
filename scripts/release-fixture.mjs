@@ -158,6 +158,18 @@ add("dueAt: missing", {
   files: { "app/asks/a.json": JSON.stringify({ id: "a" }) },
 });
 
+for (const [label, released] of Object.entries({
+  true: true,
+  false: false,
+  "the string true": "true",
+  one: 1,
+  null: null,
+})) {
+  add(`released: ${label}, already due`, {
+    files: ask("a", { dueAt: NOW - 1, released }),
+  });
+}
+
 for (const [label, id] of Object.entries({
   number: 5,
   null: null,

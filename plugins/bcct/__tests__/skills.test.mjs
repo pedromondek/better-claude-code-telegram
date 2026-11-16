@@ -2,8 +2,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { SETTABLE_STEPS } from "../../../scripts/setup.mjs";
-
 const PLUGIN_ROOT = join(import.meta.dirname, "..");
 const SKILLS_DIR = join(PLUGIN_ROOT, "skills");
 const TERMINAL_ONLY = new Set(["pairing", "setup", "token", "uninstall"]);
@@ -180,10 +178,18 @@ describe("bcct skills", () => {
     }
   });
 
-  it("sets only the steps the setup accepts with --set", () => {
+  it("sets only the steps the bcct setup accepts with --set", () => {
+    const source = readFileSync(join(RUST_SOURCE, "setup_run.rs"), "utf8");
+    const settable = /const SETTABLE_STEPS: \[&str; \d+\] = \[([^\]]+)\]/u
+      .exec(source)?.[1]
+      .match(/"[\w-]+"/gu)
+      ?.map((step) => step.slice(1, -1));
+
+    expect(settable).toContain("delays");
+
     for (const { text } of skills()) {
       for (const [, step] of text.matchAll(/--set ([\w-]+)/g)) {
-        expect(SETTABLE_STEPS).toContain(step);
+        expect(settable).toContain(step);
       }
     }
   });
@@ -198,5 +204,42 @@ describe("bcct skills", () => {
     for (const { frontmatter } of terminalSkills) {
       expect(frontmatter).not.toContain("allowed-tools");
     }
+  });
+
+  it("asks whether to group or choose first, and shows the four groups only when choosing", () => {
+    const health = skills().find(({ name }) => name === "health");
+
+    expect(health?.text).toContain(
+      'call AskUserQuestion once, header "Health", with two options: "All (Recommended)", which checks every group, and "Choose groups".',
+    );
+    expect(health?.text).toContain(
+      'Only after "Choose groups", call AskUserQuestion again, `multiSelect: true`, header "Groups"',
+    );
+  });
+
+  it("offers a delay per kind and saves it through --set delays, with 0 for right away", () => {
+    const delay = skills().find(({ name }) => name === "delay");
+
+    expect(delay?.frontmatter).toContain(
+      'argument-hint: "[minutes | per kind]"',
+    );
+    expect(delay?.text).toContain(
+      'one of them "Per kind…", with the kinds in its description',
+    );
+    expect(delay?.text).toContain(
+      '`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set delays <questions>/<permissions>/<waiting>`',
+    );
+    expect(delay?.text).toContain("0 means right away");
+  });
+
+  it("switches the language of the Telegram replies in the session without a reconnect", () => {
+    const language = skills().find(({ name }) => name === "language");
+
+    expect(language?.text).toContain(
+      "From now on, in this session, write every Telegram reply to the user in the chosen language.",
+    );
+    expect(language?.text).toContain(
+      "The channel instructions keep naming the previous language until the channel reconnects; this choice overrides them.",
+    );
   });
 });

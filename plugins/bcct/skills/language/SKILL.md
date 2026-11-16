@@ -16,3 +16,4 @@ Arguments: `$ARGUMENTS`
 
 1. If the arguments name `en-us` or `pt-br`, use it. Otherwise call AskUserQuestion once, header "Language", with the options "English / Inglês (en-us)" and "Português Brasileiro / Brazilian Portuguese (pt-br)", the current one first and marked as current.
 2. Run `"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set language <value>` and show its output. It applies to the next messages; nothing to reopen.
+3. From now on, in this session, write every Telegram reply to the user in the chosen language. The channel instructions keep naming the previous language until the channel reconnects; this choice overrides them.

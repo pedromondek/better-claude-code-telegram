@@ -30,24 +30,68 @@ pub fn read_locale(config: &Map<String, Value>) -> Locale {
         .unwrap_or_default()
 }
 
-#[must_use]
-pub fn delay_ms(config: &Map<String, Value>, env_delay: Option<&str>) -> f64 {
-    if let Some(from_env) = env_delay
+fn env_delay_ms(env_delay: Option<&str>) -> Option<f64> {
+    env_delay
         .map(js_trim)
         .filter(|raw| !raw.is_empty())
         .map(js_number)
         .filter(|ms| ms.is_finite() && *ms >= 0.0)
-    {
+}
+
+#[must_use]
+pub fn delay_ms(config: &Map<String, Value>, env_delay: Option<&str>) -> f64 {
+    if let Some(from_env) = env_delay_ms(env_delay) {
         return from_env;
     }
 
-    let minutes = config.get("delayMinutes").map_or(f64::NAN, js_to_number);
+    let raw = config.get("delayMinutes");
+    let minutes = raw.map_or(f64::NAN, js_to_number);
+    let right_away =
+        raw.is_some_and(|value| value.as_f64() == Some(0.0) || value.as_str() == Some("0"));
 
-    if minutes.is_finite() && minutes > 0.0 {
+    if minutes.is_finite() && (minutes > 0.0 || right_away) {
         minutes * MS_PER_MINUTE
     } else {
         DEFAULT_DELAY_MINUTES * MS_PER_MINUTE
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DelayKind {
+    Questions,
+    Permissions,
+    Waiting,
+}
+
+impl DelayKind {
+    pub const ALL: [Self; 3] = [Self::Questions, Self::Permissions, Self::Waiting];
+
+    #[must_use]
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Questions => "questions",
+            Self::Permissions => "permissions",
+            Self::Waiting => "waiting",
+        }
+    }
+}
+
+#[must_use]
+pub fn kind_minutes(config: &Map<String, Value>, kind: DelayKind) -> Option<f64> {
+    config
+        .get("delays")
+        .and_then(Value::as_object)
+        .and_then(|delays| delays.get(kind.key()))
+        .and_then(Value::as_f64)
+        .filter(|minutes| minutes.is_finite() && *minutes >= 0.0)
+}
+
+#[must_use]
+pub fn delay_ms_for(config: &Map<String, Value>, env_delay: Option<&str>, kind: DelayKind) -> f64 {
+    env_delay_ms(env_delay).unwrap_or_else(|| {
+        kind_minutes(config, kind)
+            .map_or_else(|| delay_ms(config, None), |minutes| minutes * MS_PER_MINUTE)
+    })
 }
 
 #[must_use]
@@ -118,6 +162,35 @@ mod tests {
     }
 
     #[test]
+    fn reads_each_delay_like_the_channel() {
+        let cases: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../../plugins/telegram/extensions/__tests__/fixtures/delays.json"
+        ))
+        .unwrap();
+
+        assert_eq!(
+            DelayKind::ALL.map(DelayKind::key),
+            ["questions", "permissions", "waiting"]
+        );
+        assert_eq!(cases.len(), 10);
+
+        for case in &cases {
+            let config = config(case["config"].clone());
+            let env = case["env"].as_str();
+
+            for kind in DelayKind::ALL {
+                let label = format!("{}: {}", case["name"], kind.key());
+
+                assert_eq!(
+                    delay_ms_for(&config, env, kind),
+                    case["expected"][kind.key()].as_f64().unwrap(),
+                    "{label}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn the_env_delay_in_ms_wins_when_it_is_a_finite_number_not_below_zero() {
         let five_minutes = config(json!({"delayMinutes": 5}));
 
@@ -137,14 +210,18 @@ mod tests {
     }
 
     #[test]
-    fn the_config_minutes_follow_js_number_and_must_be_above_zero() {
+    fn reads_the_config_minutes_like_js_number_with_zero_as_right_away() {
         let cases = [
             (json!(2), 120_000.0),
             (json!("3"), 180_000.0),
             (json!(0.5), 30_000.0),
             (json!(true), 60_000.0),
             (json!([2]), 120_000.0),
-            (json!(0), 240_000.0),
+            (json!(0), 0.0),
+            (json!("0"), 0.0),
+            (json!(""), 240_000.0),
+            (json!(false), 240_000.0),
+            (json!([]), 240_000.0),
             (json!(-2), 240_000.0),
             (json!(null), 240_000.0),
             (json!("x"), 240_000.0),

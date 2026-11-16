@@ -6,6 +6,7 @@ pub const HEALTH_FILE: &str = "health.json";
 pub const LAUNCH_FILE: &str = "launch.json";
 pub const PREVIOUS_STATUSLINE_FILE: &str = "statusline-previous.json";
 pub const APP_FOLDER: &str = "better-claude-code-telegram";
+pub const TELEGRAM_FLAG: &str = "BETTER_CC_TELEGRAM";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Paths {
@@ -58,6 +59,14 @@ mod tests {
             .collect();
 
         Paths::resolve(|name| vars.get(name).cloned(), Path::new("/home/user"))
+    }
+
+    #[test]
+    fn names_the_flag_the_hooks_check() {
+        let hooks = include_str!("../../../../plugins/telegram-hooks/hooks/hooks.json");
+
+        assert_eq!(TELEGRAM_FLAG, "BETTER_CC_TELEGRAM");
+        assert!(hooks.contains(&format!("\\\"${TELEGRAM_FLAG}\\\" = 1")));
     }
 
     #[test]

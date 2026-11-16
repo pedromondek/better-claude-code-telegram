@@ -230,6 +230,7 @@ pub enum LineKey {
     Cancelled,
     Aborted,
     Suspended,
+    Back,
 }
 
 #[derive(Debug)]
@@ -628,12 +629,14 @@ impl LineEditor {
             }
             KeyCode::Backspace => self.delete_left(),
             KeyCode::Delete => self.delete_right(),
+            KeyCode::Left if self.cursor == 0 => return (String::new(), LineKey::Back),
             KeyCode::Left => self.motion(&Motion::Left),
             KeyCode::Right => self.motion(&Motion::Right),
             KeyCode::Home => self.motion(&Motion::Start),
             KeyCode::End => self.motion(&Motion::End),
             KeyCode::Tab => self.insert(&['\t']),
             KeyCode::Char(character) => self.insert(&[character]),
+            KeyCode::Esc => return (String::new(), LineKey::Back),
             _ => String::new(),
         };
 

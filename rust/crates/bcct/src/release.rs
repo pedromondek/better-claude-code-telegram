@@ -7,7 +7,7 @@ use serde_json::{Map, Number, Value};
 
 use crate::config::{read_config, read_locale};
 use crate::files::{FileFailure, read_json, write_private};
-use crate::hook::{millis, now_ms};
+use crate::hook::now_ms;
 use crate::js::{join_path, js_string, js_trim, js_truthy, normalize_path, stringify};
 use crate::messages::messages_for;
 use crate::paths::Paths;
@@ -16,6 +16,7 @@ const JSON_SUFFIX: &str = ".json";
 const SKIPPED_SUFFIXES: [&str; 2] = [".telegram.json", ".answer.json"];
 const MARKERS: [&str; 3] = [".telegram.json", ".closed", ".answer.json"];
 const DEFAULT_INSTANCE: &str = "telegram";
+const RELEASED: &str = "released";
 const FAILURE: u8 = 1;
 
 fn pending_ask_ids(asks_dir: &Path) -> Vec<String> {
@@ -60,13 +61,13 @@ pub fn release_pending_asks(
         let Some(Value::Object(record)) = read_json(&file) else {
             continue;
         };
-        let (Some(record_id @ Value::String(_)), Some(Value::Number(due))) =
+        let (Some(record_id @ Value::String(_)), Some(Value::Number(_))) =
             (record.get("id"), record.get("dueAt"))
         else {
             continue;
         };
 
-        if due.as_f64().unwrap_or_default() <= millis(now)
+        if record.get(RELEASED) == Some(&Value::Bool(true))
             || !session_of(&record, record_id).starts_with(prefix)
         {
             continue;
@@ -74,6 +75,7 @@ pub fn release_pending_asks(
 
         let mut updated = record.clone();
         updated.insert("dueAt".to_owned(), Value::Number(Number::from(now)));
+        updated.insert(RELEASED.to_owned(), Value::Bool(true));
         write_private(&file, stringify(&Value::Object(updated)).as_bytes())
             .map_err(|_| FileFailure::NotSaved(file))?;
         released.push(Value::Object(record));

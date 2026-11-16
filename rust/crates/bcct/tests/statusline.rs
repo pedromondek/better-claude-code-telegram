@@ -188,7 +188,7 @@ fn the_binary_runs_the_previous_status_line_with_the_same_input_and_environment(
         .write_stdin("{\"model\":\"x\"}")
         .assert()
         .success()
-        .stdout("{\"model\":\"x\"} 1 │ \u{1b}[31m📱 (Main) Telegram down\u{1b}[0m")
+        .stdout("{\"model\":\"x\"} 1 │ \u{1b}[31m📱 (Main) Telegram down · type /mcp reconnect all\u{1b}[0m")
         .stderr("");
 }
 
@@ -235,7 +235,7 @@ fn without_sh_on_the_path_the_previous_status_line_prints_nothing() {
         .env("BETTER_CC_TELEGRAM", "1")
         .assert()
         .success()
-        .stdout("\u{1b}[31m📱 (Main) Telegram down\u{1b}[0m");
+        .stdout("\u{1b}[31m📱 (Main) Telegram down · type /mcp reconnect all\u{1b}[0m");
 }
 
 #[test]
@@ -253,7 +253,7 @@ fn the_binary_ignores_the_previous_status_line_without_the_flag() {
         .env("BETTER_CC_TELEGRAM", "1")
         .assert()
         .success()
-        .stdout("\u{1b}[31m📱 (Main) Telegram down\u{1b}[0m");
+        .stdout("\u{1b}[31m📱 (Main) Telegram down · type /mcp reconnect all\u{1b}[0m");
 }
 
 #[test]

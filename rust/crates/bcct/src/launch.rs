@@ -6,6 +6,7 @@ use std::process::Command;
 use crate::files::FileFailure;
 use crate::hook::now_ms;
 use crate::messages::messages_for;
+use crate::paths::TELEGRAM_FLAG;
 use crate::setup::{
     SetupPaths, check_setup, mark_launch, setup_locale, statusline_prompt,
     telegram_instance_running,
@@ -18,7 +19,6 @@ pub const CHANNEL: &str = "plugin:telegram@better-claude-code-telegram";
 
 const CLAUDE: &str = "claude";
 const INSTANCE_NAME: [&str; 2] = ["--name", "telegram"];
-const TELEGRAM_FLAG: &str = "BETTER_CC_TELEGRAM";
 const TELEGRAM_ARG: &str = "--telegram";
 const REFUSED: u8 = 1;
 #[cfg(unix)]

@@ -12,6 +12,7 @@ pub struct TerminalPrompter<C: Console> {
     console: C,
     colors: Colors,
     dumb: bool,
+    back: bool,
 }
 
 impl<C: Console> TerminalPrompter<C> {
@@ -20,6 +21,7 @@ impl<C: Console> TerminalPrompter<C> {
             console,
             colors,
             dumb,
+            back: false,
         }
     }
 
@@ -59,7 +61,6 @@ impl<C: Console> TerminalPrompter<C> {
             self.console.write(&out)?;
 
             match state {
-                LineKey::Editing => {}
                 LineKey::Suspended => {
                     self.console.set_raw(false)?;
                     self.console.suspend()?;
@@ -82,6 +83,12 @@ impl<C: Console> TerminalPrompter<C> {
                     self.release()?;
                     return Err(PromptError::Aborted(CTRL_D_ABORT));
                 }
+                LineKey::Back if self.back => {
+                    self.console.write(&editor.finish_line())?;
+                    self.release()?;
+                    return Err(PromptError::Back);
+                }
+                LineKey::Editing | LineKey::Back => {}
             }
         }
     }
@@ -119,7 +126,12 @@ impl<C: Console> TerminalPrompter<C> {
         index: usize,
         messages: &'static Messages,
     ) -> Answer<usize> {
-        let mut select = Select::new(choices, index, messages.select_hint, self.colors.out);
+        let hint = if self.back {
+            format!("{} · {}", messages.select_hint, messages.back_hint)
+        } else {
+            messages.select_hint.to_owned()
+        };
+        let mut select = Select::new(choices, index, &hint, self.colors.out);
 
         self.console
             .write(&select.start(title, self.console.columns()))?;
@@ -131,7 +143,6 @@ impl<C: Console> TerminalPrompter<C> {
             };
 
             match select.key(&key) {
-                SelectKey::Ignored => {}
                 SelectKey::Moved => {
                     let drawn = select.draw(self.console.columns());
 
@@ -148,6 +159,12 @@ impl<C: Console> TerminalPrompter<C> {
                     self.console.write(SHOW_CURSOR)?;
                     return Err(PromptError::Cancelled(messages.cancelled));
                 }
+                SelectKey::Back if self.back => {
+                    self.release()?;
+                    self.console.write(SHOW_CURSOR)?;
+                    return Err(PromptError::Back);
+                }
+                SelectKey::Ignored | SelectKey::Back => {}
             }
         }
     }
@@ -160,6 +177,14 @@ impl<C: Console> Prompter for TerminalPrompter<C> {
 
     fn colors(&self) -> Colors {
         self.colors
+    }
+
+    fn back(&self) -> bool {
+        self.back
+    }
+
+    fn set_back(&mut self, allowed: bool) {
+        self.back = allowed;
     }
 
     fn line(&mut self, prompt: &str, messages: &'static Messages) -> Answer<String> {

@@ -25,6 +25,7 @@ const ANSWER_POLL_MS = 1000;
 const SKIPPED_SUFFIXES = [".telegram.json", ".answer.json"];
 const NOT_TYPED_PROMPT_PREFIXES = [
   "Another Claude session sent a message:",
+  "<cross-session-message ",
   "[Cross-session ",
   '<channel source="plugin:telegram',
 ];

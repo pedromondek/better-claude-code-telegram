@@ -1026,6 +1026,49 @@ fn healthy() -> Value {
     scenario_named(&frozen(FIXTURE), "a healthy machine passes every check").clone()
 }
 
+fn telegram_row(scenario: &Value, label: &str) -> (u8, String) {
+    let mut out = Failing::new(|_| false);
+    let (status, _) = run_prepared(scenario, &["telegram"], &mut out, None, false, &|_| {});
+    let shown = String::from_utf8(out.accepted).unwrap();
+    let line = shown
+        .lines()
+        .find(|line| line.contains(&format!(" {label}: ")))
+        .unwrap()
+        .to_owned();
+
+    (status, line)
+}
+
+#[test]
+fn fails_with_the_reconnect_command_when_the_channel_is_down() {
+    let mut stopped = healthy();
+    stopped["files"]
+        .as_object_mut()
+        .unwrap()
+        .remove("app/health.json");
+    let mut inside = stopped.clone();
+    inside["env"]["BETTER_CC_TELEGRAM"] = Value::from("1");
+    let mut other_flag = stopped.clone();
+    other_flag["env"]["BETTER_CC_TELEGRAM"] = Value::from("0");
+
+    assert_eq!(
+        telegram_row(&inside, "Connection"),
+        (
+            1,
+            "✘ Connection: the channel server is not running in this instance; type /mcp reconnect all"
+                .to_owned()
+        )
+    );
+    assert_eq!(
+        telegram_row(&stopped, "Connection").1,
+        "○ Connection: 'claude --telegram' is not open"
+    );
+    assert_eq!(
+        telegram_row(&other_flag, "Connection").1,
+        "○ Connection: 'claude --telegram' is not open"
+    );
+}
+
 fn set_mode(path: &Path, mode: u32) {
     use std::os::unix::fs::PermissionsExt;
 

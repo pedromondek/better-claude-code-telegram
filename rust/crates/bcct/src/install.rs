@@ -7,7 +7,7 @@ use std::process::{Command, Output, Stdio};
 
 use serde_json::{Map, Number, Value};
 
-use crate::config::read_config;
+use crate::config::{DelayKind, read_config};
 use crate::files::{FileFailure, create_private_dir, write_private};
 use crate::health::Screen;
 use crate::journal::{ChangeKind, link_target};
@@ -288,11 +288,11 @@ pub enum CommandsChoice {
     Remove,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TranscriptionChoice {
     Off,
     Model(&'static str),
-    Uninstall,
+    Uninstall(Vec<&'static str>),
 }
 
 pub trait Asker {
@@ -543,6 +543,7 @@ pub struct PluginChoice {
 pub enum Kept<'v> {
     Language(&'v str),
     Delay(f64),
+    Delays { kinds: [f64; 3], summary: &'v str },
     QuietHours(Option<(&'v str, &'v str)>),
     Inbox(Option<f64>),
     Transcription(Option<&'v str>),
@@ -607,6 +608,16 @@ pub fn kept_message(
         Kept::Delay(minutes) => {
             same_number(config.get("delayMinutes"), minutes).then(|| (messages.delay_kept)(minutes))
         }
+        Kept::Delays { kinds, summary } => config
+            .get("delays")
+            .and_then(Value::as_object)
+            .is_some_and(|delays| {
+                DelayKind::ALL
+                    .into_iter()
+                    .zip(kinds)
+                    .all(|(kind, minutes)| same_number(delays.get(kind.key()), minutes))
+            })
+            .then(|| (messages.delays_kept)(summary)),
         Kept::QuietHours(range) => {
             let chosen = chosen_quiet_hours(range);
 
@@ -1261,7 +1272,9 @@ impl<'r, 's, E> Install<'r, 's, E> {
         let previous = current.filter(|_| saved);
         let installed = self.installed_models();
         let model = match self.ask(|asker| asker.transcription(current, saved, &installed))? {
-            TranscriptionChoice::Uninstall => return self.uninstall_models(app_dir, previous),
+            TranscriptionChoice::Uninstall(removed) => {
+                return self.uninstall_models(app_dir, &removed, previous);
+            }
             TranscriptionChoice::Off => None,
             TranscriptionChoice::Model(model) => Some(model),
         };
@@ -1317,21 +1330,16 @@ impl<'r, 's, E> Install<'r, 's, E> {
     fn uninstall_models(
         &mut self,
         app_dir: &Path,
+        removed: &[&'static str],
         in_use: Option<&'static str>,
     ) -> Result<(), Failure<E>> {
         let messages = self.messages;
-        let installed = self.installed_models();
-        let removed = if installed.len() == 1 {
-            installed
-        } else {
-            self.ask(|asker| asker.remove_models(&installed, in_use, messages.model_in_use))?
-        };
 
         if removed.is_empty() {
             return Ok(());
         }
 
-        self.remove_models(&removed)?;
+        self.remove_models(removed)?;
 
         if self.installed_models().is_empty() {
             remove_path(&join_path(app_dir, WHISPER_FOLDER))
@@ -1996,7 +2004,7 @@ mod tests {
         fs::create_dir_all(model.join("inside")).unwrap();
         fs::set_permissions(&model, fs::Permissions::from_mode(0o500)).unwrap();
         let mut asker = Scripted {
-            transcription: Ok(TranscriptionChoice::Uninstall),
+            transcription: Ok(TranscriptionChoice::Uninstall(vec!["base"])),
             ..Scripted::default()
         };
         let mut out = Vec::new();
@@ -2028,7 +2036,7 @@ mod tests {
         fs::create_dir_all(model_dir(&world.path("hub"), "base")).unwrap();
         let mut out = Vec::new();
         let mut uninstall = Scripted {
-            transcription: Ok(TranscriptionChoice::Uninstall),
+            transcription: Ok(TranscriptionChoice::Uninstall(vec!["base"])),
             ..Scripted::default()
         };
         let mut confirm = Scripted {
@@ -2069,7 +2077,7 @@ mod tests {
         )));
         let mut out = Vec::new();
         let mut uninstall = Scripted {
-            transcription: Ok(TranscriptionChoice::Uninstall),
+            transcription: Ok(TranscriptionChoice::Uninstall(vec!["base"])),
             ..Scripted::default()
         };
 
@@ -2128,7 +2136,7 @@ mod tests {
                 "Transcription off",
                 &[],
                 &mut Scripted {
-                    transcription: Ok(TranscriptionChoice::Uninstall),
+                    transcription: Ok(TranscriptionChoice::Uninstall(vec!["medium"])),
                     ..Scripted::default()
                 },
                 |install, world| {
@@ -2276,10 +2284,6 @@ mod tests {
             ),
             (
                 choosing(TranscriptionChoice::Model("small")),
-                Box::new(|install| install.ensure_transcription(&app)),
-            ),
-            (
-                choosing(TranscriptionChoice::Uninstall),
                 Box::new(|install| install.ensure_transcription(&app)),
             ),
             (
@@ -2902,5 +2906,39 @@ mod tests {
         assert_eq!(Tool::REQUIRED, [Tool::Claude, Tool::Bun]);
         assert_eq!(Tool::parse("uv"), Some(Tool::Uv));
         assert_eq!(Tool::parse("node"), None);
+    }
+
+    #[test]
+    fn keeps_the_delay_per_kind_only_when_every_kind_is_saved_the_same() {
+        use serde_json::json;
+
+        let kept = |config: Value, kinds: [f64; 3]| {
+            kept_message(
+                Kept::Delays {
+                    kinds,
+                    summary: "s",
+                },
+                config.as_object().unwrap(),
+                Path::new("/app"),
+                Path::new("/hub"),
+                &EN_US,
+            )
+        };
+        let saved = json!({ "delays": { "questions": 0, "permissions": 0, "waiting": 4 } });
+
+        assert_eq!(
+            kept(saved.clone(), [0.0, 0.0, 4.0]),
+            Some("Delay per kind kept:\n  • s".to_owned())
+        );
+        assert_eq!(kept(saved, [0.0, 1.0, 4.0]), None);
+        assert_eq!(
+            kept(
+                json!({ "delays": { "questions": 0, "waiting": 4 } }),
+                [0.0, 0.0, 4.0]
+            ),
+            None
+        );
+        assert_eq!(kept(json!({ "delays": 4 }), [4.0, 4.0, 4.0]), None);
+        assert_eq!(kept(json!({ "delayMinutes": 4 }), [4.0, 4.0, 4.0]), None);
     }
 }

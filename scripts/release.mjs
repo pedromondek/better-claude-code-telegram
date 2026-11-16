@@ -42,7 +42,7 @@ export function releasePendingAsks(appDir, sessionPrefix, now = Date.now()) {
     if (
       typeof record?.id !== "string" ||
       typeof record.dueAt !== "number" ||
-      record.dueAt <= now ||
+      record.released === true ||
       !String(record.sessionId ?? record.id).startsWith(sessionPrefix)
     ) {
       continue;
@@ -50,9 +50,13 @@ export function releasePendingAsks(appDir, sessionPrefix, now = Date.now()) {
 
     const temporary = `${file}.tmp`;
 
-    writeFileSync(temporary, JSON.stringify({ ...record, dueAt: now }), {
-      mode: 0o600,
-    });
+    writeFileSync(
+      temporary,
+      JSON.stringify({ ...record, dueAt: now, released: true }),
+      {
+        mode: 0o600,
+      },
+    );
     renameSync(temporary, file);
     released.push(record);
   }

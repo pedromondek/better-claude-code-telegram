@@ -14,7 +14,7 @@
       "files": {},
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {}
     },
@@ -124,7 +124,7 @@
       "files": { "app/better-cc-telegram.json": "{\"language\":\"en-us\"}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -266,7 +266,7 @@
       "files": { "app/better-cc-telegram.json": "{\"language\":\"pt-br\"}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Principal) Telegram fora\u001b[0m",
+      "stdout": "\u001b[31m📱 (Principal) Telegram fora · digite /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -408,7 +408,7 @@
       "files": { "app/better-cc-telegram.json": "{\"language\":\"fr\"}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -550,7 +550,7 @@
       "files": { "app/better-cc-telegram.json": "{" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -674,7 +674,7 @@
       "files": { "app/better-cc-telegram.json": "[\"pt-br\"]" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -816,7 +816,7 @@
       "files": { "app/better-cc-telegram.json": "{\"language\":1}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -958,7 +958,7 @@
       "files": { "app/better-cc-telegram.json": "{\"language\":\" pt-br\"}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1144,7 +1144,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1186,7 +1186,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1396,7 +1396,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1436,7 +1436,7 @@
       "files": { "app/health.json": "{\"checkedAt\":\"\",\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1476,7 +1476,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1560,7 +1560,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1686,7 +1686,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1726,7 +1726,7 @@
       "files": { "app/health.json": "{\"checkedAt\":[],\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1764,7 +1764,7 @@
       "files": { "app/health.json": "{\"checkedAt\":true,\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1802,7 +1802,7 @@
       "files": { "app/health.json": "{\"checkedAt\":false,\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1840,7 +1840,7 @@
       "files": { "app/health.json": "{\"checkedAt\":null,\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1878,7 +1878,7 @@
       "files": { "app/health.json": "{\"checkedAt\":{},\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1958,7 +1958,7 @@
       "files": { "app/health.json": "{\"checkedAt\":-1,\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1996,7 +1996,7 @@
       "files": { "app/health.json": "{\"polling\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2014,7 +2014,7 @@
       "files": { "app/health.json": "null" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2046,7 +2046,7 @@
       "files": { "app/health.json": "5" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2078,7 +2078,7 @@
       "files": { "app/health.json": "\"checkedAt\"" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2112,7 +2112,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2152,7 +2152,7 @@
       "files": { "app/health.json": "{" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2184,7 +2184,7 @@
       "files": { "app/health.json": "" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2218,7 +2218,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2260,7 +2260,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2843,7 +2843,7 @@
       "files": { "app/launch.json": "{\"launchedAt\":1699999940123}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2888,7 +2888,7 @@
       "files": { "app/launch.json": "{\"launchedAt\":1699999940122}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3023,7 +3023,7 @@
       "files": { "app/launch.json": "{\"launchedAt\":\"soon\"}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3158,7 +3158,7 @@
       "files": { "app/launch.json": "{\"launchedAt\":null}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3197,7 +3197,7 @@
       "files": { "app/launch.json": "{\"launchedAt\":true}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3236,7 +3236,7 @@
       "files": { "app/launch.json": "{\"launchedAt\":{}}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3275,7 +3275,7 @@
       "files": { "app/launch.json": "{" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3293,7 +3293,7 @@
       "files": { "app/launch.json": "[{\"launchedAt\":1700000000123}]" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3314,7 +3314,7 @@
       "files": { "app/launch.json": "null" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3332,7 +3332,7 @@
       "files": {},
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {}
     },
@@ -3679,7 +3679,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3702,7 +3702,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "mine │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "mine │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3725,7 +3725,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3748,7 +3748,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3769,7 +3769,7 @@
       "files": {},
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {}
     },
@@ -3795,7 +3795,7 @@
       "files": { "app/statusline-previous.json": "null" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3813,7 +3813,7 @@
       "files": { "app/statusline-previous.json": "[\"printf x\"]" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3834,7 +3834,7 @@
       "files": { "app/statusline-previous.json": "\"printf x\"" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3855,7 +3855,7 @@
       "files": { "app/statusline-previous.json": "{\"command\":5}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3878,7 +3878,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3899,7 +3899,7 @@
       "files": { "app/statusline-previous.json": "{\"type\":\"command\"}" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3920,7 +3920,7 @@
       "files": { "app/statusline-previous.json": "{" },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3940,7 +3940,7 @@
       },
       "stdin": "{\"model\":\"x\"}",
       "status": 0,
-      "stdout": "{\"model\":\"x\"} | mine │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "{\"model\":\"x\"} | mine │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3982,7 +3982,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "one\ntwo │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "one\ntwo │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4024,7 +4024,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4066,7 +4066,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "x │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "x │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4108,7 +4108,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "a\r │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "a\r │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4150,7 +4150,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4192,7 +4192,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "a\n\nb │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "a\n\nb │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4234,7 +4234,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\na │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\na │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4276,7 +4276,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "�ok │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "�ok │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4318,7 +4318,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "😀 é │ │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "😀 é │ │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4360,7 +4360,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4402,7 +4402,7 @@
       },
       "stdin": { "repeat": "a", "count": 300000 },
       "status": 0,
-      "stdout": "ok │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "ok │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4444,7 +4444,7 @@
       },
       "stdin": { "repeat": "b", "count": 200000 },
       "status": 0,
-      "stdout": "200000 │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "200000 │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4486,7 +4486,7 @@
       },
       "stdin": "input",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4528,7 +4528,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[1mbold\u001b[0m │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[1mbold\u001b[0m │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4570,7 +4570,7 @@
       },
       "stdin": { "bytes": [123, 255, 125, 195] },
       "status": 0,
-      "stdout": "{�}� │ \u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "{�}� │ \u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -4654,7 +4654,7 @@
       },
       "stdin": "",
       "status": 0,
-      "stdout": "\u001b[31m📱 (Main) Telegram down\u001b[0m",
+      "stdout": "\u001b[31m📱 (Main) Telegram down · type /mcp reconnect all\u001b[0m",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },

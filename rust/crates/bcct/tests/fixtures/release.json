@@ -120,7 +120,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -140,7 +140,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {
@@ -167,23 +167,23 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/B.json": {
-          "content": "{\"id\":\"B\",\"sessionId\":\"B-session\",\"instance\":\"proj [B]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"B?\",\"header\":\"H-B\"}]}",
+          "content": "{\"id\":\"B\",\"sessionId\":\"B-session\",\"instance\":\"proj [B]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"B?\",\"header\":\"H-B\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/_.json": {
-          "content": "{\"id\":\"_\",\"sessionId\":\"_-session\",\"instance\":\"proj [_]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"_?\",\"header\":\"H-_\"}]}",
+          "content": "{\"id\":\"_\",\"sessionId\":\"_-session\",\"instance\":\"proj [_]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"_?\",\"header\":\"H-_\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/c.json": {
-          "content": "{\"id\":\"c\",\"sessionId\":\"c-session\",\"instance\":\"proj [c]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"c?\",\"header\":\"H-c\"}]}",
+          "content": "{\"id\":\"c\",\"sessionId\":\"c-session\",\"instance\":\"proj [c]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"c?\",\"header\":\"H-c\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -202,7 +202,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -237,7 +237,7 @@
           "mode": "600"
         },
         "app/asks/open.json": {
-          "content": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}]}",
+          "content": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/sent.json": {
@@ -266,7 +266,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/.json": {
-          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/folder.json/": { "mode": "750" },
@@ -275,7 +275,7 @@
           "mode": "600"
         },
         "app/asks/open.json": {
-          "content": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}]}",
+          "content": "{\"id\":\"open\",\"sessionId\":\"open-session\",\"instance\":\"proj [open]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"open?\",\"header\":\"H-open\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/x.json.tmp": {
@@ -302,7 +302,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/.json": {
-          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}]}",
+          "content": "{\"id\":\"\",\"sessionId\":\"-session\",\"instance\":\"proj []\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"?\",\"header\":\"H-\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -342,7 +342,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -361,7 +361,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -437,7 +437,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -456,7 +456,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":null,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":null,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -494,7 +494,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":123,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":123,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -513,7 +513,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":1.5,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":1.5,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -532,7 +532,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":{\"a\":1},\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":{\"a\":1},\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -551,7 +551,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":[\"ab\",\"c\"],\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":[\"ab\",\"c\"],\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -570,7 +570,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":[[\"x\",null],1],\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":[[\"x\",null],1],\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -589,7 +589,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":true,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":true,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -608,7 +608,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":false,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":false,\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -627,7 +627,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -665,7 +665,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"sessão-😀\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"sessão-😀\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -682,7 +682,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"released\":true}",
           "mode": "600"
         }
       }
@@ -695,13 +695,13 @@
         "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
       },
       "status": 0,
-      "stdout": "No pending question.\n",
+      "stdout": "Released the question from [proj [a]]: H-a\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -714,13 +714,13 @@
         "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
       },
       "status": 0,
-      "stdout": "No pending question.\n",
+      "stdout": "Released the question from [proj [a]]: H-a\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -739,7 +739,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -758,7 +758,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -777,7 +777,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -790,13 +790,13 @@
         "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":-5,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}"
       },
       "status": 0,
-      "stdout": "No pending question.\n",
+      "stdout": "Released the question from [proj [a]]: H-a\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":-5,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -892,6 +892,101 @@
       }
     },
     {
+      "name": "released: true, already due",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}"
+      },
+      "status": 0,
+      "stdout": "No pending question.\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "released: false, already due",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":false}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "released: the string true, already due",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":\"true\"}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "released: one, already due",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":1}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "released: null, already due",
+      "args": [],
+      "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
+      "files": {
+        "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000122,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":null}"
+      },
+      "status": 0,
+      "stdout": "Released the question from [proj [a]]: H-a\n",
+      "stderr": "",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/asks/": { "mode": "750" },
+        "app/asks/a.json": {
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
+          "mode": "600"
+        }
+      }
+    },
+    {
       "name": "id: number",
       "args": [],
       "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
@@ -962,7 +1057,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -981,7 +1076,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"other\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"other\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1022,7 +1117,7 @@
           "mode": "600"
         },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1043,7 +1138,7 @@
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": { "content": "null", "mode": "600" },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1064,7 +1159,7 @@
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": { "content": "\"a\"", "mode": "600" },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1085,7 +1180,7 @@
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": { "content": "{", "mode": "600" },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1106,7 +1201,7 @@
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": { "content": "", "mode": "600" },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1130,7 +1225,7 @@
           "mode": "600"
         },
         "app/asks/b.json": {
-          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
+          "content": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1155,7 +1250,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"note\":\"��\"}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"note\":\"��\",\"released\":true}",
           "mode": "600"
         }
       }
@@ -1174,7 +1269,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"note\":\"\\ud83d x\"}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"note\":\"\\ud83d x\",\"released\":true}",
           "mode": "600"
         }
       }
@@ -1193,7 +1288,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"1\":\"one\",\"2\":\"two\",\"z\":1,\"dueAt\":1700000000123,\"id\":\"a\",\"b\":{\"0\":2,\"y\":1}}",
+          "content": "{\"1\":\"one\",\"2\":\"two\",\"z\":1,\"dueAt\":1700000000123,\"id\":\"a\",\"b\":{\"0\":2,\"y\":1},\"released\":true}",
           "mode": "600"
         }
       }
@@ -1212,7 +1307,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"q\":1}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"q\":1,\"released\":true}",
           "mode": "600"
         }
       }
@@ -1231,7 +1326,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"n\":[1,100,0,0.1,1e+21,1e-7,1.2345678901234568e+29,5e-324]}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"n\":[1,100,0,0.1,1e+21,1e-7,1.2345678901234568e+29,5e-324],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1250,7 +1345,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"s\":\"a\\\"b\\\\c\\n\\t\\u0001\u2028é😀</script>/\"}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"s\":\"a\\\"b\\\\c\\n\\t\\u0001\u2028é😀</script>/\",\"released\":true}",
           "mode": "600"
         }
       }
@@ -1269,7 +1364,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"__proto__\":{\"x\":1},\"id\":\"a\",\"dueAt\":1700000000123}",
+          "content": "{\"__proto__\":{\"x\":1},\"id\":\"a\",\"dueAt\":1700000000123,\"released\":true}",
           "mode": "600"
         }
       }
@@ -1288,7 +1383,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":{\"header\":\"H\"}}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":{\"header\":\"H\"},\"released\":true}",
           "mode": "600"
         }
       }
@@ -1307,7 +1402,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1326,7 +1421,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"H\",\"question\":\"Q\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"H\",\"question\":\"Q\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1345,7 +1440,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"Q\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"Q\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1364,7 +1459,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":null,\"question\":\"Q\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":null,\"question\":\"Q\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1383,7 +1478,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"\",\"question\":\"Q\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"\",\"question\":\"Q\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1402,7 +1497,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":0,\"question\":\"Q\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":0,\"question\":\"Q\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1421,7 +1516,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":false,\"question\":\"Q\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":false,\"question\":\"Q\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1440,7 +1535,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":true}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":true}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1459,7 +1554,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":1.5}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":1.5}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1478,7 +1573,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":[\"a\",[\"b\",null]]}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":[\"a\",[\"b\",null]]}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1497,7 +1592,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":[]},{\"header\":\"H\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":[]},{\"header\":\"H\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1516,7 +1611,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":{}}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":{}}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1535,7 +1630,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1554,7 +1649,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[null,\"text\",5,[\"x\"],true]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[null,\"text\",5,[\"x\"],true],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1573,7 +1668,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"One\"},{\"question\":\"Two?\"},{\"header\":\"Three\",\"question\":\"ignored\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"header\":\"One\"},{\"question\":\"Two?\"},{\"header\":\"Three\",\"question\":\"ignored\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1590,7 +1685,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"released\":true}",
           "mode": "600"
         }
       }
@@ -1609,7 +1704,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":null,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":null,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1628,7 +1723,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1647,7 +1742,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":7,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":7,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1666,7 +1761,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":{\"a\":1},\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":{\"a\":1},\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1685,7 +1780,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":[\"a\",\"b\"],\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":[\"a\",\"b\"],\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1704,7 +1799,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":false,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":false,\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1723,7 +1818,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"projeto [ãé]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"projeto [ãé]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1742,7 +1837,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"questions\":[]}",
+          "content": "{\"id\":\"a\",\"dueAt\":1700000000123,\"questions\":[],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1763,7 +1858,7 @@
         "cfg/better-claude-code-telegram/": { "mode": "750" },
         "cfg/better-claude-code-telegram/asks/": { "mode": "750" },
         "cfg/better-claude-code-telegram/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         },
         "cfg/better-claude-code-telegram/better-cc-telegram.json": {
@@ -1788,7 +1883,7 @@
         "home/.claude/better-claude-code-telegram/": { "mode": "750" },
         "home/.claude/better-claude-code-telegram/asks/": { "mode": "750" },
         "home/.claude/better-claude-code-telegram/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1810,7 +1905,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1832,7 +1927,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         }
       }
@@ -1852,7 +1947,7 @@
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
         "app/asks/a.json": {
-          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
+          "content": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}],\"released\":true}",
           "mode": "600"
         },
         "app/better-cc-telegram.json": {

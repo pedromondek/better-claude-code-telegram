@@ -1365,6 +1365,14 @@ for (const [label, prompt] of [
     "a message from another Claude session",
     'Another Claude session sent a message:\n<cross-session-message from="x">hi</cross-session-message>',
   ],
+  [
+    "a message from another Claude session as the hook receives it",
+    '<cross-session-message from="uds:/tmp/peer.sock" from-name="api" from-mode="prompting">\nhi\n</cross-session-message>',
+  ],
+  [
+    "text that starts like the cross-session tag without its attributes",
+    "<cross-session-message>",
+  ],
   ["a cross-session idle notice", "[Cross-session idle notice] peer is idle"],
   ["a cross-session delivery notice", "[Cross-session delivery notice] held"],
   [

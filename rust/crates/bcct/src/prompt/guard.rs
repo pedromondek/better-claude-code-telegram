@@ -30,10 +30,17 @@ impl<'a> GuardCancel<'a> {
             Choice::new(messages.exit_setup),
         ];
         let title = question(messages.exit_prompt, self.inner.colors().out);
+        let back = self.inner.back();
 
-        self.inner
+        self.inner.set_back(false);
+
+        let leaving = self
+            .inner
             .select(&title, &choices, LEAVE, messages)
-            .map_or(true, |chosen| chosen == LEAVE)
+            .map_or(true, |chosen| chosen == LEAVE);
+
+        self.inner.set_back(back);
+        leaving
     }
 
     fn retrying<T>(
@@ -65,6 +72,14 @@ impl Prompter for GuardCancel<'_> {
 
     fn colors(&self) -> Colors {
         self.inner.colors()
+    }
+
+    fn back(&self) -> bool {
+        self.inner.back()
+    }
+
+    fn set_back(&mut self, allowed: bool) {
+        self.inner.set_back(allowed);
     }
 
     fn line(&mut self, prompt: &str, messages: &'static Messages) -> Answer<String> {

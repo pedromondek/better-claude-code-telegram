@@ -10,7 +10,7 @@ use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
 
-use bcct::js::{js_number, js_trim, parse_json};
+use bcct::js::{js_number, js_trim, parse_json, stringify};
 use bcct::messages::{EN_US, Messages, PT_BR};
 use bcct::prompt::{
     Choice, ChoiceQuestion, GuardCancel, Other, PromptError, Prompter, ask_choice, ask_validated,
@@ -51,6 +51,7 @@ fn error_json(error: &PromptError) -> Value {
             ((*message).to_owned(), false, false)
         }
         PromptError::Io(error) => (error.to_string(), false, false),
+        PromptError::Back => (error.to_string(), false, false),
     };
 
     json!({ "message": message, "cancelled": cancelled, "interrupted": interrupted })
@@ -317,10 +318,8 @@ fn key_steps(keys: &Value) -> Vec<Step> {
         .collect()
 }
 
-#[test]
-fn the_real_terminal_writes_what_the_js_writes_in_the_same_terminal() {
-    let fixture = fixture();
-    let runs: Vec<_> = fixture["ptys"]
+fn driven(ptys: &Value) -> Vec<(Value, String, Value)> {
+    let runs: Vec<_> = ptys
         .as_array()
         .unwrap()
         .iter()
@@ -341,8 +340,38 @@ fn the_real_terminal_writes_what_the_js_writes_in_the_same_terminal() {
         })
         .collect();
 
-    for run in runs {
-        let (entry, flow, outcome) = run.join().unwrap();
+    runs.into_iter().map(|run| run.join().unwrap()).collect()
+}
+
+#[test]
+fn blessing_rewrites_the_terminal_ptys_from_the_binary() {
+    if env::var_os("BCCT_BLESS").is_none_or(|flag| flag != "1") {
+        return;
+    }
+
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/setup-terminal.json");
+    let mut fixture = parse_json(&fs::read_to_string(&path).unwrap()).unwrap();
+    let observed = driven(&fixture["ptys"]);
+
+    for (entry, (_, flow, outcome)) in fixture["ptys"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .zip(observed)
+    {
+        entry["output"] = Value::String(flow);
+        entry["outcome"] = outcome;
+    }
+
+    fs::write(path, stringify(&fixture)).unwrap();
+}
+
+#[test]
+fn writes_in_the_real_terminal_what_the_js_writes() {
+    let fixture = fixture();
+
+    for (entry, flow, outcome) in driven(&fixture["ptys"]) {
         let name = entry["name"].as_str().unwrap();
 
         assert_eq!(flow, entry["output"].as_str().unwrap(), "{name}");
