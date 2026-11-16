@@ -14,6 +14,7 @@ import { COMMAND, PACKAGE } from "../npm/shim/shim.constants.mjs";
 import { expectedHash } from "../npm/shim/shim.mjs";
 import { TARGETS } from "./release-binary.mjs";
 import { CHECKSUMS_FILE } from "./release-order.mjs";
+import { binaryFileName } from "./release.constants.mjs";
 import { checkVersions, readVersions } from "./version.mjs";
 
 const USAGE = "usage: npm run release:npm -- <assets folder> <output folder>";
@@ -42,7 +43,7 @@ export function platformOf(target) {
     ...target,
     cpu,
     packageName: `${PACKAGE}-${target.os}-${cpu}`,
-    binary: target.os === "win32" ? "bcct.exe" : "bcct",
+    binary: binaryFileName(target.os),
   };
 }
 

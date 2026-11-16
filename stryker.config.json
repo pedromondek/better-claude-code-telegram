@@ -6,7 +6,14 @@
     "plugins/telegram/extensions/**/*.ts",
     "!plugins/telegram/extensions/**/__tests__/**"
   ],
-  "ignorePatterns": ["dist", "coverage", "reports", ".stryker-tmp"],
+  "ignorePatterns": [
+    "dist",
+    "coverage",
+    "reports",
+    ".stryker-tmp",
+    "rust",
+    "tmp"
+  ],
   "ignoreStatic": true,
   "checkers": [],
   "reporters": ["clear-text", "progress", "html", "json"],

@@ -431,9 +431,11 @@ describe("lint-staged: Rust", () => {
       "rust:test": tool(
         "cargo nextest run --manifest-path rust/Cargo.toml --locked",
       ),
-      "rust:cov": tool(
+      "rust:cov": `${tool(
+        "cargo llvm-cov clean --workspace --manifest-path rust/Cargo.toml",
+      )} && ${tool(
         "cargo llvm-cov nextest --manifest-path rust/Cargo.toml --locked --fail-under-lines 100",
-      ),
+      )}`,
       "rust:deny": tool(
         "cargo deny --manifest-path rust/Cargo.toml check advisories",
       ),
@@ -442,7 +444,7 @@ describe("lint-staged: Rust", () => {
       ),
       "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
       "rust:build":
-        "cargo build --manifest-path rust/Cargo.toml --release --locked",
+        "cargo clean --manifest-path rust/Cargo.toml --release && cargo build --manifest-path rust/Cargo.toml --release --locked",
       "rust:clean": "cargo clean --manifest-path rust/Cargo.toml",
     });
   });

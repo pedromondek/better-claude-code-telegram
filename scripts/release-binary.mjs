@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { RUST_TARGET_DIR, binaryFileName } from "./release.constants.mjs";
 import { readVersions } from "./version.mjs";
 
 export const TARGETS = [
@@ -128,10 +129,10 @@ export function packageBinary({
   const entry = targetOf(target);
   const binary = join(
     root,
-    "rust/target",
+    RUST_TARGET_DIR,
     target,
     "release",
-    entry.os === "win32" ? "bcct.exe" : "bcct",
+    binaryFileName(entry.os),
   );
   const headers = readobj(["--file-headers", "--needed-libs", binary]);
   const programHeaders =

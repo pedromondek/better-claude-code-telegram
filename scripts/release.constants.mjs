@@ -12,3 +12,9 @@ export const STABLE_BRANCH = "stable";
 export const TRUST_PAUSE_MS = 2000;
 export const NPM_REGISTRY = "https://registry.npmjs.org";
 export const PROVENANCE_PREDICATE = "https://slsa.dev/provenance/v1";
+export const BINARY_NAME = "bcct";
+export const RUST_TARGET_DIR = "rust/target";
+
+export function binaryFileName(os) {
+  return os === "win32" ? `${BINARY_NAME}.exe` : BINARY_NAME;
+}

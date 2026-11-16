@@ -78,6 +78,29 @@ afterEach(() => {
   rmSync(layer, { recursive: true, force: true });
 });
 
+describe("stryker-run › sandbox contents", () => {
+  const ROOT = join(import.meta.dirname, "..", "..");
+  const config = JSON.parse(
+    readFileSync(join(ROOT, "stryker.config.json"), "utf8"),
+  );
+
+  it("leaves the Rust workspace out of the copy of each run", () => {
+    expect(config.ignorePatterns).toEqual([
+      "dist",
+      "coverage",
+      "reports",
+      ".stryker-tmp",
+      "rust",
+      "tmp",
+    ]);
+    expect(
+      [config.mutate, config.vitest?.configFile]
+        .flat()
+        .filter((pattern) => String(pattern).startsWith("rust")),
+    ).toEqual([]);
+  });
+});
+
 describe("stryker-run › own folder per run", () => {
   it("names the run folder by the pid inside .stryker-tmp", () => {
     expect(runDirFor(4321)).toBe(join(".stryker-tmp", "run-4321"));
