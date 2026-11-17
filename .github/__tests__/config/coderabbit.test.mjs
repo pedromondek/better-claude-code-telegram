@@ -44,6 +44,11 @@ describe(".coderabbit.yaml", () => {
     });
   });
 
+  it("fails the CodeRabbit check when the review errors, so the ruleset that requires it blocks the merge", () => {
+    expect(config.reviews.commit_status).toBe(true);
+    expect(config.reviews.fail_commit_status).toBe(true);
+  });
+
   it("labels the pull requests it classifies as slop", () => {
     expect(config.reviews.slop_detection).toEqual({
       enabled: true,
