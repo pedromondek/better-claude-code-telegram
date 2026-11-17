@@ -72,8 +72,6 @@ reviews:
     - "!**/__tests__/fixtures/**"
     - "!rust/crates/bcct/tests/fixtures/**"
   finishing_touches:
-    docstrings:
-      enabled: false
     unit_tests:
       enabled: false
     simplify:
@@ -83,8 +81,6 @@ reviews:
     resolve_merge_conflict:
       enabled: false
   pre_merge_checks:
-    docstrings:
-      mode: "off"
     title:
       mode: warning
       requirements: |

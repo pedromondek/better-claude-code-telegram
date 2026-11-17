@@ -49,6 +49,11 @@ describe(".coderabbit.yaml", () => {
     expect(config.reviews.fail_commit_status).toBe(true);
   });
 
+  it("drops the docstrings keys that CodeRabbit retired and no longer reads", () => {
+    expect(config.reviews.pre_merge_checks).not.toHaveProperty("docstrings");
+    expect(config.reviews.finishing_touches).not.toHaveProperty("docstrings");
+  });
+
   it("labels the pull requests it classifies as slop", () => {
     expect(config.reviews.slop_detection).toEqual({
       enabled: true,
