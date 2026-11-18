@@ -34,14 +34,19 @@ const LIMIT: Duration = Duration::from_secs(60);
 const BUFFER: usize = 4096;
 const STOPPED_STATE: &str = "T";
 const ZOMBIE_STATE: &str = "Z";
-const INPUT_WAITS: [&str; 6] = [
+const INPUT_WAITS: [&str; 5] = [
     "do_epoll_wait",
     "ep_poll",
     "do_sys_poll",
     "do_select",
     "n_tty_read",
-    "wait_woken",
 ];
+const TERMINAL_WAIT: &str = "wait_woken";
+const STDIN_ARGUMENT: &str = "0x0";
+#[cfg(target_arch = "x86_64")]
+const READ_SYSCALL: &str = "0";
+#[cfg(target_arch = "aarch64")]
+const READ_SYSCALL: &str = "63";
 
 #[derive(Debug, Clone)]
 pub(crate) enum Step {
@@ -113,25 +118,32 @@ fn innermost(pid: i32) -> i32 {
         .map_or(pid, innermost)
 }
 
-fn thread_waits(pid: i32) -> Option<Vec<String>> {
-    std::fs::read_dir(format!("/proc/{pid}/task"))
-        .ok()?
-        .map(|thread| {
-            std::fs::read_to_string(thread.ok()?.path().join("wchan"))
-                .ok()
-                .map(|wchan| wchan.trim().to_owned())
-        })
-        .collect()
+fn reading_stdin(thread: &Path) -> bool {
+    let Ok(call) = std::fs::read_to_string(thread.join("syscall")) else {
+        return true;
+    };
+    let mut fields = call.split_whitespace();
+
+    fields.next() == Some(READ_SYSCALL) && fields.next() == Some(STDIN_ARGUMENT)
+}
+
+fn thread_listens(thread: &Path) -> bool {
+    let Ok(wchan) = std::fs::read_to_string(thread.join("wchan")) else {
+        return false;
+    };
+    let wchan = wchan.trim();
+
+    INPUT_WAITS.contains(&wchan) || (wchan == TERMINAL_WAIT && reading_stdin(thread))
 }
 
 fn waiting_for_input(pid: i32) -> bool {
-    let Some(waits) = thread_waits(innermost(pid)) else {
+    let Ok(threads) = std::fs::read_dir(format!("/proc/{}/task", innermost(pid))) else {
         return true;
     };
 
-    waits
-        .iter()
-        .any(|wait| INPUT_WAITS.contains(&wait.as_str()))
+    threads
+        .filter_map(Result::ok)
+        .any(|thread| thread_listens(&thread.path()))
 }
 
 fn settle(
