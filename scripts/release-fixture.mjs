@@ -68,7 +68,7 @@ add("release: one pending question in pt-br", {
   files: { ...ask("a"), ...PT_BR },
 });
 add("release: several in name order", {
-  files: { ...ask("c"), ...ask("a"), ...ask("b"), ...ask("B"), ...ask("_") },
+  files: { ...ask("c"), ...ask("a"), ...ask("b"), ...ask("Z"), ...ask("_") },
 });
 add("release: extra arguments are ignored", {
   args: ["a-se", "more"],

@@ -157,17 +157,17 @@
         "app/asks/c.json": "{\"id\":\"c\",\"sessionId\":\"c-session\",\"instance\":\"proj [c]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"c?\",\"header\":\"H-c\"}]}",
         "app/asks/a.json": "{\"id\":\"a\",\"sessionId\":\"a-session\",\"instance\":\"proj [a]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"a?\",\"header\":\"H-a\"}]}",
         "app/asks/b.json": "{\"id\":\"b\",\"sessionId\":\"b-session\",\"instance\":\"proj [b]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"b?\",\"header\":\"H-b\"}]}",
-        "app/asks/B.json": "{\"id\":\"B\",\"sessionId\":\"B-session\",\"instance\":\"proj [B]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"B?\",\"header\":\"H-B\"}]}",
+        "app/asks/Z.json": "{\"id\":\"Z\",\"sessionId\":\"Z-session\",\"instance\":\"proj [Z]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"Z?\",\"header\":\"H-Z\"}]}",
         "app/asks/_.json": "{\"id\":\"_\",\"sessionId\":\"_-session\",\"instance\":\"proj [_]\",\"dueAt\":1700000060123,\"questions\":[{\"question\":\"_?\",\"header\":\"H-_\"}]}"
       },
       "status": 0,
-      "stdout": "Released the question from [proj [B]]: H-B\nReleased the question from [proj [_]]: H-_\nReleased the question from [proj [a]]: H-a\nReleased the question from [proj [b]]: H-b\nReleased the question from [proj [c]]: H-c\n",
+      "stdout": "Released the question from [proj [Z]]: H-Z\nReleased the question from [proj [_]]: H-_\nReleased the question from [proj [a]]: H-a\nReleased the question from [proj [b]]: H-b\nReleased the question from [proj [c]]: H-c\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
         "app/asks/": { "mode": "750" },
-        "app/asks/B.json": {
-          "content": "{\"id\":\"B\",\"sessionId\":\"B-session\",\"instance\":\"proj [B]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"B?\",\"header\":\"H-B\"}],\"released\":true}",
+        "app/asks/Z.json": {
+          "content": "{\"id\":\"Z\",\"sessionId\":\"Z-session\",\"instance\":\"proj [Z]\",\"dueAt\":1700000000123,\"questions\":[{\"question\":\"Z?\",\"header\":\"H-Z\"}],\"released\":true}",
           "mode": "600"
         },
         "app/asks/_.json": {
