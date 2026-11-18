@@ -330,7 +330,10 @@ mod tests {
         assert!(remove_tree(&file.join("inside")).is_ok());
         assert!(remove_tree(&folder.path().join("x".repeat(300))).is_err());
         assert!(remove_tree(&folder.path().join("missing")).is_ok());
+        #[cfg(unix)]
         assert!(ignore_missing(fs::remove_file(file.join("inside"))).is_err());
+        #[cfg(windows)]
+        assert!(ignore_missing(fs::remove_file(file.join("inside"))).is_ok());
         remove_tree(&file).unwrap();
         assert!(!file.exists());
     }
