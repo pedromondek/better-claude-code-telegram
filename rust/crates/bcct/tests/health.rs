@@ -14,6 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use bcct::health::{Machine, Screen, run, run_with};
+#[cfg(target_os = "linux")]
 use bcct::js::stringify;
 use bcct::prompt::{FakeCall, FakePrompter, Prompter, Reply};
 use bcct::setup::{shell_script, whisper_python_works};
@@ -27,6 +28,7 @@ use support::{
 };
 
 const FIXTURE: &str = include_str!("fixtures/health.json");
+#[cfg(target_os = "linux")]
 const BCCT: &str = env!("CARGO_BIN_EXE_bcct");
 const CYAN: &str = "\u{1b}[36m";
 const SPINNER_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -424,10 +426,12 @@ fn normalized_terminal(raw: &str) -> (String, bool) {
     (out, repainted)
 }
 
+#[cfg(target_os = "linux")]
 fn quoted(text: &str) -> String {
     format!("'{}'", text.replace('\'', "'\\''"))
 }
 
+#[cfg(target_os = "linux")]
 struct Painted {
     status: Value,
     terminal: String,
@@ -435,6 +439,7 @@ struct Painted {
     requests: Value,
 }
 
+#[cfg(target_os = "linux")]
 fn observe_terminal(scenario: &Value) -> Painted {
     let root = sandbox();
     let telegram = FakeTelegram::start(scenario);
@@ -503,10 +508,12 @@ fn every_terminal_scenario_spins_and_prints_what_the_fixture_recorded() {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn blessing() -> bool {
     std::env::var_os("BCCT_BLESS").is_some_and(|flag| flag == "1")
 }
 
+#[cfg(target_os = "linux")]
 fn after_value(tree: &Tree) -> Value {
     Value::Object(
         tree.iter()
