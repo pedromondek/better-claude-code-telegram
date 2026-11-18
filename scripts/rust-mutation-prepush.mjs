@@ -9,6 +9,11 @@ import { pushRange } from "./push-range.mjs";
 
 const RUST_SOURCE = /^(?:---|\+\+\+) [ab]\/.+\.rs$/mu;
 
+export const RUST_MUTATION_TEST_ARGS = [
+  "--test-tool=nextest",
+  "--cargo-test-arg=--max-fail=1:immediate",
+];
+
 export function touchesRustSource(diff) {
   return RUST_SOURCE.test(diff);
 }
@@ -45,6 +50,7 @@ function main() {
         "--in-place",
         "--in-diff",
         file,
+        ...RUST_MUTATION_TEST_ARGS,
       ],
       { stdio: "inherit" },
     );

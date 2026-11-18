@@ -13,7 +13,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { touchesRustSource } from "../rust-mutation-prepush.mjs";
+import {
+  RUST_MUTATION_TEST_ARGS,
+  touchesRustSource,
+} from "../rust-mutation-prepush.mjs";
 
 const SCRIPT = join(import.meta.dirname, "..", "rust-mutation-prepush.mjs");
 
@@ -43,8 +46,9 @@ function fakeSh() {
     [
       "#!/bin/bash",
       'printf "%s\\n" "$@" > "$FAKE_SH_ARGS"',
-      'cp "${@: -1}" "$FAKE_SH_DIFF" 2>/dev/null',
-      'echo "TMP_FILE=${@: -1}" >> "$FAKE_SH_ARGS"',
+      'for ((i = 1; i < $#; i++)); do [ "${!i}" = "--in-diff" ] && j=$((i + 1)) && DIFF="${!j}"; done',
+      'cp "$DIFF" "$FAKE_SH_DIFF" 2>/dev/null',
+      'echo "TMP_FILE=$DIFF" >> "$FAKE_SH_ARGS"',
       "echo FAKE_SH_STDOUT",
       "exit ${FAKE_SH_EXIT:-0}",
       "",
@@ -143,6 +147,32 @@ describe("scripts/rust-mutation-prepush.mjs", () => {
       args[7],
     ]);
     expect(args[7]).toMatch(/rust-mutation-diff/u);
+  });
+
+  it("runs each test in its own process with nextest and stops at the first failure, like rust:mutation", () => {
+    const base = git("rev-parse", "HEAD");
+    commitFile("rust/crates/bcct/src/lib.rs", "pub fn a() {}\n");
+
+    run(`${base}...HEAD`);
+    const args = recordedArgs();
+
+    expect(args.slice(8, 10)).toEqual([
+      "--test-tool=nextest",
+      "--cargo-test-arg=--max-fail=1:immediate",
+    ]);
+  });
+
+  it("runs the tests the same way as the rust:mutation script of package.json", () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        join(import.meta.dirname, "..", "..", "package.json"),
+        "utf8",
+      ),
+    );
+
+    for (const argument of RUST_MUTATION_TEST_ARGS) {
+      expect(manifest.scripts["rust:mutation"]).toContain(argument);
+    }
   });
 
   it("gives cargo-mutants the unified=0 diff of rust/ only, with paths relative to rust/ as cargo-mutants matches them", () => {
