@@ -103,7 +103,12 @@ fn innermost(pid: i32) -> i32 {
             children
                 .split_whitespace()
                 .filter_map(|child| child.parse().ok())
-                .rfind(|child| state_of(*child).as_deref() != Some(ZOMBIE_STATE))
+                .rfind(|child| {
+                    !matches!(
+                        state_of(*child).as_deref(),
+                        Some(ZOMBIE_STATE | STOPPED_STATE)
+                    )
+                })
         })
         .map_or(pid, innermost)
 }
@@ -120,15 +125,13 @@ fn thread_waits(pid: i32) -> Option<Vec<String>> {
 }
 
 fn waiting_for_input(pid: i32) -> bool {
-    let pid = innermost(pid);
-    let (Some(state), Some(waits)) = (state_of(pid), thread_waits(pid)) else {
+    let Some(waits) = thread_waits(innermost(pid)) else {
         return true;
     };
 
-    state == STOPPED_STATE
-        || waits
-            .iter()
-            .any(|wait| INPUT_WAITS.contains(&wait.as_str()))
+    waits
+        .iter()
+        .any(|wait| INPUT_WAITS.contains(&wait.as_str()))
 }
 
 fn settle(

@@ -1,3 +1,4 @@
+#![cfg(unix)]
 #![cfg(test)]
 
 mod support;
