@@ -13,5 +13,5 @@ minimum_release_age = "7d"
 "aqua:EmbarkStudios/cargo-deny" = "0.20.2"
 "aqua:orhun/git-cliff" = "2.14.2"
 "aqua:oven-sh/bun" = "1.4.4"
-"github:sourcefrog/cargo-mutants" = "27.1.0"
+"github:sourcefrog/cargo-mutants" = { version = "27.1.0", os = ["linux/x64", "macos/x64", "windows/x64"] }
 "github:nextest-rs/nextest" = { version = "0.9.149", version_prefix = "cargo-nextest-" }
