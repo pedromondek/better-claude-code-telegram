@@ -181,7 +181,14 @@ pub fn process_alive(pid: f64) -> bool {
             .is_some_and(|target| rustix::process::test_kill_process(target).is_ok())
     }
 
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        pid.to_string()
+            .parse::<u32>()
+            .is_ok_and(|raw| process_alive::state(raw.into()).is_alive())
+    }
+
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = pid;
         false
