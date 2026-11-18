@@ -532,23 +532,6 @@ fn lock_when_free(
     None
 }
 
-fn keep_mode(temporary: &File, target: &Path) -> io::Result<()> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-
-        let mode = fs::metadata(target).map_or(NEW_FILE_MODE, |metadata| {
-            metadata.permissions().mode() & 0o777
-        });
-        temporary.set_permissions(fs::Permissions::from_mode(mode))
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = (temporary, target);
-        Ok(())
-    }
-}
-
 fn folder_of(path: &Path) -> PathBuf {
     path.parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -568,7 +551,19 @@ fn write_locked(
 
     temporary.write_all(contents.as_bytes())?;
     temporary.as_file().sync_all()?;
-    keep_mode(temporary.as_file(), target)?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mode = fs::metadata(target).map_or(NEW_FILE_MODE, |metadata| {
+            metadata.permissions().mode() & 0o777
+        });
+        temporary
+            .as_file()
+            .set_permissions(fs::Permissions::from_mode(mode))?;
+    }
+
     temporary.persist(target).map_err(io::Error::from)?;
     Ok(())
 }

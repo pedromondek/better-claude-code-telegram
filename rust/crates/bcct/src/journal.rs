@@ -68,9 +68,7 @@ impl Undo {
                 path,
                 content,
                 mode,
-            } => fs::write(&path, content)
-                .and_then(|()| set_mode(&path, mode))
-                .is_ok(),
+            } => restore(&path, &content, mode).is_ok(),
             Self::RemoveFile(path) => ignore_missing(fs::remove_file(path)).is_ok(),
             Self::RemoveTree(path) => remove_tree(&path).is_ok(),
             Self::Action(action) => action(),
@@ -140,17 +138,18 @@ fn mode_of(metadata: &fs::Metadata) -> u32 {
     }
 }
 
-fn set_mode(path: &Path, mode: u32) -> io::Result<()> {
+fn restore(path: &Path, content: &[u8], mode: u32) -> io::Result<()> {
+    fs::write(path, content)?;
+
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(mode))
+        fs::set_permissions(path, fs::Permissions::from_mode(mode))?;
     }
     #[cfg(not(unix))]
-    {
-        let _ = (path, mode);
-        Ok(())
-    }
+    let _ = mode;
+
+    Ok(())
 }
 
 #[must_use]

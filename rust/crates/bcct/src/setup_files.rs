@@ -401,24 +401,20 @@ fn read_settings_or_refuse(
 }
 
 fn back_up(settings_file: &Path, backup: &Path, journal: &mut Journal) -> Result<(), FileFailure> {
-    journal
-        .track_file(backup)
-        .and_then(|()| fs::copy(settings_file, backup).map(|_| ()))
-        .and_then(|()| set_private(backup))
-        .map_err(not_saved(backup))
+    copy_private(settings_file, backup, journal).map_err(not_saved(backup))
 }
 
-fn set_private(path: &Path) -> std::io::Result<()> {
+fn copy_private(source: &Path, copy: &Path, journal: &mut Journal) -> std::io::Result<()> {
+    journal.track_file(copy)?;
+    fs::copy(source, copy)?;
+
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(BACKUP_MODE))
+        fs::set_permissions(copy, fs::Permissions::from_mode(BACKUP_MODE))?;
     }
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-        Ok(())
-    }
+
+    Ok(())
 }
 
 fn removal_text(restored: bool, settings_file: &str, messages: &Messages) -> String {
