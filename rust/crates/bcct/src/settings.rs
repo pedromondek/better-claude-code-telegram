@@ -493,7 +493,17 @@ fn same_file(file: &File, path: &Path) -> bool {
             _ => false,
         }
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        match (
+            file.try_clone().and_then(same_file::Handle::from_file),
+            same_file::Handle::from_path(path),
+        ) {
+            (Ok(locked), Ok(current)) => locked == current,
+            _ => false,
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = (file, path);
         true
