@@ -1614,7 +1614,7 @@ for (const mode of ["post", "prompt"]) {
   close("asks path is a file", { files: { "app/asks": "file" } });
   close("many records are all closed in name order", {
     files: Object.fromEntries(
-      ["b", "a", "c", "B", "_", "1", "é"].map((id) => [
+      ["b", "a", "c", "Z", "_", "1", "é"].map((id) => [
         `app/asks/${id}.json`,
         recordFile(id, "s1"),
       ]),
