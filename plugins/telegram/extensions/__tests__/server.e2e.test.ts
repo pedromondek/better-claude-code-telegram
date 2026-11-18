@@ -111,6 +111,7 @@ function createFakeTelegram(): FakeTelegram {
       body += String(chunk);
     });
     request.on("end", () => {
+      response.setHeader("content-type", "application/json");
       (async (): Promise<void> => {
         const method = (request.url ?? "").split("/").pop() ?? "";
         const isJson = (request.headers["content-type"] ?? "").includes("json");
@@ -151,7 +152,6 @@ function createFakeTelegram(): FakeTelegram {
           };
         }
 
-        response.setHeader("content-type", "application/json");
         response.end(JSON.stringify({ ok: true, result }));
       })().catch((error: unknown) => {
         unhandled.push(String(error));
