@@ -32,6 +32,16 @@ const BLIND_START: Duration = Duration::from_millis(1000);
 const POLL: Duration = Duration::from_millis(10);
 const LIMIT: Duration = Duration::from_secs(60);
 const BUFFER: usize = 4096;
+const STOPPED_STATE: &str = "T";
+const ZOMBIE_STATE: &str = "Z";
+const INPUT_WAITS: [&str; 6] = [
+    "do_epoll_wait",
+    "ep_poll",
+    "do_sys_poll",
+    "do_select",
+    "n_tty_read",
+    "wait_woken",
+];
 
 #[derive(Debug, Clone)]
 pub(crate) enum Step {
@@ -79,14 +89,58 @@ fn pump(session: &mut PtySession, out: &mut Vec<u8>) -> io::Result<Option<usize>
     }
 }
 
+fn state_of(pid: i32) -> Option<String> {
+    let status = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+    let (_, rest) = status.rsplit_once(')')?;
+
+    rest.split_whitespace().next().map(str::to_owned)
+}
+
+fn innermost(pid: i32) -> i32 {
+    std::fs::read_to_string(format!("/proc/{pid}/task/{pid}/children"))
+        .ok()
+        .and_then(|children| {
+            children
+                .split_whitespace()
+                .filter_map(|child| child.parse().ok())
+                .rfind(|child| state_of(*child).as_deref() != Some(ZOMBIE_STATE))
+        })
+        .map_or(pid, innermost)
+}
+
+fn thread_waits(pid: i32) -> Option<Vec<String>> {
+    std::fs::read_dir(format!("/proc/{pid}/task"))
+        .ok()?
+        .map(|thread| {
+            std::fs::read_to_string(thread.ok()?.path().join("wchan"))
+                .ok()
+                .map(|wchan| wchan.trim().to_owned())
+        })
+        .collect()
+}
+
+fn waiting_for_input(pid: i32) -> bool {
+    let pid = innermost(pid);
+    let (Some(state), Some(waits)) = (state_of(pid), thread_waits(pid)) else {
+        return true;
+    };
+
+    state == STOPPED_STATE
+        || waits
+            .iter()
+            .any(|wait| INPUT_WAITS.contains(&wait.as_str()))
+}
+
 fn settle(
     session: &mut PtySession,
     out: &mut Vec<u8>,
     ready: &[u8],
     blind: bool,
+    before_a_key: bool,
 ) -> io::Result<bool> {
     let started = Instant::now();
     let mut last = Instant::now();
+    let pid = session.get_process().pid().as_raw();
 
     loop {
         match pump(session, out)? {
@@ -97,7 +151,9 @@ fn settle(
 
         let waited = !blind || started.elapsed() >= BLIND_START;
 
-        if waited && contains(out, ready) && last.elapsed() >= QUIET {
+        let listening = !before_a_key || waiting_for_input(pid);
+
+        if waited && contains(out, ready) && last.elapsed() >= QUIET && listening {
             return Ok(true);
         }
 
@@ -170,7 +226,9 @@ pub(crate) fn record(run: &Run<'_>) -> io::Result<Vec<u8>> {
             continue;
         }
 
-        if !settle(&mut session, &mut out, ready, blind)? {
+        let before_a_key = matches!(step, Step::Key(_));
+
+        if !settle(&mut session, &mut out, ready, blind, before_a_key)? {
             return Err(fail("the program in the terminal ended before every key"));
         }
 
