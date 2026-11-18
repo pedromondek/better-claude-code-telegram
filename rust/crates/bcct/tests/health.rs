@@ -439,6 +439,11 @@ fn observe_terminal(scenario: &Value) -> Painted {
     let root = sandbox();
     let telegram = FakeTelegram::start(scenario);
     materialize(root.path(), &filled(&scenario["files"], now_ms()));
+    let tools = sandbox();
+    let variables = with_a_fake_git(
+        variables_of(scenario, root.path(), &telegram.root),
+        tools.path(),
+    );
     let columns = scenario["columns"]
         .as_u64()
         .map(|columns| format!("stty cols {columns}; "))
@@ -456,7 +461,7 @@ fn observe_terminal(scenario: &Value) -> Painted {
         .args(["-qec", &command, "/dev/null"])
         .env_clear()
         .envs(support::coverage_env())
-        .envs(variables_of(scenario, root.path(), &telegram.root))
+        .envs(variables)
         .current_dir(root.path())
         .stdin(Stdio::null())
         .output()
