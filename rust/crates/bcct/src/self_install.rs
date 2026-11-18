@@ -230,6 +230,7 @@ impl Store {
             .tempdir_in(&versions)?;
         let staged = staging.path().join(BINARY_FILE);
         fs::write(&staged, &bytes)?;
+        #[cfg(unix)]
         set_mode(&staged, EXECUTABLE_MODE)?;
 
         let version = answered_version(&staged).ok_or(InstallError::NotBcct)?;
@@ -424,7 +425,10 @@ fn write_file(path: &Path, contents: &[u8], mode: u32) -> io::Result<()> {
 
     temporary.write_all(contents)?;
     temporary.as_file().sync_all()?;
+    #[cfg(unix)]
     set_mode(temporary.path(), mode)?;
+    #[cfg(not(unix))]
+    let _ = mode;
     temporary.persist(path).map_err(|error| error.error)?;
 
     Ok(())
@@ -435,11 +439,6 @@ fn set_mode(path: &Path, mode: u32) -> io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     fs::set_permissions(path, fs::Permissions::from_mode(mode))
-}
-
-#[cfg(not(unix))]
-fn set_mode(_path: &Path, _mode: u32) -> io::Result<()> {
-    Ok(())
 }
 
 fn installed_versions(channel_dir: &Path) -> Vec<Version> {
