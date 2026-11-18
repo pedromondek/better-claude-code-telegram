@@ -162,6 +162,18 @@ describe("scripts/rust-mutation-prepush.mjs", () => {
     ]);
   });
 
+  it("installs cargo-mutants only on the platforms its release has a binary for", () => {
+    const tools = readFileSync(
+      join(import.meta.dirname, "..", "..", "mise.toml"),
+      "utf8",
+    );
+    const entry = tools
+      .split("\n")
+      .find((line) => line.startsWith('"github:sourcefrog/cargo-mutants"'));
+
+    expect(entry).toContain('os = ["linux/x64", "macos/x64", "windows/x64"]');
+  });
+
   it("runs the tests the same way as the rust:mutation script of package.json", () => {
     const manifest = JSON.parse(
       readFileSync(
