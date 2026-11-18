@@ -258,8 +258,13 @@ mod tests {
     #[test]
     fn a_spinner_stopped_before_its_first_turn_writes_nothing() {
         let screen = Shared::default();
-        let spinner =
-            Spinner::start(screen.clone(), frames(), " x".to_owned(), SPINNER_INTERVAL).unwrap();
+        let spinner = Spinner::start(
+            screen.clone(),
+            frames(),
+            " x".to_owned(),
+            Duration::from_secs(60),
+        )
+        .unwrap();
 
         spinner.stop(SPINNER_STOP_TIMEOUT);
         thread::sleep(SPINNER_INTERVAL * 2);
