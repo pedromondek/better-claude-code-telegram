@@ -58,12 +58,16 @@ describe("check-rust-platforms.yml runs clippy and the Rust tests on macOS and W
     const runs = rust.steps.map((step) => step.run).filter(Boolean);
 
     expect(runs).toContain("npm run --silent rust:clippy");
-    expect(runs).toContain("npm run --silent rust:test");
+    expect(runs).toContain("npm run --silent rust:test -- --no-fail-fast");
+  });
+
+  it("runs every test of the platform instead of stopping at the first failure, so one run shows them all", () => {
+    expect(stepNamed(rust, "Tests").run).toContain("--no-fail-fast");
   });
 
   it("cites only package scripts that exist", () => {
     for (const run of rust.steps.map((step) => step.run).filter(Boolean)) {
-      const script = /^npm run --silent (\S+)$/.exec(run)?.[1];
+      const script = /^npm run --silent (\S+)(?: -- .+)?$/.exec(run)?.[1];
       if (script === undefined) continue;
       expect({ script, command: typeof packageScripts[script] }).toEqual({
         script,
