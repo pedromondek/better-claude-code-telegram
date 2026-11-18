@@ -14,7 +14,7 @@ use serde_json::{Map, Value};
 
 pub(crate) const PRIVATE_FILE_MODE: &str = "600";
 
-const FIXTURE_UMASK: u32 = 0o022;
+const FIXTURE_UMASK: rustix::fs::RawMode = 0o022;
 
 pub(crate) type Tree = BTreeMap<String, (Option<String>, String)>;
 
