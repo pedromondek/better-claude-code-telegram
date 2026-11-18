@@ -22,6 +22,8 @@ use serde_json::{Value, json};
 const FIXTURE: &str = include_str!("fixtures/setup-terminal.json");
 const DRIVE: &str = "BCCT_DRIVE";
 const ROWS: u16 = 24;
+const JOB_NOTICE: &str = "\r\n[1]+";
+const LINE_END: &str = "\r\n";
 const DELAY_PRESETS: [f64; 6] = [1.0, 3.0, 4.0, 5.0, 10.0, 15.0];
 const RECOMMENDED_DELAY: f64 = 4.0;
 
@@ -413,6 +415,35 @@ fn a_key_release_reported_by_the_terminal_types_nothing() {
     assert_eq!(outcome, json!({ "value": "b" }));
 }
 
+fn without_job_notice(flow: &str) -> String {
+    let Some(start) = flow.find(JOB_NOTICE) else {
+        return flow.to_owned();
+    };
+    let after = start + LINE_END.len();
+    let end = flow
+        .get(after..)
+        .and_then(|rest| rest.find(LINE_END))
+        .map_or(flow.len(), |offset| after + offset + LINE_END.len());
+
+    format!(
+        "{}{}",
+        flow.get(..start).unwrap_or_default(),
+        flow.get(end..).unwrap_or_default()
+    )
+}
+
+#[test]
+fn drops_the_stopped_job_line_that_some_bash_versions_print() {
+    let printed =
+        "\u{1b}[1G\u{1b}[0JQ? a\u{1b}[5G\r\n[1]+  Stopped                 \"$@\"\r\nb\r\r\n";
+
+    assert_eq!(
+        without_job_notice(printed),
+        "\u{1b}[1G\u{1b}[0JQ? a\u{1b}[5Gb\r\r\n"
+    );
+    assert_eq!(without_job_notice("Q? b\r\r\n"), "Q? b\r\r\n");
+}
+
 #[test]
 fn ctrl_z_suspends_a_typed_question_and_fg_goes_on_asking_it() {
     let script = "set -m; \"$@\"; first=$?; fg > /dev/null; last=$?; \
@@ -441,7 +472,7 @@ fn ctrl_z_suspends_a_typed_question_and_fg_goes_on_asking_it() {
     let (flow, outcome) = between(&output).unwrap();
 
     assert_eq!(
-        String::from_utf8_lossy(flow),
+        without_job_notice(&String::from_utf8_lossy(flow)),
         "\u{1b}[1G\u{1b}[0JQ? \u{1b}[4Ga\
          \u{1b}[1G\u{1b}[0JQ? a\u{1b}[5Gb\r\r\n"
     );
