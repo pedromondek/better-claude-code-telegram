@@ -414,7 +414,7 @@ describe("shouldForceMutation", () => {
   for (const trigger of [
     "package.json",
     "package-lock.json",
-    "patches/@stryker-mutator+vitest-runner+10.0.0.patch",
+    "patches/@stryker-mutator+instrumenter+10.1.1.patch",
     "stryker.config.json",
     "vitest.config.ts",
     "vitest.config.stryker.ts",
