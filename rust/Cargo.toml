@@ -48,6 +48,10 @@ todo = "warn"
 unimplemented = "warn"
 unwrap_used = "warn"
 
+[profile.mutants]
+inherits = "test"
+debug = "none"
+
 [profile.release]
 opt-level = 3
 lto = "fat"

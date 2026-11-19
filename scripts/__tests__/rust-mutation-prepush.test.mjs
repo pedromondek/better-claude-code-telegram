@@ -197,6 +197,17 @@ describe("scripts/rust-mutation-prepush.mjs", () => {
     expect(config).toContain('exclude_globs = ["crates/bcct/src/windows.rs"]');
   });
 
+  it("builds the mutants with the test profile minus the debug info, which cuts each rebuild", () => {
+    const rust = join(import.meta.dirname, "..", "..", "rust");
+    const config = readFileSync(join(rust, ".cargo", "mutants.toml"), "utf8");
+    const manifest = readFileSync(join(rust, "Cargo.toml"), "utf8");
+
+    expect(config).toContain('profile = "mutants"');
+    expect(manifest).toContain(
+      '[profile.mutants]\ninherits = "test"\ndebug = "none"\n',
+    );
+  });
+
   it("runs the tests the same way as the rust:mutation script of package.json", () => {
     const manifest = JSON.parse(
       readFileSync(
