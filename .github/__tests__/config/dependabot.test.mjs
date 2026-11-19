@@ -69,7 +69,7 @@ describe("dependabot.yml: security updates, and the major versions of grammy", (
     );
   });
 
-  it("opens only the major versions of grammy in the telegram plugin, 30 days after they come out, since Dependabot makes no security update for bun", () => {
+  it("opens only the major versions of grammy in the telegram plugin, checked monthly and 30 days after they come out, since Dependabot makes no security update for bun", () => {
     const upgrade = czConfig.types.find((type) => type.value === "upgrade");
 
     expect(
@@ -77,7 +77,7 @@ describe("dependabot.yml: security updates, and the major versions of grammy", (
     ).toEqual({
       "package-ecosystem": "bun",
       directory: "/plugins/telegram",
-      schedule: { interval: "weekly" },
+      schedule: { interval: "monthly" },
       "open-pull-requests-limit": 1,
       allow: [{ "dependency-name": "grammy" }],
       ignore: [
