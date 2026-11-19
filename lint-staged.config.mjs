@@ -64,6 +64,7 @@ export default {
   ],
   ".github/zizmor.{yml,yaml}": () => ["npm run --silent lint:workflows:zizmor"],
   ".github/pinact.{yml,yaml}": () => ["npm run --silent lint:workflows:pinact"],
+  "mise.{toml,lock}": () => ["npm run --silent lint:workflows"],
   "plugins/telegram/bun.lock": () => ["npm run --silent audit:plugin"],
   "{.husky/*,.husky/**/*.sh}": () => ["npm run --silent test:hooks"],
   "scripts/**/*.sh": (files) => [

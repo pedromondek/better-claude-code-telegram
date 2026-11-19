@@ -298,6 +298,16 @@ describe("lint-staged: workflows and actions", () => {
     ]);
   });
 
+  it.each(["mise.toml", "mise.lock"])(
+    "lints every workflow again when %s moves a pinned linter",
+    (file) => {
+      expect(tasksFor(file)).toEqual([
+        ...everyFileTasks(file),
+        "npm run --silent lint:workflows",
+      ]);
+    },
+  );
+
   it("leaves a YAML file outside .github to prettier only", () => {
     expect(tasksFor("docs/example.yml")).toEqual([
       ...everyFileTasks("docs/example.yml"),
