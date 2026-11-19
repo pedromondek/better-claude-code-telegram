@@ -23,6 +23,8 @@ export interface WaitingPing {
   dueAt: number;
   text: string;
   instance?: string | null;
+  kind?: typeof FAILURE_KIND;
+  released?: boolean;
 }
 
 interface PingApi {
@@ -50,11 +52,18 @@ export interface WaitingPingChannel {
 
 export const LAST_PROMPT_FILE = "last-prompt";
 export const LAST_INBOUND_FILE = "last-inbound";
+export const FAILURE_KIND = "failure";
+
+function followsTheConversation(ping: WaitingPing): boolean {
+  return !ping.instance && ping.kind !== FAILURE_KIND;
+}
 
 export function formatWaitingPing(
   ping: WaitingPing,
   messages: Messages,
 ): string {
+  if (ping.kind === FAILURE_KIND) return ping.text;
+
   const delay = formatDelay((ping.dueAt - ping.createdAt) / 60_000);
 
   return messages.waitingPing(
@@ -73,7 +82,9 @@ export function isWaitingPing(value: unknown): value is WaitingPing {
     typeof ping.sessionId === "string" &&
     typeof ping.dueAt === "number" &&
     typeof ping.createdAt === "number" &&
-    typeof ping.text === "string"
+    typeof ping.text === "string" &&
+    (ping.kind === undefined || ping.kind === FAILURE_KIND) &&
+    (ping.released === undefined || typeof ping.released === "boolean")
   );
 }
 
@@ -146,7 +157,7 @@ export function createWaitingPing({
     for (const name of pingFiles()) {
       const ping = readPing(name);
 
-      if (ping !== null && !ping.instance) discardPing(name);
+      if (ping !== null && followsTheConversation(ping)) discardPing(name);
     }
   }
 
@@ -157,11 +168,19 @@ export function createWaitingPing({
     for (const name of pingFiles()) {
       const ping = readPing(name);
 
-      if (ping !== null && (now() < ping.dueAt || quiet)) continue;
+      if (
+        ping !== null &&
+        ping.released !== true &&
+        (now() < ping.dueAt || quiet)
+      ) {
+        continue;
+      }
 
       discardPing(name);
 
-      if (ping === null || (onTelegram && !ping.instance)) continue;
+      if (ping === null || (onTelegram && followsTheConversation(ping))) {
+        continue;
+      }
 
       const text = messages();
 
@@ -189,8 +208,8 @@ export function createWaitingPing({
       .filter(
         (ping) =>
           ping !== null &&
-          now() >= ping.dueAt &&
-          ((ping.instance ?? "") !== "" || !onTelegram),
+          (ping.released === true || now() >= ping.dueAt) &&
+          (!onTelegram || !followsTheConversation(ping)),
       ).length;
   }
 

@@ -29,9 +29,11 @@ pub mod shell_rc;
 pub mod signals;
 pub mod spinner;
 pub mod statusline;
+pub mod stop_failure;
 pub mod telegram;
 pub mod ui;
 pub mod update;
+pub mod usage_reset;
 pub mod user_path;
 #[cfg(windows)]
 pub mod windows;

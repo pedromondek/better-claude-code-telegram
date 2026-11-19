@@ -37,6 +37,7 @@ interface PingOptions {
   dueAt?: number;
   text?: string;
   instance?: string | null;
+  released?: boolean;
 }
 
 interface SetupOptions {
@@ -54,7 +55,12 @@ function pingsDir(): string {
 
 function writePing(
   sessionId: string,
-  { dueAt = NOW, text = "Preciso do ok.", instance = null }: PingOptions = {},
+  {
+    dueAt = NOW,
+    text = "Preciso do ok.",
+    instance = null,
+    released,
+  }: PingOptions = {},
 ): void {
   mkdirSync(pingsDir(), { recursive: true });
   writeFileSync(
@@ -65,6 +71,7 @@ function writePing(
       dueAt,
       text,
       instance,
+      ...(released === undefined ? {} : { released }),
     }),
   );
 }
@@ -491,6 +498,193 @@ describe("createWaitingPing", () => {
   });
 });
 
+describe("failure notices", () => {
+  const FAILURE_TEXT = "⚠️ Claude stopped: your account is on hold";
+
+  function writeFailure(
+    sessionId: string,
+    { dueAt = NOW, instance = null, released }: PingOptions = {},
+  ): void {
+    mkdirSync(pingsDir(), { recursive: true });
+    writeFileSync(
+      join(pingsDir(), `${sessionId}.notice.json`),
+      JSON.stringify({
+        sessionId,
+        createdAt: dueAt,
+        dueAt,
+        text: FAILURE_TEXT,
+        instance,
+        kind: "failure",
+        ...(released === undefined ? {} : { released }),
+      }),
+    );
+  }
+
+  function writeQuietHours(start: string, end: string): void {
+    writeFileSync(
+      join(appDir, CONFIG_FILE),
+      JSON.stringify({ quietHours: { start, end } }),
+    );
+  }
+
+  it("sends the text of the notice as it is, with no waiting wording", (): void => {
+    expect(
+      formatWaitingPing(
+        {
+          sessionId: "s1",
+          createdAt: 0,
+          dueAt: 0,
+          text: FAILURE_TEXT,
+          kind: "failure",
+        },
+        EN,
+      ),
+    ).toBe(FAILURE_TEXT);
+  });
+
+  it("accepts the failure kind and rejects any other kind", (): void => {
+    const base = { sessionId: "s1", createdAt: 0, dueAt: 0, text: "x" };
+
+    expect(isWaitingPing({ ...base, kind: "failure" })).toBe(true);
+    expect(isWaitingPing({ ...base })).toBe(true);
+    expect(isWaitingPing({ ...base, kind: "other" })).toBe(false);
+    expect(isWaitingPing({ ...base, kind: 3 })).toBe(false);
+  });
+
+  it("sends it right away and deletes it", async (): Promise<void> => {
+    writeFailure("s1");
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([FAILURE_TEXT]);
+    expect(sent[0].chatId).toBe(CHAT);
+    expect(sent[0].parseMode).toBe("HTML");
+    expect(existsSync(join(pingsDir(), "s1.notice.json"))).toBe(false);
+  });
+
+  it("sends it even with the conversation on Telegram", async (): Promise<void> => {
+    writeFailure("s1");
+    writeFileSync(join(pingsDir(), "last-prompt"), String(NOW - 100));
+    writeFileSync(join(pingsDir(), "last-inbound"), String(NOW - 50));
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([FAILURE_TEXT]);
+  });
+
+  it("keeps it when a Telegram message cancels the waiting notices", (): void => {
+    writeFailure("s1", { dueAt: NOW + 60_000 });
+    writePing("s2", { dueAt: NOW + 60_000 });
+    const { ping } = setup();
+
+    ping.noteInbound();
+
+    expect(readdirSync(pingsDir()).toSorted()).toEqual([
+      "last-inbound",
+      "s1.notice.json",
+    ]);
+  });
+
+  it("holds it during the quiet hours and sends it once they end", async (): Promise<void> => {
+    writeQuietHours("00:00", "23:59");
+    writeFailure("s1");
+    const quiet = setup({ now: new Date(2026, 0, 1, 12, 0).getTime() });
+
+    await quiet.ping.tick();
+
+    expect(quiet.sent).toEqual([]);
+    expect(existsSync(join(pingsDir(), "s1.notice.json"))).toBe(true);
+
+    const after = setup({ now: new Date(2026, 0, 1, 23, 59).getTime() });
+
+    await after.ping.tick();
+
+    expect(after.sent.map((message) => message.text)).toEqual([FAILURE_TEXT]);
+    expect(existsSync(join(pingsDir(), "s1.notice.json"))).toBe(false);
+  });
+
+  it("sends a released notice during the quiet hours", async (): Promise<void> => {
+    writeQuietHours("00:00", "23:59");
+    writeFailure("s1", { released: true });
+    const { sent, ping } = setup({
+      now: new Date(2026, 0, 1, 12, 0).getTime(),
+    });
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([FAILURE_TEXT]);
+    expect(existsSync(join(pingsDir(), "s1.notice.json"))).toBe(false);
+  });
+
+  it("holds a notice marked as not released during the quiet hours", async (): Promise<void> => {
+    writeQuietHours("00:00", "23:59");
+    writeFailure("s1", { released: false });
+    const { sent, ping } = setup({
+      now: new Date(2026, 0, 1, 12, 0).getTime(),
+    });
+
+    await ping.tick();
+
+    expect(sent).toEqual([]);
+    expect(existsSync(join(pingsDir(), "s1.notice.json"))).toBe(true);
+  });
+
+  it("counts it as held with the conversation on Telegram", (): void => {
+    const { ping } = setup();
+
+    writeFailure("s1", { dueAt: NOW - 1 });
+    writePing("own", { dueAt: NOW - 1 });
+    writeFileSync(join(pingsDir(), "last-inbound"), String(NOW - 10));
+
+    expect(ping.held()).toBe(1);
+  });
+});
+
+describe("released waiting notices", () => {
+  const quietNoon = new Date(2026, 0, 1, 12, 0).getTime();
+
+  function writeQuietHours(): void {
+    writeFileSync(
+      join(appDir, CONFIG_FILE),
+      JSON.stringify({ quietHours: { start: "00:00", end: "23:59" } }),
+    );
+  }
+
+  it("sends a released waiting notice during the quiet hours and deletes it", async (): Promise<void> => {
+    writeQuietHours();
+    writePing("s1", { dueAt: quietNoon, released: true });
+    const { sent, ping } = setup({ now: quietNoon });
+
+    await ping.tick();
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toContain("Preciso do ok.");
+    expect(existsSync(join(pingsDir(), "s1.json"))).toBe(false);
+  });
+
+  it("holds a waiting notice that is not released during the quiet hours", async (): Promise<void> => {
+    writeQuietHours();
+    writePing("s1", { dueAt: quietNoon });
+    const { sent, ping } = setup({ now: quietNoon });
+
+    await ping.tick();
+
+    expect(sent).toEqual([]);
+    expect(existsSync(join(pingsDir(), "s1.json"))).toBe(true);
+  });
+
+  it("accepts a boolean released flag and rejects any other type", (): void => {
+    const base = { sessionId: "s1", createdAt: 0, dueAt: 0, text: "x" };
+
+    expect(isWaitingPing({ ...base, released: true })).toBe(true);
+    expect(isWaitingPing({ ...base, released: false })).toBe(true);
+    expect(isWaitingPing({ ...base, released: "yes" })).toBe(false);
+    expect(isWaitingPing({ ...base, released: 1 })).toBe(false);
+  });
+});
+
 describe("waiting notices held", () => {
   it("counts the due notices it would send now, leaving out the ones not due and the unreadable files", (): void => {
     const { ping } = setup();
@@ -512,6 +706,15 @@ describe("waiting notices held", () => {
     writeFileSync(join(pingsDir(), "last-inbound"), String(NOW - 10));
 
     expect(ping.held()).toBe(2);
+  });
+
+  it("counts a released notice whose due time has not come", (): void => {
+    const { ping } = setup();
+
+    writePing("released", { dueAt: NOW + 60_000, released: true });
+    writePing("later", { dueAt: NOW + 60_000 });
+
+    expect(ping.held()).toBe(1);
   });
 
   it("holds nothing without a pings folder", (): void => {

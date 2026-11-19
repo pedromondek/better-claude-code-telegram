@@ -13,6 +13,7 @@ use crate::messages::messages_for;
 use crate::paths::Paths;
 
 const JSON_SUFFIX: &str = ".json";
+const NOTICE_SUFFIX: &str = crate::stop_failure::NOTICE_SUFFIX;
 const SKIPPED_SUFFIXES: [&str; 2] = [".telegram.json", ".answer.json"];
 const MARKERS: [&str; 3] = [".telegram.json", ".closed", ".answer.json"];
 const DEFAULT_INSTANCE: &str = "telegram";
@@ -73,15 +74,82 @@ pub fn release_pending_asks(
             continue;
         }
 
-        let mut updated = record.clone();
-        updated.insert("dueAt".to_owned(), Value::Number(Number::from(now)));
-        updated.insert(RELEASED.to_owned(), Value::Bool(true));
-        write_private(&file, stringify(&Value::Object(updated)).as_bytes())
-            .map_err(|_| FileFailure::NotSaved(file))?;
+        mark_released(&file, &record, now)?;
         released.push(Value::Object(record));
     }
 
     Ok(released)
+}
+
+fn mark_released(file: &Path, record: &Map<String, Value>, now: u64) -> Result<(), FileFailure> {
+    let mut updated = record.clone();
+    updated.insert("dueAt".to_owned(), Value::Number(Number::from(now)));
+    updated.insert(RELEASED.to_owned(), Value::Bool(true));
+
+    write_private(file, stringify(&Value::Object(updated)).as_bytes())
+        .map_err(|_| FileFailure::NotSaved(file.to_path_buf()))
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReleasedNotice {
+    Failure(Value),
+    Waiting(Value),
+}
+
+fn notice_names(pings_dir: &Path) -> Vec<String> {
+    let Ok(entries) = fs::read_dir(pings_dir) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.ends_with(JSON_SUFFIX))
+        .collect();
+    names.sort();
+
+    names
+}
+
+pub fn release_pending_notices(
+    app_dir: &Path,
+    prefix: &str,
+    now: u64,
+) -> Result<Vec<ReleasedNotice>, FileFailure> {
+    let pings_dir = join_path(app_dir, "pings");
+    let mut released = Vec::new();
+
+    for name in notice_names(&pings_dir) {
+        let file = join_path(&pings_dir, &name);
+        let Some(Value::Object(record)) = read_json(&file) else {
+            continue;
+        };
+        let (Some(Value::String(session)), Some(Value::Number(_))) =
+            (record.get("sessionId"), record.get("dueAt"))
+        else {
+            continue;
+        };
+
+        if record.get(RELEASED) == Some(&Value::Bool(true)) || !session.starts_with(prefix) {
+            continue;
+        }
+
+        mark_released(&file, &record, now)?;
+
+        released.push(if name.ends_with(NOTICE_SUFFIX) {
+            ReleasedNotice::Failure(Value::Object(record))
+        } else {
+            ReleasedNotice::Waiting(Value::Object(record))
+        });
+    }
+
+    Ok(released)
+}
+
+fn instance_of(record: &Value) -> String {
+    match record.get("instance") {
+        None | Some(Value::Null) => DEFAULT_INSTANCE.to_owned(),
+        Some(instance) => js_string(instance),
+    }
 }
 
 #[must_use]
@@ -122,23 +190,39 @@ pub fn run(
             return FAILURE;
         }
     };
+    let notices = match release_pending_notices(&app_dir, prefix, now) {
+        Ok(notices) => notices,
+        Err(failure) => {
+            let _written = stderr.write_all(format!("{}\n", failure.message(messages)).as_bytes());
+            return FAILURE;
+        }
+    };
     let mut out = String::new();
 
-    if released.is_empty() {
+    if released.is_empty() && notices.is_empty() {
         out.push_str(&(messages.nothing_pending)(Some(prefix)));
         out.push('\n');
     }
 
     for record in &released {
-        let instance = match record.get("instance") {
-            None | Some(Value::Null) => DEFAULT_INSTANCE.to_owned(),
-            Some(instance) => js_string(instance),
-        };
-
         out.push_str(&(messages.question_released)(
-            &instance,
+            &instance_of(record),
             &headers_of(record),
         ));
+        out.push('\n');
+    }
+
+    for notice in &notices {
+        let (ReleasedNotice::Failure(record) | ReleasedNotice::Waiting(record)) = notice;
+        let instance = instance_of(record);
+
+        out.push_str(&match notice {
+            ReleasedNotice::Failure(_) => (messages.stop_failure.failure_released)(
+                &instance,
+                &js_string(record.get("text").unwrap_or(&Value::Null)),
+            ),
+            ReleasedNotice::Waiting(_) => (messages.stop_failure.waiting_released)(&instance),
+        });
         out.push('\n');
     }
 

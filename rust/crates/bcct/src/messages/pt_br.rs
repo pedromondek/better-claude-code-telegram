@@ -5,8 +5,23 @@ use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
     HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels, UpdateTexts, format_delay,
+    StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts, TranscriptionModels,
+    UpdateTexts, format_delay,
 };
+
+const WEEKDAYS: [&str; 7] = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const SINGULAR_HOUR: u32 = 1;
+
+fn portuguese_weekday(weekday: u32) -> String {
+    usize::try_from(weekday)
+        .ok()
+        .and_then(|index| WEEKDAYS.get(index))
+        .map_or_else(|| weekday.to_string(), |name| (*name).to_owned())
+}
+
+fn portuguese_at(hour: u32) -> &'static str {
+    if hour == SINGULAR_HOUR { "à" } else { "às" }
+}
 
 pub(super) const MESSAGES: Messages = Messages {
     status_main: "(Principal)",
@@ -723,6 +738,54 @@ pub(super) const MESSAGES: Messages = Messages {
         quota: "cota de disco excedida",
         busy: "arquivo ocupado ou mexido por outra instância",
         input: "entrada inesperada do Claude Code",
+    },
+    stop_failure: StopFailureTexts {
+        who: |instance| match instance {
+            Some(name) => format!("A instância [{name}] do Claude"),
+            None => "O Claude".to_owned(),
+        },
+        usage_limit: |who| format!("⚠️ {who} parou: o limite de uso do seu plano foi atingido"),
+        throttle: |who| {
+            format!(
+                "⚠️ {who} parou: a API está limitando as requisições (não é o limite de uso do seu plano)"
+            )
+        },
+        billing: |who| format!("⚠️ {who} parou: há um problema de cobrança na sua conta"),
+        account_on_hold: |who| format!("⚠️ {who} parou: sua conta está suspensa"),
+        authentication: |who| format!("⚠️ {who} parou: a autenticação falhou, entre de novo"),
+        oauth_org_not_allowed: |who| {
+            format!("⚠️ {who} parou: sua organização não pode usar este login")
+        },
+        cloud_credential: |who| {
+            format!("⚠️ {who} parou: não foi possível carregar as credenciais do provedor de nuvem")
+        },
+        server_error: |who| format!("⚠️ {who} parou: a API continua falhando (erro de servidor)"),
+        invalid_request: |who, detail| match detail {
+            Some(line) => format!("⚠️ {who} parou: a API recusou a requisição ({line})"),
+            None => format!("⚠️ {who} parou: a API recusou a requisição"),
+        },
+        unknown: |who, detail| match detail {
+            Some(line) => format!("⚠️ {who} parou por um erro: {line}"),
+            None => format!("⚠️ {who} parou por um erro desconhecido"),
+        },
+        continues_by_itself: |hour, when| {
+            format!(" · continua sozinho {} {when}", portuguese_at(hour))
+        },
+        back_will_not_continue: |hour, when| {
+            format!(
+                " · volta {} {when} · não continua sozinho",
+                portuguese_at(hour)
+            )
+        },
+        back_on_will_not_continue: |when| format!(" · volta em {when} · não continua sozinho"),
+        back_weekday_will_not_continue: |when| format!(" · volta {when} · não continua sozinho"),
+        clock: |hour, minute| format!("{hour:02}:{minute:02}"),
+        date_clock: |month, day, hour, minute| format!("{day:02}/{month:02} {hour:02}:{minute:02}"),
+        weekday_clock: |weekday, hour, minute| {
+            format!("{} {hour:02}:{minute:02}", portuguese_weekday(weekday))
+        },
+        failure_released: |instance, text| format!("Aviso de erro de [{instance}] solto: {text}"),
+        waiting_released: |instance| format!("Aviso de espera de [{instance}] solto"),
     },
     update: UpdateTexts {
         looking: "Procurando versões no npm",

@@ -614,6 +614,169 @@ fn an_input_that_is_not_from_claude_code_warns_only_on_the_third_time() {
     );
 }
 
+fn failure_input(error: &str) -> String {
+    json!({
+        "session_id": "s1",
+        "cwd": "/x/proj",
+        "hook_event_name": "StopFailure",
+        "error": error,
+        "last_assistant_message": "API Error: x"
+    })
+    .to_string()
+}
+
+#[test]
+fn stop_failure_leaves_a_notice_due_right_away_and_prints_nothing() {
+    let sandbox = Sandbox::new();
+    let started = now_ms();
+
+    sandbox
+        .command("stop-failure", true)
+        .write_stdin(failure_input("billing_error"))
+        .assert()
+        .success()
+        .stdout("")
+        .stderr("");
+
+    let notice: Value =
+        serde_json::from_str(&fs::read_to_string(sandbox.pings().join("s1.notice.json")).unwrap())
+            .unwrap();
+    let created = notice["createdAt"].as_u64().unwrap();
+
+    assert_eq!(
+        notice["text"],
+        "⚠️ Claude stopped: there is a billing problem with your account"
+    );
+    assert_eq!(notice["dueAt"], notice["createdAt"]);
+    assert_eq!(notice["kind"], "failure");
+    assert_eq!(notice["sessionId"], "s1");
+    assert!(created >= started && created <= now_ms());
+}
+
+#[test]
+fn stop_failure_leaves_nothing_without_the_flag_or_for_a_quiet_error() {
+    let sandbox = Sandbox::new();
+
+    sandbox
+        .command("stop-failure", false)
+        .write_stdin(failure_input("billing_error"))
+        .assert()
+        .success()
+        .stdout("")
+        .stderr("");
+
+    assert!(!sandbox.app().exists());
+
+    for error in ["model_not_found", "max_output_tokens"] {
+        sandbox
+            .command("stop-failure", true)
+            .write_stdin(failure_input(error))
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    }
+
+    assert!(!sandbox.pings().join("s1.notice.json").exists());
+}
+
+#[test]
+fn a_repeated_failure_notices_on_the_second_and_a_prompt_starts_over() {
+    let sandbox = Sandbox::new();
+    let notice = sandbox.pings().join("s1.notice.json");
+    let run = |mode: &str, input: String| {
+        sandbox
+            .command(mode, true)
+            .write_stdin(input)
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    };
+
+    run("stop-failure", failure_input("server_error"));
+    assert!(!notice.exists());
+    assert!(sandbox.pings().join("s1.failures").exists());
+
+    run("stop-failure", failure_input("server_error"));
+    assert!(notice.exists());
+
+    fs::remove_file(&notice).unwrap();
+    run(
+        "prompt",
+        json!({"session_id": "s1", "prompt": "go"}).to_string(),
+    );
+    assert!(!sandbox.pings().join("s1.failures").exists());
+
+    run("stop-failure", failure_input("server_error"));
+    assert!(!notice.exists());
+
+    run("stop", json!({"session_id": "s1"}).to_string());
+    assert!(!sandbox.pings().join("s1.failures").exists());
+}
+
+#[test]
+fn a_typed_prompt_drops_the_held_notice_of_its_session_only() {
+    let sandbox = Sandbox::new();
+    let run = |mode: &str, input: String| {
+        sandbox
+            .command(mode, true)
+            .write_stdin(input)
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    };
+
+    run("stop-failure", failure_input("billing_error"));
+    run(
+        "stop-failure",
+        json!({"session_id": "s2", "error": "billing_error"}).to_string(),
+    );
+    run(
+        "prompt",
+        json!({"session_id": "s1", "prompt": "<channel source=\"plugin:telegram:telegram\">hi"})
+            .to_string(),
+    );
+
+    assert!(sandbox.pings().join("s1.notice.json").exists());
+
+    run(
+        "prompt",
+        json!({"session_id": "s1", "prompt": "go"}).to_string(),
+    );
+
+    assert!(!sandbox.pings().join("s1.notice.json").exists());
+    assert!(sandbox.pings().join("s2.notice.json").exists());
+}
+
+#[test]
+fn stop_failure_warns_when_the_notice_cannot_be_written() {
+    let sandbox = Sandbox::new();
+    fs::create_dir_all(sandbox.pings()).unwrap();
+    set_mode(&sandbox.pings(), 0o500);
+
+    let output = sandbox
+        .command("stop-failure", true)
+        .write_stdin(failure_input("billing_error"))
+        .assert()
+        .success()
+        .stderr("");
+
+    set_mode(&sandbox.pings(), 0o700);
+
+    assert_eq!(
+        failures(&sandbox)["notices"]["StopFailure"]["reason"],
+        json!("no-permission")
+    );
+    assert!(
+        stdout_json(&output)["systemMessage"]
+            .as_str()
+            .unwrap()
+            .contains("s1.notice.json")
+    );
+}
+
 #[test]
 fn a_closed_stdin_is_read_as_an_empty_input() {
     let sandbox = Sandbox::new();

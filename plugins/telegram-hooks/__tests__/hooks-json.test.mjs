@@ -21,7 +21,7 @@ import {
 const PLUGIN_ROOT = join(import.meta.dirname, "..");
 const ROOT_DIR = join(PLUGIN_ROOT, "..", "..");
 const HOOKS = join(PLUGIN_ROOT, "hooks", "hooks.json");
-const MODES = ["permission", "prompt", "post", "stop"];
+const MODES = ["permission", "prompt", "post", "stop", "stop-failure"];
 const GUARD =
   '[ "$BETTER_CC_TELEGRAM" = 1 ] || [ -f "${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid" ]';
 const ACTIVITY =
@@ -138,6 +138,11 @@ describe("hooks.json", () => {
             { type: "command", command: telegramHook("stop") },
             { type: "command", command: ACTIVITY },
           ],
+        },
+      ],
+      StopFailure: [
+        {
+          hooks: [{ type: "command", command: telegramHook("stop-failure") }],
         },
       ],
     });

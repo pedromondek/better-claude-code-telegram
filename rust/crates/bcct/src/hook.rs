@@ -14,6 +14,7 @@ use crate::js::{
     normalize_path, parse_json, stringify,
 };
 use crate::paths::{Paths, TELEGRAM_FLAG};
+use crate::stop_failure::{self, MANAGED_SETTINGS_DIR, clear_after_prompt, clear_after_success};
 
 pub const ANSWER_POLL: Duration = Duration::from_millis(1000);
 
@@ -39,7 +40,7 @@ pub enum Abort {
 }
 
 impl Abort {
-    fn at(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
+    pub(crate) fn at(path: &Path) -> impl FnOnce(io::Error) -> Self + '_ {
         move |error| Self::Io {
             kind: error.kind(),
             path: path.to_path_buf(),
@@ -53,10 +54,17 @@ pub enum Mode {
     Prompt,
     Post,
     Stop,
+    StopFailure,
 }
 
 impl Mode {
-    pub const ALL: [Self; 4] = [Self::Permission, Self::Prompt, Self::Post, Self::Stop];
+    pub const ALL: [Self; 5] = [
+        Self::Permission,
+        Self::Prompt,
+        Self::Post,
+        Self::Stop,
+        Self::StopFailure,
+    ];
 
     #[must_use]
     pub fn parse(name: &str) -> Option<Self> {
@@ -65,6 +73,7 @@ impl Mode {
             "prompt" => Some(Self::Prompt),
             "post" => Some(Self::Post),
             "stop" => Some(Self::Stop),
+            "stop-failure" => Some(Self::StopFailure),
             _ => None,
         }
     }
@@ -76,6 +85,7 @@ impl Mode {
             Self::Prompt => "UserPromptSubmit",
             Self::Post => "PostToolUse",
             Self::Stop => "Stop",
+            Self::StopFailure => "StopFailure",
         }
     }
 
@@ -89,6 +99,8 @@ impl Mode {
 pub struct Context {
     pub app_dir: PathBuf,
     pub state_dir: PathBuf,
+    pub claude_dir: PathBuf,
+    pub managed_settings_dir: PathBuf,
     pub telegram_instance: bool,
     pub delay_env: Option<String>,
 }
@@ -101,6 +113,8 @@ impl Context {
         Self {
             app_dir: normalize_path(&paths.app_dir),
             state_dir: normalize_path(&paths.telegram_state_dir),
+            claude_dir: normalize_path(&paths.claude_dir),
+            managed_settings_dir: PathBuf::from(MANAGED_SETTINGS_DIR),
             telegram_instance: var(TELEGRAM_FLAG).is_some_and(|flag| flag == "1"),
             delay_env: var(DELAY_ENV).map(|raw| raw.to_string_lossy().into_owned()),
         }
@@ -444,7 +458,10 @@ fn stop(
     now: u64,
     session: Option<&str>,
     ping_file: &Path,
+    key: &str,
 ) -> Result<(), Abort> {
+    clear_after_success(&ctx.app_dir.join("pings"), key)?;
+
     let entries = parse_entries(&read_transcript(input));
     let instance = instance_from(input, ctx.telegram_instance, &entries)?;
     let Some(Value::String(message)) = input.get("last_assistant_message") else {
@@ -479,11 +496,32 @@ fn stop(
     Ok(())
 }
 
-fn prompt(ctx: &Context, now: u64, ping_file: &Path) -> Result<(), Abort> {
+fn stop_failed(
+    input: &Value,
+    ctx: &Context,
+    now: u64,
+    session: Option<&str>,
+    key: &str,
+) -> Result<(), Abort> {
+    let entries = parse_entries(&read_transcript(input));
+    let instance = instance_from(input, ctx.telegram_instance, &entries)?;
+
+    stop_failure::record(
+        input,
+        ctx,
+        now,
+        session.unwrap_or(DEFAULT_SESSION),
+        key,
+        instance,
+    )
+}
+
+fn prompt(ctx: &Context, now: u64, ping_file: &Path, key: &str) -> Result<(), Abort> {
     let pings_dir = ctx.app_dir.join("pings");
     let last_prompt_file = pings_dir.join(LAST_PROMPT_FILE);
 
     create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
+    clear_after_prompt(&pings_dir, key)?;
 
     match fs::remove_file(ping_file) {
         Err(error) if error.kind() != io::ErrorKind::NotFound => {
@@ -583,20 +621,16 @@ pub fn handle_event(
 fn dispatch(mode: Mode, input: &Value, ctx: &Context, now: u64) -> Result<Option<Ask>, Abort> {
     let session = session_of(input)?;
     let asks_dir = ctx.app_dir.join("asks");
-    let ping_file = join_path(
-        &ctx.app_dir.join("pings"),
-        &format!(
-            "{}.json",
-            safe_file_name(session.unwrap_or(DEFAULT_SESSION))
-        ),
-    );
+    let key = safe_file_name(session.unwrap_or(DEFAULT_SESSION));
+    let ping_file = join_path(&ctx.app_dir.join("pings"), &format!("{key}.json"));
 
     match mode {
         Mode::Permission => permission(input, ctx, now, session),
-        Mode::Stop => stop(input, ctx, now, session, &ping_file).map(|()| None),
+        Mode::Stop => stop(input, ctx, now, session, &ping_file, &key).map(|()| None),
+        Mode::StopFailure => stop_failed(input, ctx, now, session, &key).map(|()| None),
         Mode::Prompt if !typed_at_terminal(input.get("prompt")) => Ok(None),
         Mode::Prompt => {
-            prompt(ctx, now, &ping_file)?;
+            prompt(ctx, now, &ping_file, &key)?;
             close_asks(&asks_dir, session).map(|()| None)
         }
         Mode::Post => close_asks(&asks_dir, session).map(|()| None),
@@ -849,9 +883,37 @@ mod tests {
         assert_eq!(Mode::parse("prompt"), Some(Mode::Prompt));
         assert_eq!(Mode::parse("post"), Some(Mode::Post));
         assert_eq!(Mode::parse("stop"), Some(Mode::Stop));
+        assert_eq!(Mode::parse("stop-failure"), Some(Mode::StopFailure));
 
-        for name in ["", "Stop", "STOP", "stop ", "bogus"] {
+        for name in [
+            "",
+            "Stop",
+            "STOP",
+            "stop ",
+            "bogus",
+            "stop_failure",
+            "StopFailure",
+            "stopfailure",
+        ] {
             assert_eq!(Mode::parse(name), None, "{name:?}");
+        }
+    }
+
+    #[test]
+    fn names_the_claude_code_event_of_each_mode() {
+        assert_eq!(
+            Mode::ALL.map(Mode::event_name),
+            [
+                "PermissionRequest",
+                "UserPromptSubmit",
+                "PostToolUse",
+                "Stop",
+                "StopFailure"
+            ]
+        );
+
+        for mode in Mode::ALL {
+            assert_eq!(Mode::from_event_name(mode.event_name()), Some(mode));
         }
     }
 
@@ -1112,6 +1174,7 @@ mod tests {
             Some("stop"),
             Some("post"),
             Some("prompt"),
+            Some("stop-failure"),
         ] {
             let mut out = Vec::new();
             run(

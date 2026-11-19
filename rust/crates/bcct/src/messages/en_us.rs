@@ -5,8 +5,39 @@ use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
     HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
     StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, TranscriptionModels, UpdateTexts, format_delay,
+    StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts, TranscriptionModels,
+    UpdateTexts, format_delay,
 };
+
+const MONTHS: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HALF_DAY_HOURS: u32 = 12;
+
+fn english_month(month: u32) -> String {
+    month
+        .checked_sub(1)
+        .and_then(|index| MONTHS.get(usize::try_from(index).ok()?))
+        .map_or_else(|| month.to_string(), |name| (*name).to_owned())
+}
+
+fn english_weekday(weekday: u32) -> String {
+    usize::try_from(weekday)
+        .ok()
+        .and_then(|index| WEEKDAYS.get(index))
+        .map_or_else(|| weekday.to_string(), |name| (*name).to_owned())
+}
+
+fn english_clock(hour: u32, minute: u32) -> String {
+    let suffix = if hour < HALF_DAY_HOURS { "AM" } else { "PM" };
+    let shown = match hour % HALF_DAY_HOURS {
+        0 => HALF_DAY_HOURS,
+        other => other,
+    };
+
+    format!("{shown}:{minute:02} {suffix}")
+}
 
 pub(super) const MESSAGES: Messages = Messages {
     status_main: "(Main)",
@@ -705,6 +736,63 @@ pub(super) const MESSAGES: Messages = Messages {
         quota: "disk quota exceeded",
         busy: "file busy or changed by another instance",
         input: "unexpected input from Claude Code",
+    },
+    stop_failure: StopFailureTexts {
+        who: |instance| match instance {
+            Some(name) => format!("The Claude instance [{name}]"),
+            None => "Claude".to_owned(),
+        },
+        usage_limit: |who| format!("⚠️ {who} stopped: the usage limit of your plan was reached"),
+        throttle: |who| {
+            format!("⚠️ {who} stopped: the API is limiting requests (not your plan's usage limit)")
+        },
+        billing: |who| format!("⚠️ {who} stopped: there is a billing problem with your account"),
+        account_on_hold: |who| format!("⚠️ {who} stopped: your account is on hold"),
+        authentication: |who| format!("⚠️ {who} stopped: authentication failed, log in again"),
+        oauth_org_not_allowed: |who| {
+            format!("⚠️ {who} stopped: your organization is not allowed to use this login")
+        },
+        cloud_credential: |who| {
+            format!("⚠️ {who} stopped: the cloud provider credentials could not be loaded")
+        },
+        server_error: |who| format!("⚠️ {who} stopped: the API keeps failing (server error)"),
+        invalid_request: |who, detail| match detail {
+            Some(line) => format!("⚠️ {who} stopped: the API rejected the request ({line})"),
+            None => format!("⚠️ {who} stopped: the API rejected the request"),
+        },
+        unknown: |who, detail| match detail {
+            Some(line) => format!("⚠️ {who} stopped on an error: {line}"),
+            None => format!("⚠️ {who} stopped on an unknown error"),
+        },
+        continues_by_itself: |_hour, when| format!(" · it continues by itself at {when}"),
+        back_will_not_continue: |_hour, when| {
+            format!(" · back at {when} · it will not continue by itself")
+        },
+        back_on_will_not_continue: |when| {
+            format!(" · back on {when} · it will not continue by itself")
+        },
+        back_weekday_will_not_continue: |when| {
+            format!(" · back {when} · it will not continue by itself")
+        },
+        clock: english_clock,
+        date_clock: |month, day, hour, minute| {
+            format!(
+                "{} {day}, {}",
+                english_month(month),
+                english_clock(hour, minute)
+            )
+        },
+        weekday_clock: |weekday, hour, minute| {
+            format!(
+                "{} {}",
+                english_weekday(weekday),
+                english_clock(hour, minute)
+            )
+        },
+        failure_released: |instance, text| {
+            format!("Released the error notice from [{instance}]: {text}")
+        },
+        waiting_released: |instance| format!("Released the waiting notice from [{instance}]"),
     },
     update: UpdateTexts {
         looking: "Looking for versions on npm",
