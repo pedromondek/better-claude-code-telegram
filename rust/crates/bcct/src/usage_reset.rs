@@ -188,22 +188,17 @@ fn zone_after(rest: &str) -> Option<String> {
 pub fn parse(text: &str) -> Option<Reset> {
     let after = after_marker(text)?;
     let tokens = tokens_of(after);
+    let mut words = tokens.iter().peekable();
     let mut date: Option<(u32, u32)> = None;
     let mut weekday: Option<u32> = None;
-    let mut index = 0;
 
-    while let Some((token, _)) = tokens.get(index) {
-        index += 1;
-
+    while let Some((token, token_end)) = words.next() {
         if matches!(token.as_str(), "at" | "on") {
             continue;
         }
 
         if let Some(month) = name_matches(token, &MONTH_NAMES) {
-            let day = tokens
-                .get(index)
-                .and_then(|(word, _)| day_of(word, month))?;
-            index += 1;
+            let day = words.next().and_then(|(word, _)| day_of(word, month))?;
             date = Some((u32::try_from(month).ok()? + 1, day));
             continue;
         }
@@ -213,12 +208,14 @@ pub fn parse(text: &str) -> Option<Reset> {
             continue;
         }
 
-        let next = tokens.get(index).map(|(word, _)| word.as_str());
+        let following = words.peek().copied();
+        let next = following.map(|(word, _)| word.as_str());
 
         if looks_like_time(token, next) {
             let clock = clock_of(token, next)?;
-            let last = index - 1 + usize::from(takes_the_next_word(token, next));
-            let end = tokens.get(last).map_or(after.len(), |(_, end)| *end);
+            let end = following
+                .filter(|_| takes_the_next_word(token, next))
+                .map_or(*token_end, |(_, end)| *end);
             let moment = match (date, weekday) {
                 (Some((month, day)), _) => Moment::Dated { month, day, clock },
                 (None, Some(weekday)) => Moment::Weekday { weekday, clock },
@@ -288,6 +285,8 @@ mod tests {
             ("resets 12pm", clock(12, 0)),
             ("RESETS 11:59PM", clock(23, 59)),
             ("resets at 9am", clock(9, 0)),
+            ("resets 9 am", clock(9, 0)),
+            ("resets 12:30 AM", clock(0, 30)),
         ] {
             assert_eq!(moment(text), Some(Moment::Today(expected)), "{text}");
         }
@@ -456,6 +455,7 @@ mod tests {
             "resets soon",
             "resets in 3 hours",
             "resets Nov 24",
+            "resets Nov 2 pm",
             "resets Nov",
             "resets Nov x 9am",
             "resets Nov 32, 9am",
@@ -510,6 +510,8 @@ mod tests {
             "resets 2:",
             "resets :30pm",
             "resets 2:30:15pm",
+            "resets 009pm",
+            "resets 012:30",
         ] {
             assert_eq!(at(text), None, "{text:?}");
         }
@@ -519,5 +521,14 @@ mod tests {
     fn ignores_short_words_that_start_like_a_month_or_weekday() {
         assert_eq!(moment("resets ma 9am"), Some(Moment::Today(clock(9, 0))));
         assert_eq!(moment("resets mo 9am"), Some(Moment::Today(clock(9, 0))));
+    }
+
+    #[test]
+    fn skips_words_that_end_like_a_meridiem_or_hold_a_colon() {
+        assert_eq!(
+            moment("resets for the team 9am"),
+            Some(Moment::Today(clock(9, 0)))
+        );
+        assert_eq!(moment("resets at: 9am"), Some(Moment::Today(clock(9, 0))));
     }
 }

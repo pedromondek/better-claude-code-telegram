@@ -106,10 +106,6 @@ impl Kind {
             Self::MaxOutputTokens => "max_output_tokens",
         }
     }
-
-    fn wants_detail(self) -> bool {
-        matches!(self, Self::InvalidRequest | Self::Unknown)
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -377,10 +373,7 @@ pub(crate) fn record(
     if notify {
         let texts = &messages_for(read_locale(&read_config(&ctx.app_dir))).stop_failure;
         let who = (texts.who)(instance.as_ref().and_then(Value::as_str));
-        let detail = kind
-            .wants_detail()
-            .then(|| first_line(message).or_else(|| first_line(details)))
-            .flatten();
+        let detail = first_line(message).or_else(|| first_line(details));
         let tail = if kind == Kind::UsageLimit {
             let continues = auto_continue_enabled(ctx) && mark.limit_hits <= AUTOMATIC_CONTINUES;
 
