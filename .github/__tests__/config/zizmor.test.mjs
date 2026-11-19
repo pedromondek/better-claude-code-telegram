@@ -12,6 +12,14 @@ const installsOutsideLockfile = (definition) =>
     .map((step) => step.run ?? "")
     .filter((run) => /\bnpm (?:install|i)\b/u.test(run));
 
+const secretsReadBy = (job) => [
+  ...new Set(
+    [...JSON.stringify(job).matchAll(/secrets\.([A-Z0-9_]+)/gu)]
+      .map(([, name]) => name)
+      .filter((name) => name !== "GITHUB_TOKEN"),
+  ),
+];
+
 const dispatchableTasks = () =>
   Object.entries(allWorkflows())
     .filter(
@@ -63,5 +71,41 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
         run: "npm install --global @anthropic-ai/claude-code@latest",
       },
     ]);
+  });
+
+  it("reads each secret other than GITHUB_TOKEN only in a job with an environment, so secrets-outside-env needs no ignore", () => {
+    const readers = Object.entries(allWorkflows()).flatMap(
+      ([file, definition]) =>
+        Object.entries(definition.jobs).flatMap(([job, body]) =>
+          secretsReadBy(body).map((secret) => ({
+            file,
+            job,
+            secret,
+            environment: body.environment ?? null,
+          })),
+        ),
+    );
+
+    expect(readers).toEqual([
+      {
+        file: "prepare-release.yml",
+        job: "prepare",
+        secret: "RELEASE_APP_PRIVATE_KEY",
+        environment: "release",
+      },
+      {
+        file: "release.yml",
+        job: "publish",
+        secret: "RELEASE_APP_PRIVATE_KEY",
+        environment: "release",
+      },
+      {
+        file: "release.yml",
+        job: "stable",
+        secret: "RELEASE_APP_PRIVATE_KEY",
+        environment: "release",
+      },
+    ]);
+    expect(config.rules["secrets-outside-env"]).toBeUndefined();
   });
 });
