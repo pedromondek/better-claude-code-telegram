@@ -80,11 +80,68 @@ pub fn js_key_count(value: Option<&Value>) -> usize {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PathFlavor {
+    Posix,
+    Win32,
+}
+
+pub const HOST_PATH_FLAVOR: PathFlavor = if cfg!(windows) {
+    PathFlavor::Win32
+} else {
+    PathFlavor::Posix
+};
+
+const POSIX_SEPARATORS: &[char] = &['/'];
+const WIN32_SEPARATORS: &[char] = &['/', '\\'];
+const WIN32_SEPARATOR: &str = "\\";
+const DRIVE_LENGTH: usize = 2;
+
+impl PathFlavor {
+    const fn separators(self) -> &'static [char] {
+        match self {
+            Self::Posix => POSIX_SEPARATORS,
+            Self::Win32 => WIN32_SEPARATORS,
+        }
+    }
+}
+
+fn is_win32_separator(character: char) -> bool {
+    WIN32_SEPARATORS.contains(&character)
+}
+
+fn drive_of(path: &str) -> Option<&str> {
+    let mut characters = path.chars();
+
+    match (characters.next(), characters.next()) {
+        (Some(letter), Some(':')) if letter.is_ascii_alphabetic() => path.get(..DRIVE_LENGTH),
+        _ => None,
+    }
+}
+
+fn without_drive(path: &str) -> &str {
+    drive_of(path)
+        .and_then(|drive| path.get(drive.len()..))
+        .unwrap_or(path)
+}
+
+#[must_use]
+pub fn basename_in(flavor: PathFlavor, path: &str) -> &str {
+    let body = match flavor {
+        PathFlavor::Posix => path,
+        PathFlavor::Win32 => without_drive(path),
+    };
+    let separators = flavor.separators();
+
+    body.trim_end_matches(separators)
+        .rsplit(separators)
+        .next()
+        .unwrap_or_default()
+}
+
 #[must_use]
 pub fn js_basename(path: &str) -> &str {
-    let trimmed = path.trim_end_matches('/');
-
-    trimmed.rsplit('/').next().unwrap_or_default()
+    basename_in(HOST_PATH_FLAVOR, path)
 }
 
 #[must_use]
@@ -187,13 +244,10 @@ fn split_escape(text: &str) -> Option<(u16, &str, &str)> {
     Some((unit, code, after))
 }
 
-#[must_use]
-pub fn normalize_path(path: &Path) -> PathBuf {
-    let text = path.to_string_lossy();
-    let absolute = text.starts_with('/');
+fn normalized_parts<'a>(text: &'a str, separators: &[char], absolute: bool) -> Vec<&'a str> {
     let mut parts: Vec<&str> = Vec::new();
 
-    for part in text.split('/') {
+    for part in text.split(separators) {
         match part {
             "" | "." => {}
             ".." if parts.last().is_some_and(|last| *last != "..") => {
@@ -204,22 +258,114 @@ pub fn normalize_path(path: &Path) -> PathBuf {
         }
     }
 
-    let body = parts.join("/");
+    parts
+}
 
-    PathBuf::from(match (absolute, body.is_empty()) {
+fn posix_normalize(text: &str) -> String {
+    let absolute = text.starts_with('/');
+    let body = normalized_parts(text, POSIX_SEPARATORS, absolute).join("/");
+
+    match (absolute, body.is_empty()) {
         (true, _) => format!("/{body}"),
         (false, true) => ".".to_owned(),
         (false, false) => body,
-    })
+    }
+}
+
+fn unc_root(text: &str) -> Option<(String, &str)> {
+    let after = text
+        .strip_prefix(is_win32_separator)?
+        .strip_prefix(is_win32_separator)?;
+    let (server, rest) = after.split_at(after.find(is_win32_separator)?);
+    let rest = rest.trim_start_matches(is_win32_separator);
+    let (share, rest) = rest.split_at(rest.find(is_win32_separator).unwrap_or(rest.len()));
+
+    (!server.is_empty() && !share.is_empty()).then(|| (format!("\\\\{server}\\{share}"), rest))
+}
+
+fn win32_root(text: &str) -> (Option<String>, bool, &str) {
+    if text.starts_with(is_win32_separator) {
+        return unc_root(text).map_or((None, true, text), |(device, rest)| {
+            (Some(device), true, rest)
+        });
+    }
+
+    match drive_of(text) {
+        Some(drive) => {
+            let rest = without_drive(text);
+
+            (
+                Some(drive.to_owned()),
+                rest.starts_with(is_win32_separator),
+                rest,
+            )
+        }
+        None => (None, false, text),
+    }
+}
+
+fn win32_normalize(text: &str) -> String {
+    let (device, absolute, rest) = win32_root(text);
+    let tail = normalized_parts(rest, WIN32_SEPARATORS, absolute).join(WIN32_SEPARATOR);
+    let tail = if tail.is_empty() && !absolute {
+        ".".to_owned()
+    } else {
+        tail
+    };
+
+    match (device, absolute) {
+        (None, true) => format!("{WIN32_SEPARATOR}{tail}"),
+        (None, false) => tail,
+        (Some(device), true) => format!("{device}{WIN32_SEPARATOR}{tail}"),
+        (Some(device), false) => format!("{device}{tail}"),
+    }
+}
+
+fn win32_join(base: &str, name: &str) -> String {
+    let parts: Vec<&str> = [base, name]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect();
+    let Some(first) = parts.first() else {
+        return ".".to_owned();
+    };
+    let joined = parts.join(WIN32_SEPARATOR);
+
+    if first.chars().all(is_win32_separator) {
+        return win32_normalize(&format!(
+            "{WIN32_SEPARATOR}{}",
+            joined.trim_start_matches(is_win32_separator)
+        ));
+    }
+
+    win32_normalize(&joined)
+}
+
+#[must_use]
+pub fn normalize_in(flavor: PathFlavor, text: &str) -> String {
+    match flavor {
+        PathFlavor::Posix => posix_normalize(text),
+        PathFlavor::Win32 => win32_normalize(text),
+    }
+}
+
+#[must_use]
+pub fn join_in(flavor: PathFlavor, base: &str, name: &str) -> String {
+    match flavor {
+        PathFlavor::Posix if base.is_empty() => posix_normalize(name),
+        PathFlavor::Posix => posix_normalize(&format!("{base}/{name}")),
+        PathFlavor::Win32 => win32_join(base, name),
+    }
+}
+
+#[must_use]
+pub fn normalize_path(path: &Path) -> PathBuf {
+    PathBuf::from(normalize_in(HOST_PATH_FLAVOR, &path.to_string_lossy()))
 }
 
 #[must_use]
 pub fn join_path(base: &Path, name: &str) -> PathBuf {
-    if base.as_os_str().is_empty() {
-        return normalize_path(Path::new(name));
-    }
-
-    normalize_path(Path::new(&format!("{}/{name}", base.to_string_lossy())))
+    PathBuf::from(join_in(HOST_PATH_FLAVOR, &base.to_string_lossy(), name))
 }
 
 #[must_use]
@@ -570,9 +716,100 @@ mod tests {
             ("/", ""),
             ("", ""),
             ("/bin/..", ".."),
+            ("C:\\a\\b", "C:\\a\\b"),
         ] {
-            assert_eq!(js_basename(path), expected, "{path}");
+            assert_eq!(basename_in(PathFlavor::Posix, path), expected, "{path}");
         }
+    }
+
+    #[test]
+    fn takes_the_basename_like_node_path_win32() {
+        for (path, expected) in [
+            ("C:\\a\\settings.json", "settings.json"),
+            ("C:\\", ""),
+            ("C:", ""),
+            ("C:foo", "foo"),
+            ("a\\b/c", "c"),
+            ("\\\\srv\\share\\f", "f"),
+            ("C:\\a\\b\\", "b"),
+            ("/bin/zsh", "zsh"),
+            ("zsh", "zsh"),
+            ("", ""),
+            ("\\\\?\\C:\\x\\y.json", "y.json"),
+            ("1:", "1:"),
+        ] {
+            assert_eq!(basename_in(PathFlavor::Win32, path), expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn normalizes_like_node_path_win32() {
+        for (path, expected) in [
+            ("C:\\Users\\x\\.claude", "C:\\Users\\x\\.claude"),
+            ("C:\\a\\..\\..\\b", "C:\\b"),
+            ("C:/a/./b", "C:\\a\\b"),
+            ("C:", "C:."),
+            ("C:a\\..\\..", "C:.."),
+            ("\\\\srv\\share\\..", "\\\\srv\\share\\"),
+            ("\\\\srv\\share", "\\\\srv\\share\\"),
+            ("\\\\srv", "\\srv"),
+            ("/a//b", "\\a\\b"),
+            ("/", "\\"),
+            ("", "."),
+            ("a\\..", "."),
+            ("..\\..", "..\\.."),
+            ("\\\\?\\C:\\a\\..\\b", "\\\\?\\C:\\b"),
+            ("C:\\a/b\\c", "C:\\a\\b\\c"),
+        ] {
+            assert_eq!(normalize_in(PathFlavor::Win32, path), expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn joins_like_node_path_win32() {
+        for (base, name, expected) in [
+            (
+                "C:\\Users\\x",
+                ".claude/settings.json",
+                "C:\\Users\\x\\.claude\\settings.json",
+            ),
+            ("C:\\a", "../b", "C:\\b"),
+            ("C:\\a", "..\\..\\..\\b", "C:\\b"),
+            ("", "x", "x"),
+            ("", "", "."),
+            ("\\\\srv\\share", "f", "\\\\srv\\share\\f"),
+            ("\\\\\\x", "y", "\\x\\y"),
+            ("\\", "\\x", "\\x"),
+            ("/a", "/abs", "\\a\\abs"),
+            ("rel", "../../c", "..\\c"),
+            ("C:", "x", "C:\\x"),
+            ("/a/x/..", "bin/bcct.cmd", "\\a\\bin\\bcct.cmd"),
+            ("\\", "x\\y", "\\x\\y"),
+            ("/", "srv/share", "\\srv\\share"),
+            ("\\\\", "x", "\\x"),
+            ("\\\\\\a\\b", "c", "\\a\\b\\c"),
+        ] {
+            assert_eq!(
+                join_in(PathFlavor::Win32, base, name),
+                expected,
+                "{base} + {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn uses_the_path_flavor_of_the_host() {
+        let path = "C:\\a\\..\\b/c";
+
+        assert_eq!(js_basename(path), basename_in(HOST_PATH_FLAVOR, path));
+        assert_eq!(
+            normalize_path(Path::new(path)),
+            PathBuf::from(normalize_in(HOST_PATH_FLAVOR, path))
+        );
+        assert_eq!(
+            join_path(Path::new("C:\\a"), "../b"),
+            PathBuf::from(join_in(HOST_PATH_FLAVOR, "C:\\a", "../b"))
+        );
     }
 
     #[test]
@@ -599,16 +836,21 @@ mod tests {
 
         for (base, name, expected) in cases {
             assert_eq!(
-                join_path(Path::new(base), name),
-                PathBuf::from(expected),
+                join_in(PathFlavor::Posix, base, name),
+                expected,
                 "{base} + {name}"
             );
         }
 
-        assert_eq!(normalize_path(Path::new("/")), PathBuf::from("/"));
-        assert_eq!(normalize_path(Path::new("")), PathBuf::from("."));
-        assert_eq!(normalize_path(Path::new("a/..")), PathBuf::from("."));
-        assert_eq!(normalize_path(Path::new("/..")), PathBuf::from("/"));
-        assert_eq!(normalize_path(Path::new("../..")), PathBuf::from("../.."));
+        for (path, expected) in [
+            ("/", "/"),
+            ("", "."),
+            ("a/..", "."),
+            ("/..", "/"),
+            ("../..", "../.."),
+            ("C:\\a\\..", "C:\\a\\.."),
+        ] {
+            assert_eq!(normalize_in(PathFlavor::Posix, path), expected, "{path}");
+        }
     }
 }

@@ -597,14 +597,28 @@ pub fn whisper_python_works(python: &Path) -> bool {
 mod tests {
     use super::*;
 
+    const LAUNCHER_OF_A: &str = if cfg!(windows) {
+        "\\a\\bin\\bcct.cmd"
+    } else {
+        "/a/bin/bcct"
+    };
+
+    fn launcher_command(arguments: &str) -> String {
+        format!("\"{LAUNCHER_OF_A}\" {arguments}")
+    }
+
+    fn path_of(folders: &[&str]) -> Option<OsString> {
+        std::env::join_paths(folders).ok()
+    }
+
     #[test]
     fn the_statusline_commands_quote_the_launcher_of_the_app_folder() {
         let app_dir = Path::new("/a/x/..");
 
-        assert_eq!(statusline_command(app_dir), "\"/a/bin/bcct\" statusline");
+        assert_eq!(statusline_command(app_dir), launcher_command("statusline"));
         assert_eq!(
             statusline_after_command(app_dir),
-            "\"/a/bin/bcct\" statusline --after-previous"
+            launcher_command("statusline --after-previous")
         );
     }
 
@@ -629,9 +643,12 @@ mod tests {
             kind_of("node \"/r/plugins/telegram-hooks/statusline.mjs\" --after-previous"),
             StatuslineKind::OursAfter
         );
-        assert_eq!(kind_of("\"/a/bin/bcct\" statusline"), StatuslineKind::Ours);
         assert_eq!(
-            kind_of("\"/a/bin/bcct\" statusline --after-previous"),
+            kind_of(&launcher_command("statusline")),
+            StatuslineKind::Ours
+        );
+        assert_eq!(
+            kind_of(&launcher_command("statusline --after-previous")),
             StatuslineKind::OursAfter
         );
     }
@@ -662,8 +679,8 @@ mod tests {
             )
         };
 
-        assert!(current("\"/a/bin/bcct\" statusline"));
-        assert!(current("\"/a/bin/bcct\" statusline --after-previous"));
+        assert!(current(&launcher_command("statusline")));
+        assert!(current(&launcher_command("statusline --after-previous")));
         assert!(!current(
             "node \"/r/plugins/telegram-hooks/statusline.mjs\""
         ));
@@ -689,16 +706,23 @@ mod tests {
         "}\n",
     );
 
+    fn with_host_separators(expected: &str) -> String {
+        expected.replace('/', std::path::MAIN_SEPARATOR_STR)
+    }
+
     #[test]
     fn the_shell_script_sends_only_the_telegram_launch_to_the_launcher() {
-        assert_eq!(shell_script(Path::new("/a/it's"), false), SHELL_FUNCTION);
+        assert_eq!(
+            shell_script(Path::new("/a/it's"), false),
+            with_host_separators(SHELL_FUNCTION)
+        );
     }
 
     #[test]
     fn the_shell_script_adds_the_launcher_folder_to_the_path_once_when_asked() {
         assert_eq!(
             shell_script(Path::new("/a/it's"), true),
-            format!(
+            with_host_separators(&format!(
                 "{SHELL_FUNCTION}{}",
                 concat!(
                     "case \":${PATH}:\" in\n",
@@ -706,7 +730,7 @@ mod tests {
                     "  *) export PATH='/a/it'\\''s/bin':\"$PATH\" ;;\n",
                     "esac\n",
                 )
-            )
+            ))
         );
     }
 
@@ -732,9 +756,9 @@ mod tests {
     fn the_launcher_folder_is_on_the_path_only_when_listed_exactly() {
         let bin = Path::new("/a/bin");
 
-        assert!(path_lists(Some(OsString::from("/x:/a/bin:/y")), bin));
+        assert!(path_lists(path_of(&["/x", "/a/bin", "/y"]), bin));
         assert!(path_lists(Some(OsString::from("/a/bin")), bin));
-        assert!(!path_lists(Some(OsString::from("/a/bin2:/a")), bin));
+        assert!(!path_lists(path_of(&["/a/bin2", "/a"]), bin));
         assert!(!path_lists(Some(OsString::new()), bin));
         assert!(!path_lists(None, bin));
     }

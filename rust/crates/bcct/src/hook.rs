@@ -10,8 +10,8 @@ use crate::config::{DELAY_ENV, DelayKind, delay_ms_for, read_config};
 use crate::files::{create_private_dir, read_json, write_private};
 use crate::hook_failures;
 use crate::js::{
-    is_js_whitespace, join_path, js_number, js_string, js_trim, js_truthy, normalize_path,
-    parse_json, stringify,
+    is_js_whitespace, join_path, js_basename, js_number, js_string, js_trim, js_truthy,
+    normalize_path, parse_json, stringify,
 };
 use crate::paths::{Paths, TELEGRAM_FLAG};
 
@@ -138,13 +138,6 @@ fn first_units(text: &str, units: usize) -> String {
             used <= units
         })
         .collect()
-}
-
-fn basename(path: &str) -> &str {
-    path.trim_end_matches('/')
-        .rsplit('/')
-        .next()
-        .unwrap_or_default()
 }
 
 pub(crate) fn millis(now: u64) -> f64 {
@@ -296,7 +289,7 @@ fn instance_from(
     }
 
     let folder = match input.get("cwd") {
-        Some(cwd) if js_truthy(cwd) => basename(cwd.as_str().ok_or(Abort::Input)?),
+        Some(cwd) if js_truthy(cwd) => js_basename(cwd.as_str().ok_or(Abort::Input)?),
         _ => DEFAULT_FOLDER_LABEL,
     };
     let session = input.get("session_id").map(js_string).unwrap_or_default();
