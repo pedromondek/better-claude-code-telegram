@@ -2,13 +2,13 @@ use std::ffi::OsString;
 use std::fs;
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::Duration;
 
 use semver::Version;
 use serde_json::Value;
 
-use crate::install::{MARKETPLACE_NAME, MARKETPLACE_REPO, marketplace_source};
+use crate::install::{MARKETPLACE_NAME, MARKETPLACE_REPO, System, marketplace_source};
 use crate::messages::{Messages, messages_for};
 use crate::paths::Paths;
 use crate::prompt::{FakePrompter, Prompter, create_prompter};
@@ -793,7 +793,8 @@ pub fn http_download(url: &str, file: &Path) -> Result<u16, String> {
 }
 
 fn claude_with_errors(args: &[&str]) -> String {
-    Command::new("claude")
+    System::from_process()
+        .command("claude")
         .args(args)
         .stdin(Stdio::null())
         .output()

@@ -7,6 +7,7 @@ use serde_json::{Map, Value};
 
 use crate::config::read_config;
 use crate::files::{FileFailure, create_private_dir, read_json, write_private};
+use crate::install::System;
 use crate::journal::Journal;
 use crate::js::{
     join_path, js_basename, js_number, js_trim, js_truthy, normalize_path, parse_json, stringify,
@@ -529,28 +530,17 @@ pub fn read_settings(
 
 #[must_use]
 pub fn has_command(name: &str) -> bool {
-    Command::new("sh")
-        .args(["-c", &format!("command -v {name}")])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .is_ok_and(|status| status.success())
+    System::from_process().has_command(name)
 }
 
 #[must_use]
 pub fn claude_output(args: &[&str]) -> String {
-    Command::new("claude")
-        .args(args)
-        .stdin(Stdio::null())
-        .output()
-        .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
-        .unwrap_or_default()
+    System::from_process().claude_output(args)
 }
 
 #[must_use]
 pub fn node_version() -> Option<String> {
-    node_version_from(Command::new("node"))
+    node_version_from(System::from_process().command("node"))
 }
 
 #[must_use]

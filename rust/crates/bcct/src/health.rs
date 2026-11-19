@@ -11,6 +11,7 @@ use crate::health_fix::{FixRequest, FixRun, parse_only, run_fix};
 use crate::hook::Abort;
 use crate::hook::{millis, now_ms};
 use crate::hook_failures::{Reason, open_notices};
+use crate::install::System;
 use crate::js::{
     join_path, js_key_count, js_length, js_template, js_trim, js_truthy, stringify_pretty,
 };
@@ -1189,7 +1190,7 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         uid,
         now: now_ms(),
         node_version: &node_version,
-        git_version: &|| git_version_from(std::process::Command::new("git")),
+        git_version: &|| git_version_from(System::from_process().command("git")),
         has_command: &has_command,
         claude_output: &claude_output,
         python_works: &whisper_python_works,

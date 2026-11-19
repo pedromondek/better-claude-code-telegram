@@ -5,6 +5,7 @@ use std::process::Command;
 
 use crate::files::FileFailure;
 use crate::hook::now_ms;
+use crate::install::System;
 use crate::messages::messages_for;
 use crate::paths::TELEGRAM_FLAG;
 use crate::setup::{
@@ -155,7 +156,7 @@ pub fn run_process(args: &[OsString], stderr: &mut dyn Write) -> u8 {
     let Some(call) = claude_args(args, &launch, stderr) else {
         return REFUSED;
     };
-    let mut command = Command::new(CLAUDE);
+    let mut command = System::from_process().command(CLAUDE);
     command.args(call).env(TELEGRAM_FLAG, "1");
 
     replace_process(&mut command, stderr)

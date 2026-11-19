@@ -19,6 +19,7 @@ use crate::js::{
 use crate::locale::Locale;
 use crate::messages::Messages;
 use crate::paths::CONFIG_FILE;
+use crate::program::{HOST_PROGRAM_LOOKUP, PATH_EXTENSIONS_VARIABLE, ProgramLookup, find_program};
 use crate::self_install::Channel;
 use crate::setup::{
     CHANNEL_PLUGIN_ID, HOOKS_PLUGIN_ID, read_settings, shell_file, whisper_python_works,
@@ -53,6 +54,7 @@ const VENV_PIP: &str = "bin/pip";
 const MODEL_PREFIX: &str = "models--Systran--faster-whisper-";
 const SCOPE: [&str; 2] = ["--scope", "user"];
 const PATH_VARIABLE: &str = "PATH";
+const PATH_SEPARATOR: &str = if cfg!(windows) { ";" } else { ":" };
 const LIST_SEPARATOR: &str = "\n  • ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -354,9 +356,10 @@ pub trait Journal {
     fn track_file(&mut self, file: &Path) -> io::Result<()>;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct System {
     vars: RefCell<Vec<(OsString, OsString)>>,
+    lookup: ProgramLookup,
 }
 
 impl System {
@@ -364,32 +367,44 @@ impl System {
     pub fn new(vars: Vec<(OsString, OsString)>) -> Self {
         Self {
             vars: RefCell::new(vars),
+            lookup: HOST_PROGRAM_LOOKUP,
         }
+    }
+
+    #[must_use]
+    pub fn with_program_lookup(self, lookup: ProgramLookup) -> Self {
+        Self { lookup, ..self }
     }
 
     #[must_use]
     pub fn from_process() -> Self {
         Self::new(
-            std::env::var_os(PATH_VARIABLE)
-                .map(|path| (OsString::from(PATH_VARIABLE), path))
+            [PATH_VARIABLE, PATH_EXTENSIONS_VARIABLE]
                 .into_iter()
+                .filter_map(|name| {
+                    std::env::var_os(name).map(|value| (OsString::from(name), value))
+                })
                 .collect(),
         )
     }
 
-    #[must_use]
-    pub fn path(&self) -> Option<OsString> {
+    fn var(&self, wanted: &str) -> Option<OsString> {
         self.vars
             .borrow()
             .iter()
             .rev()
-            .find(|(name, _)| name == PATH_VARIABLE)
+            .find(|(name, _)| name == wanted)
             .map(|(_, value)| value.clone())
+    }
+
+    #[must_use]
+    pub fn path(&self) -> Option<OsString> {
+        self.var(PATH_VARIABLE)
     }
 
     fn prepend_path(&self, dir: &Path) {
         let mut path = dir.as_os_str().to_owned();
-        path.push(":");
+        path.push(PATH_SEPARATOR);
         path.push(self.path().unwrap_or_default());
 
         self.vars
@@ -397,9 +412,28 @@ impl System {
             .push((OsString::from(PATH_VARIABLE), path));
     }
 
+    fn find_program(&self, name: &OsStr) -> Option<PathBuf> {
+        let folders: Vec<PathBuf> = self
+            .path()
+            .map(|path| std::env::split_paths(&path).collect())
+            .unwrap_or_default();
+
+        find_program(
+            name.to_str()?,
+            &folders,
+            self.var(PATH_EXTENSIONS_VARIABLE).as_deref(),
+            &Path::is_file,
+        )
+    }
+
     #[must_use]
     pub fn command(&self, program: impl AsRef<OsStr>) -> Command {
-        let mut command = Command::new(program);
+        let program = program.as_ref();
+        let resolved = match self.lookup {
+            ProgramLookup::Shell => None,
+            ProgramLookup::PathSearch => self.find_program(program),
+        };
+        let mut command = Command::new(resolved.as_deref().map_or(program, Path::as_os_str));
         command.envs(self.vars.borrow().iter().map(|(name, value)| (name, value)));
         command
     }
@@ -417,7 +451,12 @@ impl System {
 
     #[must_use]
     pub fn has_command(&self, name: &str) -> bool {
-        self.quiet("sh", &["-c", &format!("command -v {name}")]) == Some(0)
+        match self.lookup {
+            ProgramLookup::Shell => {
+                self.quiet("sh", &["-c", &format!("command -v {name}")]) == Some(0)
+            }
+            ProgramLookup::PathSearch => self.find_program(OsStr::new(name)).is_some(),
+        }
     }
 
     #[must_use]
@@ -1971,9 +2010,62 @@ mod tests {
         let empty = System::new(Vec::new());
         assert_eq!(empty.path(), None);
         empty.prepend_path(Path::new("/b"));
-        assert_eq!(empty.path(), Some(OsString::from("/b:")));
+        assert_eq!(
+            empty.path(),
+            Some(OsString::from(format!("/b{PATH_SEPARATOR}")))
+        );
         empty.prepend_path(Path::new("/a"));
-        assert_eq!(empty.path(), Some(OsString::from("/a:/b:")));
+        assert_eq!(
+            empty.path(),
+            Some(OsString::from(format!(
+                "/a{PATH_SEPARATOR}/b{PATH_SEPARATOR}"
+            )))
+        );
+    }
+
+    fn searching_system(folder: &Path) -> System {
+        System::new(vec![
+            (OsString::from(PATH_VARIABLE), folder.as_os_str().to_owned()),
+            (
+                OsString::from(PATH_EXTENSIONS_VARIABLE),
+                OsString::from(".sh"),
+            ),
+        ])
+        .with_program_lookup(ProgramLookup::PathSearch)
+    }
+
+    #[test]
+    fn finds_and_runs_a_program_through_path_and_pathext_when_searching() {
+        let folder = tempfile::tempdir().unwrap();
+        let tool = folder.path().join("tool.sh");
+        fs::write(&tool, "").unwrap();
+        let system = searching_system(folder.path());
+
+        assert!(system.has_command("tool"));
+        assert!(!system.has_command("missing"));
+        assert_eq!(system.command("tool").get_program(), tool.as_os_str());
+        assert_eq!(system.command("missing").get_program(), "missing");
+    }
+
+    #[test]
+    fn searches_nothing_without_a_path() {
+        let system = System::new(Vec::new()).with_program_lookup(ProgramLookup::PathSearch);
+
+        assert!(!system.has_command("sh"));
+        assert_eq!(system.command("sh").get_program(), "sh");
+    }
+
+    #[test]
+    fn finds_programs_through_the_shell_by_default_on_unix() {
+        let folder = tempfile::tempdir().unwrap();
+        let system = searching_system(folder.path());
+        let shell = System::new(vec![(
+            OsString::from(PATH_VARIABLE),
+            std::env::var_os(PATH_VARIABLE).unwrap_or_default(),
+        )]);
+
+        assert!(!system.has_command("sh"));
+        assert_eq!(shell.has_command("sh"), cfg!(unix));
     }
 
     #[test]
