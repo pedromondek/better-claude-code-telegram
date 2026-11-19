@@ -107,6 +107,7 @@ pub(super) const MESSAGES: Messages = Messages {
         tool_installed: |target| {
             format!("installed {target}, which stays installed (remove it by hand if you want)")
         },
+        user_path_changed: |target| format!("changed the Windows user PATH ({target})"),
     },
     tools_declined: |tools| format!("Nothing was installed; {tools} is still missing from PATH."),
     invalid_setting: |step, value, hint| {
@@ -683,6 +684,12 @@ pub(super) const MESSAGES: Messages = Messages {
         crate::setup_command!(),
         " path'."
     ),
+    user_path_added: "bcct is now on your Windows user PATH (PowerShell, cmd and Git Bash). It applies to new terminals.",
+    user_path_already: "bcct is already on your Windows user PATH.",
+    user_path_removed: "bcct is no longer on your Windows user PATH.",
+    user_path_failed: |reason| {
+        format!("Could not change your Windows user PATH ({reason}). Nothing was changed.")
+    },
     hook_write_failed: |file, reason| {
         format!(
             "bcct: could not write {file} ({reason}). Telegram messages may not arrive. Run /bcct:health."

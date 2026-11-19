@@ -174,6 +174,29 @@ describe("scripts/rust-mutation-prepush.mjs", () => {
     expect(entry).toContain('os = ["linux/x64", "macos/x64", "windows/x64"]');
   });
 
+  it("leaves the Windows-only module out of the mutation, since Linux never compiles it", () => {
+    const config = readFileSync(
+      join(import.meta.dirname, "..", "..", "rust", ".cargo", "mutants.toml"),
+      "utf8",
+    );
+    const windowsModule = readFileSync(
+      join(
+        import.meta.dirname,
+        "..",
+        "..",
+        "rust",
+        "crates",
+        "bcct",
+        "src",
+        "lib.rs",
+      ),
+      "utf8",
+    );
+
+    expect(windowsModule).toContain("#[cfg(windows)]\npub mod windows;");
+    expect(config).toContain('exclude_globs = ["crates/bcct/src/windows.rs"]');
+  });
+
   it("runs the tests the same way as the rust:mutation script of package.json", () => {
     const manifest = JSON.parse(
       readFileSync(

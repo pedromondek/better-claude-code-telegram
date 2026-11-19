@@ -32,6 +32,9 @@ pub mod statusline;
 pub mod telegram;
 pub mod ui;
 pub mod update;
+pub mod user_path;
+#[cfg(windows)]
+pub mod windows;
 
 use std::ffi::OsString;
 use std::io::Write;

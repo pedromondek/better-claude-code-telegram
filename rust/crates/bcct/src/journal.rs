@@ -14,6 +14,7 @@ pub enum ChangeKind {
     PluginInstalled,
     PluginRemoved,
     ToolInstalled,
+    UserPathChanged,
 }
 
 impl ChangeKind {
@@ -28,6 +29,7 @@ impl ChangeKind {
             Self::PluginInstalled => kinds.plugin_installed,
             Self::PluginRemoved => kinds.plugin_removed,
             Self::ToolInstalled => kinds.tool_installed,
+            Self::UserPathChanged => kinds.user_path_changed,
         };
 
         describe(target)
@@ -279,8 +281,65 @@ impl Journal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::locale::Locale;
+    use crate::messages::messages_for;
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    #[test]
+    fn describes_every_change_kind_with_its_target() {
+        let english = messages_for(Locale::EnUs);
+        let described = [
+            (ChangeKind::FileCreated, "created x"),
+            (ChangeKind::FileChanged, "changed x"),
+            (ChangeKind::DirCreated, "created the folder x"),
+            (
+                ChangeKind::MarketplaceAdded,
+                "registered the marketplace 'x'",
+            ),
+            (ChangeKind::PluginInstalled, "installed the plugin 'x'"),
+            (ChangeKind::PluginRemoved, "removed the plugin 'x'"),
+            (
+                ChangeKind::ToolInstalled,
+                "installed x, which stays installed (remove it by hand if you want)",
+            ),
+            (
+                ChangeKind::UserPathChanged,
+                "changed the Windows user PATH (x)",
+            ),
+        ];
+
+        for (kind, text) in described {
+            assert_eq!(kind.describe("x", english), text);
+        }
+    }
+
+    #[test]
+    fn describes_the_user_path_change_and_its_failure_in_both_languages() {
+        let english = messages_for(Locale::EnUs);
+        let portuguese = messages_for(Locale::PtBr);
+        let change = Change {
+            kind: ChangeKind::UserPathChanged,
+            target: "C:\\a\\bin".to_owned(),
+        };
+
+        assert_eq!(
+            change.describe(english),
+            "changed the Windows user PATH (C:\\a\\bin)"
+        );
+        assert_eq!(
+            change.describe(portuguese),
+            "alterou o PATH do usuário no Windows (C:\\a\\bin)"
+        );
+        assert_eq!(
+            (english.user_path_failed)("denied"),
+            "Could not change your Windows user PATH (denied). Nothing was changed."
+        );
+        assert_eq!(
+            (portuguese.user_path_failed)("denied"),
+            "Não deu para alterar o PATH do usuário no Windows (denied). Nada foi alterado."
+        );
+    }
 
     fn quiet(journal: &mut Journal) -> Vec<Change> {
         journal.undo_all(&mut |_| {}, &mut |_, _| {})
@@ -306,6 +365,24 @@ mod tests {
             vec![Change {
                 kind: ChangeKind::DirCreated,
                 target: "bcct-missing-folder".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn records_a_missing_folder_tracked_twice_only_once() {
+        let folder = tempfile::tempdir().unwrap();
+        let inner = folder.path().join("made/inner");
+        let mut journal = Journal::new();
+
+        journal.track_dir(&inner);
+        journal.track_dir(&folder.path().join("made/other"));
+
+        assert_eq!(
+            journal.changes(),
+            vec![Change {
+                kind: ChangeKind::DirCreated,
+                target: folder.path().join("made").to_string_lossy().into_owned(),
             }]
         );
     }

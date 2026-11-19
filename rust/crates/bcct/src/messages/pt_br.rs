@@ -109,6 +109,7 @@ pub(super) const MESSAGES: Messages = Messages {
         tool_installed: |target| {
             format!("instalou {target}, que continua instalado (remova à mão se quiser)")
         },
+        user_path_changed: |target| format!("alterou o PATH do usuário no Windows ({target})"),
     },
     tools_declined: |tools| format!("Nada foi instalado; {tools} continua faltando no PATH."),
     invalid_setting: |step, value, hint| {
@@ -701,6 +702,12 @@ pub(super) const MESSAGES: Messages = Messages {
         crate::setup_command!(),
         " path'."
     ),
+    user_path_added: "O bcct agora está no PATH do usuário no Windows (PowerShell, cmd e Git Bash). Vale para os terminais novos.",
+    user_path_already: "O bcct já está no PATH do usuário no Windows.",
+    user_path_removed: "O bcct não está mais no PATH do usuário no Windows.",
+    user_path_failed: |reason| {
+        format!("Não deu para alterar o PATH do usuário no Windows ({reason}). Nada foi alterado.")
+    },
     hook_write_failed: |file, reason| {
         format!(
             "bcct: não consegui gravar {file} ({reason}). As mensagens do Telegram podem não chegar. Rode /bcct:health."

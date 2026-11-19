@@ -36,10 +36,10 @@ use crate::prompt::{
 use crate::settings::{STATUS_LINE, is_our_statusline, remove_if_present, statusline_preview};
 use crate::setup::{
     ACCESS_FILE, COMMAND_ON_PATH_KEY, ENV_FILE, MINIMUM_NODE, SETUP_COMMAND, SetupPaths,
-    StatuslineState, check_setup, command_on_path, env_deny_rule, git_version_from, mark_launch,
-    node_version_from, node_version_ok, parse_env_token, read_settings, read_text, setup_locale,
-    shell_file, shell_script, statusline_is_current, statusline_prompt, statusline_state,
-    telegram_instance_running, whisper_python_works,
+    StatuslineState, check_setup, command_on_path, env_deny_rule, git_version_from, launcher_dir,
+    mark_launch, node_version_from, node_version_ok, parse_env_token, read_settings, read_text,
+    setup_locale, shell_file, shell_script, statusline_is_current, statusline_prompt,
+    statusline_state, telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
     DelayPick, QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language,
@@ -62,6 +62,7 @@ use crate::signals;
 use crate::spinner::{Pending, Terminal, pending, spin_on_stdout};
 use crate::telegram::{Interruption, abortable_post_json, api_root};
 use crate::ui::{fail, note, question, should_colorize, step_heading, success, warn};
+use crate::user_path::{PathChange, UserPath, add_folder, remove_folder};
 
 const OK: u8 = 0;
 const FAILURE: u8 = 1;
@@ -494,6 +495,7 @@ struct Setup<'a> {
     system: Rc<System>,
     interruption: Interruption,
     journal: Journal,
+    user_path: Option<Rc<dyn UserPath>>,
     output: Output<'a>,
 }
 
@@ -526,6 +528,10 @@ impl<'a> Setup<'a> {
             system: Rc::new(system),
             interruption: Interruption::new(),
             journal: Journal::new(),
+            #[cfg(windows)]
+            user_path: Some(Rc::new(crate::windows::RegistryUserPath)),
+            #[cfg(not(windows))]
+            user_path: None,
             home,
             output: Output {
                 out: Tracked {
@@ -1173,7 +1179,7 @@ impl<'a> Setup<'a> {
                 self.output.line(messages.path_off);
             }
 
-            return Ok(());
+            return self.sync_user_path(false, messages);
         }
 
         self.install_shell(messages)?;
@@ -1186,7 +1192,53 @@ impl<'a> Setup<'a> {
             printer.success(&(messages.path_added)(&shown));
         }
 
+        self.sync_user_path(true, messages)
+    }
+
+    fn sync_user_path(&mut self, wanted: bool, messages: &'static Messages) -> Result<(), Stop> {
+        let Some(user_path) = self.user_path.clone() else {
+            return Ok(());
+        };
+        let folder = launcher_dir(&self.paths.app_dir)
+            .to_string_lossy()
+            .into_owned();
+        let change = if wanted {
+            add_folder(user_path.as_ref(), &folder)
+        } else {
+            remove_folder(user_path.as_ref(), &folder)
+        }
+        .map_err(|error| Stop::Failed((messages.user_path_failed)(&error.kind().to_string())))?;
+        let PathChange::Changed { previous } = change else {
+            if wanted {
+                self.output
+                    .printer(messages)
+                    .skipped(messages.user_path_already);
+            }
+
+            return Ok(());
+        };
+        let restore = Rc::clone(&user_path);
+
+        self.journal.record(
+            ChangeKind::UserPathChanged,
+            &folder,
+            Some(Box::new(move || {
+                restore
+                    .write(previous.as_deref().unwrap_or_default())
+                    .is_ok()
+            })),
+        );
+        self.output.printer(messages).success(if wanted {
+            messages.user_path_added
+        } else {
+            messages.user_path_removed
+        });
+
         Ok(())
+    }
+
+    fn forget_user_path(&mut self, messages: &'static Messages) -> Result<(), Stop> {
+        self.sync_user_path(false, messages)
     }
 
     fn apply_setting(
@@ -1328,6 +1380,7 @@ impl<'a> Setup<'a> {
                 .map_err(failed)?;
         }
 
+        self.forget_user_path(messages)?;
         self.installing(messages, ask, |install| install.remove_plugins())?;
 
         if let Some(left) = statusline_custom_left(&self.paths.app_dir, messages, colorize) {
@@ -1747,6 +1800,7 @@ pub fn run_uninstall_process(stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
 mod tests {
     use super::*;
     use crate::prompt::FakePrompter;
+    use crate::user_path::fake::FakeUserPath;
 
     const PLUGIN: &str = "telegram@better-claude-code-telegram";
 
@@ -1772,6 +1826,177 @@ mod tests {
         assert!(setup.paths.settings_file.starts_with(folder.path()));
         assert!(setup.hf_cache.starts_with(folder.path()));
         assert_eq!(setup.system.path(), None);
+    }
+
+    fn launcher_folder(setup: &Setup<'_>) -> String {
+        launcher_dir(&setup.paths.app_dir)
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    fn path_answer(yes: bool) -> FakePrompter {
+        FakePrompter::new(true).with_replies([
+            crate::prompt::Reply::Choose(usize::from(!yes)),
+            crate::prompt::Reply::End,
+        ])
+    }
+
+    #[test]
+    fn puts_the_launcher_folder_on_the_user_path_and_undoes_it() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let user_path = Rc::new(FakeUserPath::holding("C:\\tools"));
+        let messages = messages_for(Locale::EnUs);
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let bin = launcher_folder(&setup);
+
+        setup.user_path = Some(user_path.clone());
+        setup.ensure_path(messages, &mut path_answer(true)).unwrap();
+
+        assert_eq!(
+            user_path.value.borrow().clone(),
+            Some(format!("{bin};C:\\tools"))
+        );
+        assert!(setup.journal.changes().contains(&Change {
+            kind: ChangeKind::UserPathChanged,
+            target: bin.clone(),
+        }));
+
+        setup.undo_everything(messages).unwrap();
+        drop(setup);
+
+        assert_eq!(user_path.value.borrow().as_deref(), Some("C:\\tools"));
+        assert!(
+            String::from_utf8(out)
+                .unwrap()
+                .contains(messages.user_path_added)
+        );
+    }
+
+    #[test]
+    fn keeps_the_user_path_that_already_has_the_launcher_folder() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(Locale::EnUs);
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let user_path = Rc::new(FakeUserPath::holding(&launcher_folder(&setup)));
+
+        setup.user_path = Some(user_path.clone());
+        setup.ensure_path(messages, &mut path_answer(true)).unwrap();
+        drop(setup);
+
+        assert!(user_path.writes.borrow().is_empty());
+        assert!(
+            String::from_utf8(out)
+                .unwrap()
+                .contains(messages.user_path_already)
+        );
+    }
+
+    #[test]
+    fn takes_the_launcher_folder_off_the_user_path_when_turned_off() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(Locale::EnUs);
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let bin = launcher_folder(&setup);
+        let user_path = Rc::new(FakeUserPath::holding(&format!("{bin};C:\\tools")));
+
+        setup.user_path = Some(user_path.clone());
+        setup.ensure_path(messages, &mut path_answer(true)).unwrap();
+        setup
+            .ensure_path(messages, &mut path_answer(false))
+            .unwrap();
+        drop(setup);
+
+        assert_eq!(user_path.value.borrow().as_deref(), Some("C:\\tools"));
+        assert!(
+            String::from_utf8(out)
+                .unwrap()
+                .contains(messages.user_path_removed)
+        );
+    }
+
+    #[test]
+    fn stops_with_the_error_when_the_user_path_cannot_be_written() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(Locale::EnUs);
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let user_path = Rc::new(FakeUserPath {
+            fails_to_write: true,
+            ..FakeUserPath::holding("C:\\tools")
+        });
+
+        setup.user_path = Some(user_path);
+
+        let stop = setup
+            .ensure_path(messages, &mut path_answer(true))
+            .unwrap_err();
+
+        assert_eq!(
+            format!("{stop:?}"),
+            format!(
+                "{:?}",
+                Stop::Failed((messages.user_path_failed)("permission denied"))
+            )
+        );
+    }
+
+    #[test]
+    fn takes_the_launcher_folder_off_the_user_path_on_uninstall() {
+        let folder = tempfile::tempdir().unwrap();
+        let bin = {
+            let var = |_: &str| None::<OsString>;
+            let (mut out, mut err) = (Vec::new(), Vec::new());
+            launcher_folder(&sandboxed(&var, folder.path(), &mut out, &mut err))
+        };
+        let user_path = Rc::new(FakeUserPath::holding(&format!("C:\\tools;{bin}")));
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+
+        setup.user_path = Some(user_path.clone());
+        setup.forget_user_path(messages_for(Locale::EnUs)).unwrap();
+        drop(setup);
+
+        assert_eq!(user_path.value.borrow().as_deref(), Some("C:\\tools"));
+    }
+
+    #[test]
+    fn skips_the_user_path_where_the_system_has_none() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+
+        setup.user_path = None;
+        setup.forget_user_path(messages_for(Locale::EnUs)).unwrap();
+        drop(setup);
+
+        assert_eq!(out, Vec::<u8>::new());
+        assert_eq!(err, Vec::<u8>::new());
+    }
+
+    #[test]
+    fn leaves_the_user_path_without_the_launcher_folder_untouched_on_uninstall() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let user_path = Rc::new(FakeUserPath::holding("C:\\tools"));
+
+        setup.user_path = Some(user_path.clone());
+        setup.forget_user_path(messages_for(Locale::EnUs)).unwrap();
+        drop(setup);
+
+        assert!(user_path.writes.borrow().is_empty());
+        assert_eq!(out, Vec::<u8>::new());
+        assert_eq!(err, Vec::<u8>::new());
     }
 
     fn tampered_journal(file: &Path) -> Journal {

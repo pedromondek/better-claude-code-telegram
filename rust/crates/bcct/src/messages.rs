@@ -49,6 +49,7 @@ pub struct ChangeKinds {
     pub plugin_installed: fn(&str) -> String,
     pub plugin_removed: fn(&str) -> String,
     pub tool_installed: fn(&str) -> String,
+    pub user_path_changed: fn(&str) -> String,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -515,6 +516,10 @@ pub struct Messages {
     pub path_already: fn(&str) -> String,
     pub path_removed: fn(&str) -> String,
     pub path_off: &'static str,
+    pub user_path_added: &'static str,
+    pub user_path_already: &'static str,
+    pub user_path_removed: &'static str,
+    pub user_path_failed: fn(&str) -> String,
     pub hook_write_failed: fn(&str, &str) -> String,
     pub hook_failed_often: fn(&str, u64, &str) -> String,
     pub hook_reasons: HookReasons,

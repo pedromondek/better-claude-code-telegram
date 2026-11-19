@@ -115,6 +115,7 @@ fn kind_name(kind: ChangeKind) -> &'static str {
         ChangeKind::PluginInstalled => "pluginInstalled",
         ChangeKind::PluginRemoved => "pluginRemoved",
         ChangeKind::ToolInstalled => "toolInstalled",
+        ChangeKind::UserPathChanged => "userPathChanged",
     }
 }
 

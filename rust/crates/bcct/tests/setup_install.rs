@@ -175,8 +175,11 @@ fn kind_name(kind: ChangeKind) -> &'static str {
         ChangeKind::MarketplaceAdded => "marketplaceAdded",
         ChangeKind::PluginInstalled => "pluginInstalled",
         ChangeKind::PluginRemoved => "pluginRemoved",
-        ChangeKind::FileCreated | ChangeKind::FileChanged | ChangeKind::DirCreated => {
-            panic!("the install step records no file change")
+        ChangeKind::FileCreated
+        | ChangeKind::FileChanged
+        | ChangeKind::DirCreated
+        | ChangeKind::UserPathChanged => {
+            panic!("the install step records no file or PATH change")
         }
     }
 }
