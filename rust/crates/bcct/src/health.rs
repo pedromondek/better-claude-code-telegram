@@ -346,6 +346,18 @@ fn readable(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+fn checked_home(
+    home_variable: Option<String>,
+    process_home: &Path,
+    windows: bool,
+) -> Option<String> {
+    if windows {
+        return Some(readable(process_home)).filter(|home| !home.is_empty());
+    }
+
+    home_variable
+}
+
 fn write_blocked(
     messages: &Messages,
     folder: &str,
@@ -589,7 +601,8 @@ impl Checks<'_> {
 
     fn shell(&self) -> Verdict {
         let detail = self.messages.health_detail;
-        let Some(home) = self.text_var("HOME") else {
+        let Some(home) = checked_home(self.text_var("HOME"), self.machine.home, cfg!(windows))
+        else {
             return failed(detail.no_home);
         };
         let shell = self.text_var("SHELL");
@@ -807,8 +820,7 @@ impl Checks<'_> {
 
     fn protection(&self) -> Verdict {
         let detail = self.messages.health_detail;
-        let home = self
-            .text_var("HOME")
+        let home = checked_home(self.text_var("HOME"), self.machine.home, cfg!(windows))
             .unwrap_or_else(|| readable(self.machine.home));
         let rule = env_deny_rule(&join_path(&self.paths.state_dir, ENV_FILE), &home);
         let settings = read_json(&self.paths.settings_file);
@@ -1222,6 +1234,35 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
 mod tests {
     use super::*;
     use crate::messages::{EN_US, PT_BR};
+
+    #[test]
+    fn uses_the_process_home_on_windows_over_a_posix_home_variable() {
+        let process_home = Path::new("C:\\Users\\x");
+
+        assert_eq!(
+            checked_home(Some("/c/Users/x".to_owned()), process_home, true),
+            Some("C:\\Users\\x".to_owned())
+        );
+        assert_eq!(
+            checked_home(None, process_home, true),
+            Some("C:\\Users\\x".to_owned())
+        );
+        assert_eq!(
+            checked_home(Some("/c/Users/x".to_owned()), Path::new(""), true),
+            None
+        );
+    }
+
+    #[test]
+    fn keeps_the_home_variable_outside_windows() {
+        let process_home = Path::new("/other");
+
+        assert_eq!(
+            checked_home(Some("/home/x".to_owned()), process_home, false),
+            Some("/home/x".to_owned())
+        );
+        assert_eq!(checked_home(None, process_home, false), None);
+    }
 
     const FOLDER: &str = "/app/pings";
 
