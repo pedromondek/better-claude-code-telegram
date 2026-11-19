@@ -502,10 +502,13 @@ fn run_operation(
             save_previous_statusline(&app_dir, &args["statusLine"], journal)
                 .map_err(ConfigError::File)
         }
-        "writeJsonAtomic" => {
-            bcct::settings::write_json_atomic(&paths.settings_file, object(&args["data"]), journal)
-                .map_err(ConfigError::File)
-        }
+        "writeJsonAtomic" => bcct::settings::write_json_atomic(
+            &paths.settings_file,
+            &app_dir,
+            object(&args["data"]),
+            journal,
+        )
+        .map_err(ConfigError::File),
         other => panic!("unknown operation {other}"),
     };
 

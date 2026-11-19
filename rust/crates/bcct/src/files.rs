@@ -34,9 +34,8 @@ pub fn read_json(path: &Path) -> Option<Value> {
     parse_json(&String::from_utf8_lossy(&bytes))
 }
 
-pub fn create_private_dir(path: &Path) -> io::Result<()> {
+fn private_dir_builder() -> fs::DirBuilder {
     let mut builder = fs::DirBuilder::new();
-    builder.recursive(true);
 
     #[cfg(unix)]
     {
@@ -44,7 +43,31 @@ pub fn create_private_dir(path: &Path) -> io::Result<()> {
         builder.mode(PRIVATE_DIR_MODE);
     }
 
-    builder.create(path)
+    builder
+}
+
+pub fn create_private_dir(path: &Path) -> io::Result<()> {
+    private_dir_builder().recursive(true).create(path)
+}
+
+pub fn create_private_child_dir(path: &Path) -> io::Result<()> {
+    match private_dir_builder().create(path) {
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists && path.is_dir() => Ok(()),
+        result => result,
+    }
+}
+
+pub fn open_private(path: &Path) -> io::Result<fs::File> {
+    let mut options = fs::File::options();
+    options.create(true).truncate(false).write(true);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(PRIVATE_FILE_MODE);
+    }
+
+    options.open(path)
 }
 
 pub fn write_private(path: &Path, contents: &[u8]) -> io::Result<()> {
@@ -174,6 +197,60 @@ mod tests {
             fs::metadata(&file).unwrap().permissions().mode() & 0o777,
             0o600
         );
+    }
+
+    #[test]
+    fn creates_only_the_last_folder_and_accepts_an_existing_one() {
+        let folder = tempfile::tempdir().unwrap();
+        let child = folder.path().join("locks");
+
+        create_private_child_dir(&child).unwrap();
+        create_private_child_dir(&child).unwrap();
+
+        assert!(child.is_dir());
+        assert!(create_private_child_dir(&folder.path().join("missing/locks")).is_err());
+        assert!(!folder.path().join("missing").exists());
+    }
+
+    #[test]
+    fn refuses_a_plain_file_where_the_folder_goes() {
+        let folder = tempfile::tempdir().unwrap();
+        let plain = folder.path().join("locks");
+        fs::write(&plain, "x").unwrap();
+
+        assert!(create_private_child_dir(&plain).is_err());
+        assert_eq!(fs::read_to_string(&plain).unwrap(), "x");
+    }
+
+    #[test]
+    fn opens_a_file_for_writing_without_emptying_it() {
+        let folder = tempfile::tempdir().unwrap();
+        let file = folder.path().join("settings.json.lock");
+
+        drop(open_private(&file).unwrap());
+        assert_eq!(fs::read(&file).unwrap(), Vec::<u8>::new());
+
+        fs::write(&file, "kept").unwrap();
+        open_private(&file).unwrap().write_all(b"K").unwrap();
+
+        assert_eq!(fs::read_to_string(&file).unwrap(), "Kept");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn creates_the_child_folder_and_the_opened_file_private() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let folder = tempfile::tempdir().unwrap();
+        let child = folder.path().join("locks");
+        let file = child.join("settings.json.lock");
+        let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+
+        create_private_child_dir(&child).unwrap();
+        drop(open_private(&file).unwrap());
+
+        assert_eq!(mode(&child), 0o700);
+        assert_eq!(mode(&file), 0o600);
     }
 
     #[cfg(unix)]

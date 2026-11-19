@@ -25,7 +25,6 @@ signal-hook.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 process_alive.workspace = true
-same-file.workspace = true
 
 [dev-dependencies]
 assert_cmd.workspace = true

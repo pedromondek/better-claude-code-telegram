@@ -217,6 +217,19 @@ pub(crate) fn materialize(root: &Path, files: &Value) {
     }
 }
 
+const SETTINGS_LOCK_FOLDER: &str = "locks";
+const SETTINGS_LOCK_FILE: &str = "settings.json.lock";
+
+fn holds_only_the_settings_lock(folder: &Path) -> bool {
+    folder
+        .file_name()
+        .is_some_and(|name| name == SETTINGS_LOCK_FOLDER)
+        && fs::read_dir(folder)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .eq([std::ffi::OsString::from(SETTINGS_LOCK_FILE)])
+}
+
 fn walk(root: &Path, folder: &Path, out: &mut Tree) {
     let mut names: Vec<_> = fs::read_dir(folder)
         .unwrap()
@@ -233,6 +246,10 @@ fn walk(root: &Path, folder: &Path, out: &mut Tree) {
             .into_owned();
         let metadata = fs::symlink_metadata(&full).unwrap();
         let mode = format!("{:o}", metadata.permissions().mode() & 0o777);
+
+        if metadata.is_dir() && holds_only_the_settings_lock(&full) {
+            continue;
+        }
 
         if metadata.is_dir() {
             out.insert(format!("{relative}/"), (None, mode));

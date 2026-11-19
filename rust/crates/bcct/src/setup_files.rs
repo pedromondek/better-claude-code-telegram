@@ -129,6 +129,14 @@ impl SetupFiles<'_> {
         self.settings_file.to_string_lossy().into_owned()
     }
 
+    fn save_settings(
+        &self,
+        settings: &Map<String, Value>,
+        journal: &mut Journal,
+    ) -> Result<(), FileFailure> {
+        write_json_atomic(self.settings_file, self.app_dir, settings, journal)
+    }
+
     fn env_rule(&self) -> (PathBuf, String) {
         let env_file = join_path(self.state_dir, ENV_FILE);
         let rule = env_deny_rule(&env_file, self.home);
@@ -450,7 +458,7 @@ pub fn apply_statusline(
             return Ok(());
         };
 
-        write_json_atomic(files.settings_file, &removed.settings, journal)?;
+        files.save_settings(&removed.settings, journal)?;
         printer.success(&removal_text(removed.restored, &name, messages));
 
         return Ok(());
@@ -472,22 +480,14 @@ pub fn apply_statusline(
             (command, messages.statusline_installed)
         };
 
-        write_json_atomic(
-            files.settings_file,
-            &with_status_line(&settings, &updated),
-            journal,
-        )?;
+        files.save_settings(&with_status_line(&settings, &updated), journal)?;
         printer.success(&text(&name));
         return Ok(());
     }
 
     if !current.is_some_and(js_truthy) {
         forget_statusline_customized(files.app_dir, journal)?;
-        write_json_atomic(
-            files.settings_file,
-            &with_status_line(&settings, &command),
-            journal,
-        )?;
+        files.save_settings(&with_status_line(&settings, &command), journal)?;
         printer.success(&(messages.statusline_installed)(&name));
         return Ok(());
     }
@@ -499,7 +499,7 @@ pub fn apply_statusline(
 
         forget_statusline_customized(files.app_dir, journal)?;
         save_previous_statusline(files.app_dir, &previous, journal)?;
-        write_json_atomic(files.settings_file, &chained, journal)?;
+        files.save_settings(&chained, journal)?;
         printer.success(&(messages.statusline_chained)(&name));
         return Ok(());
     }
@@ -512,7 +512,7 @@ pub fn apply_statusline(
         let replaced = with_status_line(&settings, &command);
 
         save_previous_statusline(files.app_dir, &previous, journal)?;
-        write_json_atomic(files.settings_file, &replaced, journal)?;
+        files.save_settings(&replaced, journal)?;
         printer.success(&(messages.statusline_replaced)(
             &name,
             &backup.to_string_lossy(),
@@ -544,7 +544,7 @@ pub fn ensure_env_denied(
         return Ok(());
     };
 
-    write_json_atomic(files.settings_file, &denied, journal)?;
+    files.save_settings(&denied, journal)?;
     printer.success(&(messages.env_protected)(&env_name, &name));
     Ok(())
 }
@@ -576,7 +576,7 @@ pub fn remove_our_settings(
     }
 
     match cleaned {
-        Some(cleaned) => Ok(write_json_atomic(files.settings_file, &cleaned, journal)?),
+        Some(cleaned) => Ok(files.save_settings(&cleaned, journal)?),
         None => Ok(()),
     }
 }

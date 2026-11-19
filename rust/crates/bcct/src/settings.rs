@@ -7,7 +7,7 @@ use jsonc_parser::ParseOptions;
 use jsonc_parser::cst::{CstArray, CstInputValue, CstNode, CstObject, CstObjectProp, CstRootNode};
 use serde_json::{Map, Value};
 
-use crate::files::{FileFailure, read_json};
+use crate::files::{FileFailure, create_private_child_dir, open_private, read_json};
 use crate::journal::{Journal, resolved_target};
 use crate::js::{
     format_number, join_path, js_number, js_string, js_truthy, ordered_entries, parse_json,
@@ -29,6 +29,7 @@ const PREVIEW_LIMIT: usize = 60;
 const NEW_FILE_MODE: u32 = 0o600;
 const LOCK_ATTEMPTS: usize = 50;
 const LOCK_POLL: Duration = Duration::from_millis(100);
+const SETTINGS_LOCK: &str = "locks/settings.json.lock";
 const INCLUDES_MISSING: &str = "deny.includes is not a function";
 const FILTER_MISSING: &str = "deny.filter is not a function";
 
@@ -481,58 +482,37 @@ pub fn settings_text(current: Option<&str>, settings: &Map<String, Value>) -> St
         .unwrap_or_else(|| format!("{}\n", stringify_pretty(&Value::Object(settings.clone()))))
 }
 
-fn same_file(file: &File, path: &Path) -> bool {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-
-        match (file.metadata(), fs::metadata(path)) {
-            (Ok(locked), Ok(current)) => {
-                locked.dev() == current.dev() && locked.ino() == current.ino()
-            }
-            _ => false,
-        }
-    }
-    #[cfg(windows)]
-    {
-        match (
-            file.try_clone().and_then(same_file::Handle::from_file),
-            same_file::Handle::from_path(path),
-        ) {
-            (Ok(locked), Ok(current)) => locked == current,
-            _ => false,
-        }
-    }
-    #[cfg(not(any(unix, windows)))]
-    {
-        let _ = (file, path);
-        true
-    }
+#[must_use]
+pub fn settings_lock_file(app_dir: &Path) -> PathBuf {
+    join_path(app_dir, SETTINGS_LOCK)
 }
 
-fn lock_attempt(result: &Result<(), TryLockError>, same: bool) -> LockAttempt {
+fn open_lock(lock: &Path) -> io::Result<File> {
+    create_private_child_dir(&folder_of(lock))?;
+    open_private(lock)
+}
+
+fn lock_attempt(result: &Result<(), TryLockError>) -> LockAttempt {
     match result {
-        Ok(()) if same => LockAttempt::Held,
-        Ok(()) | Err(TryLockError::WouldBlock) => LockAttempt::Busy,
+        Ok(()) => LockAttempt::Held,
+        Err(TryLockError::WouldBlock) => LockAttempt::Busy,
         Err(TryLockError::Error(_)) => LockAttempt::Failed,
     }
 }
 
-fn try_lock_current(file: &File, target: &Path) -> LockAttempt {
-    let result = file.try_lock();
-
-    lock_attempt(&result, same_file(file, target))
+fn try_lock(file: &File) -> LockAttempt {
+    lock_attempt(&file.try_lock())
 }
 
 fn lock_when_free(
-    target: &Path,
+    lock: &Path,
     attempts: usize,
-    attempt: &mut dyn FnMut(&File, &Path) -> LockAttempt,
+    attempt: &mut dyn FnMut(&File) -> LockAttempt,
 ) -> Option<File> {
-    for _ in 0..attempts {
-        let file = File::open(target).ok()?;
+    let file = open_lock(lock).ok()?;
 
-        match attempt(&file, target) {
+    for _ in 0..attempts {
+        match attempt(&file) {
             LockAttempt::Held => return Some(file),
             LockAttempt::Failed => return None,
             LockAttempt::Busy => std::thread::sleep(LOCK_POLL),
@@ -550,10 +530,11 @@ fn folder_of(path: &Path) -> PathBuf {
 
 fn write_locked(
     target: &Path,
+    lock: &Path,
     settings: &Map<String, Value>,
     lock_attempts: usize,
 ) -> io::Result<()> {
-    let _lock = lock_when_free(target, lock_attempts, &mut try_lock_current);
+    let _lock = lock_when_free(lock, lock_attempts, &mut try_lock);
     let contents = settings_text(read_text(target).as_deref(), settings);
     let mut temporary = tempfile::Builder::new()
         .prefix(".bcct-")
@@ -580,11 +561,18 @@ fn write_locked(
 
 pub fn write_json_atomic(
     file: &Path,
+    app_dir: &Path,
     settings: &Map<String, Value>,
     journal: &mut Journal,
 ) -> Result<(), FileFailure> {
     journal.track_file(file).map_err(not_saved(file))?;
-    write_locked(&resolved_target(file), settings, LOCK_ATTEMPTS).map_err(not_saved(file))
+    write_locked(
+        &resolved_target(file),
+        &settings_lock_file(app_dir),
+        settings,
+        LOCK_ATTEMPTS,
+    )
+    .map_err(not_saved(file))
 }
 
 #[cfg(test)]
@@ -911,15 +899,50 @@ mod tests {
         assert_eq!(root.to_string(), "{\n  \"b\": 2,\n  \"\\x\": 1\n}\n");
     }
 
-    #[test]
-    fn a_writer_waits_while_another_holds_the_lock() {
+    struct LockedSettings {
+        _folder: tempfile::TempDir,
+        file: PathBuf,
+        app_dir: PathBuf,
+        lock: PathBuf,
+    }
+
+    fn locked_settings(text: &str) -> LockedSettings {
         let folder = tempfile::tempdir().unwrap();
         let file = folder.path().join("settings.json");
-        fs::write(&file, "{\"a\":0}").unwrap();
-        let holder = File::open(&file).unwrap();
+        let app_dir = folder.path().join("app");
+        fs::write(&file, text).unwrap();
+        fs::create_dir(&app_dir).unwrap();
+        let lock = settings_lock_file(&app_dir);
+
+        LockedSettings {
+            _folder: folder,
+            file,
+            app_dir,
+            lock,
+        }
+    }
+
+    fn held_lock(lock: &Path) -> File {
+        let holder = open_lock(lock).unwrap();
         holder.lock().unwrap();
-        let target = file.clone();
-        let writer = std::thread::spawn(move || write_locked(&target, &map(json!({"a": 1})), 100));
+        holder
+    }
+
+    #[test]
+    fn keeps_the_lock_file_inside_the_locks_folder_of_the_app_folder() {
+        assert_eq!(
+            settings_lock_file(Path::new("/a")),
+            PathBuf::from("/a/locks/settings.json.lock")
+        );
+    }
+
+    #[test]
+    fn waits_while_another_writer_holds_the_lock_and_leaves_the_settings_readable() {
+        let settings = locked_settings("{\"a\":0}");
+        let holder = held_lock(&settings.lock);
+        let (target, lock) = (settings.file.clone(), settings.lock.clone());
+        let writer =
+            std::thread::spawn(move || write_locked(&target, &lock, &map(json!({"a": 1})), 100));
         let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
 
         while !writer.is_finished() && std::time::Instant::now() < deadline {
@@ -927,71 +950,86 @@ mod tests {
         }
 
         assert!(!writer.is_finished());
-        assert_eq!(fs::read_to_string(&file).unwrap(), "{\"a\":0}");
+        assert_eq!(fs::read_to_string(&settings.file).unwrap(), "{\"a\":0}");
 
         holder.unlock().unwrap();
         writer.join().unwrap().unwrap();
 
-        assert_eq!(fs::read_to_string(&file).unwrap(), "{\"a\":1}");
+        assert_eq!(fs::read_to_string(&settings.file).unwrap(), "{\"a\":1}");
     }
 
     #[test]
-    fn a_writer_that_never_gets_the_lock_writes_anyway() {
-        let folder = tempfile::tempdir().unwrap();
-        let file = folder.path().join("settings.json");
-        fs::write(&file, "{\"a\":0}").unwrap();
-        let holder = File::open(&file).unwrap();
-        holder.lock().unwrap();
+    fn writes_anyway_when_the_lock_never_comes_free() {
+        let settings = locked_settings("{\"a\":0}");
+        let holder = held_lock(&settings.lock);
 
-        write_locked(&file, &map(json!({"a": 1})), 2).unwrap();
+        write_locked(&settings.file, &settings.lock, &map(json!({"a": 1})), 2).unwrap();
 
-        assert_eq!(fs::read_to_string(&file).unwrap(), "{\"a\":1}");
+        assert_eq!(fs::read_to_string(&settings.file).unwrap(), "{\"a\":1}");
         holder.unlock().unwrap();
     }
 
     #[test]
-    fn a_locked_file_is_the_same_only_while_the_path_still_points_to_it() {
-        let folder = tempfile::tempdir().unwrap();
-        let file = folder.path().join("settings.json");
-        fs::write(&file, "{}").unwrap();
-        let opened = File::open(&file).unwrap();
+    fn keeps_the_comments_of_the_settings_while_holding_the_lock() {
+        let settings = locked_settings("{\n  // mine\n  \"a\": 0\n}\n");
 
-        assert!(same_file(&opened, &file));
+        write_locked(&settings.file, &settings.lock, &map(json!({"a": 1})), 2).unwrap();
 
-        let replacement = folder.path().join("replacement.json");
-        fs::write(&replacement, "{}").unwrap();
-        fs::rename(&replacement, &file).unwrap();
+        assert_eq!(
+            fs::read_to_string(&settings.file).unwrap(),
+            "{\n  // mine\n  \"a\": 1\n}\n"
+        );
+    }
 
-        assert!(!same_file(&opened, &file));
-        assert!(same_file(&File::open(&file).unwrap(), &file));
+    #[test]
+    fn creates_the_locks_folder_and_keeps_the_empty_lock_file_after_writing() {
+        let settings = locked_settings("{}");
 
-        fs::remove_file(&file).unwrap();
+        write_locked(&settings.file, &settings.lock, &map(json!({"a": 1})), 2).unwrap();
+        write_locked(&settings.file, &settings.lock, &map(json!({"a": 2})), 2).unwrap();
 
-        assert!(!same_file(&opened, &file));
+        assert_eq!(fs::read(&settings.lock).unwrap(), Vec::<u8>::new());
+        assert_eq!(
+            fs::read_to_string(&settings.file).unwrap(),
+            "{\n  \"a\": 2\n}"
+        );
+    }
+
+    #[test]
+    fn writes_without_a_lock_and_without_creating_a_missing_app_folder() {
+        let settings = locked_settings("{}");
+        let missing = settings.app_dir.join("missing");
+        let lock = settings_lock_file(&missing);
+        let started = std::time::Instant::now();
+
+        write_locked(&settings.file, &lock, &map(json!({"a": 1})), 50).unwrap();
+
+        assert!(!missing.exists());
+        assert!(started.elapsed() < LOCK_POLL * 50);
+        assert_eq!(
+            fs::read_to_string(&settings.file).unwrap(),
+            "{\n  \"a\": 1\n}"
+        );
     }
 
     #[test]
     fn each_result_of_the_lock_says_what_to_do_next() {
         let failure = || TryLockError::Error(io::ErrorKind::Unsupported.into());
 
-        assert_eq!(lock_attempt(&Ok(()), true), LockAttempt::Held);
-        assert_eq!(lock_attempt(&Ok(()), false), LockAttempt::Busy);
+        assert_eq!(lock_attempt(&Ok(())), LockAttempt::Held);
         assert_eq!(
-            lock_attempt(&Err(TryLockError::WouldBlock), true),
+            lock_attempt(&Err(TryLockError::WouldBlock)),
             LockAttempt::Busy
         );
-        assert_eq!(lock_attempt(&Err(failure()), true), LockAttempt::Failed);
-        assert_eq!(lock_attempt(&Err(failure()), false), LockAttempt::Failed);
+        assert_eq!(lock_attempt(&Err(failure())), LockAttempt::Failed);
     }
 
     #[test]
     fn the_lock_is_tried_until_the_limit_and_a_failure_ends_the_wait() {
-        let folder = tempfile::tempdir().unwrap();
-        let file = folder.path().join("settings.json");
-        fs::write(&file, "{}").unwrap();
+        let settings = locked_settings("{}");
         let attempts_until = |results: &[LockAttempt], limit: usize| {
             let mut calls = 0;
-            let held = lock_when_free(&file, limit, &mut |_, _| {
+            let held = lock_when_free(&settings.lock, limit, &mut |_| {
                 calls += 1;
                 results[calls - 1]
             });
@@ -1011,50 +1049,39 @@ mod tests {
     }
 
     #[test]
-    fn a_file_that_cannot_be_opened_has_no_lock_to_wait_for() {
-        let folder = tempfile::tempdir().unwrap();
-        let file = folder.path().join("settings.json");
-        fs::write(&file, "{}").unwrap();
+    fn gives_no_lock_when_the_lock_file_cannot_be_opened() {
+        let settings = locked_settings("{}");
         let started = std::time::Instant::now();
 
-        assert!(lock_when_free(&file.join("inside"), 50, &mut try_lock_current).is_none());
-        assert!(
-            lock_when_free(&folder.path().join("missing"), 50, &mut try_lock_current).is_none()
-        );
+        assert!(lock_when_free(&settings.file.join("inside"), 50, &mut try_lock).is_none());
+        assert!(lock_when_free(&settings.app_dir, 50, &mut try_lock).is_none());
         assert!(started.elapsed() < LOCK_POLL * 50);
     }
 
     #[test]
-    fn a_file_replaced_while_waiting_is_opened_again() {
-        let folder = tempfile::tempdir().unwrap();
-        let file = folder.path().join("settings.json");
-        fs::write(&file, "{}").unwrap();
-        let stale = File::open(&file).unwrap();
-        let replacement = folder.path().join("replacement.json");
-        fs::write(&replacement, "{}").unwrap();
-        fs::rename(&replacement, &file).unwrap();
+    fn locks_the_lock_file_against_another_handle() {
+        let settings = locked_settings("{}");
+        let held = lock_when_free(&settings.lock, 2, &mut try_lock).unwrap();
 
-        assert_eq!(try_lock_current(&stale, &file), LockAttempt::Busy);
-        stale.unlock().unwrap();
-
-        let held = lock_when_free(&file, 2, &mut try_lock_current).unwrap();
-
-        assert!(same_file(&held, &file));
         assert_eq!(
-            try_lock_current(&File::open(&file).unwrap(), &file),
+            try_lock(&open_lock(&settings.lock).unwrap()),
             LockAttempt::Busy
+        );
+        held.unlock().unwrap();
+        assert_eq!(
+            try_lock(&open_lock(&settings.lock).unwrap()),
+            LockAttempt::Held
         );
     }
 
     #[test]
-    fn a_target_that_cannot_be_opened_or_read_fails() {
-        let folder = tempfile::tempdir().unwrap();
-        let file = folder.path().join("plain");
-        fs::write(&file, "x").unwrap();
+    fn fails_when_the_target_cannot_be_opened_or_read() {
+        let settings = locked_settings("x");
+        let lock = &settings.lock;
 
-        assert!(write_locked(&file.join("settings.json"), &Map::new(), 1).is_err());
-        assert!(write_locked(folder.path(), &Map::new(), 1).is_err());
-        assert_eq!(fs::read_to_string(&file).unwrap(), "x");
+        assert!(write_locked(&settings.file.join("settings.json"), lock, &Map::new(), 1).is_err());
+        assert!(write_locked(&settings.app_dir, lock, &Map::new(), 1).is_err());
+        assert_eq!(fs::read_to_string(&settings.file).unwrap(), "x");
     }
 
     #[test]
