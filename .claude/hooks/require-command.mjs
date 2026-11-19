@@ -1,9 +1,12 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PROJECT_COMMANDS = new Set(["commit"]);
+const BRANCH_REVIEW_COMMAND = "pre-pr";
+const PR_HEAD_OPTIONS = new Set(["--head", "-H"]);
 const SEGMENT_SEPARATOR = /&&|\|\||;|\||\n|(?<![<>])&(?!>)/;
 const HEREDOC_START = /(?<!<)<<(?!<)(-?)\s*(["']?)([\w-]+)\2/g;
 const GIT_OPTIONS_WITH_VALUE = new Set([
@@ -20,21 +23,33 @@ const COMMIT_INTENT = [
   /^(?:please\s+|go\s+ahead\s+and\s+)?(?:commit|push)\b/,
   /\b(?:and|then|please|can you|could you|go ahead and)\s+(?:commit|push)\b/,
   /\b(?:make|create|do)\s+(?:a\s+|the\s+)?(?:commits?|push)\b/,
-  /\b(?:open|create|make)\s+(?:a\s+|the\s+)?(?:pr|pull request)\b/,
   /\bcommit(?:a|ar|e|em|amos)\b/,
   /\b(?:faz|fazer|faca|de|da|dar)\s+(?:o\s+|um\s+|os\s+)?commits?\b/,
   /\b(?:faz|fazer|faca|de|da|dar)\s+(?:o\s+|um\s+)?push\b/,
   /\bempurr(?:a|ar|e)\b/,
   /\bsob(?:e|ir)\s+(?:as\s+|os\s+)?(?:mudancas|alteracoes|commits)\b/,
 ];
+const PR_INTENT = [
+  /\b(?:open|create|make)\s+(?:a\s+|the\s+)?(?:pr|pull request)\b/,
+  /\b(?:cri|abr)(?:a|e|ar|ir|am)\s+(?:a\s+|o\s+|uma\s+|um\s+)?(?:nova\s+|novo\s+)?(?:prs?|pull\s+requests?)\b/,
+];
 
 const RESUME_HINT =
   "If the command was already in progress and a message from the dev (such as the approval of a draft) ended it, call the Skill again and resume from the step where it stopped.";
 
-const DENY_REASON = `Commit, push and PR go through /commit: call the Skill \`commit\` instead of running the command directly. It builds the plan by topic, asks for approval and validates each commit before the push. ${RESUME_HINT}`;
+const DENY_REASONS = {
+  commit: `Commit and push go through /commit: call the Skill \`commit\` instead of running the command directly. It builds the plan by topic, asks for approval and validates each commit before the push. ${RESUME_HINT}`,
+  [BRANCH_REVIEW_COMMAND]:
+    "A PR only opens after /pre-pr on the branch: call the Skill `pre-pr`, which reviews the whole branch and ends by opening the PR through /commit. It holds for the branch it ran on until the session ends, so the PR that /commit opens after it goes through.",
+};
 
-const REMINDER =
-  "The message may be a request to commit or push. If it is, call the Skill `commit` before any git commit, git push, npm run commit or gh pr create. First analyze the context of the conversation: the word alone is not enough. When in doubt, ask the dev instead of calling the command.";
+const CONTEXT_CHECK =
+  "First analyze the context of the conversation: the word alone is not enough. When in doubt, ask the dev instead of calling the command.";
+
+const REMINDERS = {
+  commit: `The message may be a request to commit or push. If it is, call the Skill \`commit\` before any git commit, git push or npm run commit. ${CONTEXT_CHECK}`,
+  [BRANCH_REVIEW_COMMAND]: `The message may be a request to open the PR. If it is, call the Skill \`pre-pr\`, which reviews the whole branch and ends by opening the PR through /commit, before any gh pr create. ${CONTEXT_CHECK}`,
+};
 
 async function readHookInput() {
   const chunks = [];
@@ -66,15 +81,54 @@ function readActive(sessionId) {
   }
 }
 
-function writeActive(sessionId, commands) {
+function writeState(file, value) {
   try {
-    const file = stateFile(sessionId);
-
     mkdirSync(join(file, ".."), { recursive: true });
-    writeFileSync(file, JSON.stringify(commands));
+    writeFileSync(file, JSON.stringify(value));
   } catch {
     return;
   }
+}
+
+function writeActive(sessionId, commands) {
+  writeState(stateFile(sessionId), commands);
+}
+
+function reviewedBranchesFile(sessionId) {
+  return `${stateFile(sessionId)}.${BRANCH_REVIEW_COMMAND}`;
+}
+
+function readReviewedBranches(sessionId) {
+  try {
+    return JSON.parse(readFileSync(reviewedBranchesFile(sessionId), "utf8"));
+  } catch {
+    return [];
+  }
+}
+
+function currentBranch(cwd) {
+  const env = { ...process.env };
+
+  delete env.GIT_DIR;
+  delete env.GIT_WORK_TREE;
+
+  const result = spawnSync(
+    "git",
+    ["symbolic-ref", "--quiet", "--short", "HEAD"],
+    { cwd: cwd ?? process.cwd(), encoding: "utf8", env },
+  );
+
+  return result.status === 0 ? result.stdout.trim() : undefined;
+}
+
+function markBranchReviewed(sessionId, cwd) {
+  const branch = currentBranch(cwd);
+
+  if (branch === undefined) return;
+
+  writeState(reviewedBranchesFile(sessionId), [
+    ...new Set([...readReviewedBranches(sessionId), branch]),
+  ]);
 }
 
 function withoutHeredocBodies(command) {
@@ -169,45 +223,87 @@ function npmScript(args) {
   return args.slice(1).find((token) => !token.startsWith("-"));
 }
 
-function ghRequiresCommit(args) {
-  const [resource, action] = args;
+function prHead(args) {
+  for (let index = 0; index < args.length; index += 1) {
+    if (PR_HEAD_OPTIONS.has(args[index])) return args[index + 1];
+    if (args[index].startsWith("--head=")) {
+      return args[index].slice("--head=".length);
+    }
+  }
 
-  return resource === "pr" && action === "create";
+  return undefined;
 }
 
-function requiresCommit(segment) {
+function ghRequirement(args) {
+  const [resource, action, ...rest] = args;
+
+  return resource === "pr" && action === "create"
+    ? { pullRequest: prHead(rest) }
+    : undefined;
+}
+
+function requiredCommand(segment) {
   const [program, ...args] = skipEnvPrefix(segment.trim().split(/\s+/));
 
   if (program === "git") {
     const subcommand = gitSubcommand(args);
 
-    return subcommand === "commit" || subcommand === "push";
+    return subcommand === "commit" || subcommand === "push"
+      ? "commit"
+      : undefined;
   }
-  if (program === "npm") return COMMIT_SCRIPTS.has(npmScript(args));
-  if (program === "gh") return ghRequiresCommit(args);
+  if (program === "npm") {
+    return COMMIT_SCRIPTS.has(npmScript(args)) ? "commit" : undefined;
+  }
+  if (program === "gh") return ghRequirement(args);
 
-  return false;
+  return undefined;
 }
 
-function deny() {
+function deny(command) {
   return {
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
-      permissionDecisionReason: DENY_REASON,
+      permissionDecisionReason: DENY_REASONS[command],
     },
   };
 }
 
-function onBash(sessionId, command) {
-  const blocked = shellSegments(String(command ?? "")).some(requiresCommit);
+function missingForPullRequest(sessionId, cwd, active, head) {
+  const branch = head ?? currentBranch(cwd);
 
-  return blocked && !readActive(sessionId).includes("commit")
-    ? deny()
-    : undefined;
+  if (
+    branch === undefined ||
+    !readReviewedBranches(sessionId).includes(branch)
+  ) {
+    return BRANCH_REVIEW_COMMAND;
+  }
+
+  return active.includes("commit") ? undefined : "commit";
 }
 
-function onSkill(sessionId, skill) {
+function missingCommand(sessionId, cwd, active, needed) {
+  if (needed === undefined) return undefined;
+  if (typeof needed === "object") {
+    return missingForPullRequest(sessionId, cwd, active, needed.pullRequest);
+  }
+
+  return active.includes(needed) ? undefined : needed;
+}
+
+function onBash(sessionId, cwd, command) {
+  const active = readActive(sessionId);
+  const missing = shellSegments(String(command ?? ""))
+    .map((segment) =>
+      missingCommand(sessionId, cwd, active, requiredCommand(segment)),
+    )
+    .find((needed) => needed !== undefined);
+
+  return missing === undefined ? undefined : deny(missing);
+}
+
+function onSkill(sessionId, cwd, skill) {
   const name = String(skill ?? "")
     .split(":")
     .at(-1);
@@ -215,6 +311,7 @@ function onSkill(sessionId, skill) {
   if (PROJECT_COMMANDS.has(name)) {
     writeActive(sessionId, [...new Set([...readActive(sessionId), name])]);
   }
+  if (name === BRANCH_REVIEW_COMMAND) markBranchReviewed(sessionId, cwd);
 
   return undefined;
 }
@@ -226,38 +323,48 @@ function normalized(text) {
     .toLowerCase();
 }
 
-function onPrompt(sessionId, prompt) {
+function onPrompt(sessionId, cwd, prompt) {
   const text = String(prompt ?? "").trim();
-  const typed = /^\/(commit)\b/.exec(text)?.[1];
+  const typed = /^\/(commit|pre-pr)(?![\w-])/.exec(text)?.[1];
 
-  writeActive(sessionId, typed === undefined ? [] : [typed]);
+  writeActive(sessionId, PROJECT_COMMANDS.has(typed) ? [typed] : []);
+  if (typed === BRANCH_REVIEW_COMMAND) markBranchReviewed(sessionId, cwd);
 
   if (text.startsWith("/")) return undefined;
 
   const plain = normalized(text);
+  const reminders = [
+    ...(COMMIT_INTENT.some((pattern) => pattern.test(plain))
+      ? [REMINDERS.commit]
+      : []),
+    ...(PR_INTENT.some((pattern) => pattern.test(plain))
+      ? [REMINDERS[BRANCH_REVIEW_COMMAND]]
+      : []),
+  ];
 
-  return COMMIT_INTENT.some((pattern) => pattern.test(plain))
-    ? {
+  return reminders.length === 0
+    ? undefined
+    : {
         hookSpecificOutput: {
           hookEventName: "UserPromptSubmit",
-          additionalContext: REMINDER,
+          additionalContext: reminders.join("\n"),
         },
-      }
-    : undefined;
+      };
 }
 
 function respond(input) {
   const sessionId = input?.session_id ?? "no-session";
+  const cwd = input?.cwd;
 
   if (input?.hook_event_name === "UserPromptSubmit") {
-    return onPrompt(sessionId, input.prompt);
+    return onPrompt(sessionId, cwd, input.prompt);
   }
   if (input?.hook_event_name !== "PreToolUse") return undefined;
   if (input.tool_name === "Skill") {
-    return onSkill(sessionId, input.tool_input?.skill);
+    return onSkill(sessionId, cwd, input.tool_input?.skill);
   }
   if (input.tool_name === "Bash") {
-    return onBash(sessionId, input.tool_input?.command);
+    return onBash(sessionId, cwd, input.tool_input?.command);
   }
 
   return undefined;

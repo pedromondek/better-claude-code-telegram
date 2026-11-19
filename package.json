@@ -94,6 +94,7 @@
     "test:cov:changed": "node scripts/coverage-changed-lines.mjs",
     "test:cov:ratchet": "node scripts/coverage-ratchet.mjs",
     "test:hooks": "vitest run .husky",
+    "test:workflows": "node scripts/test-workflows.mjs",
     "test:mutation": "node scripts/stryker-run.mjs run",
     "test:mutation:changed": "node scripts/mutation-changed.mjs",
     "test:mutation:prepush": "node scripts/mutation-prepush.mjs",

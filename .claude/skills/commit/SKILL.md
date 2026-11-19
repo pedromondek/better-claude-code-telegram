@@ -4,11 +4,11 @@ description: Use whenever the user asks to commit, push, ship or update a PR. Sp
 argument-hint: "[stage | autonomous] [theme or scope, optional] [resume from step <n>]"
 ---
 
-Organizes the changes into commits per theme, validates each commit, pushes per theme and keeps the PR body up to date. Run it after `/pre-commit`, which leaves the change verified. No git operation that changes state runs without approval.
+Organizes the changes into commits per theme, validates each commit, pushes per theme and keeps the PR body up to date. Run it after `/pre-pr`, which leaves the branch verified. No git operation that changes state runs without approval.
 
 If `.claude/rules/git.md` exists in this clone, read it first. This skill is complete without it.
 
-Commit, push and PR always go through this skill: the hook `.claude/hooks/require-command.mjs` blocks `git commit`, `git push`, `npm run commit`, `npm run fixup:fuse` and `gh pr create` unless the `commit` skill was invoked in the turn, and reminds you to call it when the request mentions committing or pushing.
+Commit, push and PR always go through this skill: the hook `.claude/hooks/require-command.mjs` blocks `git commit`, `git push`, `npm run commit`, `npm run fixup:fuse` and `gh pr create` unless the `commit` skill was invoked in the turn, and reminds you to call it when the request mentions committing or pushing. `gh pr create` also needs `/pre-pr` to have run on the branch in the session; without it, call `/pre-pr`, which ends by calling this skill.
 
 Every new user message ends the skill in the hook: a prose approval, the "I committed" of stage mode, an adjustment asked mid-plan. Before the next `git commit`, `git push` or `gh pr create`, call the `commit` skill again with "resume from step <n>", the mode, the autonomous scope and the approved plan as the argument, and continue from there without redoing the survey.
 
@@ -43,7 +43,7 @@ Survey without changing anything:
 
 The issue of the branch comes from its name: `0042-short-title` is issue #42 (`npm run branch -- check <name>` checks the pattern). A branch outside the pattern (other than `main`, `revert/*`, `dependabot/*` and the version branch `release/v<version>` that the prepare release workflow opens) is refused by the hooks: propose `npm run branch -- <issue number>` (or `npm run branch -- "<title>"` to open an issue and the branch together) instead of committing there.
 
-If `/pre-commit` did not run on these changes, offer to run it first. Weigh what is already ahead of the remote (`git diff --stat @{upstream}..HEAD`: changed sources, test support files, dependencies or config all force the mutation run over everything) and, if it is already heavy, recommend pushing before committing more. About 10 commits is a reference, not a limit.
+If `/pre-pr` did not run on these changes, offer to run it first. Weigh what is already ahead of the remote (`git diff --stat @{upstream}..HEAD`: changed sources, test support files, dependencies or config all force the mutation run over everything) and, if it is already heavy, recommend pushing before committing more. About 10 commits is a reference, not a limit.
 
 ## 2. Commit plan
 

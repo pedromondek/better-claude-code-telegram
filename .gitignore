@@ -42,6 +42,11 @@ docs/dev/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .claude/rules/
+.claude/skills/cr/
+.claude/skills/pre-pr/
+.claude/agents/
+.claude/workflows/
+docs/cr/
 .claude/worktrees/
 .claude/plans/
 CLAUDE.local.md
