@@ -161,4 +161,14 @@ mod tests {
             Some(PathBuf::from("/a/uv.EXE"))
         );
     }
+
+    #[test]
+    fn skips_an_empty_name_or_a_path_even_when_a_folder_has_a_match() {
+        let is_file = existing(&["/a/.exe", "/a/b/uv.exe"]);
+        let path = folders(&["/a"]);
+
+        assert_eq!(find_program("", &path, None, &is_file), None);
+        assert_eq!(find_program("b/uv", &path, None, &is_file), None);
+        assert_eq!(find_program("b\\uv", &path, None, &is_file), None);
+    }
 }
