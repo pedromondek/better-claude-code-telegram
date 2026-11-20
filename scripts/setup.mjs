@@ -454,8 +454,16 @@ export function shellRcFiles({
   };
 }
 
+function rcLineActive(rcText, shellFile) {
+  return rcText
+    .split("\n")
+    .some(
+      (line) => line.includes(shellFile) && !line.trimStart().startsWith("#"),
+    );
+}
+
 export function withShellBlock(rcText, shellFile) {
-  if (rcLoadsShellFile(rcText, shellFile)) return null;
+  if (rcLineActive(rcText, shellFile)) return null;
 
   const block = `${SHELL_MARKER}\n${sourceLine(shellFile)}\n`;
 
@@ -713,12 +721,27 @@ export function withStatusline(settings, command) {
   return { ...settings, statusLine: { type: "command", command } };
 }
 
-export function envDenyRule(envFile, home = homedir()) {
-  const homePrefix = `${home}/`;
+function rulePath(path, platform) {
+  if (platform !== "win32") return path;
 
-  return envFile.startsWith(homePrefix)
-    ? `Read(~/${envFile.slice(homePrefix.length)})`
-    : `Read(/${envFile})`;
+  const slashed = path.replaceAll("\\", "/");
+
+  return /^[a-z]:/i.test(slashed)
+    ? `/${slashed[0].toLowerCase()}${slashed.slice(2)}`
+    : slashed;
+}
+
+export function envDenyRule(
+  envFile,
+  home = homedir(),
+  platform = process.platform,
+) {
+  const file = rulePath(envFile, platform);
+  const homePrefix = `${rulePath(home, platform)}/`;
+
+  return file.startsWith(homePrefix)
+    ? `Read(~/${file.slice(homePrefix.length)})`
+    : `Read(/${file})`;
 }
 
 export function withEnvDenied(settings, rule) {
@@ -891,7 +914,12 @@ async function questionOnTerminal(prompt, messages, input, output) {
   try {
     return await readline.question(prompt, { signal: controller.signal });
   } catch (error) {
-    throw controller.signal.aborted ? cancelledError(messages) : error;
+    if (controller.signal.aborted) throw cancelledError(messages);
+    if (error?.name === "AbortError") {
+      throw new Error(messages.aborted, { cause: error });
+    }
+
+    throw error;
   } finally {
     readline.close();
   }
@@ -2311,7 +2339,7 @@ function createWhisperEnv(venvDir, messages) {
     showingProgress(messages.whisperEnvCreating, () =>
       runOrThrow(
         "uv",
-        ["venv", venvDir, "--python", "python3", "-q"],
+        ["venv", venvDir, "--python", "python3", "--clear", "-q"],
         "uv venv",
         messages,
       ),

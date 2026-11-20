@@ -633,6 +633,21 @@ describe("withShellBlock", () => {
   it("returns null when the file already loads the function", () => {
     expect(withShellBlock(`x\n${block}`, "/repo/shell.sh")).toBeNull();
   });
+
+  it("appends the marked line when the line that loads the file is commented out", () => {
+    const line = sourceLine("/repo/shell.sh");
+
+    expect(withShellBlock(`x=1\n# ${line}\n`, "/repo/shell.sh")).toBe(
+      `x=1\n# ${line}\n\n${block}`,
+    );
+    expect(withShellBlock(`  #${line}`, "/repo/shell.sh")).toBe(
+      `  #${line}\n\n${block}`,
+    );
+    expect(withShellBlock(`# old\n  ${line}\n`, "/repo/shell.sh")).toBeNull();
+    expect(
+      withShellBlock(`${line}\n# /repo/shell.sh`, "/repo/shell.sh"),
+    ).toBeNull();
+  });
 });
 
 describe("withoutShellBlock", () => {
@@ -666,6 +681,30 @@ describe("envDenyRule, withEnvDenied and withoutEnvDenied", () => {
     ).toBe("Read(~/.claude/channels/telegram/.env)");
     expect(envDenyRule("/srv/telegram/.env", "/home/dev")).toBe(
       "Read(//srv/telegram/.env)",
+    );
+  });
+
+  it("writes the rule in the POSIX form Claude Code matches on Windows", () => {
+    const win32 = (envFile, home) => envDenyRule(envFile, home, "win32");
+
+    expect(
+      win32("C:\\Users\\x\\.claude\\channels\\telegram\\.env", "C:\\Users\\x"),
+    ).toBe("Read(~/.claude/channels/telegram/.env)");
+    expect(win32("D:\\state\\.env", "C:\\Users\\x")).toBe(
+      "Read(//d/state/.env)",
+    );
+    expect(win32("c:/Users/x/.env", "C:\\Users\\x")).toBe("Read(~/.env)");
+    expect(win32("state\\.env", "C:\\Users\\x")).toBe("Read(/state/.env)");
+    expect(win32("1:\\state\\.env", "")).toBe("Read(/1:/state/.env)");
+    expect(win32("", "")).toBe("Read(/)");
+  });
+
+  it("keeps the backslashes and the drive outside Windows", () => {
+    expect(envDenyRule("C:\\x\\.env", "C:", "linux")).toBe(
+      "Read(/C:\\x\\.env)",
+    );
+    expect(envDenyRule("/home/dev/.env", "/home/dev", "darwin")).toBe(
+      "Read(~/.env)",
     );
   });
 
@@ -1425,6 +1464,53 @@ describe("createPrompter without a terminal", () => {
     await expect(prompter.line("Minutes? ", MESSAGES["en-us"])).rejects.toThrow(
       MESSAGES["en-us"].cancelled,
     );
+  });
+});
+
+describe("createPrompter on a terminal", () => {
+  function terminalPrompter() {
+    const input = new PassThrough();
+    const output = new PassThrough();
+
+    input.isTTY = true;
+    input.setRawMode = () => {};
+    output.isTTY = true;
+    output.columns = 80;
+    output.resume();
+
+    return { prompter: createPrompter({ input, output }), input };
+  }
+
+  it("aborts in the language of the setup on Ctrl+D with nothing typed", async () => {
+    for (const locale of ["en-us", "pt-br"]) {
+      const { prompter, input } = terminalPrompter();
+      const answer = prompter.line("Minutes? ", MESSAGES[locale]);
+
+      input.write("\u0004");
+
+      await expect(answer).rejects.toThrow(MESSAGES[locale].aborted);
+    }
+
+    expect([MESSAGES["en-us"].aborted, MESSAGES["pt-br"].aborted]).toEqual([
+      "Aborted with Ctrl+D",
+      "Interrompido com Ctrl+D",
+    ]);
+  });
+
+  it("cancels on Ctrl+C and answers the typed line on Enter", async () => {
+    const cancelled = terminalPrompter();
+    const stopped = cancelled.prompter.line("Minutes? ", MESSAGES["pt-br"]);
+
+    cancelled.input.write("\u0003");
+
+    await expect(stopped).rejects.toThrow(MESSAGES["pt-br"].cancelled);
+
+    const typed = terminalPrompter();
+    const answer = typed.prompter.line("Minutes? ", MESSAGES["en-us"]);
+
+    typed.input.write("4\r");
+
+    await expect(answer).resolves.toBe("4");
   });
 });
 
