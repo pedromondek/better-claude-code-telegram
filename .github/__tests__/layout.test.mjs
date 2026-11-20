@@ -29,6 +29,7 @@ const EXTRA_PERMISSIONS = {
     contents: "read",
     "pull-requests": "write",
   },
+  "manage-ci-cache.yml > delete": { contents: "read", actions: "write" },
   "release.yml > build": ATTEST,
   "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },
@@ -244,6 +245,19 @@ describe("rules of every workflow", () => {
     ).toEqual([
       "rust-mutants-${{ github.head_ref || github.ref_name }}-\nrust-mutants-main-\n",
     ]);
+  });
+
+  it("makes every mise step save its cache only on main, since mise-action saves on every ref by default", () => {
+    const mise = allSteps().filter(({ step }) =>
+      (step.uses ?? "").startsWith("jdx/mise-action@"),
+    );
+
+    expect(mise.length).toBeGreaterThan(0);
+    expect(
+      mise.filter(
+        ({ step }) => step.with?.cache_save !== `\${{ ${MAIN_ONLY} }}`,
+      ),
+    ).toEqual([]);
   });
 
   it("makes every rust-cache step save only on main, leaving the pull requests read-only", () => {
