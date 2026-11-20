@@ -1,13 +1,13 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, isAbsolute, join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -136,11 +136,13 @@ describe("renderMermaid", () => {
     const chrome = join(cache, "chromium-1243", "chrome-linux", "chrome");
     mkdirSync(dirname(chrome), { recursive: true });
     let config: unknown = null;
+    let configDir = "";
 
     const result = run(join(dir, "flow.mmd"), {
       playwrightCache: cache,
       runMmdc: (args) => {
         const configPath = args[1];
+        configDir = dirname(configPath);
         config = JSON.parse(readFileSync(configPath, "utf8"));
 
         return 0;
@@ -152,9 +154,31 @@ describe("renderMermaid", () => {
       executablePath: chrome,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    expect(
-      readdirSync(tmpdir()).filter((name) => name.startsWith("mermaid-png-")),
-    ).toEqual([]);
+    expect(dirname(configDir)).toBe(tmpdir());
+    expect(basename(configDir)).toMatch(/^mermaid-png-\w{6}$/);
+    expect(existsSync(configDir)).toBe(false);
+  });
+
+  it("prints the PNG path when the Puppeteer config folder is gone after mmdc", (): void => {
+    const cache = join(dir, "ms-playwright");
+    mkdirSync(join(cache, "chromium-1243", "chrome-linux"), {
+      recursive: true,
+    });
+    let flag = "";
+
+    const result = run(join(dir, "flow.mmd"), {
+      playwrightCache: cache,
+      runMmdc: (args) => {
+        flag = args[0];
+        rmSync(dirname(args[1]), { recursive: true });
+
+        return 0;
+      },
+    });
+
+    expect(flag).toBe("-p");
+    expect(result.code).toBe(0);
+    expect(result.out).toEqual([join(dir, "flow.png")]);
   });
 
   it("fails with the exit code of mmdc and names the PNG it could not write", (): void => {

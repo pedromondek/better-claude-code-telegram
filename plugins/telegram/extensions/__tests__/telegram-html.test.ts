@@ -132,6 +132,9 @@ describe("toTelegramHtmlChunks", () => {
     expect(toTelegramHtmlChunks("a \u{E000}7\u{E001} b")).toEqual([
       "a \u{E000}7\u{E001} b",
     ]);
+    expect(toTelegramHtmlChunks("a \u{E000}0\u{E001} b")).toEqual([
+      "a \u{E000}0\u{E001} b",
+    ]);
   });
 
   it("puts the table in a monospaced block", (): void => {
@@ -176,6 +179,13 @@ describe("toTelegramHtmlChunks", () => {
     ]);
   });
 
+  it("keeps whole a line exactly the limit long when its block is over the limit", (): void => {
+    expect(toTelegramHtmlChunks(`${"a".repeat(20)}\nb`, 20)).toEqual([
+      "a".repeat(20),
+      "b",
+    ]);
+  });
+
   it("splits a long line of astral characters without breaking a surrogate pair", (): void => {
     const line = `a${"😀".repeat(2500)}`;
     const chunks = toTelegramHtmlChunks(line, 1000);
@@ -212,6 +222,18 @@ describe("toTelegramHtmlChunks", () => {
 
   it("keeps a block that lands exactly on the limit whole", (): void => {
     expect(toTelegramHtmlChunks("x".repeat(50), 50)).toEqual(["x".repeat(50)]);
+  });
+
+  it("renders an empty code block as an empty pre", (): void => {
+    expect(toTelegramHtmlChunks("Antes\n```\n```")).toEqual([
+      "Antes\n<pre></pre>",
+    ]);
+  });
+
+  it("keeps an empty code block that lands exactly on the limit", (): void => {
+    expect(toTelegramHtmlChunks("```\n```", "<pre></pre>".length)).toEqual([
+      "<pre></pre>",
+    ]);
   });
 
   it("fills each part of a long code block up to the limit", (): void => {
