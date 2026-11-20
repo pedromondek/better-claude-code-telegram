@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
+import { labeledIssues } from "./labeled-issues.mjs";
 import { AUDIT_LABEL, openAuditIssue } from "./workflow-audit.mjs";
 
 export const AUDIT_LABEL_COLOR = "5319e7";
@@ -133,16 +134,11 @@ export function auditIssueComment(context) {
 
 function ensureLabel(gh, warn) {
   try {
-    gh([
-      "label",
-      "create",
-      AUDIT_LABEL,
-      "--color",
-      AUDIT_LABEL_COLOR,
-      "--description",
-      LABEL_DESCRIPTION,
-      "--force",
-    ]);
+    labeledIssues(gh, {
+      label: AUDIT_LABEL,
+      color: AUDIT_LABEL_COLOR,
+      description: LABEL_DESCRIPTION,
+    }).ensureLabel();
     return [AUDIT_LABEL];
   } catch {
     warn(`Could not create the label ${AUDIT_LABEL}: going on without it.`);
