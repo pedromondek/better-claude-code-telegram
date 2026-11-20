@@ -38,7 +38,7 @@ const PERMISSIONS = {
   checks: { contents: "read" },
   rust: { contents: "read" },
   mutation: { contents: "read" },
-  "pull-request": { contents: "read" },
+  "pull-request": { contents: "read", "pull-requests": "read" },
   "workflow-audit": { contents: "read", issues: "read" },
   "workflow-audit-issue": { contents: "read", issues: "write" },
 };
@@ -68,8 +68,10 @@ describe("ci.yml orchestrates the CI: it only calls the tasks and closes with on
       expect(ci.on.pull_request ?? null).toBeNull();
     });
 
-    it("cancels the superseded run only for pull requests", () => {
-      expect(ci.concurrency.group).toBe("ci-${{ github.ref }}");
+    it("cancels the superseded run only for pull requests and gives every other run a group of its own", () => {
+      expect(ci.concurrency.group).toBe(
+        "${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || format('ci-{0}', github.run_id) }}",
+      );
       expect(ci.concurrency["cancel-in-progress"]).toBe(
         "${{ github.event_name == 'pull_request' }}",
       );

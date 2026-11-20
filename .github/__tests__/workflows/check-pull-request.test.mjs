@@ -25,28 +25,30 @@ describe("check-pull-request.yml checks the pull request title and its new depen
     expect(definition.on.workflow_call ?? null).toBeNull();
   });
 
-  it("runs on ubuntu with contents: read only", () => {
+  it("runs on ubuntu with contents and pull-requests read only", () => {
     expect(pullRequest["runs-on"]).toMatch(/^ubuntu-/);
-    expect(pullRequest.permissions).toEqual({ contents: "read" });
+    expect(pullRequest.permissions).toEqual({
+      contents: "read",
+      "pull-requests": "read",
+    });
   });
 
   it("guards itself to pull requests, even when a caller forgets the condition", () => {
     expect(pullRequest.if).toBe("github.event_name == 'pull_request'");
   });
 
-  it("checks the title against the branch with the same code as the git hooks, passing both through env", () => {
+  it("checks the current title of the pull request, not the one of the event, so a re-run sees an edited title", () => {
     const title = stepNamed(
       pullRequest,
       "Title with the key of the branch issue",
     );
 
     expect(title.env).toEqual({
-      PR_TITLE: "${{ github.event.pull_request.title }}",
-      PR_BRANCH: "${{ github.head_ref }}",
+      GH_TOKEN: "${{ github.token }}",
+      GH_REPO: "${{ github.repository }}",
+      PR_NUMBER: "${{ github.event.pull_request.number }}",
     });
-    expect(title.run).toBe(
-      'npm run --silent branch -- pr "$PR_TITLE" "$PR_BRANCH"',
-    );
+    expect(title.run).toBe('npm run --silent branch -- pr "$PR_NUMBER"');
     expect(packageScripts.branch).toBe("node scripts/branch.mjs");
   });
 
