@@ -1172,6 +1172,12 @@
         "out": "The telegram-hooks plugin stayed on alpha 1, not beta 'two'. Run 'bcct update' again."
       }
     ],
+    "update.onlyNewestStable": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Only the newest stable (beta 'two') can be installed, not alpha 1. Run 'bcct update stable'."
+      }
+    ],
     "update.noHash": [
       {
         "args": ["alpha 1", "beta 'two'"],
@@ -2426,6 +2432,12 @@
       {
         "args": ["alpha 1", "beta 'two'"],
         "out": "O plugin telegram-hooks ficou na alpha 1, não na beta 'two'. Rode 'bcct update' de novo."
+      }
+    ],
+    "update.onlyNewestStable": [
+      {
+        "args": ["alpha 1", "beta 'two'"],
+        "out": "Só dá para instalar a estável mais nova (beta 'two'), não a alpha 1. Rode 'bcct update stable'."
       }
     ],
     "update.noHash": [

@@ -486,6 +486,7 @@ catalog! { m, a;
     "update.noGit" => m.update.no_git.to_owned(),
     "update.pluginFailed" => (m.update.plugin_failed)(s(a, 0)),
     "update.pluginStayed" => (m.update.plugin_stayed)(s(a, 0), s(a, 1)),
+    "update.onlyNewestStable" => (m.update.only_newest_stable)(s(a, 0), s(a, 1)),
     "update.noHash" => (m.update.no_hash)(s(a, 0), s(a, 1)),
     "update.downloadFailed" => (m.update.download_failed)(s(a, 0), s(a, 1)),
     "update.binaryFailed" => (m.update.binary_failed)(s(a, 0), s(a, 1)),
