@@ -394,7 +394,7 @@ pub(super) const MESSAGES: Messages = Messages {
     marketplace_found: "Marketplace registered",
     marketplace_missing: "Marketplace not registered yet",
     plan_header: "To finish this step, the setup needs to:",
-    plan_marketplace: |name| format!("register the marketplace '{name}' from this folder"),
+    plan_marketplace: |name| format!("register the marketplace '{name}' from GitHub"),
     plan_plugin: |id| format!("install the plugin '{id}' for your user"),
     plan_shell_line: |file| format!("add to {file} the line that loads 'claude --telegram'"),
     plan_prompt: "Go ahead with the installation?",
@@ -476,7 +476,7 @@ pub(super) const MESSAGES: Messages = Messages {
     state_kept: |channel_dir, app_dir| {
         format!("Bot token and pairing kept in {channel_dir}, settings in {app_dir}.")
     },
-    uninstall_done: "Done. Open a new terminal; this repository folder can now be deleted.",
+    uninstall_done: "Done. Open a new terminal, so it loads the shell without bcct.",
     no_saved_token: |command| format!("No saved token. Run this first:\n  {command}"),
     use_saved_bot: |username| format!("Use the saved bot, @{username}?"),
     token_prompt: "Bot token (from @BotFather; hidden while you type): ",

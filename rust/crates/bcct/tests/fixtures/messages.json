@@ -534,7 +534,7 @@
     "planMarketplace": [
       {
         "args": ["alpha 1"],
-        "out": "register the marketplace 'alpha 1' from this folder"
+        "out": "register the marketplace 'alpha 1' from GitHub"
       }
     ],
     "planPlugin": [
@@ -727,7 +727,7 @@
         "out": "Bot token and pairing kept in alpha 1, settings in beta 'two'."
       }
     ],
-    "uninstallDone": "Done. Open a new terminal; this repository folder can now be deleted.",
+    "uninstallDone": "Done. Open a new terminal, so it loads the shell without bcct.",
     "noSavedToken": [
       {
         "args": ["alpha 1"],
@@ -1790,7 +1790,7 @@
     "planMarketplace": [
       {
         "args": ["alpha 1"],
-        "out": "registrar o marketplace 'alpha 1' a partir desta pasta"
+        "out": "registrar o marketplace 'alpha 1' do GitHub"
       }
     ],
     "planPlugin": [
@@ -1986,7 +1986,7 @@
         "out": "Token do bot e pareamento mantidos em alpha 1, configurações em beta 'two'."
       }
     ],
-    "uninstallDone": "Pronto. Abra um terminal novo; já dá para apagar a pasta deste repositório.",
+    "uninstallDone": "Pronto. Abra um terminal novo, para ele carregar o shell sem o bcct.",
     "noSavedToken": [
       {
         "args": ["alpha 1"],

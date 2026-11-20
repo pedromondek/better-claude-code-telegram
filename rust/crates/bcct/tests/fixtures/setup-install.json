@@ -228,7 +228,7 @@
       "locale": "en-us",
       "plan": [
         {
-          "description": "register the marketplace 'better-claude-code-telegram' from this folder",
+          "description": "register the marketplace 'better-claude-code-telegram' from GitHub",
           "command": "claude plugin marketplace add /repo"
         },
         {
@@ -255,7 +255,7 @@
       "locale": "pt-br",
       "plan": [
         {
-          "description": "registrar o marketplace 'better-claude-code-telegram' a partir desta pasta",
+          "description": "registrar o marketplace 'better-claude-code-telegram' do GitHub",
           "command": "claude plugin marketplace add /repo"
         },
         {
@@ -1801,7 +1801,7 @@
       },
       "error": null,
       "path": "{root}/bin:{sys}",
-      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 0 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from this folder\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
+      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 0 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from GitHub\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -1922,7 +1922,7 @@
         ]
       },
       "path": "{root}/bin:{sys}",
-      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 0 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from this folder\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
+      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 0 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from GitHub\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2560,7 +2560,7 @@
       },
       "error": null,
       "path": "{root}/bin:{sys}",
-      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 1 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from this folder\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
+      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 1 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from GitHub\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2819,7 +2819,7 @@
       },
       "error": null,
       "path": "{root}/bin:{sys}",
-      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 0 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from this folder\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
+      "stdout": "○ Checked:\n  ○ Marketplace not registered yet\n  ○ 0 of 2 required plugins installed\n  ○ 0 of 1 optional plugin installed\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from GitHub\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -2943,7 +2943,7 @@
       },
       "error": null,
       "path": "{root}/bin:{sys}",
-      "stdout": "\u001b[36m⠋\u001b[39m \u001b[2mChecking the marketplace and the installed plugins…\u001b[22m\r\u001b[2K\u001b[2m○ Checked:\u001b[22m\n  \u001b[2m○ Marketplace not registered yet\u001b[22m\n  \u001b[2m○ 0 of 2 required plugins installed\u001b[22m\n  \u001b[2m○ 0 of 1 optional plugin installed\u001b[22m\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from this folder\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
+      "stdout": "\u001b[36m⠋\u001b[39m \u001b[2mChecking the marketplace and the installed plugins…\u001b[22m\r\u001b[2K\u001b[2m○ Checked:\u001b[22m\n  \u001b[2m○ Marketplace not registered yet\u001b[22m\n  \u001b[2m○ 0 of 2 required plugins installed\u001b[22m\n  \u001b[2m○ 0 of 1 optional plugin installed\u001b[22m\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from GitHub\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
@@ -3069,7 +3069,7 @@
       },
       "error": null,
       "path": "{root}/bin:{sys}",
-      "stdout": "\u001b[36m⠋\u001b[39m \u001b[2mCheck…\u001b[22m\r\u001b[2K\u001b[2m○ Checked:\u001b[22m\n  \u001b[2m○ Marketplace not registered yet\u001b[22m\n  \u001b[2m○ 0 of 2 required plugins installed\u001b[22m\n  \u001b[2m○ 0 of 1 optional plugin installed\u001b[22m\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from this folder\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
+      "stdout": "\u001b[36m⠋\u001b[39m \u001b[2mCheck…\u001b[22m\r\u001b[2K\u001b[2m○ Checked:\u001b[22m\n  \u001b[2m○ Marketplace not registered yet\u001b[22m\n  \u001b[2m○ 0 of 2 required plugins installed\u001b[22m\n  \u001b[2m○ 0 of 1 optional plugin installed\u001b[22m\nTo finish this step, the setup needs to:\n  • register the marketplace 'better-claude-code-telegram' from GitHub\n  • install the plugin 'telegram@better-claude-code-telegram' for your user\n  • install the plugin 'telegram-hooks@better-claude-code-telegram' for your user\n  • add to {root}/home/.bashrc the line that loads 'claude --telegram'\n",
       "stderr": "",
       "after": {
         "app/": { "mode": "750" },
