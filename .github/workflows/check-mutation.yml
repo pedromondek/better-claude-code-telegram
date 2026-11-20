@@ -168,7 +168,7 @@ jobs:
     needs:
       - plan
       - rust
-    if: ${{ !cancelled() && needs.plan.outputs.count != '0' }}
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.count != '0' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

@@ -128,10 +128,10 @@ describe("check-mutation.yml mutates the range in the CI: Rust in shards, with t
     }
   });
 
-  it("merges the caught mutants of the plan and of every shard and saves them for the next run of the branch", () => {
+  it("saves the caught mutants of the plan and of every shard for the next run, only after the plan succeeded", () => {
     expect(outcomes.needs).toEqual(["plan", "rust"]);
     expect(outcomes.if).toBe(
-      "${{ !cancelled() && needs.plan.outputs.count != '0' }}",
+      "${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.count != '0' }}",
     );
     expect(stepNamed(outcomes, "Merge").run).toBe(
       "npm run --silent rust:mutation:ci -- merge artifacts/rust-mutation-plan/outcomes artifacts/rust-mutants-shard-*",
