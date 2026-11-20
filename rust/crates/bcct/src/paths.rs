@@ -7,6 +7,14 @@ pub const LAUNCH_FILE: &str = "launch.json";
 pub const PREVIOUS_STATUSLINE_FILE: &str = "statusline-previous.json";
 pub const APP_FOLDER: &str = "better-claude-code-telegram";
 pub const TELEGRAM_FLAG: &str = "BETTER_CC_TELEGRAM";
+pub const PINGS_FOLDER: &str = "pings";
+pub const ASKS_FOLDER: &str = "asks";
+pub const BOT_PID_FILE: &str = "bot.pid";
+pub const CLOSED_SUFFIX: &str = ".closed";
+pub const ANSWER_SUFFIX: &str = ".answer.json";
+pub const TELEGRAM_SUFFIX: &str = ".telegram.json";
+pub const ASK_SKIPPED_SUFFIXES: [&str; 2] = [TELEGRAM_SUFFIX, ANSWER_SUFFIX];
+pub const ASK_MARKERS: [&str; 3] = [TELEGRAM_SUFFIX, CLOSED_SUFFIX, ANSWER_SUFFIX];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Paths {
