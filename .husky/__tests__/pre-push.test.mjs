@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { HUSKY_HOOK_ARGS } from "./support/husky-hook.mjs";
+import { OLD_NODE_MESSAGE, oldNodeFolder } from "./support/old-node.mjs";
 
 const PRE_PUSH = join(import.meta.dirname, "..", "pre-push");
 const ZERO_OID = "0".repeat(40);
@@ -763,6 +764,87 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
         expect(result.stdout + result.stderr).not.toContain(BAD_BRANCH);
       },
     );
+  });
+
+  describe("pushed refs", () => {
+    const ONE_COMMIT_AT_A_TIME =
+      "✗ the pre-push validates one pushed commit at a time: push one branch per git push";
+    const UNKNOWN_OID = "1".repeat(40);
+
+    function branchLine(branch, oid, remoteOid = ZERO_OID) {
+      return `refs/heads/${branch} ${oid} refs/heads/${branch} ${remoteOid}\n`;
+    }
+
+    it("stops a push of two branches on different commits before any step", () => {
+      useScripts({ lint: "grep -q GREEN marker.txt" });
+      commitFile("marker.txt", "RED\n");
+      const broken = git("rev-parse", "HEAD");
+      commitFile("marker.txt", "GREEN\n");
+
+      const result = push({
+        input: `${branchLine("0002-broken", broken)}${pushLine()}`,
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(ONE_COMMIT_AT_A_TIME);
+      expect(result.stdout).not.toContain("lint and typecheck");
+    });
+
+    it("runs the checks once for a branch and an annotated tag on the same commit", () => {
+      git("tag", "-a", "v1", "-m", "v1");
+
+      const result = push({
+        input: `refs/tags/v1 ${git("rev-parse", "v1")} refs/tags/v1 ${ZERO_OID}\n${pushLine()}`,
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain(ONE_COMMIT_AT_A_TIME);
+      expect(result.stdout).toMatch(/^✓ lint and typecheck OK/mu);
+    });
+
+    it("reads the refs after one whose remote commit is not in the repository", () => {
+      const previous = git("rev-parse", "HEAD~1");
+
+      const result = push({
+        input: `${pushLine(UNKNOWN_OID)}${branchLine("0002-other", previous)}`,
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(ONE_COMMIT_AT_A_TIME);
+    });
+
+    it("checks the branch name of a ref after one whose remote commit is not in the repository", () => {
+      const result = push({
+        input: `${pushLine(UNKNOWN_OID)}${branchLine("my-branch", git("rev-parse", "HEAD"))}`,
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout + result.stderr).toContain(
+        "outside the pattern 0042-short-title",
+      );
+    });
+
+    it("hands no range to the mutation when the remote commit is not in the repository", () => {
+      useScripts({
+        "test:mutation:prepush": 'echo "RANGE=${MUTATION_RANGE:-none}"',
+      });
+
+      const result = push({ input: pushLine(UNKNOWN_OID) });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("No reliable range");
+      expect(result.stdout).toMatch(/^RANGE=none$/mu);
+    });
+
+    it("stops the push with the Node version message when the node of the PATH is too old", () => {
+      const result = push({
+        env: { PATH: `${oldNodeFolder(repo)}:${process.env.PATH}` },
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(OLD_NODE_MESSAGE);
+      expect(result.stdout).not.toContain("lint and typecheck");
+    });
   });
 
   describe("fixup commits", () => {

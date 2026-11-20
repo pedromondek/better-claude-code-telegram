@@ -4,7 +4,9 @@ timeout 10 git fetch --quiet origin main 2>/dev/null || true
 
 SAW_PUSH=0
 RANGE_OK=0
+RANGE_FAILED=0
 PUSHED_OID=""
+PUSHED_OIDS=""
 PUSHED_RANGE=""
 CHANGED=""
 BRANCH_NAME_FAILED=0
@@ -17,11 +19,12 @@ while read -r local_ref local_oid remote_ref remote_oid; do
 
   SAW_PUSH=1
   PUSHED_OID=$local_oid
+  PUSHED_OIDS="$PUSHED_OIDS $(git rev-parse --verify --quiet "$local_oid^{commit}" || echo "$local_oid")"
 
   case "$remote_ref" in
     refs/heads/*)
       if [ -z "$CI" ] && [ -z "$PREPUSH_SKIP_BRANCH_CHECK" ]; then
-        node "$(dirname "$0")/../scripts/branch.mjs" check "${remote_ref#refs/heads/}" || BRANCH_NAME_FAILED=1
+        node "$(dirname "$0")/../scripts/require-node.cjs" && node "$(dirname "$0")/../scripts/branch.mjs" check "${remote_ref#refs/heads/}" || BRANCH_NAME_FAILED=1
       fi
       ;;
   esac
@@ -47,13 +50,19 @@ while read -r local_ref local_oid remote_ref remote_oid; do
     CHANGED="$CHANGED
 $changed"
   else
-    RANGE_OK=0
-    break
+    RANGE_FAILED=1
+    PUSHED_RANGE=""
   fi
 done
 
+[ "$RANGE_FAILED" = "1" ] && RANGE_OK=0
 [ "$BRANCH_NAME_FAILED" = "1" ] && exit 1
 [ "$SAW_PUSH" = "1" ] || exit 0
+
+if [ -n "$(printf '%s\n' $PUSHED_OIDS | sort -u | sed -n 2p)" ]; then
+  echo "✗ the pre-push validates one pushed commit at a time: push one branch per git push"
+  exit 1
+fi
 
 RUN_WORKFLOWS=0
 RUN_PLUGIN_AUDIT=0
