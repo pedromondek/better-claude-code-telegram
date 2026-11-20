@@ -431,6 +431,88 @@ describe("question sending", () => {
     expect(readAnswers()).toEqual({ "Qual banco?": "Redis" });
   });
 
+  it("sends every question again on the next tick when one failed partway", async (): Promise<void> => {
+    let failSecondQuestion = true;
+    const { telegram, mirror, logs } = setup({
+      rejectSend: (text) =>
+        failSecondQuestion &&
+        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+
+    expect(logs).toEqual([PT_TEXTS.logCycleFailed]);
+
+    failSecondQuestion = false;
+    await mirror.tick();
+
+    const withKeyboard = telegram.sent.filter(
+      (message) => message.keyboard !== undefined,
+    );
+
+    expect(withKeyboard.map((message) => message.text.slice(0, 35))).toEqual([
+      "❓ Pergunta aberta no terminal (1/2)",
+      "❓ Pergunta aberta no terminal (1/2)",
+      "❓ Pergunta aberta no terminal (2/2)",
+    ]);
+    expect(logs).toEqual([
+      PT_TEXTS.logCycleFailed,
+      PT.askSent(ASK_ID, "telegram"),
+    ]);
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:0`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:d`).ctx);
+
+    expect(readAnswers()).toEqual({
+      "Qual banco?": "Redis",
+      "Quais camadas?": "Backend",
+    });
+  });
+
+  it("edits the keyboard of a chat that failed partway when another chat got every question", async (): Promise<void> => {
+    const partialChat = "222";
+    const telegram = fakeApi({
+      rejectSend: (text, chatId) =>
+        chatId === partialChat &&
+        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+    });
+    const logs: string[] = [];
+    const mirror = createAskMirror({
+      api: telegram.api,
+      appDir,
+      allowedChats: () => [partialChat, CHAT],
+      log: (message) => logs.push(message),
+      messages: () => PT,
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await mirror.tick();
+
+    const partialMessageId = telegram.sent.find(
+      (message) => message.chatId === partialChat,
+    )?.messageId;
+
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+
+    expect(telegram.sent.map((message) => message.chatId)).toEqual([
+      partialChat,
+      CHAT,
+      CHAT,
+    ]);
+    expect(logs).toEqual([
+      PT_TEXTS.logCycleFailed,
+      PT.askSent(ASK_ID, "telegram"),
+    ]);
+    expect(
+      telegram.edits
+        .filter((edit) => edit.chatId === partialChat)
+        .map((edit) => edit.messageId),
+    ).toEqual([partialMessageId]);
+  });
+
   it("sends before the deadline when the last message came from Telegram", async (): Promise<void> => {
     const { telegram, mirror } = setup();
 

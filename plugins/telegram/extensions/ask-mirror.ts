@@ -348,6 +348,7 @@ export function createAskMirror({
     const shortId = shortIdFor(record.id);
     const total = record.questions.length;
     const sentMessages: SentMessage[] = [];
+    let reachedEveryQuestion = false;
 
     for (const chatId of allowedChats()) {
       try {
@@ -370,12 +371,14 @@ export function createAskMirror({
 
           sentMessages.push({ chatId, questionIndex, messageId });
         }
+
+        reachedEveryQuestion = true;
       } catch (error) {
         log(text.askCycleFailed(describeError(error)));
       }
     }
 
-    if (sentMessages.length === 0) return;
+    if (!reachedEveryQuestion) return;
 
     saveSent(record.id, {
       shortId,

@@ -894,6 +894,31 @@ describe.skipIf(!canRun)(
       expect(channelContents(fork).slice(contentsBefore)).toEqual(["sync"]);
     });
 
+    it("delivers the voice as an attachment when whisper is not installed", async (): Promise<void> => {
+      const contentsBefore = channelContents(fork).length;
+
+      rmSync(join(fork.appDir, "whisper"), { recursive: true, force: true });
+      pushVoice(fork, CHAT);
+
+      const notification = await waitFor(
+        () =>
+          fork.mcpMessages
+            .filter(
+              (message) => message.method === "notifications/claude/channel",
+            )
+            .at(contentsBefore),
+        "the voice delivered as an attachment",
+      );
+      const params = isRecord(notification.params) ? notification.params : {};
+
+      expect(params.content).toBe("(voice message)");
+      expect(params.meta).toMatchObject({
+        attachment_kind: "voice",
+        attachment_file_id: "voice-1",
+      });
+      expect(whisperCalls()).toBe(1);
+    });
+
     it("answers every Telegram API method the test expects and nothing else", (): void => {
       expect(fork.telegram.unhandled).toEqual([]);
     });
