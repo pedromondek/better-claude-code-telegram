@@ -1980,6 +1980,30 @@ fn lists_a_failed_json_fix_as_skipped_with_its_reason() {
     );
 }
 
+#[test]
+fn names_the_unsaved_script_when_the_shell_fix_meets_a_folder_in_its_place() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+    let fixed = fixing(
+        &owned,
+        &["install", "--json", "--fix", "--only", "shell"],
+        None,
+        &|root| {
+            without_shell_script(root);
+            std::fs::create_dir(root.join("app/shell.sh")).unwrap();
+        },
+        &|_| {},
+    );
+    let output: Value = serde_json::from_str(&fixed.out).unwrap();
+
+    assert_eq!(fixed.status, 1);
+    assert_eq!(output["fixes"]["applied"], json!([]));
+    assert_eq!(
+        output["fixes"]["skipped"],
+        json!([{"id": "shell", "reason": "Could not save {root}/app/shell.sh."}])
+    );
+}
+
 fn fake_chromium(browsers: &Path) {
     let version = browsers.join("chromium-1243");
 
