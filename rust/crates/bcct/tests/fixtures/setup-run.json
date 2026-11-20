@@ -3464,6 +3464,33 @@
         }
       },
       {
+        "name": "--set delays off keeps the delay per kind off when none is saved",
+        "runs": [
+          { "args": ["--set", "delays", "off"], "input": "", "env": {} }
+        ],
+        "files": {
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": "{\n  \"delay\": 4\n}\n"
+        },
+        "results": [
+          {
+            "status": 0,
+            "stdout": "○ Delay per kind kept: off, the single delay applies to everything.\n",
+            "stderr": ""
+          }
+        ],
+        "claudeCalls": [],
+        "toolCalls": "",
+        "telegramCalls": [],
+        "after": {
+          "home/.claude/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/": { "mode": "750" },
+          "home/.claude/better-claude-code-telegram/better-cc-telegram.json": {
+            "content": "{\n  \"delay\": 4\n}\n",
+            "mode": "600"
+          }
+        }
+      },
+      {
         "name": "--set delays refuses two kinds and a negative minute",
         "runs": [
           { "args": ["--set", "delays", "0/4"], "input": "", "env": {} },
