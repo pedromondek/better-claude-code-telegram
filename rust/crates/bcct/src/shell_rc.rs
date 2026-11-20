@@ -28,7 +28,7 @@ pub fn rc_loads(rc_text: &str, shell_file: &str) -> bool {
 #[must_use]
 pub fn rc_line_active(rc_text: &str, shell_file: &str) -> bool {
     rc_text
-        .lines()
+        .split('\n')
         .any(|line| line.contains(shell_file) && !line.trim_start().starts_with('#'))
 }
 
@@ -53,7 +53,7 @@ fn clone_line(rc_text: &str) -> Option<&str> {
 
 #[must_use]
 pub fn with_shell_block(rc_text: &str, shell_file: &str) -> Option<String> {
-    if rc_loads(rc_text, shell_file) {
+    if rc_line_active(rc_text, shell_file) {
         return None;
     }
 
@@ -249,6 +249,32 @@ mod tests {
                 NEW
             ),
             Some(format!("{SHELL_MARKER}\n{}", new_line()))
+        );
+    }
+
+    #[test]
+    fn appends_the_block_when_the_line_of_the_shell_file_is_commented_out() {
+        let commented = format!("export A=1\n# {}\n", new_line());
+
+        assert_eq!(
+            with_shell_block(&commented, NEW),
+            Some(format!("{commented}\n{SHELL_MARKER}\n{}\n", new_line()))
+        );
+        assert_eq!(
+            with_shell_block(&format!("  #{}", new_line()), NEW),
+            Some(format!(
+                "  #{}\n\n{SHELL_MARKER}\n{}\n",
+                new_line(),
+                new_line()
+            ))
+        );
+        assert_eq!(
+            with_shell_block(&format!("# old\n  {}\n", new_line()), NEW),
+            None
+        );
+        assert_eq!(
+            with_shell_block(&format!("{}\n# {NEW}", new_line()), NEW),
+            None
         );
     }
 
