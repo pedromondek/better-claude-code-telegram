@@ -468,6 +468,45 @@ fn replay(scenario: &Value, root: &Path, sys: &Path) -> Run {
     }
 }
 
+fn dash_form(stderr: &str) -> String {
+    stderr
+        .split_inclusive('\n')
+        .map(|line| {
+            let (body, end) = line
+                .strip_suffix('\n')
+                .map_or((line, ""), |body| (body, "\n"));
+
+            body.strip_prefix("sh: ")
+                .and_then(|rest| rest.strip_suffix(": command not found"))
+                .map_or_else(
+                    || line.to_owned(),
+                    |command| format!("sh: 1: {command}: not found{end}"),
+                )
+        })
+        .collect()
+}
+
+#[test]
+fn rewrites_only_the_not_found_line_of_a_bash_sh_in_the_dash_form() {
+    assert_eq!(
+        dash_form("sh: curl: command not found\n"),
+        "sh: 1: curl: not found\n"
+    );
+    assert_eq!(
+        dash_form("sh: 1: curl: not found\n"),
+        "sh: 1: curl: not found\n"
+    );
+    assert_eq!(
+        dash_form("a\nsh: uv: command not found"),
+        "a\nsh: 1: uv: not found"
+    );
+    assert_eq!(
+        dash_form("other: command not found\n"),
+        "other: command not found\n"
+    );
+    assert_eq!(dash_form(""), "");
+}
+
 #[test]
 fn every_scenario_prints_asks_records_and_writes_like_setup_mjs() {
     let fixture = parse(FIXTURE);
@@ -483,7 +522,11 @@ fn every_scenario_prints_asks_records_and_writes_like_setup_mjs() {
         let run = replay(scenario, root.path(), sys.path());
 
         assert_eq!(run.out, text(scenario, "stdout"), "{name}: stdout");
-        assert_eq!(run.err, text(scenario, "stderr"), "{name}: stderr");
+        assert_eq!(
+            dash_form(&run.err),
+            text(scenario, "stderr"),
+            "{name}: stderr"
+        );
         assert_eq!(run.error, scenario["error"], "{name}: error");
         assert_eq!(run.value, scenario["value"], "{name}: value");
         assert_eq!(run.path, text(scenario, "path"), "{name}: path");

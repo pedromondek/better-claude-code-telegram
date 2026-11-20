@@ -4440,7 +4440,7 @@
         "BETTER_CC_TELEGRAM": "1"
       },
       "files": {
-        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"wc -c\"}"
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"wc -c | tr -d ' '\"}"
       },
       "stdin": { "repeat": "b", "count": 200000 },
       "status": 0,
@@ -4449,7 +4449,7 @@
       "after": {
         "app/": { "mode": "750" },
         "app/statusline-previous.json": {
-          "content": "{\"type\":\"command\",\"command\":\"wc -c\"}",
+          "content": "{\"type\":\"command\",\"command\":\"wc -c | tr -d ' '\"}",
           "mode": "600"
         }
       }
@@ -4459,7 +4459,7 @@
       "args": ["--after-previous"],
       "env": { "HOME": "{root}/home", "BETTER_CC_TELEGRAM_DIR": "{root}/app" },
       "files": {
-        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"wc -c\"}"
+        "app/statusline-previous.json": "{\"type\":\"command\",\"command\":\"wc -c | tr -d ' '\"}"
       },
       "stdin": { "repeat": "b", "count": 200000 },
       "status": 0,
@@ -4468,7 +4468,7 @@
       "after": {
         "app/": { "mode": "750" },
         "app/statusline-previous.json": {
-          "content": "{\"type\":\"command\",\"command\":\"wc -c\"}",
+          "content": "{\"type\":\"command\",\"command\":\"wc -c | tr -d ' '\"}",
           "mode": "600"
         }
       }

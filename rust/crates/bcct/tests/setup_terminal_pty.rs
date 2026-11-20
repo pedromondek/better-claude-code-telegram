@@ -16,7 +16,7 @@ use bcct::prompt::{
     Choice, ChoiceQuestion, GuardCancel, Other, PromptError, Prompter, ask_choice, ask_validated,
     ask_yes_no, create_prompter, index_of_value, marked, number_choices,
 };
-use pty::{Run, Step, between, record};
+use pty::{Redirect, Run, Step, between, record};
 use serde_json::{Value, json};
 
 const FIXTURE: &str = include_str!("fixtures/setup-terminal.json");
@@ -151,7 +151,7 @@ fn terminal_modes() -> Result<Value, PromptError> {
             "input": modes.input_modes.bits(),
             "output": modes.output_modes.bits(),
             "size": (modes.control_modes & ControlModes::CSIZE).bits(),
-            "local": modes.local_modes.bits(),
+            "local": (modes.local_modes - LocalModes::PENDIN).bits(),
             "min": modes.special_codes[SpecialCodeIndex::VMIN],
             "time": modes.special_codes[SpecialCodeIndex::VTIME],
         })
@@ -286,7 +286,7 @@ fn drive(spec: &Value, columns: u16, steps: &[Step], redirect: bool) -> (String,
         columns,
         rows: ROWS,
         steps,
-        redirect: redirect.then_some(file.as_path()),
+        redirect: redirect.then_some(Redirect::File(file.as_path())),
     })
     .unwrap();
     let text = if redirect {

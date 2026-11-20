@@ -16,6 +16,8 @@ pub(crate) const PRIVATE_FILE_MODE: &str = "600";
 
 const FIXTURE_UMASK: rustix::fs::RawMode = 0o022;
 
+const SYMLINK_MODE: &str = "777";
+
 pub(crate) type Tree = BTreeMap<String, (Option<String>, String)>;
 
 const RELEASE_FORMS: [(&str, &str); 8] = [
@@ -144,6 +146,24 @@ fn use_fixture_umask() {
     let _previous = rustix::process::umask(rustix::fs::Mode::from_raw_mode(FIXTURE_UMASK));
 }
 
+#[cfg(target_os = "linux")]
+pub(crate) fn unwritable_output() -> Stdio {
+    Stdio::from(
+        fs::OpenOptions::new()
+            .write(true)
+            .open("/dev/full")
+            .unwrap(),
+    )
+}
+
+#[cfg(not(target_os = "linux"))]
+pub(crate) fn unwritable_output() -> Stdio {
+    let (reader, writer) = std::io::pipe().unwrap();
+
+    drop(reader);
+    Stdio::from(writer)
+}
+
 pub(crate) fn sandbox() -> tempfile::TempDir {
     use_fixture_umask();
 
@@ -245,7 +265,11 @@ fn walk(root: &Path, folder: &Path, out: &mut Tree) {
             .to_string_lossy()
             .into_owned();
         let metadata = fs::symlink_metadata(&full).unwrap();
-        let mode = format!("{:o}", metadata.permissions().mode() & 0o777);
+        let mode = if metadata.file_type().is_symlink() {
+            SYMLINK_MODE.to_owned()
+        } else {
+            format!("{:o}", metadata.permissions().mode() & 0o777)
+        };
 
         if metadata.is_dir() && holds_only_the_settings_lock(&full) {
             continue;

@@ -56,6 +56,12 @@ pub(crate) enum Step {
     When(Vec<u8>, Vec<u8>),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Redirect<'a> {
+    File(&'a Path),
+    Unwritable,
+}
+
 #[derive(Debug)]
 pub(crate) struct Run<'a> {
     pub(crate) argv: &'a [String],
@@ -63,7 +69,17 @@ pub(crate) struct Run<'a> {
     pub(crate) columns: u16,
     pub(crate) rows: u16,
     pub(crate) steps: &'a [Step],
-    pub(crate) redirect: Option<&'a Path>,
+    pub(crate) redirect: Option<Redirect<'a>>,
+}
+
+#[cfg(target_os = "linux")]
+fn unwritable_script(size: &str) -> String {
+    format!("{size} && exec \"$0\" \"$@\" > '/dev/full'")
+}
+
+#[cfg(not(target_os = "linux"))]
+fn unwritable_script(size: &str) -> String {
+    format!("{size} && {{ sleep 1; exec \"$0\" \"$@\"; }} | true")
 }
 
 fn fail(message: &str) -> io::Error {
@@ -199,14 +215,15 @@ fn wait_for(session: &mut PtySession, out: &mut Vec<u8>, needle: &[u8]) -> io::R
 }
 
 fn command_of(run: &Run<'_>) -> io::Result<Command> {
-    let redirect = run
-        .redirect
-        .map(|path| format!(" > '{}'", path.to_string_lossy()))
-        .unwrap_or_default();
-    let script = format!(
-        "stty cols {} rows {} && exec \"$0\" \"$@\"{redirect}",
-        run.columns, run.rows
-    );
+    let size = format!("stty cols {} rows {}", run.columns, run.rows);
+    let script = match run.redirect {
+        None => format!("{size} && exec \"$0\" \"$@\""),
+        Some(Redirect::File(path)) => format!(
+            "{size} && exec \"$0\" \"$@\" > '{}'",
+            path.to_string_lossy()
+        ),
+        Some(Redirect::Unwritable) => unwritable_script(&size),
+    };
     let (program, args) = run.argv.split_first().ok_or_else(|| fail("no program"))?;
     let mut command = Command::new("sh");
 
@@ -267,7 +284,10 @@ pub(crate) fn record(run: &Run<'_>) -> io::Result<Vec<u8>> {
 
     while pump(&mut session, &mut out)?.is_some() {
         if started.elapsed() > LIMIT {
-            return Err(fail("the program in the terminal did not end"));
+            return Err(fail(&format!(
+                "the program in the terminal did not end; it showed: {:?}",
+                String::from_utf8_lossy(&out)
+            )));
         }
 
         thread::sleep(POLL);

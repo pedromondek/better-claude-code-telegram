@@ -264,12 +264,7 @@ fn the_binary_ends_with_code_1_like_node_when_stdout_cannot_take_the_segment() {
         .arg("statusline")
         .env("BETTER_CC_TELEGRAM_DIR", root.path())
         .env("BETTER_CC_TELEGRAM", "1")
-        .stdout(std::process::Stdio::from(
-            fs::OpenOptions::new()
-                .write(true)
-                .open("/dev/full")
-                .unwrap(),
-        ))
+        .stdout(support::unwritable_output())
         .stderr(std::process::Stdio::piped())
         .output()
         .unwrap();

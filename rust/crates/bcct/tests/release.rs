@@ -526,12 +526,7 @@ fn the_binary_ignores_a_closed_stdout_like_console_log() {
     let status = std::process::Command::new(assert_cmd::cargo::cargo_bin!("bcct"))
         .arg("release")
         .env("BETTER_CC_TELEGRAM_DIR", root.path())
-        .stdout(std::process::Stdio::from(
-            fs::OpenOptions::new()
-                .write(true)
-                .open("/dev/full")
-                .unwrap(),
-        ))
+        .stdout(support::unwritable_output())
         .status()
         .unwrap();
 

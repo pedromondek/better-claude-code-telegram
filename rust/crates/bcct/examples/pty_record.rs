@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         columns: size("columns"),
         rows: size("rows"),
         steps: &steps,
-        redirect: redirect.as_deref(),
+        redirect: redirect.as_deref().map(pty::Redirect::File),
     })?;
 
     std::io::stdout().write_all(json!({ "output": output }).to_string().as_bytes())?;

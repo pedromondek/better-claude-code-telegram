@@ -1295,13 +1295,9 @@ fn closed_output_command(root: &Path, args: &[&str]) -> Command {
 }
 
 fn with_full_output(root: &Path, args: &[&str], input: &str) -> (Option<i32>, String) {
-    let full = fs::OpenOptions::new()
-        .write(true)
-        .open("/dev/full")
-        .unwrap();
     let mut child = closed_output_command(root, args)
         .stdin(Stdio::piped())
-        .stdout(Stdio::from(full))
+        .stdout(support::unwritable_output())
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
@@ -1727,10 +1723,6 @@ fn a_closed_output_never_reaches_the_network() {
     let root = folder.path();
     let telegram = start_telegram(&json!({}));
     let api = format!("http://127.0.0.1:{}", telegram.port);
-    let full = fs::OpenOptions::new()
-        .write(true)
-        .open("/dev/full")
-        .unwrap();
 
     materialize(
         root,
@@ -1740,7 +1732,7 @@ fn a_closed_output_never_reaches_the_network() {
     let child = closed_output_command(root, &["pairing"])
         .env("BETTER_CC_TELEGRAM_API_ROOT", &api)
         .stdin(Stdio::null())
-        .stdout(Stdio::from(full))
+        .stdout(support::unwritable_output())
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
@@ -2132,7 +2124,7 @@ fn a_closed_output_on_the_terminal_ends_without_offering_to_undo() {
         columns: PTY_COLUMNS,
         rows: PTY_ROWS,
         steps: &[],
-        redirect: Some(Path::new("/dev/full")),
+        redirect: Some(pty::Redirect::Unwritable),
     })
     .unwrap();
     let shown = String::from_utf8_lossy(&output).into_owned();
