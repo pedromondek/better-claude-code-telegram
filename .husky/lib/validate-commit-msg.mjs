@@ -10,6 +10,7 @@ const HEADER_PATTERN =
   /^(?<type>[^(:]+?)(?:\((?<scope>[^()]*)\))?: (?<subject>.*)$/u;
 const GIT_GENERATED_PATTERN =
   /^(?:Merge |Revert "|Reapply "|(?:fixup|squash|amend)! )/u;
+const SQUASH_OR_AMEND_PATTERN = /^(?:squash|amend)! /u;
 const FORMAT_EXAMPLE = "🔧 chore(root): update the pre-push hook";
 const SCISSORS_PATTERN = /^# -+ >8 -+$/u;
 
@@ -41,6 +42,13 @@ function headerOf(message) {
     .find((line) => line !== "" && !line.startsWith("#"));
 }
 
+function bodyOf(message, header) {
+  const lines = messageText(message).split("\n");
+  const headerIndex = lines.findIndex((line) => line.trimEnd() === header);
+
+  return lines.slice(headerIndex + 1).join("\n");
+}
+
 function parseHeader(header) {
   const groups = HEADER_PATTERN.exec(header)?.groups;
 
@@ -56,7 +64,13 @@ export function validateCommitMessage(message, czConfig) {
   const header = headerOf(message);
 
   if (header === undefined) return ["the message is empty"];
-  if (GIT_GENERATED_PATTERN.test(header)) return [];
+  if (GIT_GENERATED_PATTERN.test(header)) {
+    if (!SQUASH_OR_AMEND_PATTERN.test(header)) return [];
+
+    return inlineClosingReferences(bodyOf(message, header)).map(
+      inlineClosingProblem,
+    );
+  }
 
   const problems = [];
   const parsed = parseHeader(header);

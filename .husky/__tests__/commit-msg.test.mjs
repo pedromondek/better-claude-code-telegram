@@ -11,6 +11,11 @@ import {
   validateCommitMessage,
 } from "../lib/validate-commit-msg.mjs";
 import { HUSKY_HOOK_ARGS } from "./support/husky-hook.mjs";
+import {
+  OLD_NODE_MESSAGE,
+  SYSTEM_PATH,
+  oldNodeFolder,
+} from "./support/old-node.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const HOOK = join(ROOT, ".husky", "commit-msg");
@@ -171,6 +176,48 @@ describe("validateCommitMessage", () => {
     expect(refused).toEqual([]);
   });
 
+  it.each(["squash!", "amend!"])(
+    "refuses the closing keyword in the middle of the body of a %s commit",
+    (prefix) => {
+      const problems = validateCommitMessage(
+        `${prefix} 🔧 chore(root): x\n\nThe bug goes away; fix #12 for good.`,
+        czConfig,
+      );
+
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toMatch(
+        /"fix #12" in the middle of the text closes issue #12/,
+      );
+    },
+  );
+
+  it("accepts the closing keyword on its own line in the body of an amend! commit", () => {
+    expect(
+      validateCommitMessage(
+        "amend! 🔧 chore(root): x\n\n🔧 chore(root): x\n\nCloses #12",
+        czConfig,
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    [
+      "the closing keyword in a fixup! body",
+      "fixup! 🔧 chore(root): x\n\nThe bug goes away; fix #12 for good.",
+    ],
+    ["a squash! without a body", "squash! 🔧 chore(root): x"],
+    [
+      "the closing keyword in a commented line of a squash!",
+      "squash! 🔧 chore(root): x\n\n# fix #3\nok",
+    ],
+    [
+      "the closing keyword in the squash! header, copied from the origin",
+      "\nsquash! 🔧 chore(root): fix #12 x\n\nok",
+    ],
+  ])("accepts %s", (_description, message) => {
+    expect(validateCommitMessage(message, czConfig)).toEqual([]);
+  });
+
   it("accepts the closing keyword on its own line and Refs anywhere", () => {
     expect(
       validateCommitMessage(
@@ -242,6 +289,28 @@ describe(".husky/commit-msg", { timeout: HOOK_TIMEOUT }, () => {
     expect(result.stderr).toMatch(/"chore"/);
     expect(result.stderr).toMatch(/🔧 chore/);
     expect(result.stderr).toMatch(/type\(scope\): subject/);
+  });
+
+  it("exits 1 with the Node version message when the node of the PATH is too old", () => {
+    const file = join(dir, "COMMIT_EDITMSG");
+
+    writeFileSync(file, "🔧 chore(root): subject\n");
+
+    const result = spawnSync(
+      "sh",
+      [...HUSKY_HOOK_ARGS, join(".husky", "commit-msg"), file],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          HOME: process.env.HOME,
+          PATH: `${oldNodeFolder(dir)}:${SYSTEM_PATH}`,
+        },
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(OLD_NODE_MESSAGE);
   });
 
   it("blocks git commit with a message outside the format and lets the valid one through", () => {
