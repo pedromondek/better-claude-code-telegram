@@ -1660,7 +1660,7 @@ fn an_app_folder_of_the_user_gets_write_permission_and_its_hook_warning_goes_awa
 }
 
 #[test]
-fn a_fix_that_fails_says_why_and_the_others_still_run() {
+fn gives_the_app_folder_write_permission_before_the_shell_fix_writes_in_it() {
     let mut owned = healthy();
     owned["uid"] = json!(rustix::process::getuid().as_raw());
     let fixed = fixing(
@@ -1671,14 +1671,121 @@ fn a_fix_that_fails_says_why_and_the_others_still_run() {
             without_shell_script(root);
             set_mode(&root.join("app"), 0o500);
         },
-        &the_script_is_missing,
+        &the_script_is_current,
+    );
+
+    assert_eq!(fixed.status, 0, "{}", fixed.out);
+    assert!(
+        fixed.out.contains(&format!(
+            "✔ Fixed: give write permission to {{root}}/app\n✔ Fixed: {SHELL_FIX}\n"
+        )),
+        "{}",
+        fixed.out
+    );
+}
+
+fn commented_shell_line(root: &Path) -> String {
+    let line = format!(
+        "[ -f \"{0}/app/shell.sh\" ] && . \"{0}/app/shell.sh\"",
+        root.display()
+    );
+
+    format!("# {line}\n")
+}
+
+fn comment_out_the_shell_line(root: &Path, mode: u32) {
+    let commented = commented_shell_line(root);
+
+    write(&root.join("home/.bashrc"), &commented, mode);
+}
+
+#[test]
+fn says_why_a_fix_failed_and_still_runs_the_others() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+    let fixed = fixing(
+        &owned,
+        &["install", "--fix", "--yes"],
+        None,
+        &|root| {
+            comment_out_the_shell_line(root, 0o400);
+            set_mode(&root.join("app"), 0o500);
+        },
+        &|root| {
+            assert_eq!(
+                std::fs::read_to_string(root.join("home/.bashrc")).unwrap(),
+                commented_shell_line(root)
+            );
+        },
     );
 
     assert_eq!(fixed.status, 1);
     assert!(
         fixed.out.contains(&format!(
-            "✘ Could not: {SHELL_FIX} (permission denied)\n✔ Fixed: give write permission to {{root}}/app\n"
+            "✔ Fixed: give write permission to {{root}}/app\n✘ Could not: {SHELL_FIX} (Could not save {{root}}/home/.bashrc.)\n"
         )),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn fixes_a_commented_out_shell_line_with_an_active_one() {
+    let fixed = fixing(
+        &healthy(),
+        &["install", "--fix", "--yes"],
+        None,
+        &|root| comment_out_the_shell_line(root, 0o600),
+        &|root| {
+            let rc = std::fs::read_to_string(root.join("home/.bashrc")).unwrap();
+            let script = root.join("app/shell.sh");
+
+            assert!(rc.starts_with(&commented_shell_line(root)), "{rc}");
+            assert!(
+                rc.lines().any(|line| !line.starts_with('#')
+                    && line.contains(&*script.to_string_lossy())),
+                "{rc}"
+            );
+        },
+    );
+
+    assert_eq!(fixed.status, 0, "{}", fixed.out);
+    assert!(
+        fixed.out.contains(&format!("✔ Fixed: {SHELL_FIX}\n")),
+        "{}",
+        fixed.out
+    );
+    assert!(
+        fixed
+            .out
+            .ends_with(&format!("Checking again:\n{}", healthy_install_out())),
+        "{}",
+        fixed.out
+    );
+}
+
+#[test]
+fn says_the_io_failure_of_a_fix_in_the_chosen_language() {
+    let mut owned = healthy();
+    owned["uid"] = json!(rustix::process::getuid().as_raw());
+    owned["files"]["app/better-cc-telegram.json"] =
+        json!(r#"{"language":"pt-br","transcription":{"model":"small"}}"#);
+    let fixed = fixing(
+        &owned,
+        &["install", "--fix", "--only", "shell"],
+        None,
+        &|root| {
+            without_shell_script(root);
+            set_mode(&root.join("app"), 0o500);
+        },
+        &the_script_is_missing,
+    );
+
+    assert_eq!(fixed.status, 1);
+    assert!(
+        fixed.out.contains(
+            "✘ Não consegui: regravar o shell.sh e a linha do {root}/home/.bashrc (sem permissão de escrita)\n"
+        ),
         "{}",
         fixed.out
     );
@@ -1850,7 +1957,7 @@ fn the_binary_with_fix_and_no_terminal_only_says_how_to_apply() {
 }
 
 #[test]
-fn a_json_fix_that_fails_is_listed_as_skipped_with_its_error() {
+fn lists_a_failed_json_fix_as_skipped_with_its_reason() {
     let mut owned = healthy();
     owned["uid"] = json!(rustix::process::getuid().as_raw());
     let fixed = fixing(
@@ -1869,7 +1976,7 @@ fn a_json_fix_that_fails_is_listed_as_skipped_with_its_error() {
     assert_eq!(output["fixes"]["applied"], json!([]));
     assert_eq!(
         output["fixes"]["skipped"],
-        json!([{"id": "shell", "reason": "permission denied"}])
+        json!([{"id": "shell", "reason": "no write permission"}])
     );
 }
 

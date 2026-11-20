@@ -17,7 +17,7 @@ use crate::journal::Journal;
 use crate::js::stringify_pretty;
 use crate::messages::Messages;
 use crate::prompt::Prompter;
-use crate::settings::STATUS_LINE;
+use crate::settings::{DENY, PERMISSIONS, STATUS_LINE};
 use crate::setup::{
     SetupPaths, StatuslineKind, command_on_path, read_settings, shell_file, shell_rc_files,
     shell_script, statusline_is_current, statusline_kind,
@@ -181,14 +181,14 @@ fn text_var(machine: &Machine<'_>, name: &str) -> Option<String> {
 fn deny_is_usable(paths: &SetupPaths) -> bool {
     let deny = read_json(&paths.settings_file).and_then(|settings| {
         settings
-            .get("permissions")
-            .and_then(|permissions| permissions.get("deny"))
+            .get(PERMISSIONS)
+            .and_then(|permissions| permissions.get(DENY))
             .cloned()
     });
 
     !matches!(
         deny,
-        Some(Value::Bool(_) | Value::Number(_) | Value::Object(_))
+        Some(Value::Bool(_) | Value::Number(_) | Value::String(_) | Value::Object(_))
     )
 }
 
@@ -212,6 +212,20 @@ pub fn plan(
 ) -> Vec<Fix> {
     let mut fixes = Vec::new();
 
+    if failed(results, Check::AppDir)
+        && let Some((folder, kind)) = first_blocked(&paths.app_dir)
+        && Reason::of(&Abort::Io {
+            kind,
+            path: folder.clone(),
+        }) == Reason::NoPermission
+        && owner_of(&folder).is_some_and(|owner| Some(owner) == machine.uid)
+    {
+        fixes.push(Fix {
+            id: FixId::AppDir,
+            target: folder,
+        });
+    }
+
     if failed(results, Check::Shell) {
         let home = machine.home.to_string_lossy();
         let shell = text_var(machine, "SHELL");
@@ -226,7 +240,7 @@ pub fn plan(
     }
 
     if failed(results, Check::Protection)
-        && !failed(results, Check::Config)
+        && read_settings(&paths.settings_file, messages).is_ok()
         && deny_is_usable(paths)
     {
         fixes.push(Fix {
@@ -239,20 +253,6 @@ pub fn plan(
         fixes.push(Fix {
             id: FixId::Statusline,
             target: paths.settings_file.clone(),
-        });
-    }
-
-    if failed(results, Check::AppDir)
-        && let Some((folder, kind)) = first_blocked(&paths.app_dir)
-        && Reason::of(&Abort::Io {
-            kind,
-            path: folder.clone(),
-        }) == Reason::NoPermission
-        && owner_of(&folder).is_some_and(|owner| Some(owner) == machine.uid)
-    {
-        fixes.push(Fix {
-            id: FixId::AppDir,
-            target: folder,
         });
     }
 
@@ -312,7 +312,14 @@ pub fn apply(
         home: &home,
     };
     let refused = |error: crate::setup_files::ConfigError| error.message(messages);
-    let io_failed = |error: io::Error| error.kind().to_string();
+    let io_failed = |error: io::Error| {
+        Reason::of(&Abort::Io {
+            kind: error.kind(),
+            path: fix.target.clone(),
+        })
+        .text(messages)
+        .to_owned()
+    };
 
     match fix.id {
         FixId::Shell => {

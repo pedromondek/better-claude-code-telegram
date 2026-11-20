@@ -16,19 +16,23 @@ use crate::js::{
     join_path, js_key_count, js_length, js_template, js_trim, js_truthy, stringify_pretty,
 };
 use crate::messages::{Messages, messages_for};
-use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE, TELEGRAM_FLAG};
+use crate::paths::{
+    ASKS_FOLDER, CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE, PINGS_FOLDER, TELEGRAM_FLAG,
+};
 use crate::prompt::{Prompter, create_prompter};
 use crate::self_install::Store;
+use crate::settings::{DENY, PERMISSIONS};
 use crate::setup::{
-    ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, SETUP_COMMAND, SetupPaths,
-    StatuslineState, claude_output, command_on_path, env_deny_rule, git_version_from, has_command,
-    launcher_dir, parse_env_token, path_lists, read_settings, read_text, setup_locale, shell_file,
-    shell_rc_files, shell_script, statusline_state, whisper_python_works,
+    ACCESS_FILE, ALLOW_FROM_KEY, ALLOWLIST, CHANNEL_PLUGIN_ID, DM_POLICY_KEY, ENV_FILE,
+    HOOKS_PLUGIN_ID, SETUP_COMMAND, SetupPaths, StatuslineState, claude_output, command_on_path,
+    env_deny_rule, git_version_from, has_command, launcher_dir, parse_env_token, path_lists,
+    read_settings, read_text, setup_locale, shell_file, shell_rc_files, shell_script,
+    statusline_state, whisper_python_works,
 };
 use crate::shell_rc::{rc_line_active, rc_loads};
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
 use crate::statusline::{TELEGRAM_HEALTH_TTL_MS, TELEGRAM_LAUNCH_GRACE_MS, time_of};
-use crate::telegram::{api_root, call, post_json, property};
+use crate::telegram::{GET_CHAT, GET_ME, api_root, call, post_json, property};
 use crate::ui::{fail, section, should_colorize, skipped, success};
 use crate::update::{parse_plugins, run_quietly};
 
@@ -375,16 +379,20 @@ fn write_blocked(
 }
 
 pub(crate) fn first_blocked(app: &Path) -> Option<(PathBuf, io::ErrorKind)> {
-    [app.to_path_buf(), app.join("asks"), app.join("pings")]
-        .into_iter()
-        .filter(|folder| folder.is_dir())
-        .find_map(|folder| {
-            tempfile::Builder::new()
-                .prefix(".bcct-probe-")
-                .tempfile_in(&folder)
-                .err()
-                .map(|error| (folder, error.kind()))
-        })
+    [
+        app.to_path_buf(),
+        app.join(ASKS_FOLDER),
+        app.join(PINGS_FOLDER),
+    ]
+    .into_iter()
+    .filter(|folder| folder.is_dir())
+    .find_map(|folder| {
+        tempfile::Builder::new()
+            .prefix(".bcct-probe-")
+            .tempfile_in(&folder)
+            .err()
+            .map(|error| (folder, error.kind()))
+    })
 }
 
 pub(crate) fn owner_of(path: &Path) -> Option<u32> {
@@ -649,7 +657,7 @@ impl Checks<'_> {
                     machine.fetch,
                     &api_root(machine.var),
                     &token,
-                    "getMe",
+                    GET_ME,
                     &json!({}),
                     messages,
                 ) {
@@ -695,7 +703,7 @@ impl Checks<'_> {
             self.machine.fetch,
             &api_root(self.machine.var),
             token,
-            "getChat",
+            GET_CHAT,
             &json!({ "chat_id": user_id }),
             self.messages,
         )
@@ -722,7 +730,9 @@ impl Checks<'_> {
         let access = read_json(&join_path(&self.paths.state_dir, ACCESS_FILE))
             .filter(|access| !access.is_null())
             .unwrap_or_else(|| Value::Object(Map::new()));
-        let allowed = access.get("allowFrom").filter(|allowed| !allowed.is_null());
+        let allowed = access
+            .get(ALLOW_FROM_KEY)
+            .filter(|allowed| !allowed.is_null());
         let account = match (&self.token, allowed) {
             (Some(token), Some(Value::Array(users))) if users.len() == 1 => {
                 self.describe_account(token, users.first().unwrap_or(&Value::Null))
@@ -732,7 +742,7 @@ impl Checks<'_> {
         let accounts = allowed.and_then(js_length).unwrap_or_default();
         let waiting = js_key_count(access.get("pending"));
         let groups = js_key_count(access.get("groups"));
-        let policy = access.get("dmPolicy").filter(|policy| !policy.is_null());
+        let policy = access.get(DM_POLICY_KEY).filter(|policy| !policy.is_null());
 
         if accounts == 0 {
             return failed(detail.not_paired);
@@ -745,7 +755,7 @@ impl Checks<'_> {
             ));
         }
 
-        if policy.and_then(Value::as_str) != Some("allowlist") {
+        if policy.and_then(Value::as_str) != Some(ALLOWLIST) {
             return failed(&(detail.not_allowlist)(
                 &policy.map_or_else(|| "pairing".to_owned(), js_template),
             ));
@@ -809,8 +819,8 @@ impl Checks<'_> {
         let settings = read_json(&self.paths.settings_file);
         let deny = settings
             .as_ref()
-            .and_then(|settings| settings.get("permissions"))
-            .and_then(|permissions| permissions.get("deny"))
+            .and_then(|settings| settings.get(PERMISSIONS))
+            .and_then(|permissions| permissions.get(DENY))
             .filter(|deny| !deny.is_null());
         let protected = match deny {
             None => false,
