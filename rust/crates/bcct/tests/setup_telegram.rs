@@ -233,7 +233,7 @@ fn candidate_json(candidate: &Candidate) -> String {
 }
 
 #[test]
-fn every_pure_case_answers_like_setup_mjs() {
+fn answers_every_pure_case_like_setup_mjs() {
     let fixture = parse(FIXTURE);
     let pure = &fixture["pure"];
 
@@ -330,7 +330,7 @@ fn every_pure_case_answers_like_setup_mjs() {
 }
 
 #[test]
-fn every_api_call_answers_like_create_telegram_api() {
+fn answers_every_api_call_like_create_telegram_api() {
     let fixture = parse(FIXTURE);
     let token = text(&fixture, "token");
 
@@ -617,7 +617,7 @@ fn written_files(outcome: &Value) -> Value {
 }
 
 #[test]
-fn every_flow_prints_asks_calls_and_writes_like_setup_mjs() {
+fn runs_every_flow_like_setup_mjs() {
     let fixture = parse(FIXTURE);
     let default_mode = default_file_mode();
 
@@ -785,7 +785,7 @@ fn greeting_replies() -> [Value; 2] {
 }
 
 #[test]
-fn a_terminal_that_refuses_the_first_spinner_line_never_calls_telegram() {
+fn calls_no_telegram_when_the_first_spinner_line_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -804,7 +804,7 @@ fn a_terminal_that_refuses_the_first_spinner_line_never_calls_telegram() {
 }
 
 #[test]
-fn a_terminal_that_refuses_the_spinner_of_the_greeting_saves_the_account_and_greets_nobody() {
+fn saves_the_account_without_greeting_when_the_greeting_spinner_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -847,7 +847,7 @@ fn fake_bot() -> SavedBot {
 }
 
 #[test]
-fn a_screen_that_refuses_the_saved_line_keeps_the_token_and_says_it_was_refused() {
+fn keeps_the_token_and_marks_the_refusal_when_the_saved_line_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     let server = FakeTelegram::start(&get_me_replies());
@@ -871,7 +871,7 @@ fn a_screen_that_refuses_the_saved_line_keeps_the_token_and_says_it_was_refused(
 }
 
 #[test]
-fn a_screen_that_shows_everything_is_not_marked_as_refused() {
+fn marks_no_refusal_when_the_screen_shows_everything() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -894,7 +894,7 @@ fn a_screen_that_shows_everything_is_not_marked_as_refused() {
 }
 
 #[test]
-fn a_terminal_that_refuses_the_end_of_the_token_check_still_saves_the_token() {
+fn saves_the_token_when_the_end_of_its_check_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     let server = FakeTelegram::start(&get_me_replies());
@@ -918,7 +918,7 @@ fn a_terminal_that_refuses_the_end_of_the_token_check_still_saves_the_token() {
 }
 
 #[test]
-fn a_refused_screen_stops_before_asking_about_the_saved_bot_or_for_a_token() {
+fn stops_before_asking_about_the_saved_bot_or_a_token_on_a_refused_screen() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -946,7 +946,7 @@ fn a_refused_screen_stops_before_asking_about_the_saved_bot_or_for_a_token() {
 }
 
 #[test]
-fn a_saved_bot_on_a_refused_screen_says_so_and_stops_the_pairing_before_telegram() {
+fn stops_the_pairing_before_telegram_when_the_saved_bot_line_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -980,7 +980,7 @@ fn a_saved_bot_on_a_refused_screen_says_so_and_stops_the_pairing_before_telegram
 }
 
 #[test]
-fn a_refused_screen_stops_before_asking_to_keep_or_to_confirm_the_account() {
+fn stops_before_asking_to_keep_or_confirm_the_account_on_a_refused_screen() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1019,35 +1019,36 @@ fn a_refused_screen_stops_before_asking_to_keep_or_to_confirm_the_account() {
 }
 
 #[test]
-fn without_random_bytes_there_is_no_code_and_no_wait() {
-    let root = sandbox();
-    let state_dir = root.path().join("state");
-    fs::create_dir_all(&state_dir).unwrap();
-    let server = FakeTelegram::start(&pairing_replies());
-    let mut setup = quiet_setup(&state_dir, &post_json, &server.root);
-    setup.random = &|_| None;
-    let (mut out, mut err) = (Vec::new(), Vec::new());
+fn fails_in_the_chosen_language_without_waiting_when_random_bytes_fail() {
+    for (locale, expected) in [
+        (Locale::EnUs, "Could not generate the pairing code."),
+        (Locale::PtBr, "Não consegui gerar o código de pareamento."),
+    ] {
+        let root = sandbox();
+        let state_dir = root.path().join("state");
+        fs::create_dir_all(&state_dir).unwrap();
+        let server = FakeTelegram::start(&pairing_replies());
+        let mut setup = quiet_setup(&state_dir, &post_json, &server.root);
+        setup.random = &|_| None;
+        setup.messages = messages_for(locale);
+        let (mut out, mut err) = (Vec::new(), Vec::new());
 
-    let paired = ensure_pairing(
-        &setup,
-        &fake_bot(),
-        &mut quiet_screen(&mut out, &mut err),
-        &mut silent_prompts(),
-        &mut Recorder::default(),
-    );
+        let paired = ensure_pairing(
+            &setup,
+            &fake_bot(),
+            &mut quiet_screen(&mut out, &mut err),
+            &mut silent_prompts(),
+            &mut Recorder::default(),
+        );
 
-    assert_eq!(
-        paired,
-        Err(Failure::Failed(
-            "Could not generate the pairing code.".to_owned()
-        ))
-    );
-    assert_eq!(out, Vec::<u8>::new());
-    assert_eq!(server.requests().len(), 2);
+        assert_eq!(paired, Err(Failure::Failed(expected.to_owned())));
+        assert_eq!(out, Vec::<u8>::new());
+        assert_eq!(server.requests().len(), 2);
+    }
 }
 
 #[test]
-fn a_terminal_that_refuses_the_spinner_stops_before_the_token_is_saved() {
+fn stops_before_saving_the_token_when_the_spinner_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     let server = FakeTelegram::start(&get_me_replies());
@@ -1067,7 +1068,7 @@ fn a_terminal_that_refuses_the_spinner_stops_before_the_token_is_saved() {
 }
 
 #[test]
-fn a_terminal_that_refuses_the_spinner_of_the_saved_bot_stops_before_offering_it() {
+fn stops_before_offering_the_saved_bot_when_its_spinner_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1097,7 +1098,7 @@ fn a_terminal_that_refuses_the_spinner_of_the_saved_bot_stops_before_offering_it
 }
 
 #[test]
-fn a_failure_on_a_terminal_that_refuses_the_spinner_is_still_the_failure() {
+fn keeps_the_failure_when_the_spinner_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     let server = FakeTelegram::start(&[json!({
@@ -1119,7 +1120,7 @@ fn a_failure_on_a_terminal_that_refuses_the_spinner_is_still_the_failure() {
 }
 
 #[test]
-fn a_screen_that_refuses_the_code_never_waits_for_a_message_nobody_can_send() {
+fn waits_for_no_message_when_the_code_line_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1141,7 +1142,7 @@ fn a_screen_that_refuses_the_code_never_waits_for_a_message_nobody_can_send() {
 }
 
 #[test]
-fn a_screen_that_refuses_the_paired_line_stops_with_the_account_saved_and_greeted() {
+fn stops_with_the_account_saved_and_greeted_when_the_paired_line_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1167,7 +1168,7 @@ fn a_screen_that_refuses_the_paired_line_stops_with_the_account_saved_and_greete
 }
 
 #[test]
-fn a_screen_that_refuses_the_kept_account_stops() {
+fn stops_when_the_kept_account_line_is_refused() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1203,7 +1204,7 @@ fn a_screen_that_refuses_the_kept_account_stops() {
 }
 
 #[test]
-fn a_failure_is_built_from_its_message() {
+fn builds_a_failure_from_its_message() {
     assert_eq!(
         Failure::from("x".to_owned()),
         Failure::Failed("x".to_owned())
@@ -1211,7 +1212,7 @@ fn a_failure_is_built_from_its_message() {
 }
 
 #[test]
-fn a_token_that_cannot_be_saved_says_which_file_and_saves_nothing() {
+fn names_the_file_and_saves_nothing_when_the_token_cannot_be_saved() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::write(&state_dir, "a file where the folder goes").unwrap();
@@ -1241,7 +1242,7 @@ fn a_token_that_cannot_be_saved_says_which_file_and_saves_nothing() {
 }
 
 #[test]
-fn a_token_file_that_cannot_be_written_says_so() {
+fn reports_a_token_file_that_cannot_be_written() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(state_dir.join(".env")).unwrap();
@@ -1267,7 +1268,7 @@ fn a_token_file_that_cannot_be_written_says_so() {
 }
 
 #[test]
-fn a_token_file_the_journal_cannot_read_stays_as_it_was() {
+fn keeps_the_token_file_the_journal_cannot_read() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1296,7 +1297,7 @@ fn a_token_file_the_journal_cannot_read_stays_as_it_was() {
 }
 
 #[test]
-fn a_token_file_behind_a_link_keeps_the_link_and_saves_in_the_target() {
+fn saves_the_token_in_the_target_of_its_link() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     let target = root.path().join("real.env");
@@ -1334,7 +1335,7 @@ fn a_token_file_behind_a_link_keeps_the_link_and_saves_in_the_target() {
 }
 
 #[test]
-fn a_token_file_behind_a_link_that_points_to_nothing_creates_the_target() {
+fn creates_the_target_of_a_dangling_token_link() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1362,7 +1363,7 @@ fn a_token_file_behind_a_link_that_points_to_nothing_creates_the_target() {
 }
 
 #[test]
-fn an_access_file_behind_a_link_keeps_the_link_and_saves_in_the_target() {
+fn saves_the_access_in_the_target_of_its_link() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     let target = root.path().join("real-access.json");
@@ -1414,7 +1415,7 @@ fn pairing_replies() -> Vec<Value> {
 }
 
 #[test]
-fn an_access_file_that_cannot_be_written_says_so_and_greets_nobody() {
+fn reports_an_access_file_that_cannot_be_written_and_greets_nobody() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(state_dir.join("access.json")).unwrap();
@@ -1443,7 +1444,7 @@ fn an_access_file_that_cannot_be_written_says_so_and_greets_nobody() {
 }
 
 #[test]
-fn an_access_file_the_journal_cannot_read_stays_as_it_was_and_greets_nobody() {
+fn keeps_the_access_file_the_journal_cannot_read_and_greets_nobody() {
     let root = sandbox();
     let state_dir = root.path().join("state");
     fs::create_dir_all(&state_dir).unwrap();
@@ -1477,7 +1478,7 @@ fn an_access_file_the_journal_cannot_read_stays_as_it_was_and_greets_nobody() {
 }
 
 #[test]
-fn an_interrupted_call_never_reaches_telegram() {
+fn never_reaches_telegram_on_an_interrupted_call() {
     let server = FakeTelegram::start(&[]);
     let interruption = Interruption::new();
     interruption.interrupt();
@@ -1490,7 +1491,7 @@ fn an_interrupted_call_never_reaches_telegram() {
 }
 
 #[test]
-fn an_interruption_stops_waiting_for_a_call_that_never_answers() {
+fn stops_waiting_on_an_interruption_for_a_call_that_never_answers() {
     let server = FakeTelegram::start(&[json!({"method": "getUpdates", "hold": true})]);
     let interruption = Interruption::new();
     let interrupting = interruption.clone();
@@ -1511,7 +1512,7 @@ fn an_interruption_stops_waiting_for_a_call_that_never_answers() {
 }
 
 #[test]
-fn an_uninterrupted_call_answers_like_the_plain_one() {
+fn answers_an_uninterrupted_call_like_the_plain_one() {
     let server = FakeTelegram::start(&[json!({
         "method": "getMe",
         "status": 200,
@@ -1546,7 +1547,7 @@ fn waits_for_a_slow_answer_while_nothing_interrupts() {
 }
 
 #[test]
-fn random_codes_are_eight_hex_digits_that_change() {
+fn generates_random_codes_of_eight_hex_digits_that_change() {
     let first = pairing_code(&random_bytes).unwrap();
     let second = pairing_code(&random_bytes).unwrap();
 
@@ -1564,7 +1565,7 @@ fn random_codes_are_eight_hex_digits_that_change() {
 }
 
 #[test]
-fn a_bot_that_cannot_join_groups_has_no_warning() {
+fn warns_only_for_a_bot_that_can_join_groups() {
     let bot = SavedBot {
         token: String::new(),
         username: "b".to_owned(),

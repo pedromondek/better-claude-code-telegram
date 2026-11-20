@@ -11,22 +11,30 @@ use crate::js::{
     join_path, js_number, js_string, js_template, js_trim, js_truthy, stringify_pretty,
 };
 use crate::messages::Messages;
-use crate::setup::{ACCESS_FILE, ENV_FILE, SETUP_COMMAND, is_paired, parse_env_token, read_text};
+use crate::setup::{
+    ACCESS_FILE, ALLOW_FROM_KEY, ALLOWLIST, DM_POLICY_KEY, ENV_FILE, SETUP_COMMAND, TOKEN_KEY,
+    is_paired, parse_env_token, read_text,
+};
 use crate::spinner::{Pending, pending};
-use crate::telegram::{Fetch, call, property};
+use crate::telegram::{Fetch, GET_CHAT, GET_ME, GET_UPDATES, call, property};
 use crate::ui::{bold, link, skipped, success, warn};
 
-pub const PAIRING_TIMEOUT_MS: u64 = 180_000;
+#[macro_export]
+macro_rules! pairing_timeout_minutes {
+    () => {
+        3
+    };
+}
+
+pub const PAIRING_TIMEOUT_MS: u64 = crate::pairing_timeout_minutes!() * 60_000;
 
 const PAIRING_CODE_BYTES: usize = 4;
 const LONG_POLL_SECONDS: u64 = 30;
-const ALLOWLIST: &str = "allowlist";
 const PRIVATE_CHAT: &str = "private";
 const START_COMMAND: &str = "/start";
 const UNDEFINED: &str = "undefined";
 const TEXT_NOT_TRIMMABLE: &str = "update.message.text?.trim is not a function";
 const REPLACEMENT: char = '\u{fffd}';
-const NO_RANDOM_BYTES: &str = "Could not generate the pairing code.";
 
 pub struct TelegramSetup<'a> {
     pub state_dir: &'a Path,
@@ -177,8 +185,8 @@ fn spread(value: &Value) -> Map<String, Value> {
 pub fn build_access(current: Option<&Value>, user_id: &str) -> Value {
     let mut access = current.map(spread).unwrap_or_default();
 
-    access.insert("dmPolicy".to_owned(), json!(ALLOWLIST));
-    access.insert("allowFrom".to_owned(), json!([user_id]));
+    access.insert(DM_POLICY_KEY.to_owned(), json!(ALLOWLIST));
+    access.insert(ALLOW_FROM_KEY.to_owned(), json!([user_id]));
     access.insert("groups".to_owned(), json!({}));
     access.insert("pending".to_owned(), json!({}));
 
@@ -372,7 +380,7 @@ pub fn load_saved_bot(
         refused: false,
     };
     let bot = stage.showing(messages.saved_bot_checking, || {
-        setup.call(&token, "getMe", &json!({}))
+        setup.call(&token, GET_ME, &json!({}))
     })?;
     let mut saved = saved_bot(&token, bot.as_ref())?;
 
@@ -396,7 +404,7 @@ fn save_token(
     tracks.track_file(&env_file).map_err(not_saved)?;
     write_private(
         &link_target(&env_file),
-        format!("TELEGRAM_BOT_TOKEN={token}\n").as_bytes(),
+        format!("{TOKEN_KEY}{token}\n").as_bytes(),
     )
     .map_err(not_saved)?;
 
@@ -428,7 +436,7 @@ pub fn ensure_token<P: Prompts>(
 
     if let Some(saved) = setup.saved_token().filter(|_| offer_saved) {
         let bot = stage.showing(messages.saved_bot_checking, || {
-            Ok(setup.call(&saved, "getMe", &json!({})).ok().flatten())
+            Ok(setup.call(&saved, GET_ME, &json!({})).ok().flatten())
         })?;
 
         if let Some(bot) = bot.filter(js_truthy) {
@@ -448,7 +456,7 @@ pub fn ensure_token<P: Prompts>(
 
     let token = prompts.hidden(messages.token_prompt)?;
     let bot = stage.showing(messages.token_checking, || {
-        setup.call(&token, "getMe", &json!({}))
+        setup.call(&token, GET_ME, &json!({}))
     })?;
 
     save_token(setup, &token, bot.as_ref(), &mut stage, tracks).map_err(P::Error::from)
@@ -460,7 +468,7 @@ pub fn paired_accounts(setup: &TelegramSetup<'_>, user_ids: &[Value], token: &st
         .iter()
         .map(|user_id| {
             let chat = setup
-                .call(token, "getChat", &json!({ "chat_id": user_id }))
+                .call(token, GET_CHAT, &json!({ "chat_id": user_id }))
                 .ok()
                 .flatten();
             let name = field(chat.as_ref(), "username")
@@ -493,7 +501,7 @@ fn wait_for_pairing_message(
     while (setup.now)() < deadline {
         let updates = setup.call(
             token,
-            "getUpdates",
+            GET_UPDATES,
             &json!({
                 "offset": number(next),
                 "timeout": LONG_POLL_SECONDS,
@@ -533,12 +541,12 @@ fn request_pairing(
 
         setup.call(
             &bot.token,
-            "getUpdates",
+            GET_UPDATES,
             &json!({ "offset": -1, "timeout": 0 }),
         )
     })?;
-    let code =
-        pairing_code(setup.random).ok_or_else(|| Failure::Failed(NO_RANDOM_BYTES.to_owned()))?;
+    let code = pairing_code(setup.random)
+        .ok_or_else(|| Failure::Failed(messages.no_pairing_code.to_owned()))?;
     let colorize = stage.colorize();
 
     stage.show(&(messages.send_pairing_code)(
@@ -578,7 +586,7 @@ fn finish_pairing(
     let greeted = setup
         .call(
             token,
-            "getUpdates",
+            GET_UPDATES,
             &json!({ "offset": plus_one(candidate.update_id.as_ref()), "timeout": 0 }),
         )
         .and_then(|_| {
@@ -623,7 +631,7 @@ pub fn ensure_pairing<P: Prompts>(
     if is_paired(saved_access.as_ref()) {
         let user_ids = saved_access
             .as_ref()
-            .and_then(|access| access.get("allowFrom"))
+            .and_then(|access| access.get(ALLOW_FROM_KEY))
             .and_then(Value::as_array)
             .map(Vec::as_slice)
             .unwrap_or_default();
@@ -647,7 +655,7 @@ pub fn ensure_pairing<P: Prompts>(
         .filter(|access| js_truthy(access))
         .map(|access| {
             let mut copy = spread(access);
-            copy.insert("allowFrom".to_owned(), json!([]));
+            copy.insert(ALLOW_FROM_KEY.to_owned(), json!([]));
             Value::Object(copy)
         });
     let candidate = request_pairing(setup, bot, &mut stage)?;
@@ -674,9 +682,49 @@ pub fn ensure_pairing<P: Prompts>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::messages::{EN_US, PT_BR};
 
     #[test]
-    fn numbers_follow_javascript_coercion() {
+    fn waits_for_the_pairing_as_long_as_the_messages_say() {
+        assert_eq!(PAIRING_TIMEOUT_MS, 180_000);
+        assert_eq!(
+            EN_US.no_pairing_message,
+            "No message with the code arrived in 3 min. Run the setup again."
+        );
+        assert_eq!(
+            PT_BR.no_pairing_message,
+            "Nenhuma mensagem com o código chegou em 3 min. Rode o setup de novo."
+        );
+
+        for messages in [&EN_US, &PT_BR] {
+            assert!(
+                (messages.send_pairing_code)("b", "C", "l").contains(" 3 min. "),
+                "{}",
+                messages.no_pairing_message
+            );
+        }
+    }
+
+    #[test]
+    fn keeps_the_access_and_env_keys_the_channel_server_reads() {
+        let server = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../plugins/telegram/server.ts"
+        ))
+        .unwrap();
+
+        assert_eq!(TOKEN_KEY, "TELEGRAM_BOT_TOKEN=");
+        assert!(server.contains(&format!("process.env.{}", TOKEN_KEY.trim_end_matches('='))));
+        assert!(server.contains(&format!("{ALLOW_FROM_KEY}: string[]")));
+        assert!(server.contains(&format!("{DM_POLICY_KEY}: 'pairing' | '{ALLOWLIST}'")));
+        assert_eq!(
+            build_access(None, "1"),
+            json!({"dmPolicy": "allowlist", "allowFrom": ["1"], "groups": {}, "pending": {}})
+        );
+    }
+
+    #[test]
+    fn coerces_numbers_like_javascript() {
         assert!(to_number(None).is_nan());
         assert!(to_number(Some(&json!({}))).is_nan());
         assert!(to_number(Some(&json!([1, 2]))).is_nan());
@@ -693,7 +741,7 @@ mod tests {
     }
 
     #[test]
-    fn adding_one_concatenates_text_and_adds_numbers() {
+    fn concatenates_text_and_adds_numbers_when_adding_one() {
         assert_eq!(plus_one(Some(&json!("9"))), json!("91"));
         assert_eq!(plus_one(Some(&json!([1, 2]))), json!("1,21"));
         assert_eq!(plus_one(Some(&json!({}))), json!("[object Object]1"));
@@ -704,7 +752,7 @@ mod tests {
     }
 
     #[test]
-    fn spreading_text_splits_it_into_utf16_units() {
+    fn splits_spread_text_into_utf16_units() {
         let spread_text = spread(&json!("a😀"));
 
         assert_eq!(
@@ -715,7 +763,7 @@ mod tests {
     }
 
     #[test]
-    fn the_debug_view_names_the_folder_and_the_api_root() {
+    fn names_the_folder_and_the_api_root_in_debug() {
         let setup = TelegramSetup {
             state_dir: Path::new("/state"),
             messages: crate::messages::messages_for(crate::locale::Locale::EnUs),
@@ -733,7 +781,7 @@ mod tests {
     }
 
     #[test]
-    fn the_confirmation_keeps_any_id_as_text() {
+    fn keeps_any_id_as_text_in_the_confirmation() {
         let messages = crate::messages::messages_for(crate::locale::Locale::EnUs);
 
         assert_eq!(
