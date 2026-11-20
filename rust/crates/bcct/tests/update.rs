@@ -1144,7 +1144,7 @@ fn the_quiet_update_gives_only_the_reason_when_it_fails() {
 }
 
 #[test]
-fn the_health_fix_runs_the_quiet_update_of_the_binary() {
+fn runs_the_quiet_update_of_the_binary_on_the_health_fix() {
     let folder = sandbox();
     let root = folder.path();
     let bin = root.join("bin");
@@ -1328,7 +1328,7 @@ fn the_http_helpers_turn_connection_errors_into_a_short_reason() {
 }
 
 #[test]
-fn the_update_command_reads_the_roots_from_the_environment() {
+fn reads_the_roots_of_the_update_from_the_environment() {
     let folder = sandbox();
     let root = serve(vec![response("500 Internal Server Error", "")]);
 
