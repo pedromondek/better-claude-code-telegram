@@ -1,6 +1,7 @@
 use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, VisualMode, Visuals, kind_minutes};
 use crate::install::{
-    CommandsChoice, DISABLE_ANSWERS, Parsed, TRANSCRIPTION_MODELS, TranscriptionChoice, VisualsPick,
+    BASE_MODEL, CommandsChoice, DISABLE_ANSWERS, Parsed, SMALL_MODEL, TRANSCRIPTION_MODELS,
+    TranscriptionChoice, VisualsPick,
 };
 use crate::js::{format_number, is_js_whitespace, js_number, js_trim};
 use crate::locale::Locale;
@@ -606,8 +607,8 @@ pub fn ask_quiet_hours(
 fn model_option(model: &'static str, messages: &Messages) -> ChoiceItem<TranscriptionChoice> {
     let models = messages.transcription_models;
     let hint = match model {
-        "base" => models.base,
-        "small" => models.small,
+        BASE_MODEL => models.base,
+        SMALL_MODEL => models.small,
         _ => models.medium,
     };
 
@@ -1449,6 +1450,30 @@ mod visuals_tests {
 
         for wrong in ["", "maybe", "1"] {
             assert_eq!(parse_visual_review(wrong), None, "{wrong}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod transcription_tests {
+    use super::*;
+    use crate::messages::{EN_US, PT_BR};
+
+    fn hint_of(model: &'static str, messages: &Messages) -> Option<String> {
+        match model_option(model, messages) {
+            ChoiceItem::Pick { hint, .. } => hint,
+            ChoiceItem::Heading(_) => None,
+        }
+    }
+
+    #[test]
+    fn gives_each_transcription_model_the_hint_of_its_name() {
+        for messages in [&EN_US, &PT_BR] {
+            let models = messages.transcription_models;
+
+            assert_eq!(hint_of("base", messages).as_deref(), Some(models.base));
+            assert_eq!(hint_of("small", messages).as_deref(), Some(models.small));
+            assert_eq!(hint_of("medium", messages).as_deref(), Some(models.medium));
         }
     }
 }

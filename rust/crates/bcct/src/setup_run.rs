@@ -35,9 +35,9 @@ use crate::prompt::{
 };
 use crate::settings::{STATUS_LINE, is_our_statusline, remove_if_present, statusline_preview};
 use crate::setup::{
-    ACCESS_FILE, COMMAND_ON_PATH_KEY, ENV_FILE, SETUP_COMMAND, SetupPaths, StatuslineState,
-    check_setup, command_on_path, env_deny_rule, git_version_from, launcher_dir, mark_launch,
-    parse_env_token, read_settings, read_text, setup_locale, shell_file, shell_script,
+    ACCESS_FILE, ALLOW_FROM_KEY, COMMAND_ON_PATH_KEY, ENV_FILE, SETUP_COMMAND, SetupPaths,
+    StatuslineState, check_setup, command_on_path, env_deny_rule, git_version_from, launcher_dir,
+    mark_launch, parse_env_token, read_settings, read_text, setup_locale, shell_file, shell_script,
     statusline_is_current, statusline_prompt, statusline_state, telegram_instance_running,
     whisper_python_works,
 };
@@ -1084,6 +1084,8 @@ impl<'a> Setup<'a> {
             messages.done_all
         } else if needs_reopen {
             messages.done_reopen
+        } else if sections.contains(&Section::Path) {
+            messages.done_new_terminal
         } else {
             messages.done_live
         };
@@ -1259,6 +1261,14 @@ impl<'a> Setup<'a> {
             }
             "delays" => {
                 if DISABLE_ANSWERS.contains(&js_trim(value).to_lowercase().as_str()) {
+                    if !read_config(&self.paths.app_dir).contains_key(DELAYS_KEY) {
+                        self.output
+                            .printer(messages)
+                            .skipped(messages.delays_already_off);
+
+                        return Ok(());
+                    }
+
                     return self.clear_kinds(messages);
                 }
 
@@ -1689,7 +1699,7 @@ pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>)
             .is_some_and(|token| !token.is_empty());
     let accounts = read_json(&join_path(&paths.state_dir, ACCESS_FILE))
         .as_ref()
-        .and_then(|access| access.get("allowFrom"))
+        .and_then(|access| access.get(ALLOW_FROM_KEY))
         .and_then(js_length)
         .unwrap_or_default();
 
@@ -1802,7 +1812,7 @@ mod tests {
     }
 
     #[test]
-    fn a_setup_built_in_the_test_process_lives_in_the_home_and_system_it_is_given() {
+    fn builds_the_test_setup_in_the_home_and_system_it_is_given() {
         let folder = tempfile::tempdir().unwrap();
         let var = |_: &str| None::<OsString>;
         let (mut out, mut err) = (Vec::new(), Vec::new());
@@ -1999,7 +2009,7 @@ mod tests {
     }
 
     #[test]
-    fn a_change_that_cannot_be_described_ends_with_its_error() {
+    fn ends_with_its_error_when_a_change_cannot_be_described() {
         let folder = tempfile::tempdir().unwrap();
         let settings = folder.path().join("settings.json");
         let var = |_: &str| None::<OsString>;
@@ -2068,6 +2078,63 @@ mod tests {
         assert_eq!(out, Vec::<u8>::new());
     }
 
+    fn set_delays_off(config: Option<&str>, locale: Locale) -> (String, Option<String>) {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(locale);
+        let config_file = {
+            let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+            let config_file = setup.paths.app_dir.join(crate::paths::CONFIG_FILE);
+
+            if let Some(text) = config {
+                std::fs::create_dir_all(&setup.paths.app_dir).unwrap();
+                std::fs::write(&config_file, text).unwrap();
+            }
+
+            setup
+                .apply_setting("delays", "off", messages, &mut FakePrompter::new(false))
+                .unwrap();
+            config_file
+        };
+
+        assert_eq!(err, Vec::<u8>::new());
+
+        (
+            String::from_utf8(out).unwrap(),
+            std::fs::read_to_string(config_file).ok(),
+        )
+    }
+
+    #[test]
+    fn says_the_delay_per_kind_stays_off_when_none_is_saved() {
+        assert_eq!(
+            set_delays_off(None, Locale::EnUs),
+            (
+                "○ Delay per kind kept: off, the single delay applies to everything.\n".to_owned(),
+                None
+            )
+        );
+        assert_eq!(
+            set_delays_off(Some(r#"{"delay":4}"#), Locale::PtBr),
+            (
+                "○ Atraso por tipo mantido: desligado, o atraso único vale para tudo.\n".to_owned(),
+                Some(r#"{"delay":4}"#.to_owned())
+            )
+        );
+    }
+
+    #[test]
+    fn turns_the_saved_delay_per_kind_off() {
+        let (out, config) = set_delays_off(Some(r#"{"delays":[1,2,3],"delay":4}"#), Locale::EnUs);
+
+        assert_eq!(
+            out,
+            "✔ Delay per kind turned off: the single delay applies to everything.\n"
+        );
+        assert!(!config.unwrap().contains("delays"));
+    }
+
     struct Refusing;
 
     impl Write for Refusing {
@@ -2081,7 +2148,7 @@ mod tests {
     }
 
     #[test]
-    fn the_tracked_output_remembers_each_failure_and_writes_everything() {
+    fn remembers_each_failure_of_the_tracked_output_and_writes_everything() {
         let mut written = Vec::new();
         let mut tracked = Tracked {
             inner: &mut written,
@@ -2112,7 +2179,7 @@ mod tests {
     }
 
     #[test]
-    fn the_final_check_is_a_step_but_cannot_be_asked_for() {
+    fn keeps_the_final_check_a_step_that_cannot_be_asked_for() {
         assert_eq!(Section::Health.as_str(), "health");
         assert!(!SETUP_SECTIONS.contains(&Section::Health));
         assert!(parse_setup_sections(&["health".to_owned()], messages_for(Locale::EnUs)).is_err());

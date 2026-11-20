@@ -832,7 +832,7 @@ fn replay_group(group: &str) {
 }
 
 #[test]
-fn a_bot_answer_without_data_fails_only_its_check_and_the_setup_finishes() {
+fn fails_only_the_check_of_a_bot_answer_without_data_and_finishes_the_setup() {
     let fixture = fixture();
     let scenario = list(&fixture["processes"], "telegram")
         .iter()
@@ -1202,7 +1202,7 @@ fn asks_each_question_as_the_fixture_recorded() {
 }
 
 #[test]
-fn a_heading_keeps_its_label_when_the_values_change_type() {
+fn keeps_the_heading_label_when_the_values_change_type() {
     let heading: ChoiceItem<u8> = ChoiceItem::heading("title");
     let pick = ChoiceItem::pick("label", "answer", 1_u8).map_value(u16::from);
 
@@ -1212,7 +1212,7 @@ fn a_heading_keeps_its_label_when_the_values_change_type() {
 }
 
 #[test]
-fn the_plugin_step_stops_with_the_install_commands_when_git_is_missing() {
+fn stops_the_plugin_step_with_the_install_commands_when_git_is_missing() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -1233,7 +1233,7 @@ fn the_plugin_step_stops_with_the_install_commands_when_git_is_missing() {
 }
 
 #[test]
-fn the_uninstall_subcommand_is_the_same_as_the_flag() {
+fn runs_the_uninstall_subcommand_like_the_flag() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -1324,7 +1324,7 @@ fn path_run(root: &Path, input: &str, facts: &mut Facts) -> RunResult {
 }
 
 #[test]
-fn the_path_step_adds_keeps_and_removes_the_launcher_folder() {
+fn adds_keeps_and_removes_the_launcher_folder_in_the_path_step() {
     let fixture = fixture();
     let folder = support::sandbox();
     let root = folder.path();
@@ -1350,10 +1350,24 @@ fn the_path_step_adds_keeps_and_removes_the_launcher_folder() {
     );
     assert!(off.stdout.contains(en.path_off), "{}", off.stdout);
     assert!(!config.exists());
+    assert!(
+        off.stdout
+            .ends_with("\n✔ Done. Open a new terminal for it to apply.\n"),
+        "{}",
+        off.stdout
+    );
+    assert!(!off.stdout.contains(en.done_live), "{}", off.stdout);
 
     let added = path_run(root, "y\n", &mut facts);
 
     assert_eq!(added.status, Some(0), "{}", added.stdout);
+    assert!(
+        added
+            .stdout
+            .ends_with(&format!("✔ {}\n", en.done_new_terminal)),
+        "{}",
+        added.stdout
+    );
     assert!(
         added.stdout.contains(&(en.path_added)(&shell)),
         "{}",
@@ -1399,7 +1413,7 @@ fn the_path_step_adds_keeps_and_removes_the_launcher_folder() {
 }
 
 #[test]
-fn a_shell_script_that_cannot_be_saved_stops_the_plugin_step_with_its_name() {
+fn stops_the_plugin_step_naming_the_shell_script_that_cannot_be_saved() {
     let fixture = fixture();
     let scenario = list(&fixture["processes"], "plugins")
         .iter()
@@ -1430,7 +1444,7 @@ fn a_shell_script_that_cannot_be_saved_stops_the_plugin_step_with_its_name() {
 }
 
 #[test]
-fn an_uninstall_that_cannot_remove_the_shell_script_names_it_and_stops() {
+fn stops_the_uninstall_naming_the_shell_script_it_cannot_remove() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -1473,7 +1487,7 @@ fn full_output_sandbox() -> tempfile::TempDir {
 }
 
 #[test]
-fn a_closed_output_ends_a_step_with_the_line_of_the_catalog() {
+fn ends_a_step_with_the_catalog_line_when_the_output_is_closed() {
     let messages = messages_for(Locale::EnUs);
     let line = format!("✘ {}\n", messages.output_not_shown);
 
@@ -1495,7 +1509,7 @@ fn a_closed_output_ends_a_step_with_the_line_of_the_catalog() {
 }
 
 #[test]
-fn a_closed_output_saves_the_write_in_course_and_stops_before_the_next_question() {
+fn saves_the_write_in_course_and_stops_before_the_next_question_on_a_closed_output() {
     let folder = full_output_sandbox();
     let root = folder.path();
 
@@ -1514,7 +1528,7 @@ fn a_closed_output_saves_the_write_in_course_and_stops_before_the_next_question(
 }
 
 #[test]
-fn a_closed_output_after_a_failure_still_says_both() {
+fn says_both_when_the_output_closes_after_a_failure() {
     let folder = full_output_sandbox();
     let root = folder.path();
 
@@ -1542,7 +1556,7 @@ fn a_closed_output_after_a_failure_still_says_both() {
 }
 
 #[test]
-fn a_closed_output_stops_the_prompt_of_the_statusline_request_and_the_declined_report() {
+fn stops_the_statusline_request_prompt_and_the_declined_report_on_a_closed_output() {
     let folder = full_output_sandbox();
     let root = folder.path();
 
@@ -1628,17 +1642,17 @@ fn passes_alone(driver: &str) {
 }
 
 #[test]
-fn an_output_closed_at_the_token_still_applies_the_rule_and_then_stops() {
+fn applies_the_rule_and_stops_when_the_output_closes_at_the_token() {
     passes_alone("closed_at_the_token_driver");
 }
 
 #[test]
-fn an_output_closed_at_the_token_prompt_stops_without_saving_it() {
+fn stops_without_saving_the_token_when_the_output_closes_at_its_prompt() {
     passes_alone("closed_at_the_token_prompt_driver");
 }
 
 #[test]
-fn an_output_closed_at_the_pairing_stops_after_keeping_the_account() {
+fn keeps_the_account_and_stops_when_the_output_closes_at_the_pairing() {
     passes_alone("closed_at_the_pairing_driver");
 }
 
@@ -1718,7 +1732,7 @@ fn closed_at_the_token_prompt_driver() {
 }
 
 #[test]
-fn a_closed_output_never_reaches_the_network() {
+fn never_reaches_the_network_on_a_closed_output() {
     let folder = full_output_sandbox();
     let root = folder.path();
     let telegram = start_telegram(&json!({}));
@@ -1774,7 +1788,7 @@ fn closed_at_the_pairing_driver() {
 }
 
 #[test]
-fn a_file_that_cannot_be_saved_says_so_in_one_line_of_the_catalog() {
+fn says_in_one_catalog_line_that_a_file_cannot_be_saved() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -1820,7 +1834,7 @@ fn a_file_that_cannot_be_saved_says_so_in_one_line_of_the_catalog() {
 }
 
 #[test]
-fn an_rc_file_that_cannot_be_written_stops_the_plugin_step_in_one_line() {
+fn stops_the_plugin_step_in_one_line_when_an_rc_file_cannot_be_written() {
     let folder = full_output_sandbox();
     let root = folder.path();
     let rc = root.join("home/.zshrc");
@@ -1839,7 +1853,7 @@ fn an_rc_file_that_cannot_be_written_stops_the_plugin_step_in_one_line() {
 }
 
 #[test]
-fn a_state_folder_that_cannot_be_removed_stops_the_uninstall_in_one_line() {
+fn stops_the_uninstall_in_one_line_when_the_state_folder_cannot_be_removed() {
     let folder = full_output_sandbox();
     let root = folder.path();
     let channels = root.join("home/.claude/channels");
@@ -1864,7 +1878,7 @@ fn a_state_folder_that_cannot_be_removed_stops_the_uninstall_in_one_line() {
 }
 
 #[test]
-fn a_request_that_cannot_be_taken_says_so_in_one_line_of_the_catalog() {
+fn says_in_one_catalog_line_that_a_request_cannot_be_taken() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -1929,7 +1943,7 @@ fn goes_on_with_a_missing_or_an_old_node_since_only_npx_needs_it() {
 }
 
 #[test]
-fn a_tool_installed_by_the_setup_is_seen_by_the_rest_of_the_setup() {
+fn finds_a_tool_the_setup_installed_in_the_rest_of_the_setup() {
     let folder = support::sandbox();
     let root = folder.path();
     let fixture = fixture();
@@ -2110,7 +2124,7 @@ fn assert_cooked(modes: &str) {
 }
 
 #[test]
-fn a_closed_output_on_the_terminal_ends_without_offering_to_undo() {
+fn ends_without_offering_to_undo_when_the_terminal_output_is_closed() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -2140,10 +2154,19 @@ fn ctrl_z_gives_the_terminal_back_while_stopped_and_fg_goes_on_asking() {
 
     prepared(root, &json!({}), "");
     with_stty(root);
-    std::os::unix::fs::symlink(resolved("bash"), root.join("bin/bash")).unwrap();
+    std::os::unix::fs::symlink(
+        resolved(pty::JOB_SHELL),
+        root.join("bin").join(pty::JOB_SHELL),
+    )
+    .unwrap();
 
-    let script = "set -m; printf '<<<'; \"$0\" setup delay; echo \"[stopped=$?]\"; echo \"[modes]\"; stty -a; echo \"[/modes]\"; fg; echo \"[exit=$?]\"";
-    let argv: Vec<String> = ["bash", "-c", script, BCCT].map(str::to_owned).to_vec();
+    let script = format!(
+        "{}; printf '<<<'; \"$0\" setup delay; echo \"[stopped=$?]\"; echo \"[modes]\"; stty -a; echo \"[/modes]\"; fg; echo \"[exit=$?]\"",
+        pty::JOB_CONTROL
+    );
+    let argv: Vec<String> = [pty::JOB_SHELL, "-c", &script, BCCT]
+        .map(str::to_owned)
+        .to_vec();
     let down = b"\x1b[B".to_vec();
     let steps = [
         pty::Step::Key(down.clone()),
@@ -2265,7 +2288,7 @@ fn signal_driver() {
 }
 
 #[test]
-fn a_signal_ends_the_process_by_itself_like_node_and_shows_the_cursor_again() {
+fn ends_by_the_signal_like_node_and_shows_the_cursor_again() {
     const SIGTERM: i32 = 15;
     const SIGINT: i32 = 2;
 
@@ -2347,7 +2370,7 @@ fn survived_signal_driver() {
 }
 
 #[test]
-fn a_signal_that_does_not_kill_ends_with_the_code_of_the_signal_and_the_terminal_back() {
+fn ends_with_the_signal_code_and_gives_the_terminal_back_when_the_signal_does_not_kill() {
     for (name, code) in [("TERM", 143), ("INT", 130)] {
         let exe = std::env::current_exe()
             .unwrap()
@@ -2442,7 +2465,7 @@ fn drop_driver() {
 }
 
 #[test]
-fn a_console_dropped_in_raw_mode_gives_the_terminal_back() {
+fn gives_the_terminal_back_when_a_console_drops_in_raw_mode() {
     let argv = [
         std::env::current_exe()
             .unwrap()

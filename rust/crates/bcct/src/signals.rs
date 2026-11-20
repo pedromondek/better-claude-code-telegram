@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn the_cursor_comes_back_before_dying_and_the_exit_code_only_counts_if_it_survives() {
+    fn shows_the_cursor_before_dying_and_keeps_the_exit_code_only_if_it_survives() {
         let written = Shared::default();
         let mut screen = written.clone();
         let seen = RefCell::new(Vec::new());
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn an_output_that_is_not_a_terminal_gets_no_cursor_and_a_failed_emulation_still_ends() {
+    fn skips_the_cursor_off_a_terminal_and_still_ends_when_the_emulation_fails() {
         let emulate = |_: i32| Err(io::ErrorKind::Other.into());
 
         assert_eq!(ended_by(2, None, None, &emulate), 130);

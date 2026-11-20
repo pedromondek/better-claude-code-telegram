@@ -1732,7 +1732,7 @@
           }
         ],
         "claudeCalls": [],
-        "toolCalls": "uv venv {root}/home/.claude/better-claude-code-telegram/whisper/venv --python python3 -q\nuv pip install -q --python {root}/home/.claude/better-claude-code-telegram/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+        "toolCalls": "uv venv {root}/home/.claude/better-claude-code-telegram/whisper/venv --python python3 --clear -q\nuv pip install -q --python {root}/home/.claude/better-claude-code-telegram/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
         "telegramCalls": [],
         "after": {
           "home/": { "mode": "755" },
@@ -1874,7 +1874,7 @@
           }
         ],
         "claudeCalls": [],
-        "toolCalls": "uv venv {root}/home/.claude/better-claude-code-telegram/whisper/venv --python python3 -q\nuv pip install -q --python {root}/home/.claude/better-claude-code-telegram/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+        "toolCalls": "uv venv {root}/home/.claude/better-claude-code-telegram/whisper/venv --python python3 --clear -q\nuv pip install -q --python {root}/home/.claude/better-claude-code-telegram/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
         "telegramCalls": [],
         "after": {
           "home/": { "mode": "755" },
