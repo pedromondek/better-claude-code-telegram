@@ -163,10 +163,12 @@ export function runBinary({ spawnSync, signals, onSignal }, binary, args) {
   }
 }
 
+export const INSPECTOR_SIGNAL = "SIGUSR1";
+
 export function exitAsChild(current, code, signal) {
   current.exitCode = code;
 
-  if (signal !== null) {
+  if (signal !== null && signal !== INSPECTOR_SIGNAL) {
     current.kill(current.pid, signal);
   }
 }

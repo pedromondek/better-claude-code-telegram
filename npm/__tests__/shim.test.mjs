@@ -703,4 +703,13 @@ describe("exitAsChild", () => {
     expect(shim.exitCode).toBe(1);
     expect(shim.kills).toEqual([[4242, "SIGINT"]]);
   });
+
+  it("keeps the exit code and sends no signal when the child ended by SIGUSR1, which opens the Node inspector", () => {
+    const shim = current();
+
+    exitAsChild(shim, 1, "SIGUSR1");
+
+    expect(shim.exitCode).toBe(1);
+    expect(shim.kills).toEqual([]);
+  });
 });
