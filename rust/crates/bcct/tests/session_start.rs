@@ -44,7 +44,7 @@ fn shown(root: &Path, variables: &[(&str, OsString)], binary: &str) -> String {
 }
 
 #[test]
-fn the_plugin_version_comes_from_its_manifest() {
+fn reads_the_plugin_version_from_its_manifest() {
     let folder = sandbox();
     let root = folder.path();
 
@@ -62,7 +62,7 @@ fn the_plugin_version_comes_from_its_manifest() {
 }
 
 #[test]
-fn a_different_version_warns_the_user_and_tells_claude() {
+fn warns_the_user_and_tells_claude_when_the_versions_differ() {
     let output: Value =
         serde_json::from_str(&notice("0.2.0", "0.1.0", messages_for(Locale::PtBr)).unwrap())
             .unwrap();
@@ -86,7 +86,7 @@ fn a_different_version_warns_the_user_and_tells_claude() {
 }
 
 #[test]
-fn the_hook_stays_quiet_when_the_versions_match_or_the_plugin_is_unknown() {
+fn stays_quiet_when_the_versions_match_or_the_plugin_is_unknown() {
     let folder = sandbox();
     let root = folder.path();
     let plugin = plugin_at(root, "0.2.0").into_os_string();
@@ -108,21 +108,18 @@ fn the_hook_stays_quiet_when_the_versions_match_or_the_plugin_is_unknown() {
 }
 
 #[test]
-fn the_hook_subcommand_compares_the_plugin_with_the_running_binary() {
+fn compares_the_plugin_with_the_running_binary() {
     let folder = sandbox();
     let root = folder.path();
     let plugin = plugin_at(root, "9.9.9");
 
     let output = cargo_bin_cmd!("bcct")
+        .env_clear()
+        .envs(support::coverage_env())
         .args(["hook", "session-start"])
         .env("HOME", root.join("home"))
         .env("CLAUDE_CONFIG_DIR", root.join("claude"))
         .env(PLUGIN_DIR_ENV, &plugin)
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
-        .env_remove("BETTER_CC_TELEGRAM")
-        .env_remove("LC_MESSAGES")
-        .env_remove("LANG")
-        .env_remove("LC_ALL")
         .write_stdin("{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}")
         .output()
         .unwrap();

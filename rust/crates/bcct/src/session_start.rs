@@ -9,6 +9,7 @@ use crate::js::stringify;
 use crate::messages::{Messages, messages_for};
 use crate::paths::Paths;
 use crate::setup::setup_locale;
+use crate::update::UPDATE_COMMAND;
 
 pub const PLUGIN_DIR_ENV: &str = "BETTER_CC_TELEGRAM_PLUGIN_DIR";
 
@@ -33,7 +34,7 @@ pub fn notice(plugin: &str, binary: &str, messages: &Messages) -> Option<String>
     }
 
     let context = format!(
-        "better-claude-code-telegram: plugin {plugin}, binary {binary}. Tell the user and recommend running 'bcct update'."
+        "better-claude-code-telegram: plugin {plugin}, binary {binary}. Tell the user and recommend running '{UPDATE_COMMAND}'."
     );
     let specific = Map::from_iter([
         ("hookEventName".to_owned(), Value::from(EVENT)),
