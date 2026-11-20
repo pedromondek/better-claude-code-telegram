@@ -1,5 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 
+import { labeledIssues } from "./labeled-issues.mjs";
+
 const PLUGIN_DIR = "plugins/telegram";
 const SEVERE = new Set(["high", "critical"]);
 const SECURITY_LABEL = "security";
@@ -149,63 +151,12 @@ const bun = {
   },
 };
 
-const github = {
-  openIssue: () => {
-    const [found] = JSON.parse(
-      gh([
-        "issue",
-        "list",
-        "--label",
-        SECURITY_LABEL,
-        "--state",
-        "open",
-        "--search",
-        `"${ISSUE_TITLE}" in:title`,
-        "--json",
-        "number,body,comments",
-        "--limit",
-        "1",
-      ]),
-    );
-
-    return found === undefined
-      ? null
-      : {
-          number: found.number,
-          texts: [found.body, ...found.comments.map(({ body }) => body)],
-        };
-  },
-  ensureLabel: () => {
-    gh([
-      "label",
-      "create",
-      SECURITY_LABEL,
-      "--color",
-      SECURITY_LABEL_COLOR,
-      "--description",
-      "A known vulnerability to fix",
-      "--force",
-    ]);
-  },
-  createIssue: ({ title, label, body }) =>
-    Number(
-      /\/issues\/(\d+)/u.exec(
-        gh([
-          "issue",
-          "create",
-          "--title",
-          title,
-          "--label",
-          label,
-          "--body",
-          body,
-        ]),
-      )[1],
-    ),
-  comment: (number, body) => {
-    gh(["issue", "comment", String(number), "--body", body]);
-  },
-};
+const github = labeledIssues(gh, {
+  label: SECURITY_LABEL,
+  color: SECURITY_LABEL_COLOR,
+  description: "A known vulnerability to fix",
+  search: `"${ISSUE_TITLE}" in:title`,
+});
 
 if (import.meta.main) {
   process.exitCode = run(process.argv.slice(2), {
