@@ -475,7 +475,11 @@ fn is_stale_leftover(entry: &fs::DirEntry) -> bool {
             .and_then(|metadata| metadata.modified())
             .ok()
             .and_then(|modified| modified.elapsed().ok())
-            .is_some_and(|age| age > BODY_TIMEOUT)
+            .is_some_and(is_stale)
+}
+
+fn is_stale(age: std::time::Duration) -> bool {
+    age > BODY_TIMEOUT
 }
 
 fn remove_stale_leftovers(versions: &Path) {
@@ -723,5 +727,19 @@ fn run<O: Write, E: Write>(
 
             FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn counts_a_leftover_as_stale_only_past_the_download_timeout() {
+        assert!(!is_stale(
+            BODY_TIMEOUT.saturating_sub(std::time::Duration::from_nanos(1))
+        ));
+        assert!(!is_stale(BODY_TIMEOUT));
+        assert!(is_stale(BODY_TIMEOUT + std::time::Duration::from_nanos(1)));
     }
 }
