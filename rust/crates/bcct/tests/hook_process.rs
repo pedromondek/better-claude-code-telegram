@@ -751,6 +751,85 @@ fn drops_only_the_held_notice_of_the_session_on_a_typed_prompt() {
     assert!(sandbox.pings().join("s2.notice.json").exists());
 }
 
+const LIMIT_RESET_PROMPT: &str = "Your claude.ai usage limit has reset. Continue the task you were working on when the limit was reached; do not repeat work that is already complete.";
+const EARLY_RESET_PROMPT: &str = "Your claude.ai usage is available again before the usage-limit reset. Continue the task you were working on when the limit was reached; do not repeat work that is already complete.";
+
+fn usage_limit_input() -> String {
+    json!({
+        "session_id": "s1",
+        "error": "rate_limit",
+        "last_assistant_message": "You've hit your session limit · resets 2:20pm (America/Sao_Paulo)"
+    })
+    .to_string()
+}
+
+#[test]
+fn keeps_the_limit_hits_and_drops_the_notice_and_the_ping_on_an_automatic_continue() {
+    let sandbox = Sandbox::new();
+    let notice = sandbox.pings().join("s1.notice.json");
+    let ping = sandbox.pings().join("s1.json");
+    let run = |mode: &str, input: String| {
+        sandbox
+            .command(mode, true)
+            .write_stdin(input)
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    };
+
+    for (hit, continuation) in [LIMIT_RESET_PROMPT, EARLY_RESET_PROMPT, LIMIT_RESET_PROMPT]
+        .into_iter()
+        .enumerate()
+    {
+        run("stop-failure", usage_limit_input());
+        fs::write(&ping, "{}").unwrap();
+        assert!(notice.exists());
+
+        run(
+            "prompt",
+            json!({"session_id": "s1", "prompt": continuation}).to_string(),
+        );
+        let mark: Value =
+            serde_json::from_str(&fs::read_to_string(sandbox.pings().join("s1.failures")).unwrap())
+                .unwrap();
+
+        assert_eq!(mark["limitHits"], json!(hit + 1));
+        assert!(!notice.exists());
+        assert!(!ping.exists());
+    }
+
+    assert!(!sandbox.pings().join("last-prompt").exists());
+}
+
+#[test]
+fn warns_on_an_automatic_continue_when_the_notice_cannot_be_removed() {
+    let sandbox = Sandbox::new();
+    sandbox
+        .command("stop-failure", true)
+        .write_stdin(usage_limit_input())
+        .assert()
+        .success();
+    set_mode(&sandbox.pings(), 0o500);
+
+    let output = sandbox
+        .command("prompt", true)
+        .write_stdin(json!({"session_id": "s1", "prompt": LIMIT_RESET_PROMPT}).to_string())
+        .assert()
+        .success()
+        .stderr("");
+
+    set_mode(&sandbox.pings(), 0o700);
+
+    assert!(
+        stdout_json(&output)["systemMessage"]
+            .as_str()
+            .unwrap()
+            .contains("s1.notice.json")
+    );
+    assert!(sandbox.pings().join("s1.notice.json").exists());
+}
+
 #[test]
 fn warns_on_stop_failure_when_the_notice_cannot_be_written() {
     let sandbox = Sandbox::new();

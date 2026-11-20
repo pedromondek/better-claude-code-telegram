@@ -5,10 +5,10 @@ use crate::update::UPDATE_COMMAND;
 
 use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
-    HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
-    StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts, TranscriptionModels,
-    UpdateTexts, format_delay,
+    HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed, QuietPresets,
+    SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices, StatuslineDetail,
+    StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts,
+    TranscriptionModels, UpdateTexts, format_delay,
 };
 
 const MONTHS: [&str; 12] = [
@@ -593,7 +593,22 @@ pub(super) const MESSAGES: Messages = Messages {
         medium: "most accurate, much slower, uses much more RAM, ~1.5 GB of storage",
     },
     transcription_disabled: "Transcription off:\n  • voice messages reach Claude as attachments",
-    python_env_failed: "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+    python_env_failed: PythonEnvFailed {
+        posix: concat!(
+            "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (",
+            crate::uv_posix_install_command!(),
+            ")\n  • Python's venv (on Debian and Ubuntu, ",
+            crate::python_venv_apt_command!(),
+            ")"
+        ),
+        windows: concat!(
+            "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (",
+            crate::uv_windows_install_command!(),
+            ")\n  • Python from python.org, which brings the py launcher (",
+            crate::python_windows_download_url!(),
+            ")"
+        ),
+    },
     git_missing_setup: "git is not installed, and Claude Code needs it to download the plugins. Install it and run the setup again:\n  • Debian and Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     install_whisper: "install faster-whisper",
     downloading_model: |model| {

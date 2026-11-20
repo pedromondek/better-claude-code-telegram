@@ -5,10 +5,10 @@ use crate::update::UPDATE_COMMAND;
 
 use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
-    HealthLabels, HookReasons, Messages, PairingChoices, QuietPresets, SettingHints, SettingsKeys,
-    StatuslineChoiceHints, StatuslineChoices, StatuslineDetail, StatuslineOursChoices,
-    StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts, TranscriptionModels,
-    UpdateTexts, format_delay,
+    HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed, QuietPresets,
+    SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices, StatuslineDetail,
+    StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts,
+    TranscriptionModels, UpdateTexts, format_delay,
 };
 
 const WEEKDAYS: [&str; 7] = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
@@ -595,7 +595,22 @@ pub(super) const MESSAGES: Messages = Messages {
         medium: "a mais precisa, bem mais lenta, usa muito mais RAM, ~1,5 GB de armazenamento",
     },
     transcription_disabled: "Transcrição desligada:\n  • o áudio chega ao Claude como anexo",
-    python_env_failed: "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • o venv do Python (no Debian e no Ubuntu, sudo apt install python3-venv)",
+    python_env_failed: PythonEnvFailed {
+        posix: concat!(
+            "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (",
+            crate::uv_posix_install_command!(),
+            ")\n  • o venv do Python (no Debian e no Ubuntu, ",
+            crate::python_venv_apt_command!(),
+            ")"
+        ),
+        windows: concat!(
+            "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (",
+            crate::uv_windows_install_command!(),
+            ")\n  • o Python do python.org, que traz o launcher py (",
+            crate::python_windows_download_url!(),
+            ")"
+        ),
+    },
     git_missing_setup: "O git não está instalado, e o Claude Code precisa dele para baixar os plugins. Instale e rode o setup de novo:\n  • Debian e Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     install_whisper: "instalar o faster-whisper",
     downloading_model: |model| {

@@ -21,6 +21,10 @@ pub const MARK_SUFFIX: &str = ".failures";
 pub const NOTICE_SUFFIX: &str = ".notice.json";
 pub const NOTICE_KIND: &str = "failure";
 pub const AUTO_CONTINUE_KEY: &str = "autoContinueAtUsageLimit";
+pub const AUTOMATIC_CONTINUE_PROMPTS: [&str; 2] = [
+    "Your claude.ai usage limit has reset. Continue the task you were working on when the limit was reached; do not repeat work that is already complete.",
+    "Your claude.ai usage is available again before the usage-limit reset. Continue the task you were working on when the limit was reached; do not repeat work that is already complete.",
+];
 
 const MANAGED_FILE: &str = "managed-settings.json";
 const DROP_IN_FOLDER: &str = "managed-settings.d";
@@ -211,6 +215,10 @@ pub(crate) fn clear_after_success(pings_dir: &Path, key: &str) -> Result<(), Abo
 
 pub(crate) fn clear_after_prompt(pings_dir: &Path, key: &str) -> Result<(), Abort> {
     remove_ignoring_missing(&mark_file(pings_dir, key))?;
+    clear_after_continue(pings_dir, key)
+}
+
+pub(crate) fn clear_after_continue(pings_dir: &Path, key: &str) -> Result<(), Abort> {
     remove_ignoring_missing(&notice_file(pings_dir, key))
 }
 
@@ -1085,6 +1093,44 @@ mod tests {
                     .ends_with(&format!("{BACK_TODAY} · it {WILL_NOT}")),
                 "hit {hit}"
             );
+        }
+    }
+
+    #[test]
+    fn stops_promising_after_three_continues_even_with_their_prompts_between_hits() {
+        for continuation in AUTOMATIC_CONTINUE_PROMPTS {
+            let world = World::new();
+            let continue_task = || {
+                world
+                    .send(
+                        Mode::Prompt,
+                        &json!({"session_id": "s1", "prompt": format!("{continuation}\n")}),
+                    )
+                    .unwrap();
+            };
+
+            for hit in 1..=3 {
+                assert!(
+                    world
+                        .fail("rate_limit", SESSION_LIMIT)
+                        .unwrap()
+                        .ends_with(CONTINUES),
+                    "hit {hit}"
+                );
+                continue_task();
+                assert_eq!(world.mark("s1").unwrap()["limitHits"], json!(hit));
+            }
+
+            for hit in 4..=5 {
+                assert!(
+                    world
+                        .fail("rate_limit", SESSION_LIMIT)
+                        .unwrap()
+                        .ends_with(&format!("{BACK_TODAY} · it {WILL_NOT}")),
+                    "hit {hit}"
+                );
+                continue_task();
+            }
         }
     }
 
