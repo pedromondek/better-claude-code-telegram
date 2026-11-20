@@ -9,11 +9,14 @@ import {
   issueNumberFromPrTitle,
 } from "./issue-key.mjs";
 
-const PR_USAGE = 'npm run branch -- pr "<pull request title>" <branch>';
+const PR_USAGE = [
+  'npm run branch -- pr "<pull request title>" <branch>',
+  "npm run branch -- pr <pull request number>",
+];
 const USAGE = [
   "Usage: npm run branch -- <issue number> [summary] [--epic]",
   '       npm run branch -- "<title of a new issue>"',
-  `       ${PR_USAGE}`,
+  ...PR_USAGE.map((usage) => `       ${usage}`),
 ].join("\n");
 const EPIC_FLAG = "--epic";
 const ISSUE_ARGUMENT = /^#?(\d+)$/u;
@@ -107,24 +110,46 @@ export function pullRequestCheckMessage(title, branch) {
   ].join("\n");
 }
 
-export function run(argv, { gh, log }) {
-  const [command, ...rest] = argv;
+function pullRequestToCheck([titleOrNumber, branch], gh) {
+  if (branch !== undefined) return { title: titleOrNumber, branch };
 
-  if (command === "pr") {
-    const [title, branch] = rest;
+  if (!ISSUE_ARGUMENT.test(titleOrNumber ?? "")) return null;
 
-    if (title === undefined || branch === undefined) {
-      log(`Usage: ${PR_USAGE}`);
+  const { title, headRefName } = gh.viewPullRequest(
+    parseIssueNumber(titleOrNumber),
+  );
+
+  return { title, branch: headRefName };
+}
+
+function checkPullRequest(argv, { gh, log }) {
+  try {
+    const pullRequest = pullRequestToCheck(argv, gh);
+
+    if (pullRequest === null) {
+      log(`Usage: ${PR_USAGE.join("\n       ")}`);
       return 1;
     }
 
-    const message = pullRequestCheckMessage(title, branch);
+    const message = pullRequestCheckMessage(
+      pullRequest.title,
+      pullRequest.branch,
+    );
 
     if (message === null) return 0;
 
     log(message);
     return 1;
+  } catch (error) {
+    log(`✗ ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
   }
+}
+
+export function run(argv, { gh, log }) {
+  const [command, ...rest] = argv;
+
+  if (command === "pr") return checkPullRequest(rest, { gh, log });
 
   if (command === "check") {
     const message = branchCheckMessage(rest[0] ?? "");
@@ -174,6 +199,14 @@ export function run(argv, { gh, log }) {
 }
 
 const ghCli = {
+  viewPullRequest: (number) =>
+    JSON.parse(
+      execFileSync(
+        "gh",
+        ["pr", "view", String(number), "--json", "title,headRefName"],
+        { encoding: "utf8" },
+      ),
+    ),
   createIssue: (title) =>
     issueNumberFromUrl(
       execFileSync(
