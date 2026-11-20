@@ -11,7 +11,7 @@ use crate::health_fix::{FixRequest, FixRun, parse_only, run_fix};
 use crate::hook::Abort;
 use crate::hook::{millis, now_ms};
 use crate::hook_failures::{Reason, open_notices};
-use crate::install::System;
+use crate::install::{System, whisper_python};
 use crate::js::{
     join_path, js_key_count, js_length, js_template, js_trim, js_truthy, stringify_pretty,
 };
@@ -43,7 +43,6 @@ const ONLY_FLAG: &str = "--only";
 const ONLY_PREFIX: &str = "--only=";
 const ALL_ANSWERS: [&str; 2] = ["all", "tudo"];
 const FAILURE: u8 = 1;
-const WHISPER_PYTHON: &str = "whisper/venv/bin/python";
 
 pub struct Machine<'a> {
     pub var: &'a dyn Fn(&str) -> Option<OsString>,
@@ -867,7 +866,7 @@ impl Checks<'_> {
         else {
             return off(detail.off);
         };
-        let python: PathBuf = join_path(&self.paths.app_dir, WHISPER_PYTHON);
+        let python = whisper_python(&self.paths.app_dir);
 
         if (self.machine.python_works)(&python) {
             ok(&(detail.model)(&js_template(model)))
