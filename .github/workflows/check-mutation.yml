@@ -79,9 +79,17 @@ jobs:
       - name: Plan
         id: plan
         env:
-          MUTATION_BEFORE: ${{ inputs.before }}
+          MUTATION_BEFORE: ${{ inputs.before || 'origin/main' }}
           RUST_MUTATION_FULL: ${{ inputs.full }}
         run: npm run --silent rust:mutation:ci -- plan
+
+      - name: Rust cache of the shards, kept warm on main
+        if: github.ref == 'refs/heads/main' && steps.plan.outputs.count == '0'
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: rust
+          shared-key: mutation
+          save-if: false
 
       - name: Keep the plan for the shards
         if: steps.plan.outputs.count != '0'
@@ -220,7 +228,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('patches/**') }}
 
       - name: Install dependencies
         if: steps.modules.outputs.cache-hit != 'true'
@@ -235,7 +243,7 @@ jobs:
 
       - name: Mutation
         env:
-          MUTATION_BEFORE: ${{ inputs.before }}
+          MUTATION_BEFORE: ${{ inputs.before || 'origin/main' }}
         run: npm run --silent test:mutation:prepush
 
       - name: Save the incremental

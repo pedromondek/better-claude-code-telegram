@@ -18,6 +18,7 @@ import {
   MAX_SHARDS,
   needsFullRustScope,
   shardCount,
+  touchesInlineTests,
 } from "../rust-mutation-ci.mjs";
 
 const SCRIPT = join(import.meta.dirname, "..", "rust-mutation-ci.mjs");
@@ -148,6 +149,137 @@ describe("needsFullRustScope", () => {
   });
 });
 
+describe("touchesInlineTests", () => {
+  const PATH = "crates/bcct/src/hook.rs";
+  const WITH_TESTS = [
+    "fn a() {}",
+    "",
+    "#[cfg(test)]",
+    "mod tests {",
+    "    #[test]",
+    "    fn a() {}",
+    "}",
+    "",
+  ].join("\n");
+  const fileDiff = (path, hunkLines, { from = path, to = path } = {}) =>
+    [
+      `diff --git a/${path} b/${path}`,
+      from === null ? "--- /dev/null" : `--- a/${from}`,
+      to === null ? "+++ /dev/null" : `+++ b/${to}`,
+      ...hunkLines,
+    ].join("\n");
+  const headOf = (files) => (path) => files[path] ?? "";
+
+  it("turns iterate off for a hunk inside the test module of a source", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -6 +6 @@",
+      "-    fn a() {}",
+      "+    fn b() {}",
+    ]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: WITH_TESTS }))).toBe(true);
+  });
+
+  it("turns iterate off for a new source whose single hunk spans its test module", () => {
+    const diff = fileDiff(
+      PATH,
+      ["@@ -0,0 +1,2 @@", "+fn a() {}", "+mod tests {}"],
+      { from: null },
+    );
+
+    expect(
+      touchesInlineTests(diff, headOf({ [PATH]: "fn a() {}\n#[cfg(test)]\n" })),
+    ).toBe(true);
+  });
+
+  it("turns iterate off for a hunk that removes the test module", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -3,5 +2,0 @@",
+      "-#[cfg(test)]",
+      "-mod tests {",
+      "-    #[test]",
+      "-    fn a() {}",
+      "-}",
+    ]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: "fn a() {}\n" }))).toBe(
+      true,
+    );
+  });
+
+  it("turns iterate off for a source deleted with its test module", () => {
+    const diff = fileDiff(
+      PATH,
+      ["@@ -1,2 +0,0 @@", "-fn a() {}", "-#[cfg(test)]"],
+      { to: null },
+    );
+
+    expect(touchesInlineTests(diff, headOf({}))).toBe(true);
+  });
+
+  it("turns iterate off for a pure deletion that ends right on the test module", () => {
+    const diff = fileDiff(PATH, ["@@ -3 +2,0 @@", "-    let x = 1;"]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: WITH_TESTS }))).toBe(true);
+  });
+
+  it("keeps iterate on for a hunk above the test module", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -1 +1 @@",
+      "-fn a() {}",
+      "+fn a() { b() }",
+    ]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: WITH_TESTS }))).toBe(
+      false,
+    );
+  });
+
+  it("keeps iterate on for a pure deletion above the test module", () => {
+    const diff = fileDiff(PATH, ["@@ -1 +0,0 @@", "-fn a() {}"]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: WITH_TESTS }))).toBe(
+      false,
+    );
+  });
+
+  it("keeps iterate on for a source without a test module", () => {
+    const diff = fileDiff(PATH, ["@@ -1 +1 @@", "-fn a() {}", "+fn b() {}"]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: "fn b() {}\n" }))).toBe(
+      false,
+    );
+  });
+
+  it("leaves out files outside the src folder of a crate", () => {
+    const outside = "crates/bcct/build.rs";
+    const diff = fileDiff(outside, [
+      "@@ -6 +6 @@",
+      "-    fn a() {}",
+      "+    fn b() {}",
+    ]);
+
+    expect(touchesInlineTests(diff, headOf({ [outside]: WITH_TESTS }))).toBe(
+      false,
+    );
+  });
+
+  it("checks each file of the diff against its own head", () => {
+    const other = "crates/bcct/src/locale.rs";
+    const diff = [
+      fileDiff(PATH, ["@@ -1 +1 @@", "-fn a() {}", "+fn a() { b() }"]),
+      fileDiff(other, ["@@ -6 +6 @@", "-    fn a() {}", "+    fn b() {}"]),
+    ].join("\n");
+
+    expect(
+      touchesInlineTests(
+        diff,
+        headOf({ [PATH]: WITH_TESTS, [other]: WITH_TESTS }),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("mergeOutcomes", () => {
   it("joins the caught and unviable mutants of every folder, once each and sorted", () => {
     const first = join(scratch, "first");
@@ -202,6 +334,48 @@ describe("scripts/rust-mutation-ci.mjs plan", () => {
     expect(
       readFileSync(join(repo, "rust-mutation-plan", "push.diff"), "utf8"),
     ).toContain("+fn a() { b() }");
+  });
+
+  it("drops the previous outcomes when the range changes an inline test of a source", () => {
+    commitFile(
+      SOURCE,
+      "fn a() {}\n\n#[cfg(test)]\nmod tests {\n    fn t() {}\n}\n",
+    );
+    writeFile(join(repo, "rust", "mutants.out", "caught.txt"), "old\n");
+    commitFile(
+      SOURCE,
+      "fn a() {}\n\n#[cfg(test)]\nmod tests {\n    fn u() {}\n}\n",
+    );
+
+    const result = run(["plan"], {
+      MUTATION_RANGE: "HEAD~1..HEAD",
+      FAKE_SH_LIST: "one\n",
+    });
+
+    expect(result.status).toBe(0);
+    expect(recordedArgs()).not.toContain("--iterate");
+    expect(outputs()).toContain("iterate=false\n");
+  });
+
+  it("keeps the previous outcomes when the range changes a source above its inline tests", () => {
+    commitFile(
+      SOURCE,
+      "fn a() {}\n\n#[cfg(test)]\nmod tests {\n    fn t() {}\n}\n",
+    );
+    writeFile(join(repo, "rust", "mutants.out", "caught.txt"), "old\n");
+    commitFile(
+      SOURCE,
+      "fn b() {}\n\n#[cfg(test)]\nmod tests {\n    fn t() {}\n}\n",
+    );
+
+    const result = run(["plan"], {
+      MUTATION_RANGE: "HEAD~1..HEAD",
+      FAKE_SH_LIST: "one\n",
+    });
+
+    expect(result.status).toBe(0);
+    expect(recordedArgs()).toContain("--iterate");
+    expect(outputs()).toContain("iterate=true\n");
   });
 
   it("drops the previous outcomes when asked for the full run or when the range touches the lock", () => {

@@ -34,6 +34,9 @@ const FULL_SCOPE = [
   /^rust\/\.cargo\//u,
   /^rust\/crates\/[^/]+\/tests\//u,
 ];
+const INLINE_TEST_SOURCE = /^crates\/[^/]+\/src\/.+\.rs$/u;
+const TEST_ATTRIBUTE = "#[cfg(test)]";
+const HUNK_HEADER = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/u;
 
 export function shardCount(mutants) {
   return Math.min(MAX_SHARDS, Math.ceil(mutants / MUTANTS_PER_SHARD));
@@ -41,6 +44,76 @@ export function shardCount(mutants) {
 
 export function needsFullRustScope(files) {
   return files.some((file) => FULL_SCOPE.some((rule) => rule.test(file)));
+}
+
+function fileSections(diff) {
+  return diff
+    .split(/^(?=diff --git )/mu)
+    .filter((section) => section.startsWith("diff --git "))
+    .map((section) => {
+      const lines = section.split("\n");
+      const target = lines.find((line) => line.startsWith("+++ "));
+      const origin = lines.find((line) => line.startsWith("--- "));
+      const named = target === "+++ /dev/null" ? origin : target;
+
+      return {
+        path: (named ?? "").replace(/^(\+\+\+|---) [ab]\//u, ""),
+        lines,
+      };
+    });
+}
+
+function changesTestAttribute(lines) {
+  return lines.some(
+    (line) =>
+      /^[+-]/u.test(line) &&
+      !/^(\+\+\+|---) /u.test(line) &&
+      line.includes(TEST_ATTRIBUTE),
+  );
+}
+
+function hunkEnds(lines) {
+  return lines.flatMap((line) => {
+    const hunk = HUNK_HEADER.exec(line);
+
+    if (hunk === null) {
+      return [];
+    }
+
+    const start = Number(hunk[1]);
+    const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
+
+    return [count === 0 ? start + 1 : start + count - 1];
+  });
+}
+
+export function touchesInlineTests(diff, readHead) {
+  return fileSections(diff)
+    .filter(({ path }) => INLINE_TEST_SOURCE.test(path))
+    .some(({ path, lines }) => {
+      if (changesTestAttribute(lines)) {
+        return true;
+      }
+
+      const testLine =
+        readHead(path)
+          .split("\n")
+          .findIndex((line) => line.includes(TEST_ATTRIBUTE)) + 1;
+
+      return testLine > 0 && hunkEnds(lines).some((end) => end >= testLine);
+    });
+}
+
+function rangeEnd(range) {
+  return range.split(/\.{2,3}/u).at(-1) || "HEAD";
+}
+
+function headFile(range, path) {
+  try {
+    return git(["show", `${rangeEnd(range)}:rust/${path}`]);
+  } catch {
+    return "";
+  }
 }
 
 function linesOf(file) {
@@ -106,7 +179,8 @@ function plan() {
 
   const iterate =
     process.env.RUST_MUTATION_FULL !== "true" &&
-    !needsFullRustScope(changedFiles(range));
+    !needsFullRustScope(changedFiles(range)) &&
+    !touchesInlineTests(diff, (path) => headFile(range, path));
   const diffFile = resolve(PLAN_DIR, "push.diff");
 
   mkdirSync(PLAN_DIR, { recursive: true });

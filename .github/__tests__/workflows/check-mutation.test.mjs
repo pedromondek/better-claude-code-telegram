@@ -16,6 +16,11 @@ const { plan, rust, outcomes, stryker } = definition.jobs;
 const packageScripts = JSON.parse(read("package.json")).scripts;
 const MUTANTS_KEY =
   "rust-mutants-${{ github.head_ref || github.ref_name }}-${{ github.sha }}";
+const MUTATION_BEFORE = "${{ inputs.before || 'origin/main' }}";
+const RUST_CACHE = {
+  workspaces: "rust",
+  "shared-key": "mutation",
+};
 
 describe("check-mutation.yml mutates the range in the CI: Rust in shards, with the mutants already caught, and Stryker in one job", () => {
   it("has the plan, the shards, the caught mutants and the Stryker jobs only", () => {
@@ -58,7 +63,7 @@ describe("check-mutation.yml mutates the range in the CI: Rust in shards, with t
     expect(stepNamed(plan, "Plan")).toMatchObject({
       run: "npm run --silent rust:mutation:ci -- plan",
       env: {
-        MUTATION_BEFORE: "${{ inputs.before }}",
+        MUTATION_BEFORE,
         RUST_MUTATION_FULL: "${{ inputs.full }}",
       },
     });
@@ -66,6 +71,30 @@ describe("check-mutation.yml mutates the range in the CI: Rust in shards, with t
       count: "${{ steps.plan.outputs.count }}",
       shards: "${{ steps.plan.outputs.shards }}",
     });
+  });
+
+  it("mutates from the merge-base with origin/main when the caller gives no base, as a manual dispatch does", () => {
+    expect(definition.on.workflow_dispatch.inputs.before).toBeUndefined();
+    expect(stepNamed(plan, "Plan").env.MUTATION_BEFORE).toBe(MUTATION_BEFORE);
+    expect(stepNamed(stryker, "Mutation").env.MUTATION_BEFORE).toBe(
+      MUTATION_BEFORE,
+    );
+  });
+
+  it("restores the Rust cache of the shards on main when no shard runs, without saving it", () => {
+    const steps = plan.steps.map((step) => step.name ?? step.uses);
+    const warm = stepUsing(plan, "Swatinem/rust-cache");
+
+    expect(warm).toMatchObject({
+      name: "Rust cache of the shards, kept warm on main",
+      if: "github.ref == 'refs/heads/main' && steps.plan.outputs.count == '0'",
+      with: { ...RUST_CACHE, "save-if": false },
+    });
+    expect(steps.indexOf(warm.name)).toBeGreaterThan(steps.indexOf("Plan"));
+    expect(stepUsing(rust, "Swatinem/rust-cache").with).toMatchObject(
+      RUST_CACHE,
+    );
+    expect(warm.uses).toBe(stepUsing(rust, "Swatinem/rust-cache").uses);
   });
 
   it("gives every shard the same plan, since cargo-mutants skips the caught mutants before it splits the shards", () => {
@@ -113,6 +142,12 @@ describe("check-mutation.yml mutates the range in the CI: Rust in shards, with t
     });
   });
 
+  it("keys the node_modules of the Stryker job on the runner, the .nvmrc, the lock and the patches", () => {
+    expect(stepNamed(stryker, "node_modules from the cache").with.key).toBe(
+      "node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('patches/**') }}",
+    );
+  });
+
   it("mutates the TypeScript with the incremental of main, saved only on main", () => {
     const restore = stepNamed(stryker, "Incremental of the last mutation");
     const save = stepUsing(stryker, "actions/cache/save");
@@ -125,7 +160,7 @@ describe("check-mutation.yml mutates the range in the CI: Rust in shards, with t
     });
     expect(stepNamed(stryker, "Mutation")).toMatchObject({
       run: "npm run --silent test:mutation:prepush",
-      env: { MUTATION_BEFORE: "${{ inputs.before }}" },
+      env: { MUTATION_BEFORE },
     });
     expect(save.if).toBe("github.ref == 'refs/heads/main'");
   });
