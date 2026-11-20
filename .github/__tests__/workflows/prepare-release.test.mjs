@@ -85,6 +85,14 @@ describe("prepare-release.yml computes the next version, waits for approval on a
     expect(packageScripts["release:pr"]).toBe("node scripts/release-pr.mjs");
   });
 
+  it("installs the mise tools without the cache of main, which any workflow on main can write", () => {
+    expect(
+      [plan, prepare].map(
+        (job) => stepUsing(job, "jdx/mise-action").with.cache,
+      ),
+    ).toEqual([false, false]);
+  });
+
   it("asks for approval in the release-approval environment only when the plan says so, without any token", () => {
     expect(approval.if).toBe("needs.plan.outputs.approval == 'true'");
     expect(approval.environment).toBe("release-approval");
