@@ -141,7 +141,7 @@ async function agreesToDownload(ask, question) {
   }
 }
 
-export function runBinary({ spawnSync, signals }, binary, args) {
+export function runBinary({ spawnSync, signals, onSignal }, binary, args) {
   const ignoreInterrupt = () => {};
 
   signals.on("SIGINT", ignoreInterrupt);
@@ -153,9 +153,21 @@ export function runBinary({ spawnSync, signals }, binary, args) {
       throw result.error;
     }
 
+    if (typeof result.signal === "string") {
+      onSignal(result.signal);
+    }
+
     return result.status ?? 1;
   } finally {
     signals.off("SIGINT", ignoreInterrupt);
+  }
+}
+
+export function exitAsChild(current, code, signal) {
+  current.exitCode = code;
+
+  if (signal !== null) {
+    current.kill(current.pid, signal);
   }
 }
 

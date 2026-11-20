@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 import { APP_FOLDER, CONFIG_FILE } from "../shim.constants.mjs";
-import { run, runBinary } from "../shim.mjs";
+import { exitAsChild, run, runBinary } from "../shim.mjs";
 
 const SHIM_DIR = join(import.meta.dirname, "..");
 const require = createRequire(import.meta.url);
@@ -89,7 +89,9 @@ const { version } = JSON.parse(
   readFileSync(join(SHIM_DIR, "package.json"), "utf8"),
 );
 
-process.exitCode = await run(process.argv.slice(2), {
+let childSignal = null;
+
+const code = await run(process.argv.slice(2), {
   version,
   platform: process.platform,
   arch: process.arch,
@@ -103,7 +105,19 @@ process.exitCode = await run(process.argv.slice(2), {
   writeExecutable,
   removeExecutable,
   spawn: (binary, args) =>
-    runBinary({ spawnSync, signals: process }, binary, args),
+    runBinary(
+      {
+        spawnSync,
+        signals: process,
+        onSignal: (signal) => {
+          childSignal = signal;
+        },
+      },
+      binary,
+      args,
+    ),
   out: (line) => console.log(line),
   err: (line) => console.error(line),
 });
+
+exitAsChild(process, code, childSignal);

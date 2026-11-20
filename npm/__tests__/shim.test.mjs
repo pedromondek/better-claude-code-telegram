@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { COMMAND, PACKAGE, PLATFORMS } from "../shim/shim.constants.mjs";
 import {
   binaryCommand,
+  exitAsChild,
   expectedHash,
   localeOf,
   platformOf,
@@ -576,15 +577,17 @@ describe("runBinary", () => {
   it("ignores SIGINT only while the child runs and returns its exit code", () => {
     const emitter = signals();
     const seen = [];
+    const childSignals = [];
 
     const code = runBinary(
       {
         spawnSync: (binary, args, options) => {
           seen.push([binary, args, options, emitter.listenerCount("SIGINT")]);
 
-          return { status: 5 };
+          return { status: 5, signal: null };
         },
         signals: emitter,
+        onSignal: (signal) => childSignals.push(signal),
       },
       "/tmp/bcct-shim/bcct",
       ["setup"],
@@ -595,54 +598,109 @@ describe("runBinary", () => {
       ["/tmp/bcct-shim/bcct", ["setup"], { stdio: "inherit" }, 1],
     ]);
     expect(emitter.listenerCount("SIGINT")).toBe(0);
+    expect(childSignals).toEqual([]);
   });
 
-  it("returns 1 when the child ends by a signal without an exit code", () => {
+  it("returns 1 and hands over the signal when the child ends by a signal", () => {
     const emitter = signals();
+    const childSignals = [];
 
     expect(
       runBinary(
         {
           spawnSync: () => ({ status: null, signal: "SIGKILL" }),
           signals: emitter,
+          onSignal: (signal) => childSignals.push(signal),
         },
         "bcct",
         [],
       ),
     ).toBe(1);
+    expect(childSignals).toEqual(["SIGKILL"]);
   });
 
   it("throws the error of a child that could not start and stops ignoring SIGINT", () => {
     const emitter = signals();
     const error = new Error("spawnSync bcct EACCES");
+    const childSignals = [];
 
     expect(() =>
       runBinary(
-        { spawnSync: () => ({ status: null, error }), signals: emitter },
+        {
+          spawnSync: () => ({ status: null, signal: null, error }),
+          signals: emitter,
+          onSignal: (signal) => childSignals.push(signal),
+        },
         "bcct",
         [],
       ),
     ).toThrow(error);
     expect(emitter.listenerCount("SIGINT")).toBe(0);
+    expect(childSignals).toEqual([]);
   });
+
+  function shimEnding(command) {
+    const script = [
+      'import { spawnSync } from "node:child_process";',
+      `import { exitAsChild, runBinary } from ${JSON.stringify(pathToFileURL(SHIM).href)};`,
+      "let childSignal = null;",
+      `const code = runBinary({ spawnSync, signals: process, onSignal: (signal) => { childSignal = signal; } }, "/bin/sh", ["-c", ${JSON.stringify(command)}]);`,
+      "exitAsChild(process, code, childSignal);",
+    ].join("\n");
+
+    return spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      encoding: "utf8",
+    });
+  }
 
   it.skipIf(process.platform === "win32")(
     "keeps the shim alive until the child ends when the terminal sends SIGINT",
     () => {
-      const script = [
-        'import { spawnSync } from "node:child_process";',
-        `import { runBinary } from ${JSON.stringify(pathToFileURL(SHIM).href)};`,
-        'process.exitCode = runBinary({ spawnSync, signals: process }, "/bin/sh", ["-c", "kill -INT $PPID; sleep 0.2; exit 7"]);',
-      ].join("\n");
-
-      const result = spawnSync(
-        process.execPath,
-        ["--input-type=module", "-e", script],
-        { encoding: "utf8" },
-      );
+      const result = shimEnding("kill -INT $PPID; sleep 0.2; exit 7");
 
       expect(result.signal).toBeNull();
       expect(result.status).toBe(7);
     },
   );
+
+  it.skipIf(process.platform === "win32")(
+    "ends the shim by SIGINT when the child dies by SIGINT",
+    () => {
+      const result = shimEnding("kill -INT $$; sleep 1; exit 7");
+
+      expect(result.signal).toBe("SIGINT");
+      expect(result.status).toBeNull();
+    },
+  );
+});
+
+describe("exitAsChild", () => {
+  function current() {
+    const kills = [];
+
+    return {
+      pid: 4242,
+      exitCode: undefined,
+      kills,
+      kill: (pid, signal) => kills.push([pid, signal]),
+    };
+  }
+
+  it("sets the exit code and sends no signal when the child exited by code", () => {
+    const shim = current();
+
+    exitAsChild(shim, 7, null);
+
+    expect(shim.exitCode).toBe(7);
+    expect(shim.kills).toEqual([]);
+  });
+
+  it("sends the signal of the child to itself and keeps the exit code as a fallback", () => {
+    const shim = current();
+
+    exitAsChild(shim, 1, "SIGINT");
+
+    expect(shim.exitCode).toBe(1);
+    expect(shim.kills).toEqual([[4242, "SIGINT"]]);
+  });
 });
