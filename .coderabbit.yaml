@@ -27,8 +27,11 @@ reviews:
     - The binary installs itself only after checking the sha256 listed in
       the checksums.txt of the plugin. Skipping or weakening that check is
       critical.
-    - The CI has no secrets and a read-only token: every workflow starts
-      with permissions {} and pins each action by SHA.
+    - Every workflow starts with permissions {} and each job asks only for
+      what it uses; every action is pinned by SHA. The only secret is the
+      release app key, held by the release environment and used only in
+      prepare-release.yml and release.yml. Exposing it, or a write token,
+      to a job that runs pull request code is critical.
   merge_risk_instructions: |
     Higher risk: hooks.json and the plugin scripts that launch bcct, the Rust
     hook, launcher, setup, update and uninstall paths, anything that writes
@@ -177,7 +180,8 @@ reviews:
         - Every action pinned by full SHA with the version comment, and
           `persist-credentials: false` on every checkout.
         - Never `pull_request_target` with a checkout of the PR head.
-        - A cache is saved only on main, never on a pull request.
+        - A cache is saved only on main, never on a pull request, except
+          the caught Rust mutants of check-mutation.yml, keyed by the ref.
         - Every file in .github/ has its mirrored test in .github/__tests__/.
     - path: ".husky/**"
       instructions: |

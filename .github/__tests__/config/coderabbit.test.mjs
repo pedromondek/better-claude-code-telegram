@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { parse } from "yaml";
 
-import { read, ROOT } from "../support/workflow.mjs";
+import { allWorkflows, read, ROOT } from "../support/workflow.mjs";
 
 const config = parse(read(".coderabbit.yaml"));
 const TONE_LIMIT = 250;
@@ -139,5 +139,34 @@ describe(".coderabbit.yaml", () => {
     for (const text of texts) {
       expect(text).not.toMatch(LOCAL_RULE_REFERENCE);
     }
+  });
+
+  it("names the workflows that read a secret in the security risk, never claiming the CI has none", () => {
+    const withSecrets = Object.keys(allWorkflows()).filter((file) =>
+      read(`.github/workflows/${file}`).includes("secrets."),
+    );
+    const { security_risk_instructions } = config.reviews;
+
+    expect(withSecrets.toSorted()).toEqual([
+      "prepare-release.yml",
+      "release.yml",
+    ]);
+    expect(security_risk_instructions).not.toMatch(/no secrets/u);
+    for (const file of withSecrets) {
+      expect(security_risk_instructions).toContain(file);
+    }
+  });
+
+  it("tells the review of .github the caught Rust mutants are the one cache saved on a pull request", () => {
+    const { instructions } = config.reviews.path_instructions.find(
+      ({ path }) => path === ".github/**",
+    );
+
+    expect(read(".github/workflows/check-mutation.yml")).toContain(
+      "key: rust-mutants-${{ github.head_ref || github.ref_name }}-",
+    );
+    expect(instructions).toMatch(
+      /saved only on main, never on a pull request, except\s+the caught Rust mutants of check-mutation\.yml/u,
+    );
   });
 });
