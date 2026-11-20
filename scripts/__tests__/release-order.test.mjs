@@ -94,6 +94,35 @@ describe("checkOrder", () => {
     },
   );
 
+  it.each([
+    ["0.1.0-alpha.3", [], "the next alpha is v0.1.0-alpha.1"],
+    ["0.1.0-beta.2", [], "the next beta is v0.1.0-beta.1"],
+    ["0.1.0-alpha.5", ["0.1.0-alpha.1"], "the next alpha is v0.1.0-alpha.2"],
+    ["0.1.0-rc.4", ["0.1.0-alpha.1"], "the next rc is v0.1.0-rc.1"],
+    ["0.1.1-beta.3", ["0.1.0"], "the next beta is v0.1.1-beta.1"],
+  ])(
+    "refuses %s after %j, which skips a pre-release number",
+    (version, released, next) => {
+      expect(checkOrder(version, released).problem).toBe(
+        `v${version} skips a version: ${next}`,
+      );
+    },
+  );
+
+  it.each([
+    ["0.1.0-alpha.1", []],
+    ["0.1.0-alpha.2", ["0.1.0-alpha.1"]],
+    ["0.1.0-alpha.10", ["0.1.0-alpha.9"]],
+    ["0.1.0-beta.1", ["0.1.0-alpha.3"]],
+    ["0.1.0", ["0.1.0-rc.2"]],
+    ["0.1.1-beta.1", ["0.1.0"]],
+  ])(
+    "lets %s follow %j with the next pre-release number",
+    (version, released) => {
+      expect(checkOrder(version, released).problem).toBeNull();
+    },
+  );
+
   it("keeps an open pre-release line until its stable, without opening another base", () => {
     const released = ["0.2.0", "0.3.0-alpha.1"];
 

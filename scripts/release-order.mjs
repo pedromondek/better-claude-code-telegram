@@ -110,6 +110,15 @@ export function checkOrder(version, released) {
     );
   }
 
+  const openLine = open === null ? null : parseVersion(highest);
+  const nextNumber = openLine?.stage === target.stage ? openLine.number + 1 : 1;
+
+  if (target.stage !== null && target.number !== nextNumber) {
+    return result(
+      `v${version} skips a version: the next ${target.stage} is v${base(target)}-${target.stage}.${nextNumber}`,
+    );
+  }
+
   return result(null);
 }
 
