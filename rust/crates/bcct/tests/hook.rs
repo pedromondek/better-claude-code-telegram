@@ -323,7 +323,7 @@ fn blessing_rewrites_the_hook_fixture_from_the_binary() {
 }
 
 #[test]
-fn asks_about_the_same_pids_and_answers_like_telegram_active() {
+fn asks_about_the_same_pids_and_answers_like_the_js_gate() {
     let fixture = fixture();
     let alive = fixture["alivePid"].as_f64().unwrap();
 
