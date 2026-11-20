@@ -620,6 +620,9 @@ mod tests {
             "node /r/plugins/telegram-hooks/statusline.mjs",
             "bun \"/r/plugins/telegram-hooks/statusline.mjs\"",
             "node \"plugins/telegram-hooks/statusline.mjs\"",
+            "node \"/plugins/telegram-hooks/statusline.mjs\"",
+            "node \"/a/long/folder/of/someone/plugins/other-hooks/statusline.mjs\"",
+            "node \"/x\" \"/r/plugins/telegram-hooks/statusline.mjs\"",
             "\"/b/bin/bcct\" statusline",
             "",
         ] {
