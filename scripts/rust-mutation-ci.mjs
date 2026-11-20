@@ -35,7 +35,7 @@ const FULL_SCOPE = [
   /^rust\/crates\/[^/]+\/tests\//u,
 ];
 const INLINE_TEST_SOURCE = /^crates\/[^/]+\/src\/.+\.rs$/u;
-const TEST_ATTRIBUTE = "#[cfg(test)]";
+const TEST_ATTRIBUTE = /#\[cfg\([^\]]*\btest\b/u;
 const HUNK_HEADER = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/u;
 
 export function shardCount(mutants) {
@@ -68,7 +68,7 @@ function changesTestAttribute(lines) {
     (line) =>
       /^[+-]/u.test(line) &&
       !/^(\+\+\+|---) /u.test(line) &&
-      line.includes(TEST_ATTRIBUTE),
+      TEST_ATTRIBUTE.test(line),
   );
 }
 
@@ -98,7 +98,7 @@ export function touchesInlineTests(diff, readHead) {
       const testLine =
         readHead(path)
           .split("\n")
-          .findIndex((line) => line.includes(TEST_ATTRIBUTE)) + 1;
+          .findIndex((line) => TEST_ATTRIBUTE.test(line)) + 1;
 
       return testLine > 0 && hunkEnds(lines).some((end) => end >= testLine);
     });

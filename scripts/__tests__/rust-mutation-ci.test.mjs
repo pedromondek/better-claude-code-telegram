@@ -180,6 +180,54 @@ describe("touchesInlineTests", () => {
     expect(touchesInlineTests(diff, headOf({ [PATH]: WITH_TESTS }))).toBe(true);
   });
 
+  it("turns iterate off for a hunk inside a test module gated by cfg(all(test, unix))", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -6 +6 @@",
+      "-    fn a() {}",
+      "+    fn b() {}",
+    ]);
+    const head = WITH_TESTS.replace("#[cfg(test)]", "#[cfg(all(test, unix))]");
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: head }))).toBe(true);
+  });
+
+  it("keeps iterate on for a hunk above a test module gated by cfg(all(test, unix))", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -1 +1 @@",
+      "-fn a() {}",
+      "+fn a() { b() }",
+    ]);
+    const head = WITH_TESTS.replace("#[cfg(test)]", "#[cfg(all(test, unix))]");
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: head }))).toBe(false);
+  });
+
+  it("turns iterate off for a hunk that removes a cfg(all(test, unix)) attribute", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -3,2 +2,0 @@",
+      "-#[cfg(all(test, unix))]",
+      "-mod tests {}",
+    ]);
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: "fn a() {}\n" }))).toBe(
+      true,
+    );
+  });
+
+  it("keeps iterate on below a cfg_attr or a cfg that only names a word with test", () => {
+    const diff = fileDiff(PATH, [
+      "@@ -6 +6 @@",
+      "-    fn a() {}",
+      "+    fn b() {}",
+    ]);
+    const head = WITH_TESTS.replace(
+      "#[cfg(test)]",
+      '#[cfg_attr(test, derive(Debug))]\n#[cfg(feature = "testing")]',
+    );
+
+    expect(touchesInlineTests(diff, headOf({ [PATH]: head }))).toBe(false);
+  });
+
   it("turns iterate off for a new source whose single hunk spans its test module", () => {
     const diff = fileDiff(
       PATH,
