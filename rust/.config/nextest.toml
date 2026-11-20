@@ -1,0 +1,22 @@
+[test-groups]
+terminal = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'binary_id(bcct::setup_terminal_pty)'
+test-group = 'terminal'
+
+[[profile.default.overrides]]
+filter = """
+binary_id(bcct::setup_run) & (\
+  test(=blessing_rewrites_the_setup_run_fixture_from_the_binary) | \
+  test(=ends_by_the_signal_like_node_and_shows_the_cursor_again) | \
+  test(=ends_with_the_signal_code_and_gives_the_terminal_back_when_the_signal_does_not_kill) | \
+  test(=ends_without_offering_to_undo_when_the_terminal_output_is_closed) | \
+  test(=gives_the_terminal_back_on_ctrl_z_and_goes_on_asking_after_fg) | \
+  test(=gives_the_terminal_back_when_a_console_drops_in_raw_mode) | \
+  test(=shows_on_the_terminal_what_the_fixture_recorded) | \
+  test(=sigint_from_outside_at_a_question_of_the_setup_does_not_end_it) | \
+  test(=sigint_from_outside_at_a_question_of_the_uninstall_gives_the_terminal_back) | \
+  test(=sigterm_at_a_question_gives_the_terminal_back_and_ends_by_the_signal)\
+)"""
+test-group = 'terminal'
