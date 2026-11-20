@@ -1,6 +1,8 @@
 #![cfg(unix)]
 #![cfg(test)]
 
+mod support;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -43,11 +45,10 @@ impl Sandbox {
     fn command(&self, mode: &str, telegram: bool) -> Command {
         let mut command = cargo_bin_cmd!("bcct");
         command
+            .env_clear()
+            .envs(support::coverage_env())
             .arg("hook")
             .arg(mode)
-            .env_remove("BETTER_CC_TELEGRAM")
-            .env_remove("BETTER_CC_TELEGRAM_DELAY_MS")
-            .env_remove("CLAUDE_CONFIG_DIR")
             .env("HOME", self.root.path().join("home"))
             .env("TELEGRAM_STATE_DIR", self.state())
             .env("BETTER_CC_TELEGRAM_DIR", self.app())
@@ -171,7 +172,7 @@ fn waits_for_the_answer_file_and_prints_the_decision_without_a_trailing_newline(
 }
 
 #[test]
-fn a_closed_file_ends_the_wait_without_output() {
+fn stops_waiting_without_output_when_the_closed_file_appears() {
     let sandbox = Sandbox::new();
     let asks = sandbox.asks();
 
@@ -193,7 +194,7 @@ fn a_closed_file_ends_the_wait_without_output() {
 }
 
 #[test]
-fn a_removed_record_ends_the_wait_without_output() {
+fn stops_waiting_without_output_when_the_record_is_removed() {
     let sandbox = Sandbox::new();
     let asks = sandbox.asks();
 
@@ -210,7 +211,7 @@ fn a_removed_record_ends_the_wait_without_output() {
 }
 
 #[test]
-fn an_answer_that_is_not_an_object_is_ignored_until_a_valid_one_arrives() {
+fn ignores_an_answer_that_is_not_an_object_until_a_valid_one_arrives() {
     let sandbox = Sandbox::new();
     let asks = sandbox.asks();
 
@@ -232,7 +233,7 @@ fn an_answer_that_is_not_an_object_is_ignored_until_a_valid_one_arrives() {
 }
 
 #[test]
-fn invalid_stdin_leaves_no_trace_and_no_output() {
+fn leaves_no_trace_and_no_output_on_invalid_stdin() {
     let sandbox = Sandbox::new();
 
     sandbox
@@ -247,7 +248,7 @@ fn invalid_stdin_leaves_no_trace_and_no_output() {
 }
 
 #[test]
-fn an_unknown_or_missing_mode_does_nothing_and_exits_zero() {
+fn exits_zero_without_doing_anything_for_an_unknown_or_missing_mode() {
     let sandbox = Sandbox::new();
 
     sandbox
@@ -259,9 +260,9 @@ fn an_unknown_or_missing_mode_does_nothing_and_exits_zero() {
         .stderr("");
 
     cargo_bin_cmd!("bcct")
+        .env_clear()
+        .envs(support::coverage_env())
         .arg("hook")
-        .env_remove("BETTER_CC_TELEGRAM_DELAY_MS")
-        .env_remove("CLAUDE_CONFIG_DIR")
         .env("HOME", sandbox.root.path().join("home"))
         .env("BETTER_CC_TELEGRAM", "1")
         .env("BETTER_CC_TELEGRAM_DIR", sandbox.app())
@@ -275,7 +276,7 @@ fn an_unknown_or_missing_mode_does_nothing_and_exits_zero() {
 }
 
 #[test]
-fn extra_arguments_after_the_mode_are_ignored() {
+fn ignores_extra_arguments_after_the_mode() {
     let sandbox = Sandbox::new();
 
     sandbox
@@ -292,7 +293,7 @@ fn extra_arguments_after_the_mode_are_ignored() {
 }
 
 #[test]
-fn nothing_happens_without_the_telegram_flag_or_a_live_bot() {
+fn does_nothing_without_the_telegram_flag_or_a_live_bot() {
     let sandbox = Sandbox::new();
 
     sandbox
@@ -307,7 +308,7 @@ fn nothing_happens_without_the_telegram_flag_or_a_live_bot() {
 }
 
 #[test]
-fn a_bot_pid_of_a_live_process_activates_the_hook_with_a_label() {
+fn activates_the_hook_with_a_label_when_the_bot_pid_is_alive() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.state()).unwrap();
     fs::write(
@@ -345,7 +346,7 @@ fn a_bot_pid_of_a_live_process_activates_the_hook_with_a_label() {
 }
 
 #[test]
-fn the_delay_variable_sets_the_deadline() {
+fn sets_the_deadline_from_the_delay_variable() {
     let sandbox = Sandbox::new();
 
     sandbox
@@ -366,7 +367,7 @@ fn the_delay_variable_sets_the_deadline() {
 }
 
 #[test]
-fn a_dead_bot_pid_keeps_the_hook_inactive() {
+fn keeps_the_hook_inactive_when_the_bot_pid_is_dead() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.state()).unwrap();
     fs::write(sandbox.state().join("bot.pid"), "2147483646").unwrap();
@@ -381,7 +382,7 @@ fn a_dead_bot_pid_keeps_the_hook_inactive() {
 }
 
 #[test]
-fn prompt_removes_the_ping_records_the_time_and_closes_the_asks_of_the_session() {
+fn removes_the_ping_records_the_time_and_closes_the_asks_of_the_session_on_prompt() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.asks()).unwrap();
     fs::create_dir_all(sandbox.pings()).unwrap();
@@ -418,7 +419,7 @@ fn prompt_removes_the_ping_records_the_time_and_closes_the_asks_of_the_session()
 }
 
 #[test]
-fn post_closes_the_asks_of_the_session() {
+fn closes_the_asks_of_the_session_after_the_tool() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.asks()).unwrap();
     fs::write(
@@ -454,7 +455,7 @@ fn stdout_json(assert: &assert_cmd::assert::Assert) -> Value {
 }
 
 #[test]
-fn a_stop_that_cannot_write_warns_the_user_then_the_next_prompt_tells_claude_once() {
+fn warns_the_user_when_stop_cannot_write_and_tells_claude_once_on_the_next_prompt() {
     let sandbox = Sandbox::new();
     let stop_input = json!({"session_id": "s1", "last_assistant_message": "done"}).to_string();
     let ping_file = sandbox.pings().join("s1.json");
@@ -514,7 +515,7 @@ fn a_stop_that_cannot_write_warns_the_user_then_the_next_prompt_tells_claude_onc
 }
 
 #[test]
-fn a_prompt_that_cannot_write_warns_the_user_and_claude_in_the_same_reply() {
+fn warns_the_user_and_claude_in_one_reply_when_the_prompt_cannot_write() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.pings()).unwrap();
     fs::write(
@@ -553,7 +554,7 @@ fn a_prompt_that_cannot_write_warns_the_user_and_claude_in_the_same_reply() {
 }
 
 #[test]
-fn a_question_that_cannot_be_saved_warns_without_a_decision_and_without_waiting() {
+fn warns_without_a_decision_or_a_wait_when_the_question_cannot_be_saved() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.asks()).unwrap();
     set_mode(&sandbox.asks(), 0o500);
@@ -585,7 +586,7 @@ fn a_question_that_cannot_be_saved_warns_without_a_decision_and_without_waiting(
 }
 
 #[test]
-fn an_input_that_is_not_from_claude_code_warns_only_on_the_third_time() {
+fn warns_only_on_the_third_input_that_is_not_from_claude_code() {
     let sandbox = Sandbox::new();
     let broken = json!({"session_id": 5}).to_string();
 
@@ -626,7 +627,7 @@ fn failure_input(error: &str) -> String {
 }
 
 #[test]
-fn stop_failure_leaves_a_notice_due_right_away_and_prints_nothing() {
+fn leaves_a_notice_due_right_away_on_stop_failure_and_prints_nothing() {
     let sandbox = Sandbox::new();
     let started = now_ms();
 
@@ -654,7 +655,7 @@ fn stop_failure_leaves_a_notice_due_right_away_and_prints_nothing() {
 }
 
 #[test]
-fn stop_failure_leaves_nothing_without_the_flag_or_for_a_quiet_error() {
+fn leaves_nothing_on_stop_failure_without_the_flag_or_for_a_quiet_error() {
     let sandbox = Sandbox::new();
 
     sandbox
@@ -681,7 +682,7 @@ fn stop_failure_leaves_nothing_without_the_flag_or_for_a_quiet_error() {
 }
 
 #[test]
-fn a_repeated_failure_notices_on_the_second_and_a_prompt_starts_over() {
+fn notices_a_repeated_failure_on_the_second_and_starts_over_on_a_prompt() {
     let sandbox = Sandbox::new();
     let notice = sandbox.pings().join("s1.notice.json");
     let run = |mode: &str, input: String| {
@@ -716,7 +717,7 @@ fn a_repeated_failure_notices_on_the_second_and_a_prompt_starts_over() {
 }
 
 #[test]
-fn a_typed_prompt_drops_the_held_notice_of_its_session_only() {
+fn drops_only_the_held_notice_of_the_session_on_a_typed_prompt() {
     let sandbox = Sandbox::new();
     let run = |mode: &str, input: String| {
         sandbox
@@ -751,7 +752,7 @@ fn a_typed_prompt_drops_the_held_notice_of_its_session_only() {
 }
 
 #[test]
-fn stop_failure_warns_when_the_notice_cannot_be_written() {
+fn warns_on_stop_failure_when_the_notice_cannot_be_written() {
     let sandbox = Sandbox::new();
     fs::create_dir_all(sandbox.pings()).unwrap();
     set_mode(&sandbox.pings(), 0o500);
@@ -778,7 +779,7 @@ fn stop_failure_warns_when_the_notice_cannot_be_written() {
 }
 
 #[test]
-fn a_closed_stdin_is_read_as_an_empty_input() {
+fn reads_a_closed_stdin_as_an_empty_input() {
     let sandbox = Sandbox::new();
 
     sandbox

@@ -13,7 +13,10 @@ use crate::js::{
     is_js_whitespace, join_path, js_basename, js_number, js_string, js_trim, js_truthy,
     normalize_path, parse_json, stringify,
 };
-use crate::paths::{Paths, TELEGRAM_FLAG};
+use crate::paths::{
+    ANSWER_SUFFIX, ASK_SKIPPED_SUFFIXES, ASKS_FOLDER, BOT_PID_FILE, CLOSED_SUFFIX, PINGS_FOLDER,
+    Paths, TELEGRAM_FLAG,
+};
 use crate::stop_failure::{self, MANAGED_SETTINGS_DIR, clear_after_prompt, clear_after_success};
 
 pub const ANSWER_POLL: Duration = Duration::from_millis(1000);
@@ -22,7 +25,6 @@ const TRANSCRIPT_TAIL_BYTES: usize = 4_194_304;
 const LAST_PROMPT_FILE: &str = "last-prompt";
 const DEFAULT_SESSION: &str = "session";
 const JSON_SUFFIX: &str = ".json";
-const SKIPPED_SUFFIXES: [&str; 2] = [".telegram.json", ".answer.json"];
 const LABEL_SESSION_UNITS: usize = 4;
 const DEFAULT_FOLDER_LABEL: &str = "claude";
 const LOWEST_REAL_PID: f64 = 1.0;
@@ -168,7 +170,7 @@ pub fn is_active(ctx: &Context, is_alive: &dyn Fn(f64) -> bool) -> bool {
 }
 
 fn bot_alive(ctx: &Context, is_alive: &dyn Fn(f64) -> bool) -> bool {
-    let Ok(bytes) = fs::read(join_path(&ctx.state_dir, "bot.pid")) else {
+    let Ok(bytes) = fs::read(join_path(&ctx.state_dir, BOT_PID_FILE)) else {
         return false;
     };
     let pid = js_number(&String::from_utf8_lossy(&bytes));
@@ -442,7 +444,7 @@ fn permission(
     let Some(ask) = build_ask(input, ctx, now, session, context, instance)? else {
         return Ok(None);
     };
-    let asks_dir = ctx.app_dir.join("asks");
+    let asks_dir = ctx.app_dir.join(ASKS_FOLDER);
     let record_file = join_path(&asks_dir, &format!("{}.json", ask.id));
 
     create_private_dir(&asks_dir).map_err(Abort::at(&asks_dir))?;
@@ -460,7 +462,7 @@ fn stop(
     ping_file: &Path,
     key: &str,
 ) -> Result<(), Abort> {
-    clear_after_success(&ctx.app_dir.join("pings"), key)?;
+    clear_after_success(&ctx.app_dir.join(PINGS_FOLDER), key)?;
 
     let entries = parse_entries(&read_transcript(input));
     let instance = instance_from(input, ctx.telegram_instance, &entries)?;
@@ -487,7 +489,7 @@ fn stop(
     ping.insert("text".to_owned(), Value::String(text.to_owned()));
     ping.insert("instance".to_owned(), instance.unwrap_or(Value::Null));
 
-    let pings_dir = ctx.app_dir.join("pings");
+    let pings_dir = ctx.app_dir.join(PINGS_FOLDER);
 
     create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
     write_private(ping_file, stringify(&Value::Object(ping)).as_bytes())
@@ -517,7 +519,7 @@ fn stop_failed(
 }
 
 fn prompt(ctx: &Context, now: u64, ping_file: &Path, key: &str) -> Result<(), Abort> {
-    let pings_dir = ctx.app_dir.join("pings");
+    let pings_dir = ctx.app_dir.join(PINGS_FOLDER);
     let last_prompt_file = pings_dir.join(LAST_PROMPT_FILE);
 
     create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
@@ -559,7 +561,9 @@ fn closable_ids(asks_dir: &Path, session: Option<&str>) -> Vec<String> {
         .filter_map(|entry| entry.file_name().into_string().ok())
         .filter(|name| {
             name.ends_with(JSON_SUFFIX)
-                && !SKIPPED_SUFFIXES.iter().any(|suffix| name.ends_with(suffix))
+                && !ASK_SKIPPED_SUFFIXES
+                    .iter()
+                    .any(|suffix| name.ends_with(suffix))
         })
         .collect();
     names.sort();
@@ -584,7 +588,7 @@ fn closable_ids(asks_dir: &Path, session: Option<&str>) -> Vec<String> {
 
 fn close_asks(asks_dir: &Path, session: Option<&str>) -> Result<(), Abort> {
     for id in closable_ids(asks_dir, session) {
-        let closed_file = join_path(asks_dir, &format!("{id}.closed"));
+        let closed_file = join_path(asks_dir, &format!("{id}{CLOSED_SUFFIX}"));
 
         write_private(&closed_file, b"").map_err(Abort::at(&closed_file))?;
     }
@@ -620,9 +624,9 @@ pub fn handle_event(
 
 fn dispatch(mode: Mode, input: &Value, ctx: &Context, now: u64) -> Result<Option<Ask>, Abort> {
     let session = session_of(input)?;
-    let asks_dir = ctx.app_dir.join("asks");
+    let asks_dir = ctx.app_dir.join(ASKS_FOLDER);
     let key = safe_file_name(session.unwrap_or(DEFAULT_SESSION));
-    let ping_file = join_path(&ctx.app_dir.join("pings"), &format!("{key}.json"));
+    let ping_file = join_path(&ctx.app_dir.join(PINGS_FOLDER), &format!("{key}.json"));
 
     match mode {
         Mode::Permission => permission(input, ctx, now, session),
@@ -650,8 +654,8 @@ fn read_answers(answer_file: &Path) -> Option<Value> {
 
 #[must_use]
 pub fn wait_for_answer(asks_dir: &Path, id: &str, pause: &dyn Fn()) -> Option<Value> {
-    let answer_file = join_path(asks_dir, &format!("{id}.answer.json"));
-    let closed_file = join_path(asks_dir, &format!("{id}.closed"));
+    let answer_file = join_path(asks_dir, &format!("{id}{ANSWER_SUFFIX}"));
+    let closed_file = join_path(asks_dir, &format!("{id}{CLOSED_SUFFIX}"));
     let record_file = join_path(asks_dir, &format!("{id}.json"));
 
     loop {
@@ -730,7 +734,7 @@ pub fn run(
     };
     let tool_input = input.get("tool_input").unwrap_or(&Value::Null);
 
-    if let Some(answers) = wait_for_answer(&ctx.app_dir.join("asks"), &ask.id, pause) {
+    if let Some(answers) = wait_for_answer(&ctx.app_dir.join(ASKS_FOLDER), &ask.id, pause) {
         write_output(stdout, Some(decision_output(tool_input, &answers)));
     }
 }
@@ -867,7 +871,7 @@ mod tests {
     }
 
     #[test]
-    fn the_limited_pause_counts_its_calls() {
+    fn counts_the_calls_of_the_limited_pause() {
         let calls = Cell::new(0);
         let pause = limited_pause(&calls, 2);
 
@@ -878,7 +882,7 @@ mod tests {
     }
 
     #[test]
-    fn every_mode_name_parses_and_any_other_spelling_does_not() {
+    fn parses_every_mode_name_and_no_other_spelling() {
         assert_eq!(Mode::parse("permission"), Some(Mode::Permission));
         assert_eq!(Mode::parse("prompt"), Some(Mode::Prompt));
         assert_eq!(Mode::parse("post"), Some(Mode::Post));
@@ -918,7 +922,7 @@ mod tests {
     }
 
     #[test]
-    fn the_context_reads_the_flag_the_delay_and_normalized_folders() {
+    fn reads_the_flag_the_delay_and_the_normalized_folders_into_the_context() {
         let folder = Path::new("/base");
         let flagged = |value: &str| context_in(folder, &[("BETTER_CC_TELEGRAM", value)]);
 
@@ -951,7 +955,7 @@ mod tests {
     }
 
     #[test]
-    fn a_failing_or_invalid_stdin_reads_as_an_empty_object() {
+    fn reads_a_failing_or_invalid_stdin_as_an_empty_object() {
         assert_eq!(read_input(&mut Unreadable), json!({}));
         assert_eq!(read_input(&mut &b"not json"[..]), json!({}));
         assert_eq!(read_input(&mut &b""[..]), json!({}));
@@ -963,7 +967,7 @@ mod tests {
     }
 
     #[test]
-    fn a_lone_surrogate_in_stdin_keeps_the_rest_of_the_input() {
+    fn keeps_the_rest_of_the_input_around_a_lone_surrogate_in_stdin() {
         assert_eq!(
             read_input(&mut &br#"{"session_id":"s1","prompt":"cut \ud83d here"}"#[..]),
             json!({"session_id": "s1", "prompt": "cut \u{fffd} here"})
@@ -971,7 +975,7 @@ mod tests {
     }
 
     #[test]
-    fn a_transcript_line_with_a_lone_surrogate_still_gives_the_context() {
+    fn reads_the_context_from_a_transcript_line_with_a_lone_surrogate() {
         let transcript = concat!(
             r#"{"type":"user"}"#,
             "\n",
@@ -986,7 +990,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn closing_through_a_symlinked_closed_file_leaves_its_target_intact() {
+    fn leaves_the_target_intact_when_the_closed_file_is_a_symlink() {
         let folder = tempfile::tempdir().unwrap();
         let asks = folder.path().join("asks");
         fs::create_dir(&asks).unwrap();
@@ -1009,7 +1013,7 @@ mod tests {
     }
 
     #[test]
-    fn the_wait_ends_without_an_answer_when_the_request_is_closed_or_gone() {
+    fn stops_waiting_without_an_answer_when_the_request_is_closed_or_gone() {
         let folder = tempfile::tempdir().unwrap();
         let calls = Cell::new(0);
         let pause = limited_pause(&calls, 0);
@@ -1029,7 +1033,7 @@ mod tests {
     }
 
     #[test]
-    fn the_wait_keeps_polling_until_the_answer_is_an_object_or_an_array() {
+    fn keeps_polling_until_the_answer_is_an_object_or_an_array() {
         let folder = tempfile::tempdir().unwrap();
         fs::write(folder.path().join("a.json"), "{}").unwrap();
         let answer = folder.path().join("a.answer.json");
@@ -1075,7 +1079,7 @@ mod tests {
     }
 
     #[test]
-    fn a_permission_run_prints_the_decision_once_the_answer_arrives() {
+    fn prints_the_permission_decision_once_the_answer_arrives() {
         let folder = tempfile::tempdir().unwrap();
         let ctx = context_in(folder.path(), &[]);
         let asks = folder.path().join("app/asks");
@@ -1110,7 +1114,7 @@ mod tests {
     }
 
     #[test]
-    fn a_failing_stdout_does_not_stop_the_run() {
+    fn keeps_running_when_stdout_fails() {
         let folder = tempfile::tempdir().unwrap();
         let ctx = context_in(folder.path(), &[]);
         let asks = folder.path().join("app/asks");
@@ -1135,7 +1139,7 @@ mod tests {
     }
 
     #[test]
-    fn a_closed_request_prints_nothing() {
+    fn prints_nothing_for_a_closed_request() {
         let folder = tempfile::tempdir().unwrap();
         let ctx = context_in(folder.path(), &[]);
         let asks = folder.path().join("app/asks");
@@ -1161,7 +1165,7 @@ mod tests {
     }
 
     #[test]
-    fn modes_that_wait_for_nothing_and_unknown_modes_return_without_output() {
+    fn returns_without_output_for_the_modes_that_wait_for_nothing_and_unknown_ones() {
         let folder = tempfile::tempdir().unwrap();
         let ctx = context_in(folder.path(), &[]);
         let calls = Cell::new(0);
@@ -1196,7 +1200,7 @@ mod tests {
     }
 
     #[test]
-    fn a_permission_without_questions_returns_without_waiting() {
+    fn returns_without_waiting_for_a_permission_without_questions() {
         let folder = tempfile::tempdir().unwrap();
         let ctx = context_in(folder.path(), &[]);
         let calls = Cell::new(0);
@@ -1216,7 +1220,7 @@ mod tests {
     }
 
     #[test]
-    fn the_current_process_is_alive_and_impossible_pids_are_not() {
+    fn finds_the_current_process_alive_and_impossible_pids_dead() {
         assert!(process_alive(f64::from(std::process::id())));
 
         for pid in [2_147_483_646.0, 2_147_483_648.0, 3e9, 0.0, -5.0, 2.5] {
@@ -1225,7 +1229,7 @@ mod tests {
     }
 
     #[test]
-    fn the_clock_is_the_unix_time_in_milliseconds() {
+    fn reads_the_clock_as_the_unix_time_in_milliseconds() {
         let before = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -1240,7 +1244,7 @@ mod tests {
     }
 
     #[test]
-    fn the_poll_pause_lasts_one_second() {
+    fn pauses_one_second_between_polls() {
         let start = Instant::now();
 
         pause_between_polls();
