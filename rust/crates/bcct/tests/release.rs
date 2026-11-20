@@ -520,11 +520,14 @@ fn the_binary_fails_with_code_1_and_names_the_record_it_could_not_write() {
 }
 
 #[test]
-fn the_binary_ignores_a_closed_stdout_like_console_log() {
+fn ignores_a_closed_stdout_like_console_log() {
     let root = sandbox();
 
     let status = std::process::Command::new(assert_cmd::cargo::cargo_bin!("bcct"))
         .arg("release")
+        .env_clear()
+        .envs(support::coverage_env())
+        .env("HOME", root.path().join("home"))
         .env("BETTER_CC_TELEGRAM_DIR", root.path())
         .stdout(support::unwritable_output())
         .status()

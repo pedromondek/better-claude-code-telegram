@@ -14,6 +14,14 @@ use crate::setup::{
 };
 use crate::ui::{fail, should_colorize};
 
+#[macro_export]
+macro_rules! telegram_command {
+    () => {
+        "claude --telegram"
+    };
+}
+
+pub const TELEGRAM_COMMAND: &str = crate::telegram_command!();
 pub const CHANNEL_SETTINGS: &str =
     r#"{"enabledPlugins":{"telegram@better-claude-code-telegram":true}}"#;
 pub const CHANNEL: &str = "plugin:telegram@better-claude-code-telegram";
@@ -160,4 +168,15 @@ pub fn run_process(args: &[OsString], stderr: &mut dyn Write) -> u8 {
     command.args(call).env(TELEGRAM_FLAG, "1");
 
     replace_process(&mut command, stderr)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CLAUDE, TELEGRAM_ARG, TELEGRAM_COMMAND};
+
+    #[test]
+    fn names_the_command_of_claude_with_the_telegram_flag() {
+        assert_eq!(TELEGRAM_COMMAND, "claude --telegram");
+        assert_eq!(TELEGRAM_COMMAND, format!("{CLAUDE} {TELEGRAM_ARG}"));
+    }
 }

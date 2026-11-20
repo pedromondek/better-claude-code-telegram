@@ -257,11 +257,15 @@ fn the_binary_ignores_the_previous_status_line_without_the_flag() {
 }
 
 #[test]
-fn the_binary_ends_with_code_1_like_node_when_stdout_cannot_take_the_segment() {
+fn ends_with_code_1_like_node_when_stdout_cannot_take_the_segment() {
     let root = sandbox();
 
     let output = std::process::Command::new(assert_cmd::cargo::cargo_bin!("bcct"))
         .arg("statusline")
+        .env_clear()
+        .envs(support::coverage_env())
+        .env("PATH", "/usr/bin:/bin")
+        .env("HOME", root.path().join("home"))
         .env("BETTER_CC_TELEGRAM_DIR", root.path())
         .env("BETTER_CC_TELEGRAM", "1")
         .stdout(support::unwritable_output())

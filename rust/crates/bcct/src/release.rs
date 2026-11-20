@@ -10,12 +10,10 @@ use crate::files::{FileFailure, read_json, write_private};
 use crate::hook::now_ms;
 use crate::js::{join_path, js_string, js_trim, js_truthy, normalize_path, stringify};
 use crate::messages::messages_for;
-use crate::paths::Paths;
+use crate::paths::{ASK_MARKERS, ASK_SKIPPED_SUFFIXES, ASKS_FOLDER, PINGS_FOLDER, Paths};
 
 const JSON_SUFFIX: &str = ".json";
 const NOTICE_SUFFIX: &str = crate::stop_failure::NOTICE_SUFFIX;
-const SKIPPED_SUFFIXES: [&str; 2] = [".telegram.json", ".answer.json"];
-const MARKERS: [&str; 3] = [".telegram.json", ".closed", ".answer.json"];
 const DEFAULT_INSTANCE: &str = "telegram";
 const RELEASED: &str = "released";
 const FAILURE: u8 = 1;
@@ -32,10 +30,14 @@ fn pending_ask_ids(asks_dir: &Path) -> Vec<String> {
 
     names
         .into_iter()
-        .filter(|name| !SKIPPED_SUFFIXES.iter().any(|suffix| name.ends_with(suffix)))
+        .filter(|name| {
+            !ASK_SKIPPED_SUFFIXES
+                .iter()
+                .any(|suffix| name.ends_with(suffix))
+        })
         .filter_map(|name| name.strip_suffix(JSON_SUFFIX).map(str::to_owned))
         .filter(|id| {
-            !MARKERS
+            !ASK_MARKERS
                 .iter()
                 .any(|marker| join_path(asks_dir, &format!("{id}{marker}")).exists())
         })
@@ -54,7 +56,7 @@ pub fn release_pending_asks(
     prefix: &str,
     now: u64,
 ) -> Result<Vec<Value>, FileFailure> {
-    let asks_dir = join_path(app_dir, "asks");
+    let asks_dir = join_path(app_dir, ASKS_FOLDER);
     let mut released = Vec::new();
 
     for id in pending_ask_ids(&asks_dir) {
@@ -115,7 +117,7 @@ pub fn release_pending_notices(
     prefix: &str,
     now: u64,
 ) -> Result<Vec<ReleasedNotice>, FileFailure> {
-    let pings_dir = join_path(app_dir, "pings");
+    let pings_dir = join_path(app_dir, PINGS_FOLDER);
     let mut released = Vec::new();
 
     for name in notice_names(&pings_dir) {
