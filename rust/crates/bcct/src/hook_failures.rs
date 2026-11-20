@@ -392,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn only_the_errors_that_block_writing_are_permanent() {
+    fn treats_only_the_errors_that_block_writing_as_permanent() {
         let cases = [
             (io::ErrorKind::PermissionDenied, Reason::NoPermission, true),
             (io::ErrorKind::StorageFull, Reason::DiskFull, true),
@@ -415,7 +415,7 @@ mod tests {
     }
 
     #[test]
-    fn every_reason_reads_back_from_its_code() {
+    fn reads_every_reason_back_from_its_code() {
         for reason in Reason::ALL {
             assert_eq!(Reason::parse(reason.code()), Some(reason));
         }
@@ -424,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn a_write_blocked_for_good_warns_the_user_in_the_config_language_at_once() {
+    fn warns_at_once_in_the_config_language_when_a_write_is_blocked_for_good() {
         let folder = app();
         set_language(folder.path(), "pt-br");
 
@@ -453,7 +453,7 @@ mod tests {
     }
 
     #[test]
-    fn a_blocked_write_in_the_prompt_hook_also_tells_claude_at_once() {
+    fn tells_claude_at_once_when_the_prompt_hook_cannot_write() {
         let folder = app();
 
         let output = failed(
@@ -480,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    fn a_passing_failure_stays_silent_until_the_third_time_in_24_hours() {
+    fn stays_silent_until_the_third_passing_failure_in_24_hours() {
         let folder = app();
         let busy = io_at(io::ErrorKind::ResourceBusy);
 
@@ -514,7 +514,7 @@ mod tests {
     }
 
     #[test]
-    fn a_failure_exactly_24_hours_old_no_longer_counts() {
+    fn drops_a_failure_exactly_24_hours_old() {
         let folder = app();
 
         assert_eq!(failed(folder.path(), Mode::Stop, &Abort::Input, NOW), None);
@@ -552,7 +552,7 @@ mod tests {
     }
 
     #[test]
-    fn a_failure_just_under_24_hours_old_still_counts() {
+    fn counts_a_failure_just_under_24_hours_old() {
         let folder = app();
 
         assert_eq!(failed(folder.path(), Mode::Stop, &Abort::Input, NOW), None);
@@ -572,7 +572,7 @@ mod tests {
     }
 
     #[test]
-    fn the_count_joins_only_the_same_hook_with_the_same_reason() {
+    fn counts_only_the_same_hook_with_the_same_reason() {
         let folder = app();
         let busy = io_at(io::ErrorKind::ResourceBusy);
 
@@ -592,7 +592,7 @@ mod tests {
     }
 
     #[test]
-    fn only_the_latest_passing_failures_are_kept() {
+    fn keeps_only_the_latest_passing_failures() {
         let folder = app();
 
         for offset in 0..u64::try_from(TRANSIENT_LIMIT).unwrap() + 5 {
@@ -606,7 +606,7 @@ mod tests {
     }
 
     #[test]
-    fn the_permanent_warning_goes_out_even_when_the_app_folder_cannot_be_written() {
+    fn sends_the_permanent_warning_even_when_the_app_folder_cannot_be_written() {
         let folder = app();
         let blocked = folder.path().join("app");
         fs::write(&blocked, "a file where the folder should be").unwrap();
@@ -627,7 +627,7 @@ mod tests {
     }
 
     #[test]
-    fn a_hook_that_works_again_clears_only_its_own_notice() {
+    fn clears_only_its_own_notice_when_the_hook_works_again() {
         let folder = app();
         let full = io_at(io::ErrorKind::QuotaExceeded);
         let _stop = failed(folder.path(), Mode::Stop, &full, NOW);
@@ -642,7 +642,7 @@ mod tests {
     }
 
     #[test]
-    fn the_prompt_hook_tells_claude_once_about_every_notice_still_open() {
+    fn tells_claude_once_on_prompt_about_every_notice_still_open() {
         let folder = app();
         set_language(folder.path(), "pt-br");
         let _stop = failed(
@@ -680,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn the_prompt_hook_clears_its_own_notice_without_telling_claude_again() {
+    fn clears_the_prompt_notice_without_telling_claude_again() {
         let folder = app();
         let _prompt = failed(
             folder.path(),
@@ -694,7 +694,7 @@ mod tests {
     }
 
     #[test]
-    fn a_hook_that_works_with_nothing_open_writes_nothing() {
+    fn writes_nothing_when_a_hook_works_with_nothing_open() {
         let folder = app();
         let app_dir = folder.path().join("app");
 
@@ -706,7 +706,7 @@ mod tests {
     }
 
     #[test]
-    fn another_hook_working_keeps_the_file_as_it_was() {
+    fn keeps_the_file_as_it_was_when_another_hook_works() {
         let folder = app();
         let _stop = failed(
             folder.path(),
@@ -724,7 +724,7 @@ mod tests {
     }
 
     #[test]
-    fn a_broken_failures_file_counts_as_empty() {
+    fn reads_a_broken_failures_file_as_empty() {
         for broken in [
             "not json".to_owned(),
             json!([1, 2]).to_string(),
@@ -767,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn a_notice_with_missing_fields_reads_with_defaults() {
+    fn reads_a_notice_with_missing_fields_with_defaults() {
         let folder = app();
         fs::write(
             folder.path().join(FAILURES_FILE),
