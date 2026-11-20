@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { binaryCommand } from "../../../npm/shim/shim.mjs";
 import { SETUP_COMMAND } from "../../../plugins/telegram-hooks/lib/package.constants.mjs";
 import { describeIssueForm, issueForm } from "../support/issue-form.mjs";
 
@@ -38,6 +39,12 @@ describe("1-bug.yml: what helps to reproduce", () => {
   it("asks to run the health check of the published command and paste its output", () => {
     expect(`${SETUP_COMMAND} health`).toBe(HEALTH);
     expect(form.body[0].attributes.value).toContain(`\`${HEALTH}\``);
+  });
+
+  it("names a command the npm shim runs as bcct health, not as a setup step", () => {
+    const args = HEALTH.split(" ").slice(2);
+
+    expect(binaryCommand(args).command).toEqual(["health"]);
   });
 
   it("asks for the versions of bcct and Claude Code and the system, where each command prints them", () => {
