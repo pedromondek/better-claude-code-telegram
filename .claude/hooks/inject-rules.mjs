@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { join } from "node:path";
+
+import { projectRelativePath, readHookInput } from "./lib/hook-input.mjs";
 
 const CODE_FILE = /\.(?:ts|mjs|js|cjs|sh)$/;
 const TEST_FILE = /(?:^|\/)__tests__\/(?:.*\/)?[^/]*\.test\.[^/]+$/;
@@ -9,35 +11,6 @@ const GIT_FOLDER = /^(?:\.husky|scripts|\.github)\//;
 
 const PREAMBLE =
   "New file: path-scoped rules load when a file is edited, not when it is created. Follow these conventions when writing it:";
-
-async function readHookInput() {
-  const chunks = [];
-
-  try {
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
-    }
-
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
-    return {};
-  }
-}
-
-function projectRelativePath(file, projectDir) {
-  const path = relative(resolve(projectDir), resolve(projectDir, file));
-
-  if (
-    path === "" ||
-    path === ".." ||
-    path.startsWith(`..${sep}`) ||
-    isAbsolute(path)
-  ) {
-    return undefined;
-  }
-
-  return path.split(sep).join("/");
-}
 
 function rulesFor(path) {
   const rules = [];

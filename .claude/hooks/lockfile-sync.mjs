@@ -3,6 +3,7 @@ import {
   checkLockfileSync,
   formatReport,
 } from "../../scripts/check-lockfile-sync.mjs";
+import { readHookInput } from "./lib/hook-input.mjs";
 
 const DEPENDENCY_COMMANDS = new Set([
   "install",
@@ -33,20 +34,6 @@ const DEPENDENCY_COMMANDS = new Set([
   "install-test",
   "it",
 ]);
-
-async function readHookInput() {
-  const chunks = [];
-
-  try {
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
-    }
-
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
-    return {};
-  }
-}
 
 function changesDependencies(command) {
   return command.split(/&&|\|\||[;|\n]/).some((segment) => {

@@ -4,9 +4,35 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { readHookInput } from "./lib/hook-input.mjs";
+
 const PROJECT_COMMANDS = new Set(["commit"]);
 const BRANCH_REVIEW_COMMAND = "pre-pr";
 const PR_HEAD_OPTIONS = new Set(["--head", "-H"]);
+const PR_CREATE_ACTIONS = new Set(["create", "new"]);
+const HELP_FLAGS = new Set(["--help", "-h"]);
+const SHELL_WRAPPERS = new Set([
+  "!",
+  "if",
+  "while",
+  "until",
+  "then",
+  "do",
+  "else",
+  "elif",
+  "time",
+  "command",
+  "exec",
+  "nohup",
+  "sudo",
+  "xargs",
+]);
+const TIMEOUT_OPTIONS_WITH_VALUE = new Set([
+  "-s",
+  "--signal",
+  "-k",
+  "--kill-after",
+]);
 const SEGMENT_SEPARATOR = /&&|\|\||;|\||\n|(?<![<>])&(?!>)/;
 const HEREDOC_START = /(?<!<)<<(?!<)(-?)\s*(["']?)([\w-]+)\2/g;
 const GIT_OPTIONS_WITH_VALUE = new Set([
@@ -50,20 +76,6 @@ const REMINDERS = {
   commit: `The message may be a request to commit or push. If it is, call the Skill \`commit\` before any git commit, git push or npm run commit. ${CONTEXT_CHECK}`,
   [BRANCH_REVIEW_COMMAND]: `The message may be a request to open the PR. If it is, call the Skill \`pre-pr\`, which reviews the whole branch and ends by opening the PR through /commit, before any gh pr create. ${CONTEXT_CHECK}`,
 };
-
-async function readHookInput() {
-  const chunks = [];
-
-  try {
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
-    }
-
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
-    return {};
-  }
-}
 
 function stateFile(sessionId) {
   return join(
@@ -207,20 +219,54 @@ function skipEnvPrefix(tokens) {
   return tokens.slice(index);
 }
 
-function gitSubcommand(args) {
+function withoutWrappers(tokens) {
+  let index = 0;
+
+  while (index < tokens.length) {
+    if (SHELL_WRAPPERS.has(tokens[index])) {
+      index += 1;
+    } else if (tokens[index] === "timeout") {
+      index += 1;
+      while (index < tokens.length && tokens[index].startsWith("-")) {
+        index += TIMEOUT_OPTIONS_WITH_VALUE.has(tokens[index]) ? 2 : 1;
+      }
+      index += 1;
+    } else {
+      break;
+    }
+  }
+
+  return tokens.slice(index);
+}
+
+function commandTokens(segment) {
+  return segment
+    .replaceAll(/[(){}]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token !== "");
+}
+
+function isHelpOnly(args) {
+  return args.length === 1 && HELP_FLAGS.has(args[0]);
+}
+
+function gitSubcommandIndex(args) {
   let index = 0;
 
   while (index < args.length && args[index].startsWith("-")) {
     index += GIT_OPTIONS_WITH_VALUE.has(args[index]) ? 2 : 1;
   }
 
-  return args[index];
+  return index;
 }
 
 function npmScript(args) {
-  if (args[0] !== "run" && args[0] !== "run-script") return undefined;
+  const run = args.findIndex((token) => !token.startsWith("-"));
 
-  return args.slice(1).find((token) => !token.startsWith("-"));
+  if (args[run] !== "run" && args[run] !== "run-script") return undefined;
+
+  return args.slice(run + 1).find((token) => !token.startsWith("-"));
 }
 
 function prHead(args) {
@@ -237,20 +283,24 @@ function prHead(args) {
 function ghRequirement(args) {
   const [resource, action, ...rest] = args;
 
-  return resource === "pr" && action === "create"
+  return resource === "pr" && PR_CREATE_ACTIONS.has(action) && !isHelpOnly(rest)
     ? { pullRequest: prHead(rest) }
     : undefined;
 }
 
 function requiredCommand(segment) {
-  const [program, ...args] = skipEnvPrefix(segment.trim().split(/\s+/));
+  const [path, ...args] = withoutWrappers(
+    skipEnvPrefix(withoutWrappers(commandTokens(segment))),
+  );
+  const program = path?.split("/").at(-1);
 
   if (program === "git") {
-    const subcommand = gitSubcommand(args);
+    const index = gitSubcommandIndex(args);
+    const subcommand = args[index];
 
-    return subcommand === "commit" || subcommand === "push"
-      ? "commit"
-      : undefined;
+    if (subcommand !== "commit" && subcommand !== "push") return undefined;
+
+    return isHelpOnly(args.slice(index + 1)) ? undefined : "commit";
   }
   if (program === "npm") {
     return COMMIT_SCRIPTS.has(npmScript(args)) ? "commit" : undefined;
