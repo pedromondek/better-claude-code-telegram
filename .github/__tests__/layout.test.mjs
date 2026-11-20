@@ -260,7 +260,7 @@ describe("rules of every workflow", () => {
     ).toEqual([]);
   });
 
-  it("makes every rust-cache step save only on main, leaving the pull requests read-only", () => {
+  it("makes every rust-cache step save only on main or never, leaving the pull requests read-only", () => {
     const rustCaches = allSteps().filter(({ step }) =>
       (step.uses ?? "").startsWith("Swatinem/rust-cache@"),
     );
@@ -268,7 +268,8 @@ describe("rules of every workflow", () => {
     expect(rustCaches.length).toBeGreaterThan(0);
     expect(
       rustCaches.filter(
-        ({ step }) => step.with?.["save-if"] !== `\${{ ${MAIN_ONLY} }}`,
+        ({ step }) =>
+          ![`\${{ ${MAIN_ONLY} }}`, false].includes(step.with?.["save-if"]),
       ),
     ).toEqual([]);
   });
