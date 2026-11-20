@@ -42,6 +42,36 @@ function changedFiles() {
     .filter(Boolean);
 }
 
+function deletedFiles() {
+  return run(["diff", "--name-only", "--diff-filter=D", pushRange()])
+    .split("\n")
+    .map((file) => file.trim())
+    .filter(Boolean);
+}
+
+export function deletedSpecSources(
+  files,
+  { layer, mutateGlobs, exists = existsSync },
+) {
+  const prefix = layerPrefix(layer);
+
+  return files
+    .filter((file) => file.startsWith(prefix))
+    .filter((file) => {
+      const layerPath = file.slice(prefix.length);
+
+      return (
+        layerPath.startsWith(`${SOURCE_ROOT}/`) &&
+        SPEC_SUFFIX.test(layerPath) &&
+        !E2E_SPEC.test(layerPath)
+      );
+    })
+    .map((file) => specToSource(file, { layer, exists }))
+    .filter(
+      (source) => source !== null && isMutationTarget(source, mutateGlobs),
+    );
+}
+
 export function toLayerChangedLines(changedByRepoPath, layer) {
   const prefix = layerPrefix(layer);
   const byLayerPath = new Map();
@@ -369,6 +399,15 @@ async function main() {
   const { mutate: mutateGlobs = [] } = strykerConfig;
   const files = changedFiles();
   const rangeTargets = collectTargets(files, { layer, mutateGlobs });
+
+  for (const source of deletedSpecSources(deletedFiles(), {
+    layer,
+    mutateGlobs,
+  })) {
+    rangeTargets.directSources.add(source);
+    rangeTargets.mutate.add(source);
+  }
+
   const scope = {
     env: process.env,
     layer,

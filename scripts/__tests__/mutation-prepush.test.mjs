@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   collectTargets,
+  deletedSpecSources,
   fitsProgressBar,
   isMutationTarget,
   needsFullScope,
@@ -650,6 +651,57 @@ describe("widenToFullScope", () => {
   });
 });
 
+describe("deletedSpecSources", () => {
+  it("maps a deleted unit spec to its source that still exists", () => {
+    expect(
+      deletedSpecSources([`${EXT}/__tests__/ask-format.test.ts`], {
+        layer: "",
+        mutateGlobs: EXT_MUTATE,
+        exists: existing(`${EXT}/ask-format.ts`),
+      }),
+    ).toEqual([`${EXT}/ask-format.ts`]);
+  });
+
+  it("maps a deleted spec under a layer folder to the source of that layer", () => {
+    expect(
+      deletedSpecSources([`app/${EXT}/__tests__/ask-format.test.ts`], {
+        layer: "app",
+        mutateGlobs: EXT_MUTATE,
+        exists: existing(`${EXT}/ask-format.ts`),
+      }),
+    ).toEqual([`${EXT}/ask-format.ts`]);
+  });
+
+  it("ignores deleted e2e specs, specs whose source is gone, sources and files outside the extensions", () => {
+    expect(
+      deletedSpecSources(
+        [
+          `${EXT}/__tests__/server.e2e.test.ts`,
+          `${EXT}/__tests__/orphan.test.ts`,
+          `${EXT}/config.ts`,
+          "scripts/__tests__/git.test.mjs",
+          `other/${EXT}/__tests__/ask-format.test.ts`,
+        ],
+        {
+          layer: "",
+          mutateGlobs: EXT_MUTATE,
+          exists: existing(`${EXT}/server.ts`, `${EXT}/config.ts`),
+        },
+      ),
+    ).toEqual([]);
+  });
+
+  it("ignores a deleted spec whose source is outside the mutate", () => {
+    expect(
+      deletedSpecSources([`${EXT}/__tests__/support/helper.test.ts`], {
+        layer: "",
+        mutateGlobs: EXT_MUTATE,
+        exists: existing(`${EXT}/__tests__/support/helper.ts`),
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe("collectTargets", () => {
   it("separates the push source from the source covered by the push spec, only inside the extensions folder", () => {
     const { directSources, specSources, mutate, unmapped, skipped } =
@@ -889,6 +941,30 @@ describe("main", () => {
       /^\.stryker-tmp[/\\]run-\d+$/,
     );
     expect(args.slice(-2)).toEqual(["--cleanTempDir", "always"]);
+  });
+
+  it("mutates the source of a unit spec the push deletes instead of skipping the mutation", () => {
+    const source = "// base\nexport const pick = (a) => (a > 0 ? 1 : 2);\n";
+    write(`${EXT}/__tests__/svc.test.ts`, "it('picks', () => {});\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "spec");
+    git("rm", "-q", `${EXT}/__tests__/svc.test.ts`);
+    git("commit", "-q", "-m", "drop spec");
+    write(
+      "report.fixture.json",
+      JSON.stringify({ files: { [SVC]: { source, mutants: [] } } }),
+    );
+
+    const { status, stdout, stderr } = spawnSync(process.execPath, [SCRIPT], {
+      cwd: repo,
+      encoding: "utf8",
+      env: { ...envWithoutGit, MUTATION_RANGE: "HEAD~1..HEAD" },
+    });
+
+    expect({ status, stderr }).toMatchObject({ status: 0 });
+    expect(stdout).not.toMatch(/mutation skipped/u);
+    const args = readArgs();
+    expect(args[args.indexOf("--mutate") + 1]).toBe(SVC);
   });
 
   it("with MUTATION_ONLY, mutates only the slice files among the range's targets", () => {
