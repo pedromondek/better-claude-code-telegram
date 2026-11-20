@@ -17,7 +17,10 @@ use crate::paths::{
     ANSWER_SUFFIX, ASK_SKIPPED_SUFFIXES, ASKS_FOLDER, BOT_PID_FILE, CLOSED_SUFFIX, PINGS_FOLDER,
     Paths, TELEGRAM_FLAG,
 };
-use crate::stop_failure::{self, MANAGED_SETTINGS_DIR, clear_after_prompt, clear_after_success};
+use crate::stop_failure::{
+    self, AUTOMATIC_CONTINUE_PROMPTS, MANAGED_SETTINGS_DIR, clear_after_continue,
+    clear_after_prompt, clear_after_success,
+};
 
 pub const ANSWER_POLL: Duration = Duration::from_millis(1000);
 
@@ -524,13 +527,7 @@ fn prompt(ctx: &Context, now: u64, ping_file: &Path, key: &str) -> Result<(), Ab
 
     create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
     clear_after_prompt(&pings_dir, key)?;
-
-    match fs::remove_file(ping_file) {
-        Err(error) if error.kind() != io::ErrorKind::NotFound => {
-            return Err(Abort::at(ping_file)(error));
-        }
-        _ => {}
-    }
+    remove_ping(ping_file)?;
 
     if ctx.telegram_instance {
         write_private(&last_prompt_file, now.to_string().as_bytes())
@@ -538,6 +535,26 @@ fn prompt(ctx: &Context, now: u64, ping_file: &Path, key: &str) -> Result<(), Ab
     }
 
     Ok(())
+}
+
+fn continued(ctx: &Context, ping_file: &Path, key: &str) -> Result<(), Abort> {
+    clear_after_continue(&ctx.app_dir.join(PINGS_FOLDER), key)?;
+    remove_ping(ping_file)
+}
+
+fn remove_ping(ping_file: &Path) -> Result<(), Abort> {
+    match fs::remove_file(ping_file) {
+        Err(error) if error.kind() != io::ErrorKind::NotFound => Err(Abort::at(ping_file)(error)),
+        _ => Ok(()),
+    }
+}
+
+fn automatic_continue(prompt: Option<&Value>) -> bool {
+    let Some(Value::String(text)) = prompt else {
+        return false;
+    };
+
+    AUTOMATIC_CONTINUE_PROMPTS.contains(&js_trim(text))
 }
 
 #[must_use]
@@ -633,6 +650,9 @@ fn dispatch(mode: Mode, input: &Value, ctx: &Context, now: u64) -> Result<Option
         Mode::Stop => stop(input, ctx, now, session, &ping_file, &key).map(|()| None),
         Mode::StopFailure => stop_failed(input, ctx, now, session, &key).map(|()| None),
         Mode::Prompt if !typed_at_terminal(input.get("prompt")) => Ok(None),
+        Mode::Prompt if automatic_continue(input.get("prompt")) => {
+            continued(ctx, &ping_file, &key).map(|()| None)
+        }
         Mode::Prompt => {
             prompt(ctx, now, &ping_file, &key)?;
             close_asks(&asks_dir, session).map(|()| None)
