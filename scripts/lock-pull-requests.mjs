@@ -1,8 +1,12 @@
 import { execFileSync } from "node:child_process";
 
+import {
+  PULL_REQUEST_NUMBER,
+  invalidPullRequestNumber,
+} from "./pull-request.constants.mjs";
+
 const USAGE =
   "usage: npm run pr:lock (pull request in PR_NUMBER, or every open one without it)";
-const PULL_REQUEST_NUMBER = /^[1-9]\d*$/u;
 
 function targets(env, github) {
   const wanted = env.PR_NUMBER ?? "";
@@ -12,9 +16,7 @@ function targets(env, github) {
   }
 
   if (!PULL_REQUEST_NUMBER.test(wanted)) {
-    throw new Error(
-      `PR_NUMBER must be the number of a pull request, not "${wanted}"`,
-    );
+    throw new Error(invalidPullRequestNumber(wanted));
   }
 
   return [github.pullRequest(Number(wanted))];
