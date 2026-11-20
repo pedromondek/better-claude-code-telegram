@@ -228,8 +228,6 @@ fn observe(scenario: &Value, now: u64) -> Observed {
     let variables = variables_of(scenario, root.path(), &telegram.root);
     let var = lookup(&variables);
     let bin = root.path().join("bin");
-    let version = text(scenario, "nodeVersion").to_owned();
-    let node_version = || Some(version.clone());
     let has_command = |name: &str| bin.join(name).is_file();
     let claude_output = |args: &[&str]| {
         Command::new(bin.join("claude"))
@@ -248,7 +246,6 @@ fn observe(scenario: &Value, now: u64) -> Observed {
                 .map_or(REGULAR_UID, |uid| u32::try_from(uid).unwrap()),
         ),
         now,
-        node_version: &node_version,
         git_version: &|| Some(GIT_VERSION.to_owned()),
         has_command: &has_command,
         claude_output: &claude_output,
@@ -573,7 +570,7 @@ fn blessing_rewrites_the_health_fixture_from_the_binary() {
 }
 
 #[test]
-fn a_node_that_cannot_be_found_fails_the_node_check() {
+fn checks_no_node_in_the_install_group_since_only_npx_needs_it() {
     let root = sandbox();
     let variables = HashMap::from([
         ("HOME".to_owned(), root.path().as_os_str().to_owned()),
@@ -588,7 +585,6 @@ fn a_node_that_cannot_be_found_fails_the_node_check() {
         home: root.path(),
         uid: None,
         now: 0,
-        node_version: &|| None,
         git_version: &|| Some(GIT_VERSION.to_owned()),
         has_command: &|name| name == "claude",
         claude_output: &|_| String::new(),
@@ -615,9 +611,14 @@ fn a_node_that_cannot_be_found_fails_the_node_check() {
     let results: Value = serde_json::from_slice(&out).unwrap();
 
     assert_eq!(status, 1);
-    assert_eq!(
-        results[0],
-        json!({"group": "install", "check": "node", "status": "fail", "detail": "missing"})
+    assert_eq!(results[0]["check"], "claude");
+    assert!(
+        results
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["check"] != "node"),
+        "{results}"
     );
     assert_eq!(err, Vec::<u8>::new());
 }
@@ -713,8 +714,6 @@ fn sandboxed<R>(
     let variables = variables_of(scenario, root.path(), &telegram.root);
     let var = lookup(&variables);
     let bin = root.path().join("bin");
-    let version = text(scenario, "nodeVersion").to_owned();
-    let node_version = || Some(version.clone());
     let git = (scenario.get("gitVersion") != Some(&Value::Null)).then(|| GIT_VERSION.to_owned());
     let git_version = || git.clone();
     let has_command = |name: &str| bin.join(name).is_file();
@@ -735,7 +734,6 @@ fn sandboxed<R>(
                 .map_or(REGULAR_UID, |uid| u32::try_from(uid).unwrap()),
         ),
         now,
-        node_version: &node_version,
         git_version: &git_version,
         has_command: &has_command,
         claude_output: &claude_output,
@@ -876,7 +874,7 @@ fn a_spinner_line_that_cannot_be_written_also_fails_the_result() {
     );
     assert_eq!(
         String::from_utf8(out.accepted).unwrap(),
-        "Install\n\r\u{1b}[2K✔ Node: Node 24.20.0\n"
+        "Install\n\r\u{1b}[2K✔ claude: found\n"
     );
 }
 
@@ -1885,7 +1883,6 @@ fn visual_checks(config: &str, with_chromium: bool, with_ffmpeg: bool) -> (u8, V
         home: root.path(),
         uid: None,
         now: 0,
-        node_version: &|| None,
         git_version: &|| None,
         has_command: &|name| with_ffmpeg && name == "ffmpeg",
         claude_output: &|_| String::new(),

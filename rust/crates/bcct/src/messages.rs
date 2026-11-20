@@ -75,7 +75,6 @@ pub struct HealthGroupTitles {
 
 #[derive(Debug, Clone, Copy)]
 pub struct HealthLabels {
-    pub node: &'static str,
     pub user: &'static str,
     pub claude: &'static str,
     pub bun: &'static str,
@@ -112,7 +111,6 @@ pub struct StatuslineDetail {
 
 #[derive(Debug, Clone, Copy)]
 pub struct HealthDetail {
-    pub version: fn(&str) -> String,
     pub found: &'static str,
     pub missing: &'static str,
     pub git_missing: &'static str,
@@ -337,7 +335,6 @@ pub struct Messages {
     pub tool_installed: fn(&str, &str) -> String,
     pub install_failed: fn(&str) -> String,
     pub tool_still_missing: fn(&str, &str) -> String,
-    pub node_too_old: fn(&str, &str) -> String,
     pub bcct_prompt: &'static str,
     pub bcct_installed_question: &'static str,
     pub bcct_choices: BcctChoices,

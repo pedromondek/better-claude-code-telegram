@@ -25,7 +25,7 @@ use bcct::journal::ChangeKind;
 use bcct::js::format_number;
 use bcct::locale::Locale;
 use bcct::messages::{Messages, messages_for};
-use bcct::setup::{git_version_from, node_version_ok};
+use bcct::setup::git_version_from;
 use bcct::spinner::Terminal;
 use serde_json::{Value, json};
 use support::{
@@ -713,17 +713,6 @@ fn the_git_version_is_the_third_word_and_a_missing_or_failing_git_has_none() {
         git_version_from(Command::new(folder.path().join("missing"))),
         None
     );
-}
-
-#[test]
-fn node_versions_are_judged_like_node_version_ok() {
-    for case in list(&parse(FIXTURE), "nodeVersionOk") {
-        assert_eq!(
-            node_version_ok(text(case, "version")),
-            case["ok"] == json!(true),
-            "{case}"
-        );
-    }
 }
 
 #[test]

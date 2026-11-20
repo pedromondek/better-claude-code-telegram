@@ -103,19 +103,6 @@ fn resolved(name: &str) -> String {
         .clone()
 }
 
-fn node_version() -> &'static str {
-    static VERSION: OnceLock<String> = OnceLock::new();
-
-    VERSION.get_or_init(|| {
-        let output = Command::new("node").arg("--version").output().unwrap();
-
-        String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .trim_start_matches('v')
-            .to_owned()
-    })
-}
-
 #[derive(Default)]
 struct Facts {
     code: Option<String>,
@@ -140,7 +127,7 @@ fn after_prefix(input: &str, prefix: &str, keep: &str, shown: &str) -> String {
 }
 
 fn normalized(input: &str, root: &Path, facts: &Facts) -> String {
-    let mut out = placeholders(input, root).replace(node_version(), "{node}");
+    let mut out = placeholders(input, root);
 
     if let Some(code) = &facts.code {
         out = out.replace(code, "{code}");
@@ -1912,7 +1899,7 @@ fn a_request_that_cannot_be_taken_says_so_in_one_line_of_the_catalog() {
 }
 
 #[test]
-fn a_missing_node_lets_the_setup_go_on_and_an_old_one_stops_it() {
+fn goes_on_with_a_missing_or_an_old_node_since_only_npx_needs_it() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -1938,14 +1925,15 @@ fn a_missing_node_lets_the_setup_go_on_and_an_old_one_stops_it() {
         .stdin(Stdio::null())
         .output()
         .unwrap();
-    let messages = messages_for(Locale::EnUs);
 
-    assert_eq!(old.status.code(), Some(1));
-    assert_eq!(
-        String::from_utf8_lossy(&old.stderr),
-        format!("✘ {}\n", (messages.node_too_old)("18.2.0", "24.11"))
+    assert!(
+        String::from_utf8_lossy(&old.stdout).contains("Wait time"),
+        "{old:?}"
     );
-    assert_eq!(old.stdout, Vec::<u8>::new());
+    assert!(
+        !String::from_utf8_lossy(&old.stderr).contains("18.2.0"),
+        "{old:?}"
+    );
 }
 
 #[test]

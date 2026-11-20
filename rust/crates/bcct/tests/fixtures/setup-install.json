@@ -10,22 +10,6 @@
     "manualUninstallCommands": "  claude plugin uninstall telegram@better-claude-code-telegram\n  claude plugin uninstall telegram-hooks@better-claude-code-telegram\n  claude plugin uninstall bcct@better-claude-code-telegram\n  claude plugin marketplace remove better-claude-code-telegram",
     "shellFile": "{repo}/scripts/shell.sh"
   },
-  "nodeVersionOk": [
-    { "version": "24.11.0", "ok": true },
-    { "version": "24.20.0", "ok": true },
-    { "version": "25.0.0", "ok": true },
-    { "version": "24.10.9", "ok": false },
-    { "version": "22.12.0", "ok": false },
-    { "version": "18.0.0", "ok": false },
-    { "version": "", "ok": false },
-    { "version": "24", "ok": false },
-    { "version": "24.11", "ok": true },
-    { "version": "v24.11.0", "ok": false },
-    { "version": "24.x", "ok": false },
-    { "version": "100.0.0", "ok": true },
-    { "version": " 24.11.0", "ok": true },
-    { "version": "24.11.0-rc.1", "ok": true }
-  ],
   "installerFor": [
     {
       "tool": "claude",

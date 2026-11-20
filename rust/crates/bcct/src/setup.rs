@@ -10,7 +10,7 @@ use crate::files::{FileFailure, create_private_dir, read_json, write_private};
 use crate::install::System;
 use crate::journal::Journal;
 use crate::js::{
-    join_path, js_basename, js_number, js_trim, js_truthy, normalize_path, parse_json, stringify,
+    join_path, js_basename, js_trim, js_truthy, normalize_path, parse_json, stringify,
 };
 use crate::locale::Locale;
 use crate::messages::{Messages, messages_for};
@@ -22,13 +22,10 @@ pub use crate::package::SETUP_COMMAND;
 pub const STATUSLINE_REQUEST_FILE: &str = "statusline-customize.json";
 pub const CHANNEL_PLUGIN_ID: &str = "telegram@better-claude-code-telegram";
 pub const HOOKS_PLUGIN_ID: &str = "telegram-hooks@better-claude-code-telegram";
-pub const MINIMUM_NODE: &str = "24.11";
 pub const ENV_FILE: &str = ".env";
 pub const ACCESS_FILE: &str = "access.json";
 
 const SETTINGS_FILE: &str = "settings.json";
-const MINIMUM_NODE_MAJOR: f64 = 24.0;
-const MINIMUM_NODE_MINOR: f64 = 11.0;
 const SHELL_SCRIPT: &str = "shell.sh";
 const LAUNCHER: &str = if cfg!(windows) {
     "bin/bcct.cmd"
@@ -503,15 +500,6 @@ pub fn env_deny_rule(env_file: &Path, home: &str) -> String {
     )
 }
 
-#[must_use]
-pub fn node_version_ok(version: &str) -> bool {
-    let mut parts = version.split('.').map(js_number);
-    let major = parts.next().unwrap_or(f64::NAN);
-    let minor = parts.next().unwrap_or(f64::NAN);
-
-    major > MINIMUM_NODE_MAJOR || (major == MINIMUM_NODE_MAJOR && minor >= MINIMUM_NODE_MINOR)
-}
-
 pub fn read_settings(
     settings_file: &Path,
     messages: &Messages,
@@ -536,26 +524,6 @@ pub fn has_command(name: &str) -> bool {
 #[must_use]
 pub fn claude_output(args: &[&str]) -> String {
     System::from_process().claude_output(args)
-}
-
-#[must_use]
-pub fn node_version() -> Option<String> {
-    node_version_from(System::from_process().command("node"))
-}
-
-#[must_use]
-pub fn node_version_from(mut command: Command) -> Option<String> {
-    let output = command
-        .arg("--version")
-        .stdin(Stdio::null())
-        .stderr(Stdio::null())
-        .output()
-        .ok()
-        .filter(|output| output.status.success())?;
-    let text = String::from_utf8_lossy(&output.stdout);
-    let version = text.trim();
-
-    Some(version.strip_prefix('v').unwrap_or(version).to_owned())
 }
 
 #[must_use]
@@ -840,11 +808,9 @@ mod tests {
     }
 
     #[test]
-    fn a_missing_python_does_not_work_and_an_empty_version_is_too_old() {
+    fn finds_no_working_python_in_a_missing_folder() {
         let folder = tempfile::tempdir().unwrap();
 
         assert!(!whisper_python_works(&folder.path().join("missing")));
-        assert!(node_version_ok("24.11.0"));
-        assert!(!node_version_ok(""));
     }
 }

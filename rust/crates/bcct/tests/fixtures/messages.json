@@ -297,7 +297,6 @@
     "healthGroupTitles.telegram": "Telegram",
     "healthGroupTitles.security": "Security",
     "healthGroupTitles.extras": "Extras",
-    "healthLabels.node": "Node",
     "healthLabels.user": "Running as root",
     "healthLabels.claude": "claude",
     "healthLabels.bun": "bun",
@@ -318,7 +317,6 @@
     "healthLabels.version": "Version",
     "healthLabels.appDir": "App folder",
     "healthLabels.hooks": "Hooks",
-    "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
     "healthDetail.found": "found",
     "healthDetail.missing": "missing",
     "healthDetail.gitMissing": "not installed. Claude Code needs it to download and update the plugins.",
@@ -507,12 +505,6 @@
       {
         "args": ["alpha 1", "beta 'two'"],
         "out": "'alpha 1' was installed but is not in beta 'two'; check the installer output."
-      }
-    ],
-    "nodeTooOld": [
-      {
-        "args": ["alpha 1", "beta 'two'"],
-        "out": "Node alpha 1 is too old; the setup needs Node beta 'two' or newer (see .nvmrc; with nvm, run nvm install)."
       }
     ],
     "bcctPrompt": "(optional) Also add the /bcct: commands to Claude Code (setup steps and health from inside a session)?",
@@ -1553,7 +1545,6 @@
     "healthGroupTitles.telegram": "Telegram",
     "healthGroupTitles.security": "Segurança",
     "healthGroupTitles.extras": "Extras",
-    "healthLabels.node": "Node",
     "healthLabels.user": "Execução como root",
     "healthLabels.claude": "claude",
     "healthLabels.bun": "bun",
@@ -1574,7 +1565,6 @@
     "healthLabels.version": "Versão",
     "healthLabels.appDir": "Pasta do app",
     "healthLabels.hooks": "Hooks",
-    "healthDetail.version": [{ "args": ["alpha 1"], "out": "Node alpha 1" }],
     "healthDetail.found": "encontrado",
     "healthDetail.missing": "não encontrado",
     "healthDetail.gitMissing": "não instalado. O Claude Code precisa dele para baixar e atualizar os plugins.",
@@ -1763,12 +1753,6 @@
       {
         "args": ["alpha 1", "beta 'two'"],
         "out": "O 'alpha 1' foi instalado mas não está em beta 'two'; confira a saída do instalador."
-      }
-    ],
-    "nodeTooOld": [
-      {
-        "args": ["alpha 1", "beta 'two'"],
-        "out": "O Node alpha 1 é antigo demais; o setup precisa do Node beta 'two' ou mais novo (veja o .nvmrc; com nvm, rode nvm install)."
       }
     ],
     "bcctPrompt": "(opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)?",

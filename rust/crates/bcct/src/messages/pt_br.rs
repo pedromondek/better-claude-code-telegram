@@ -214,7 +214,6 @@ pub(super) const MESSAGES: Messages = Messages {
         extras: "Extras",
     },
     health_labels: HealthLabels {
-        node: "Node",
         user: "Execução como root",
         claude: "claude",
         bun: "bun",
@@ -239,7 +238,6 @@ pub(super) const MESSAGES: Messages = Messages {
         hooks: "Hooks",
     },
     health_detail: HealthDetail {
-        version: |version| format!("Node {version}"),
         found: "encontrado",
         missing: "não encontrado",
         git_missing: "não instalado. O Claude Code precisa dele para baixar e atualizar os plugins.",
@@ -369,11 +367,6 @@ pub(super) const MESSAGES: Messages = Messages {
     tool_still_missing: |tool, bin_dir| {
         format!(
             "O '{tool}' foi instalado mas não está em {bin_dir}; confira a saída do instalador."
-        )
-    },
-    node_too_old: |version, minimum| {
-        format!(
-            "O Node {version} é antigo demais; o setup precisa do Node {minimum} ou mais novo (veja o .nvmrc; com nvm, rode nvm install)."
         )
     },
     bcct_prompt: "(opcional) Adicionar também ao Claude Code os comandos /bcct: (etapas do setup e health de dentro da sessão)?",

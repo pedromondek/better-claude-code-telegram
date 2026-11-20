@@ -228,7 +228,6 @@ pub(super) const MESSAGES: Messages = Messages {
         extras: "Extras",
     },
     health_labels: HealthLabels {
-        node: "Node",
         user: "Running as root",
         claude: "claude",
         bun: "bun",
@@ -253,7 +252,6 @@ pub(super) const MESSAGES: Messages = Messages {
         hooks: "Hooks",
     },
     health_detail: HealthDetail {
-        version: |version| format!("Node {version}"),
         found: "found",
         missing: "missing",
         git_missing: "not installed. Claude Code needs it to download and update the plugins.",
@@ -368,11 +366,6 @@ pub(super) const MESSAGES: Messages = Messages {
     install_failed: |tool| format!("The installer of '{tool}' failed; nothing else was changed."),
     tool_still_missing: |tool, bin_dir| {
         format!("'{tool}' was installed but is not in {bin_dir}; check the installer output.")
-    },
-    node_too_old: |version, minimum| {
-        format!(
-            "Node {version} is too old; the setup needs Node {minimum} or newer (see .nvmrc; with nvm, run nvm install)."
-        )
     },
     bcct_prompt: "(optional) Also add the /bcct: commands to Claude Code (setup steps and health from inside a session)?",
     bcct_installed_question: "(optional) The /bcct: commands are already in Claude Code. What should happen to them?",

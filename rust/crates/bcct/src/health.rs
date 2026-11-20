@@ -20,11 +20,10 @@ use crate::paths::{CONFIG_FILE, HEALTH_FILE, LAUNCH_FILE, TELEGRAM_FLAG};
 use crate::prompt::{Prompter, create_prompter};
 use crate::self_install::Store;
 use crate::setup::{
-    ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, MINIMUM_NODE, SETUP_COMMAND,
-    SetupPaths, StatuslineState, claude_output, command_on_path, env_deny_rule, git_version_from,
-    has_command, launcher_dir, node_version, node_version_ok, parse_env_token, path_lists,
-    read_settings, read_text, setup_locale, shell_file, shell_rc_files, shell_script,
-    statusline_state, whisper_python_works,
+    ACCESS_FILE, CHANNEL_PLUGIN_ID, ENV_FILE, HOOKS_PLUGIN_ID, SETUP_COMMAND, SetupPaths,
+    StatuslineState, claude_output, command_on_path, env_deny_rule, git_version_from, has_command,
+    launcher_dir, parse_env_token, path_lists, read_settings, read_text, setup_locale, shell_file,
+    shell_rc_files, shell_script, statusline_state, whisper_python_works,
 };
 use crate::shell_rc::{rc_line_active, rc_loads};
 use crate::spinner::{Spinner, Terminal, pending, spin_on_stdout};
@@ -47,7 +46,6 @@ pub struct Machine<'a> {
     pub home: &'a Path,
     pub uid: Option<u32>,
     pub now: u64,
-    pub node_version: &'a dyn Fn() -> Option<String>,
     pub git_version: &'a dyn Fn() -> Option<String>,
     pub has_command: &'a dyn Fn(&str) -> bool,
     pub claude_output: &'a dyn Fn(&[&str]) -> String,
@@ -127,7 +125,6 @@ impl Group {
     fn checks(self) -> &'static [Check] {
         match self {
             Self::Install => &[
-                Check::Node,
                 Check::Claude,
                 Check::Bun,
                 Check::Git,
@@ -154,7 +151,6 @@ impl Group {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Check {
-    Node,
     Claude,
     Bun,
     Git,
@@ -183,7 +179,6 @@ impl Check {
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Node => "node",
             Self::Claude => "claude",
             Self::Bun => "bun",
             Self::Git => "git",
@@ -214,7 +209,6 @@ impl Check {
         let labels = messages.health_labels;
 
         match self {
-            Self::Node => labels.node,
             Self::Claude => labels.claude,
             Self::Bun => labels.bun,
             Self::Git => labels.git,
@@ -449,7 +443,6 @@ impl Checks<'_> {
             Check::Token => self.token_check(),
             Check::Groups => self.groups(),
             Check::Protection => self.protection(),
-            Check::Node => self.node(),
             Check::Claude => self.tool("claude"),
             Check::Bun => self.tool("bun"),
             Check::Git => (self.machine.git_version)().map_or_else(
@@ -466,16 +459,6 @@ impl Checks<'_> {
             Check::Chromium => self.chromium(),
             Check::Ffmpeg => self.ffmpeg(),
             Check::Statusline => self.statusline(),
-        }
-    }
-
-    fn node(&self) -> Verdict {
-        let detail = self.messages.health_detail;
-
-        match (self.machine.node_version)() {
-            Some(version) if node_version_ok(&version) => ok(&(detail.version)(&version)),
-            Some(version) => failed(&(self.messages.node_too_old)(&version, MINIMUM_NODE)),
-            None => failed(detail.missing),
         }
     }
 
@@ -1201,7 +1184,6 @@ pub fn run_process(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn W
         home: &home,
         uid,
         now: now_ms(),
-        node_version: &node_version,
         git_version: &|| git_version_from(System::from_process().command("git")),
         has_command: &has_command,
         claude_output: &claude_output,
