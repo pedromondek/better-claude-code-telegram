@@ -45,7 +45,6 @@ jobs:
       number: ${{ steps.plan.outputs.number }}
       version: ${{ steps.plan.outputs.version }}
       merge: ${{ steps.plan.outputs.merge }}
-      recorded: ${{ steps.plan.outputs.recorded }}
       prerelease: ${{ steps.plan.outputs.prerelease }}
     steps:
       - name: Harden the runner
@@ -140,7 +139,6 @@ jobs:
           PR_NUMBER: ${{ needs.plan.outputs.number }}
           VERSION: ${{ needs.plan.outputs.version }}
           MERGE: ${{ needs.plan.outputs.merge }}
-          RECORDED: ${{ needs.plan.outputs.recorded }}
         run: npm run --silent release:publish -- record dist
 
       - name: Release

@@ -242,7 +242,6 @@ describe("release.yml publishes the version pull request that was merged", () =>
         number: "${{ steps.plan.outputs.number }}",
         version: "${{ steps.plan.outputs.version }}",
         merge: "${{ steps.plan.outputs.merge }}",
-        recorded: "${{ steps.plan.outputs.recorded }}",
         prerelease: "${{ steps.plan.outputs.prerelease }}",
       });
     });
@@ -310,7 +309,6 @@ describe("release.yml publishes the version pull request that was merged", () =>
       expect(record.env).toEqual({
         ...shared,
         MERGE: "${{ needs.plan.outputs.merge }}",
-        RECORDED: "${{ needs.plan.outputs.recorded }}",
       });
       expect(record.run).toBe(
         "npm run --silent release:publish -- record dist",

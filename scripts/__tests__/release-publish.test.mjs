@@ -150,7 +150,7 @@ describe("plan", () => {
 
     expect(result.code).toBe(0);
     expect(result.outputs).toBe(
-      `number=12\nversion=${VERSION}\nmerge=${MERGE}\nrecorded=\nprerelease=true\n`,
+      `number=12\nversion=${VERSION}\nmerge=${MERGE}\nprerelease=true\n`,
     );
     expect(result.out).toEqual([
       `✓ v${VERSION} from #12, built at ${MERGE.slice(0, 7)}`,
@@ -184,8 +184,8 @@ describe("plan", () => {
     });
 
     expect(result.code).toBe(0);
-    expect(result.outputs).toContain(`recorded=${RECORD}\n`);
-    expect(result.out[0]).toContain("resuming after");
+    expect(result.outputs).not.toContain("recorded=");
+    expect(result.out[0]).toContain(`, resuming after ${RECORD.slice(0, 7)}`);
   });
 
   it("resumes on a draft Release of the version, whose tag may already exist", () => {
@@ -276,7 +276,7 @@ describe("record", () => {
     project();
 
     const result = runWith(["record", "dist"], {
-      env: { MERGE, RECORDED: "", VERSION },
+      env: { MERGE, VERSION },
     });
     const [, commit] = result.calls.find(([name]) => name === "commitFiles");
 
@@ -303,24 +303,51 @@ describe("record", () => {
     project();
 
     const result = runWith(["record", "dist"], {
-      env: { MERGE, RECORDED: "", VERSION },
+      env: { MERGE, VERSION },
       state: { head: "c".repeat(40) },
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.err.join("\n")).toContain(
+      "main moved past the merge aaaaaaa of #12 to ccccccc, which is not the record",
+    );
+    expect(result.calls.some(([name]) => name === "commitFiles")).toBe(false);
+  });
+
+  it("refuses a commit over the merge whose headline is not the record of the version", () => {
+    project();
+
+    const result = runWith(["record", "dist"], {
+      env: { MERGE, VERSION },
+      state: {
+        head: RECORD,
+        commits: { [RECORD]: { parents: [MERGE], headline: "other work" } },
+      },
     });
 
     expect(result.code).toBe(1);
     expect(result.calls.some(([name]) => name === "commitFiles")).toBe(false);
   });
 
-  it("skips the commit when the plan found it already made", () => {
+  it("skips the commit when main already holds the record of the version", () => {
     project();
 
     const result = runWith(["record", "dist"], {
-      env: { MERGE, RECORDED: RECORD, VERSION },
+      env: { MERGE, VERSION },
+      state: {
+        head: RECORD,
+        commits: {
+          [RECORD]: { parents: [MERGE], headline: recordHeadline(VERSION) },
+        },
+      },
     });
 
     expect(result.code).toBe(0);
     expect(result.calls.some(([name]) => name === "commitFiles")).toBe(false);
     expect(result.outputs).toBe(`commit=${RECORD}\n`);
+    expect(result.out).toContain(
+      `✓ v${VERSION} is already recorded in bbbbbbb`,
+    );
   });
 });
 

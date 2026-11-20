@@ -137,27 +137,24 @@ function plan({ root, env, github, released, out }) {
 
   const prerelease = parseVersion(version).stage !== null;
 
-  output(env, { number, version, merge, recorded, prerelease });
+  output(env, { number, version, merge, prerelease });
   out(
     `✓ v${version} from #${number}, built at ${short(merge)}${recorded === "" ? "" : `, resuming after ${short(recorded)}`}`,
   );
 }
 
 function record({ root, env, github, assetsDir, out }) {
-  const { MERGE: merge, RECORDED: recorded, VERSION: version } = env;
+  const { MERGE: merge, VERSION: version } = env;
+  const recorded = recordedCommit(github, {
+    number: Number(env.PR_NUMBER),
+    version,
+    merge,
+  });
 
-  if (recorded) {
+  if (recorded !== "") {
     output(env, { commit: recorded });
     out(`✓ v${version} is already recorded in ${short(recorded)}`);
     return;
-  }
-
-  const head = github.branchHead(BASE_BRANCH);
-
-  if (head !== merge) {
-    throw new Error(
-      `main moved past the merge ${short(merge)} to ${short(head)} before the record of v${version}`,
-    );
   }
 
   appendChecksums({ root, assetsDir });
