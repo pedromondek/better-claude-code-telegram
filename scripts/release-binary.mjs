@@ -121,6 +121,7 @@ export function sha256Line(sha256, asset) {
 
 export function packageBinary({
   root,
+  env,
   target,
   outDir,
   readobj,
@@ -128,8 +129,7 @@ export function packageBinary({
 }) {
   const entry = targetOf(target);
   const binary = join(
-    root,
-    RUST_TARGET_DIR,
+    resolve(root, env.CARGO_TARGET_DIR ?? RUST_TARGET_DIR),
     target,
     "release",
     binaryFileName(entry.os),
@@ -207,6 +207,7 @@ if (import.meta.main) {
 
       return packageBinary({
         root,
+        env: process.env,
         ...options,
         readobj: (args) =>
           execFileSync(readobjPath, args, { encoding: "utf8" }),

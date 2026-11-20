@@ -179,8 +179,8 @@ describe("packageBinary", () => {
     setVersion(root, version);
   }
 
-  function built(target, name = "bcct") {
-    const file = join(root, "rust/target", target, "release", name);
+  function built(target, name = "bcct", targetDir = join(root, "rust/target")) {
+    const file = join(targetDir, target, "release", name);
 
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, `binary of ${target}`);
@@ -209,6 +209,7 @@ describe("packageBinary", () => {
 
     const result = packageBinary({
       root,
+      env: {},
       target: "x86_64-unknown-linux-musl",
       outDir: join(root, "dist"),
       ...deps,
@@ -238,6 +239,7 @@ describe("packageBinary", () => {
     expect(
       packageBinary({
         root,
+        env: {},
         target: "x86_64-pc-windows-msvc",
         outDir: join(root, "dist"),
         ...deps,
@@ -253,6 +255,7 @@ describe("packageBinary", () => {
     expect(
       packageBinary({
         root,
+        env: {},
         target: "x86_64-unknown-linux-musl",
         outDir: join(root, "dist"),
         ...tools({
@@ -269,6 +272,7 @@ describe("packageBinary", () => {
     expect(() =>
       packageBinary({
         root,
+        env: {},
         target: "x86_64-unknown-linux-musl",
         outDir: join(root, "dist"),
         ...tools({ version: "bcct 0.1.0" }),
@@ -278,6 +282,41 @@ describe("packageBinary", () => {
     );
   });
 
+  it.each([
+    ["an absolute", (dir) => dir],
+    ["a relative", () => "build/cargo"],
+  ])(
+    "reads the binary under %s CARGO_TARGET_DIR instead of rust/target",
+    (_kind, setting) => {
+      project("0.2.0");
+      built("x86_64-unknown-linux-musl");
+      const binary = built(
+        "x86_64-unknown-linux-musl",
+        "bcct",
+        join(root, "build/cargo"),
+      );
+      writeFileSync(binary, "binary of CARGO_TARGET_DIR");
+      const deps = tools();
+
+      packageBinary({
+        root,
+        env: { CARGO_TARGET_DIR: setting(join(root, "build/cargo")) },
+        target: "x86_64-unknown-linux-musl",
+        outDir: join(root, "dist"),
+        ...deps,
+      });
+
+      expect(deps.asked[0]).toEqual([
+        "--file-headers",
+        "--needed-libs",
+        binary,
+      ]);
+      expect(readFileSync(join(root, "dist/bcct-linux-x64"), "utf8")).toBe(
+        "binary of CARGO_TARGET_DIR",
+      );
+    },
+  );
+
   it("refuses a binary with problems, naming every one", () => {
     project("0.2.0");
     built("x86_64-unknown-linux-musl");
@@ -285,6 +324,7 @@ describe("packageBinary", () => {
     expect(() =>
       packageBinary({
         root,
+        env: {},
         target: "x86_64-unknown-linux-musl",
         outDir: join(root, "dist"),
         ...tools({ headers: DYNAMIC_ELF }),
