@@ -55,6 +55,7 @@ const enUs = {
   enterKeepsDefault:
     "Press Enter on an empty answer to keep the default or the existing setting.",
   cancelled: "Cancelled.",
+  aborted: "Aborted with Ctrl+D",
   exitPrompt: "Leave the setup?",
   continueSetup: "Go on where it stopped",
   exitSetup: "Leave",
@@ -693,6 +694,7 @@ const ptBr = {
   enterKeepsDefault:
     "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.",
   cancelled: "Cancelado.",
+  aborted: "Interrompido com Ctrl+D",
   exitPrompt: "Sair do setup?",
   continueSetup: "Continuar de onde parou",
   exitSetup: "Sair",
