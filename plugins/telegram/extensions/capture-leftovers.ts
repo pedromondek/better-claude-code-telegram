@@ -82,8 +82,10 @@ export function cleanLeftovers(
 
     if (chromium > 0 && usesProfile) kill(chromium);
 
-    remove(path);
-    removed.push(path);
+    try {
+      remove(path);
+      removed.push(path);
+    } catch {}
   }
 
   return removed;

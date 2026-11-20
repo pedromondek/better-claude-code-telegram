@@ -185,6 +185,23 @@ describe("cleanLeftovers", () => {
     expect(killed).toEqual([]);
   });
 
+  it("skips a folder it cannot remove and still removes the next ones", (): void => {
+    const cleaned = cleanLeftovers("/tmp", {
+      listDir: () => ["bcct-frames-10-locked", "bcct-frames-11-free"],
+      isAlive: () => false,
+      readText: () => null,
+      kill: (pid) => killed.push(pid),
+      remove: (path) => {
+        if (path.endsWith("locked")) throw new Error("EACCES");
+
+        removed.push(path);
+      },
+    });
+
+    expect(cleaned).toEqual(["/tmp/bcct-frames-11-free"]);
+    expect(removed).toEqual(["/tmp/bcct-frames-11-free"]);
+  });
+
   it("stops nothing without a valid pid of Chromium", (): void => {
     files["/tmp/bcct-capture-10-aaa/chromium.pid"] = "0";
     files["/proc/0/cmdline"] = "--user-data-dir=/tmp/bcct-capture-10-aaa";
