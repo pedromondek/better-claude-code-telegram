@@ -759,7 +759,7 @@ fn the_git_version_is_the_third_word_and_a_missing_or_failing_git_has_none() {
 }
 
 #[test]
-fn installers_match_installer_for() {
+fn picks_the_installer_of_each_tool_like_the_js() {
     for case in list(&parse(FIXTURE), "installerFor") {
         let found = Tool::parse(text(case, "tool"))
             .map(|tool| installer_for(tool, Path::new(text(case, "home"))))
@@ -821,7 +821,7 @@ fn answers_are_parsed_like_the_js() {
 }
 
 #[test]
-fn the_plugin_plan_matches_plugin_plan() {
+fn plans_the_plugins_like_the_js() {
     for case in list(&parse(FIXTURE), "pluginPlan") {
         let input = &case["input"];
         let rc_files: Vec<PathBuf> = strings(&input["rcFiles"])

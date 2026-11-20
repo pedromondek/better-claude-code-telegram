@@ -6466,7 +6466,7 @@
           "mode": "755"
         },
         "uv-calls": {
-          "content": "venv {root}/app/whisper/venv --python python3 -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+          "content": "venv {root}/app/whisper/venv --python python3 --clear -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
           "mode": "644"
         }
       }
@@ -7017,7 +7017,7 @@
           "mode": "755"
         },
         "uv-calls": {
-          "content": "venv {root}/app/whisper/venv --python python3 -q\n",
+          "content": "venv {root}/app/whisper/venv --python python3 --clear -q\n",
           "mode": "644"
         }
       }
@@ -7153,7 +7153,7 @@
           "mode": "755"
         },
         "uv-calls": {
-          "content": "venv {root}/app/whisper/venv --python python3 -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+          "content": "venv {root}/app/whisper/venv --python python3 --clear -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
           "mode": "644"
         }
       }
@@ -7307,7 +7307,7 @@
           "mode": "755"
         },
         "uv-calls": {
-          "content": "venv {root}/app/whisper/venv --python python3 -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+          "content": "venv {root}/app/whisper/venv --python python3 --clear -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
           "mode": "644"
         }
       }
@@ -7567,7 +7567,7 @@
           "mode": "755"
         },
         "uv-calls": {
-          "content": "venv {root}/app/whisper/venv --python python3 -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+          "content": "venv {root}/app/whisper/venv --python python3 --clear -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
           "mode": "644"
         }
       }
@@ -10198,7 +10198,7 @@
           "mode": "755"
         },
         "uv-calls": {
-          "content": "venv {root}/app/whisper/venv --python python3 -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
+          "content": "venv {root}/app/whisper/venv --python python3 --clear -q\npip install -q --python {root}/app/whisper/venv/bin/python faster-whisper==1.2.1 av==18.1.0\n",
           "mode": "644"
         }
       }

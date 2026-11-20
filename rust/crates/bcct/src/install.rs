@@ -29,6 +29,20 @@ use crate::shell_rc::{rc_files_without_shell_line, source_line};
 use crate::spinner::{Pending, pending};
 use crate::ui::{bold, info, note, skipped, success, warn};
 
+#[macro_export]
+macro_rules! faster_whisper_version {
+    () => {
+        "1.2.1"
+    };
+}
+
+#[macro_export]
+macro_rules! pyav_version {
+    () => {
+        "18.1.0"
+    };
+}
+
 pub const CLAUDE_CODE_VERSION: &str = "2.1.303";
 pub const BUN_VERSION: &str = "1.4.3";
 pub const UV_VERSION: &str = "0.13.1";
@@ -36,12 +50,18 @@ pub const MARKETPLACE_NAME: &str = "better-claude-code-telegram";
 pub const BCCT_PLUGIN_ID: &str = "bcct@better-claude-code-telegram";
 pub const PLUGIN_IDS: [&str; 3] = [CHANNEL_PLUGIN_ID, HOOKS_PLUGIN_ID, BCCT_PLUGIN_ID];
 pub const MERMAID_UNINSTALL_COMMAND: &str = "npm uninstall -g @mermaid-js/mermaid-cli";
-pub const TRANSCRIPTION_MODELS: [&str; 3] = ["base", "small", "medium"];
-pub const DEFAULT_TRANSCRIPTION_MODEL: &str = "base";
+pub const BASE_MODEL: &str = "base";
+pub const SMALL_MODEL: &str = "small";
+pub const MEDIUM_MODEL: &str = "medium";
+pub const TRANSCRIPTION_MODELS: [&str; 3] = [BASE_MODEL, SMALL_MODEL, MEDIUM_MODEL];
+pub const DEFAULT_TRANSCRIPTION_MODEL: &str = BASE_MODEL;
 
 const REQUIRED_PLUGIN_IDS: [&str; 2] = [CHANNEL_PLUGIN_ID, HOOKS_PLUGIN_ID];
 pub const DISABLE_ANSWERS: [&str; 8] = ["não", "nao", "n", "nenhum", "no", "none", "off", "0"];
-const WHISPER_PACKAGES: [&str; 2] = ["faster-whisper==1.2.1", "av==18.1.0"];
+pub const WHISPER_PACKAGES: [&str; 2] = [
+    concat!("faster-whisper==", crate::faster_whisper_version!()),
+    concat!("av==", crate::pyav_version!()),
+];
 pub const MARKETPLACE_REPO: &str = "pedromondek/better-claude-code-telegram";
 pub const TRANSCRIBE_SOURCE: &str =
     include_str!("../../../../plugins/telegram/extensions/transcribe.py");
@@ -951,13 +971,17 @@ impl<'r, 's, E> Install<'r, 's, E> {
                 skipped(text, colorize)
             }
         };
+        let total = |ids: &[&str]| u64::try_from(ids.len()).unwrap_or(u64::MAX);
         let count = |ids: &[&str]| {
             u64::try_from(ids.iter().filter(|id| plugins.contains(**id)).count())
                 .unwrap_or(u64::MAX)
         };
+        let optional_ids = [BCCT_PLUGIN_ID];
+        let required_total = total(&REQUIRED_PLUGIN_IDS);
+        let optional_total = total(&optional_ids);
         let required = count(&REQUIRED_PLUGIN_IDS);
-        let optional = count(&[BCCT_PLUGIN_ID]);
-        let required_complete = required == 2;
+        let optional = count(&optional_ids);
+        let required_complete = required == required_total;
         let registered = marketplaces.contains(MARKETPLACE_NAME);
 
         [
@@ -975,11 +999,17 @@ impl<'r, 's, E> Install<'r, 's, E> {
             ),
             format!(
                 "  {}",
-                marker(required_complete, &(messages.required_plugins)(required, 2))
+                marker(
+                    required_complete,
+                    &(messages.required_plugins)(required, required_total)
+                )
             ),
             format!(
                 "  {}",
-                marker(optional == 1, &(messages.optional_plugins)(optional, 1))
+                marker(
+                    optional == optional_total,
+                    &(messages.optional_plugins)(optional, optional_total)
+                )
             ),
         ]
         .join("\n")
@@ -1443,7 +1473,7 @@ impl<'r, 's, E> Install<'r, 's, E> {
                 system
                     .run_or_fail(
                         "uv",
-                        &["venv", &venv_text, "--python", "python3", "-q"],
+                        &["venv", &venv_text, "--python", "python3", "--clear", "-q"],
                         "uv venv",
                         messages,
                     )
@@ -1727,7 +1757,7 @@ mod tests {
     const STOP: &str = "stop";
 
     #[test]
-    fn a_stable_binary_follows_the_stable_branch_and_a_test_version_stays_on_its_tag() {
+    fn follows_the_stable_branch_on_a_stable_version_and_the_tag_on_a_test_one() {
         assert_eq!(
             marketplace_source("0.1.0"),
             "pedromondek/better-claude-code-telegram#stable"
@@ -1746,7 +1776,7 @@ mod tests {
     }
 
     #[test]
-    fn the_transcription_script_is_the_one_of_the_plugin() {
+    fn embeds_the_transcription_script_of_the_plugin() {
         assert_eq!(
             TRANSCRIBE_SOURCE,
             std::fs::read_to_string(
@@ -1982,7 +2012,7 @@ mod tests {
     }
 
     #[test]
-    fn an_undo_runs_claude_again_and_reports_what_it_said() {
+    fn runs_claude_again_on_an_undo_and_reports_what_it_said() {
         let world = World::new(&[(
             "claude",
             "[ \"$*\" = \"plugin install x\" ] && exit 0\necho nope\nexit 1",
@@ -2001,7 +2031,7 @@ mod tests {
     }
 
     #[test]
-    fn the_process_system_starts_from_the_process_path_and_prepends_to_it() {
+    fn prepends_to_the_process_path() {
         assert_eq!(
             System::from_process().path(),
             std::env::var_os(PATH_VARIABLE)
@@ -2069,7 +2099,7 @@ mod tests {
     }
 
     #[test]
-    fn the_script_reaches_the_interpreter_through_its_input_with_the_arguments() {
+    fn passes_the_script_to_the_interpreter_input_with_the_arguments() {
         let world = World::new(&[(
             "python",
             "[ \"$1\" = - ] || exit 9\nshift\nexec /bin/sh -s -- \"$@\"",
@@ -2103,7 +2133,7 @@ mod tests {
     }
 
     #[test]
-    fn a_program_that_cannot_start_fails_with_only_the_description() {
+    fn fails_with_only_the_description_when_the_program_cannot_start() {
         let world = World::new(&[]);
 
         assert_eq!(
@@ -2117,7 +2147,7 @@ mod tests {
     }
 
     #[test]
-    fn the_installer_runs_in_a_shell_and_returns_its_exit_code() {
+    fn runs_the_installer_in_a_shell_and_returns_its_exit_code() {
         let world = World::new(&[]);
 
         assert_eq!(world.system.run_installer("exit 3"), Some(3));
@@ -2127,7 +2157,7 @@ mod tests {
     }
 
     #[test]
-    fn the_machine_and_the_install_describe_themselves() {
+    fn describes_the_machine_and_the_install() {
         let world = World::new(&[]);
         let mut out = Vec::new();
         let text = world.run(
@@ -2146,7 +2176,7 @@ mod tests {
     }
 
     #[test]
-    fn removing_reports_what_could_not_be_removed() {
+    fn reports_what_could_not_be_removed() {
         let folder = tempfile::tempdir().unwrap();
         let file = folder.path().join("file");
         fs::write(&file, "x").unwrap();
@@ -2174,7 +2204,7 @@ mod tests {
     }
 
     #[test]
-    fn a_config_that_cannot_be_saved_stops_with_the_file() {
+    fn stops_with_the_file_when_the_config_cannot_be_saved() {
         let world = World::new(&[]);
         let blocked = world.path("blocked");
         fs::write(&blocked, "x").unwrap();
@@ -2211,7 +2241,7 @@ mod tests {
     }
 
     #[test]
-    fn a_model_that_cannot_be_removed_stops_the_uninstall() {
+    fn stops_the_uninstall_when_a_model_cannot_be_removed() {
         let world = World::new(&[]);
         let hub = world.path("hub");
         let model = model_dir(&hub, "base");
@@ -2244,7 +2274,7 @@ mod tests {
     }
 
     #[test]
-    fn a_python_environment_that_cannot_be_removed_stops_the_removal() {
+    fn stops_the_removal_when_the_python_environment_cannot_be_removed() {
         let world = World::new(&[]);
         let whisper = locked_whisper(&world);
         fs::create_dir_all(model_dir(&world.path("hub"), "base")).unwrap();
@@ -2281,7 +2311,7 @@ mod tests {
     }
 
     #[test]
-    fn a_config_folder_in_the_way_stops_the_transcription() {
+    fn stops_the_transcription_when_a_folder_takes_the_config_name() {
         let world = World::new(&[]);
         let app = world.path("app");
         fs::create_dir_all(app.join(CONFIG_FILE)).unwrap();
@@ -2315,7 +2345,7 @@ mod tests {
     }
 
     #[test]
-    fn the_remaining_lines_that_cannot_be_shown_stop_the_step() {
+    fn stops_the_step_when_the_remaining_lines_cannot_be_shown() {
         let claude = [("claude", "exit 0")];
 
         assert_eq!(
@@ -2400,7 +2430,7 @@ mod tests {
     }
 
     #[test]
-    fn a_spinner_that_cannot_be_shown_stops_the_check_and_an_empty_removal_says_nothing() {
+    fn stops_the_check_without_a_spinner_and_says_nothing_on_an_empty_removal() {
         let mut world = World::new(&[("claude", "exit 0"), ("python", "exit 0")]);
         world.terminal = Some(crate::spinner::Terminal { columns: None });
         let mut out = Failing::on("Checking");
@@ -2449,7 +2479,7 @@ mod tests {
     }
 
     #[test]
-    fn a_failing_installer_stops_the_requirements() {
+    fn stops_the_requirements_when_the_installer_fails() {
         let world = World::new(&[]);
         let mut out = Vec::new();
         let mut asker = Scripted {
@@ -2466,7 +2496,7 @@ mod tests {
     }
 
     #[test]
-    fn every_question_can_stop_the_step() {
+    fn stops_the_step_at_any_question() {
         let world = World::new(&[("claude", "exit 0"), ("mmdc", "exit 0")]);
         let app = world.path("app");
         let hub = world.path("hub");
@@ -2520,7 +2550,7 @@ mod tests {
     }
 
     #[test]
-    fn the_commands_question_and_the_plan_question_can_stop_the_plugin_step() {
+    fn stops_the_plugin_step_at_the_commands_or_the_plan_question() {
         let world = World::new(&[("claude", &installed_plugins())]);
         let mut out = Vec::new();
         let mut asker = Scripted {
@@ -2550,7 +2580,7 @@ mod tests {
     }
 
     #[test]
-    fn a_screen_that_cannot_show_a_line_stops_the_step() {
+    fn stops_the_step_when_the_screen_cannot_show_a_line() {
         let installed = installed_plugins();
         let everything = PluginChoice {
             marketplaces: MARKETPLACE_NAME.to_owned(),
@@ -2660,7 +2690,7 @@ mod tests {
     }
 
     #[test]
-    fn a_screen_that_cannot_show_the_transcription_lines_stops_the_step() {
+    fn stops_the_step_when_the_screen_cannot_show_the_transcription_lines() {
         let python = ("python", "exit 0");
         let mut asker = Scripted {
             transcription: Ok(TranscriptionChoice::Model("small")),
@@ -2763,7 +2793,7 @@ mod tests {
     }
 
     #[test]
-    fn a_tool_installed_by_the_installer_is_shown_and_journaled() {
+    fn shows_and_journals_a_tool_installed_by_the_installer() {
         let mut world = World::new(&[]);
         installing(&mut world, &[Tool::Bun]);
         let mut out = Failing::on("installed in");
@@ -2782,7 +2812,7 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_line_stops_at_the_next_question_and_not_before_the_install_ends() {
+    fn stops_on_a_refused_line_at_the_next_question_after_the_install() {
         let mut world = World::new(&[]);
         installing(&mut world, &[Tool::Bun, Tool::Uv]);
         let mut out = Failing::on("installed in");
@@ -2802,7 +2832,7 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_line_wins_over_the_tools_that_were_declined() {
+    fn fails_on_a_refused_line_even_with_declined_tools() {
         let mut world = World::new(&[]);
         installing(&mut world, &[Tool::Uv]);
         let mut out = Failing::on("installed in");
@@ -2819,7 +2849,7 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_line_keeps_the_next_process_from_starting() {
+    fn starts_no_next_process_after_a_refused_line() {
         let root = tempfile::tempdir().unwrap();
         let world = World::new(&[("claude", &World::logging_claude(root.path()))]);
         let calls = || fs::read_to_string(root.path().join("calls")).unwrap_or_default();
@@ -2856,7 +2886,7 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_line_keeps_the_marketplace_from_being_removed() {
+    fn keeps_the_marketplace_after_a_refused_line() {
         let root = tempfile::tempdir().unwrap();
         let script = format!(
             "{}\n",
@@ -2883,7 +2913,7 @@ mod tests {
     }
 
     #[test]
-    fn a_spinner_that_cannot_be_shown_keeps_its_process_from_starting() {
+    fn starts_no_process_when_its_spinner_cannot_be_shown() {
         let root = tempfile::tempdir().unwrap();
         let mut world = World::new(&[("claude", &World::logging_claude(root.path()))]);
         world.terminal = Some(crate::spinner::Terminal { columns: None });
@@ -2911,7 +2941,7 @@ mod tests {
     }
 
     #[test]
-    fn a_plugin_install_ends_its_wait_in_every_way() {
+    fn ends_the_wait_of_a_plugin_install_in_every_way() {
         let root = tempfile::tempdir().unwrap();
         let script = format!(
             "echo \"$*\" >> {}/calls\n[ -f {0}/fail ] && exit 1\nexit 0",
@@ -2952,7 +2982,7 @@ mod tests {
     }
 
     #[test]
-    fn a_spinner_that_cannot_be_shown_keeps_mermaid_installed() {
+    fn keeps_mermaid_installed_when_the_spinner_cannot_be_shown() {
         let root = tempfile::tempdir().unwrap();
         let npm = format!("echo \"$*\" >> {}/calls\nexit 0", root.path().display());
         let mut world = World::new(&[("mmdc", "exit 0"), ("npm", &npm)]);
@@ -2978,7 +3008,7 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_line_after_a_write_keeps_the_file_written() {
+    fn keeps_the_file_written_before_a_refused_line() {
         let world = World::new(&[]);
         let app = world.path("app");
         let mut out = Failing::on("deleted after");
@@ -2998,7 +3028,7 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_line_after_the_download_keeps_the_config_and_stops() {
+    fn keeps_the_config_and_stops_on_a_refused_line_after_the_download() {
         let world = World::new(&[("python", "exit 0")]);
         let app = world.path("app");
         fs::create_dir_all(app.join("whisper/venv/bin")).unwrap();
@@ -3024,7 +3054,39 @@ mod tests {
     }
 
     #[test]
-    fn a_config_behind_a_dangling_link_creates_the_target_and_keeps_the_link() {
+    fn recreates_the_python_environment_when_a_broken_one_exists() {
+        let world = World::new(&[(
+            "uv",
+            "echo \"$*\" >> \"$(dirname \"$0\")/../uv-calls\"\n[ \"$1\" = venv ] || exit 0\ncase \" $* \" in *\" --clear \"*) printf '#!/bin/sh\\nexit 0\\n' > \"$2/bin/python\"; exit 0 ;; esac\necho 'A virtual environment already exists' >&2\nexit 2",
+        )]);
+        let app = world.path("app");
+        let venv = app.join("whisper/venv");
+        fs::create_dir_all(venv.join("bin")).unwrap();
+        fs::write(venv.join("bin/python"), "#!/bin/sh\nexit 1\n").unwrap();
+        fs::set_permissions(venv.join("bin/python"), fs::Permissions::from_mode(0o755)).unwrap();
+        let mut out = Vec::new();
+
+        let result = world.run(
+            &mut Scripted::default(),
+            &mut Recorded::default(),
+            &mut out,
+            |install| install.apply_transcription(&app, Some("small")),
+        );
+
+        assert_eq!(result, Ok(()));
+        assert_eq!(
+            fs::read_to_string(world.path("uv-calls")).unwrap(),
+            format!(
+                "venv {} --python python3 --clear -q\npip install -q --python {} {}\n",
+                venv.display(),
+                venv.join("bin/python").display(),
+                WHISPER_PACKAGES.join(" ")
+            )
+        );
+    }
+
+    #[test]
+    fn creates_the_target_of_a_dangling_config_link_and_keeps_the_link() {
         let world = World::new(&[]);
         let app = world.path("app");
         let elsewhere = world.path("elsewhere.json");
@@ -3053,7 +3115,7 @@ mod tests {
     }
 
     #[test]
-    fn a_config_behind_a_link_is_written_through_the_link() {
+    fn writes_the_config_through_its_link() {
         let world = World::new(&[]);
         let app = world.path("app");
         let elsewhere = world.path("elsewhere.json");
@@ -3083,7 +3145,7 @@ mod tests {
     }
 
     #[test]
-    fn a_journal_that_cannot_read_the_config_stops_before_writing_it() {
+    fn stops_before_writing_the_config_when_the_journal_cannot_read_it() {
         let world = World::new(&[]);
         let app = world.path("app");
         let mut out = Vec::new();
@@ -3347,7 +3409,7 @@ mod tests {
     }
 
     #[test]
-    fn a_visuals_config_that_cannot_be_saved_stops_with_the_file() {
+    fn stops_with_the_file_when_the_visuals_config_cannot_be_saved() {
         let world = World::new(&[]);
         let folder = world.path("folder");
         fs::create_dir_all(folder.join(CONFIG_FILE)).unwrap();
@@ -3369,7 +3431,7 @@ mod tests {
     }
 
     #[test]
-    fn a_visuals_question_that_fails_stops_the_step() {
+    fn stops_the_step_when_a_visuals_question_fails() {
         let world = World::new(&[]);
         let mut out = Vec::new();
 
@@ -3385,7 +3447,7 @@ mod tests {
     }
 
     #[test]
-    fn a_screen_that_cannot_show_a_visuals_line_stops_the_step() {
+    fn stops_the_step_when_the_screen_cannot_show_a_visuals_line() {
         for (needle, chosen) in [
             ("Illustrations on Telegram:", pick(VisualMode::Off, None)),
             (
@@ -3447,14 +3509,14 @@ mod tests {
     }
 
     #[test]
-    fn the_inbox_days_are_shown_as_javascript_shows_the_number() {
+    fn shows_the_inbox_days_as_javascript_shows_the_number() {
         assert_eq!(days_text(&EN_US, Some(7.0)), (EN_US.inbox_days)(7));
         assert_eq!(days_text(&EN_US, None), EN_US.inbox_forever);
         assert_eq!(number_value(f64::NAN), Value::Null);
     }
 
     #[test]
-    fn the_tool_names_are_the_js_ones() {
+    fn parses_the_tool_names_of_the_js_setup() {
         assert_eq!(Tool::REQUIRED, [Tool::Claude, Tool::Bun]);
         assert_eq!(Tool::parse("uv"), Some(Tool::Uv));
         assert_eq!(Tool::parse("node"), None);
