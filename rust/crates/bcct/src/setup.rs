@@ -10,13 +10,14 @@ use crate::files::{FileFailure, create_private_dir, read_json, write_private};
 use crate::install::System;
 use crate::journal::Journal;
 use crate::js::{
-    join_path, js_basename, js_trim, js_truthy, normalize_path, parse_json, stringify,
+    HOST_PATH_FLAVOR, PathFlavor, join_path, js_basename, js_trim, js_truthy, normalize_path,
+    parse_json, stringify,
 };
 use crate::locale::Locale;
 use crate::messages::{Messages, messages_for};
-use crate::paths::{LAUNCH_FILE, Paths};
-use crate::settings::remove_if_present;
-use crate::setup_files::{CUSTOMIZED_KEY, update_config};
+use crate::paths::{BOT_PID_FILE, LAUNCH_FILE, Paths};
+use crate::settings::{PERMISSIONS, SETTINGS_FILE, STATUS_LINE, remove_if_present};
+use crate::setup_files::{CUSTOMIZED_KEY, statusline_customized, update_config};
 
 pub use crate::package::SETUP_COMMAND;
 pub const STATUSLINE_REQUEST_FILE: &str = "statusline-customize.json";
@@ -24,8 +25,11 @@ pub const CHANNEL_PLUGIN_ID: &str = "telegram@better-claude-code-telegram";
 pub const HOOKS_PLUGIN_ID: &str = "telegram-hooks@better-claude-code-telegram";
 pub const ENV_FILE: &str = ".env";
 pub const ACCESS_FILE: &str = "access.json";
+pub const ALLOW_FROM_KEY: &str = "allowFrom";
+pub const DM_POLICY_KEY: &str = "dmPolicy";
+pub const ALLOWLIST: &str = "allowlist";
+pub const TOKEN_KEY: &str = "TELEGRAM_BOT_TOKEN=";
 
-const SETTINGS_FILE: &str = "settings.json";
 const SHELL_SCRIPT: &str = "shell.sh";
 const LAUNCHER: &str = if cfg!(windows) {
     "bin/bcct.cmd"
@@ -36,9 +40,13 @@ const SHELL_LAUNCHER: &str = "bin/bcct";
 const LAUNCHER_FOLDER: &str = "bin";
 pub const COMMAND_ON_PATH_KEY: &str = "commandOnPath";
 const DEFAULT_SHELL: &str = "bash";
-const WHISPER_CHECK: &str = "import importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\"";
-const BOT_PID_FILE: &str = "bot.pid";
-const TOKEN_KEY: &str = "TELEGRAM_BOT_TOKEN=";
+const WHISPER_CHECK: &str = concat!(
+    "import importlib.metadata as m; assert m.version(\"faster-whisper\") == \"",
+    crate::faster_whisper_version!(),
+    "\" and m.version(\"av\") == \"",
+    crate::pyav_version!(),
+    "\""
+);
 const JS_LINE_BREAKS: [char; 4] = ['\n', '\r', '\u{2028}', '\u{2029}'];
 const LOCALE_VARIABLES: [&str; 3] = ["LC_ALL", "LC_MESSAGES", "LANG"];
 const SKIP_PERMISSION_FLAGS: [&str; 3] = [
@@ -138,7 +146,7 @@ pub fn parse_env_token(text: &str) -> Option<String> {
 #[must_use]
 pub fn is_paired(access: Option<&Value>) -> bool {
     access
-        .and_then(|access| access.get("allowFrom"))
+        .and_then(|access| access.get(ALLOW_FROM_KEY))
         .and_then(Value::as_array)
         .is_some_and(|allowed| !allowed.is_empty())
 }
@@ -174,7 +182,7 @@ pub fn skipped_permissions(args: &[String], settings: Option<&Value>) -> Option<
     }
 
     settings
-        .and_then(|settings| settings.get("permissions"))
+        .and_then(|settings| settings.get(PERMISSIONS))
         .and_then(|permissions| permissions.get("defaultMode"))
         .is_some_and(|mode| mode == BYPASS_MODE)
         .then(|| format!("defaultMode {BYPASS_MODE}"))
@@ -226,7 +234,7 @@ pub fn check_setup(
     let accounts = read_json(&join_path(&paths.state_dir, ACCESS_FILE))
         .and_then(|access| {
             access
-                .get("allowFrom")
+                .get(ALLOW_FROM_KEY)
                 .and_then(Value::as_array)
                 .map(Vec::len)
         })
@@ -347,7 +355,7 @@ pub fn statusline_prompt(
     }
 
     let current =
-        read_json(&paths.settings_file).and_then(|settings| settings.get("statusLine").cloned());
+        read_json(&paths.settings_file).and_then(|settings| settings.get(STATUS_LINE).cloned());
 
     if statusline_kind(current.as_ref(), &paths.app_dir) != StatuslineKind::Other {
         return Ok(String::new());
@@ -382,7 +390,7 @@ pub enum StatuslineState {
 #[must_use]
 pub fn statusline_state(paths: &SetupPaths) -> StatuslineState {
     let current =
-        read_json(&paths.settings_file).and_then(|settings| settings.get("statusLine").cloned());
+        read_json(&paths.settings_file).and_then(|settings| settings.get(STATUS_LINE).cloned());
 
     match statusline_kind(current.as_ref(), &paths.app_dir) {
         StatuslineKind::None => StatuslineState::None,
@@ -391,11 +399,7 @@ pub fn statusline_state(paths: &SetupPaths) -> StatuslineState {
         StatuslineKind::Other if join_path(&paths.app_dir, STATUSLINE_REQUEST_FILE).exists() => {
             StatuslineState::CustomPending
         }
-        StatuslineKind::Other
-            if read_config(&paths.app_dir).get(CUSTOMIZED_KEY) == Some(&Value::Bool(true)) =>
-        {
-            StatuslineState::Custom
-        }
+        StatuslineKind::Other if statusline_customized(&paths.app_dir) => StatuslineState::Custom,
         StatuslineKind::Other => StatuslineState::Other,
     }
 }
@@ -490,14 +494,36 @@ pub fn shell_rc_files(home: &str, shell: Option<&str>, macos: bool) -> ShellRcFi
     }
 }
 
+fn rule_path(flavor: PathFlavor, path: &str) -> String {
+    if flavor == PathFlavor::Posix {
+        return path.to_owned();
+    }
+
+    let slashed = path.replace('\\', "/");
+    let mut chars = slashed.chars();
+
+    match (chars.next(), chars.next()) {
+        (Some(drive), Some(':')) if drive.is_ascii_alphabetic() => {
+            format!("/{}{}", drive.to_ascii_lowercase(), chars.as_str())
+        }
+        _ => slashed,
+    }
+}
+
 #[must_use]
-pub fn env_deny_rule(env_file: &Path, home: &str) -> String {
-    let env_file = env_file.to_string_lossy();
+pub fn env_deny_rule_in(flavor: PathFlavor, env_file: &Path, home: &str) -> String {
+    let env_file = rule_path(flavor, &env_file.to_string_lossy());
+    let home = rule_path(flavor, home);
 
     env_file.strip_prefix(&format!("{home}/")).map_or_else(
         || format!("Read(/{env_file})"),
         |inside| format!("Read(~/{inside})"),
     )
+}
+
+#[must_use]
+pub fn env_deny_rule(env_file: &Path, home: &str) -> String {
+    env_deny_rule_in(HOST_PATH_FLAVOR, env_file, home)
 }
 
 pub fn read_settings(
@@ -807,6 +833,62 @@ mod tests {
         assert_eq!(
             shell_rc_files("/h", None, false).primary,
             Some(PathBuf::from("/h/.bashrc"))
+        );
+    }
+
+    #[test]
+    fn writes_the_deny_rule_in_the_posix_form_claude_code_matches_on_windows() {
+        let win32 = |env_file: &str, home: &str| {
+            env_deny_rule_in(PathFlavor::Win32, Path::new(env_file), home)
+        };
+
+        assert_eq!(
+            win32(
+                "C:\\Users\\x\\.claude\\channels\\telegram\\.env",
+                "C:\\Users\\x"
+            ),
+            "Read(~/.claude/channels/telegram/.env)"
+        );
+        assert_eq!(
+            win32("D:\\state\\.env", "C:\\Users\\x"),
+            "Read(//d/state/.env)"
+        );
+        assert_eq!(win32("c:/Users/x/.env", "C:\\Users\\x"), "Read(~/.env)");
+        assert_eq!(win32("state\\.env", "C:\\Users\\x"), "Read(/state/.env)");
+        assert_eq!(win32("1:\\state\\.env", ""), "Read(/1:/state/.env)");
+        assert_eq!(win32("", ""), "Read(/)");
+    }
+
+    #[test]
+    fn keeps_the_posix_deny_rule_as_the_path_is() {
+        let posix = |env_file: &str, home: &str| {
+            env_deny_rule_in(PathFlavor::Posix, Path::new(env_file), home)
+        };
+
+        assert_eq!(
+            posix("/home/dev/.claude/channels/telegram/.env", "/home/dev"),
+            "Read(~/.claude/channels/telegram/.env)"
+        );
+        assert_eq!(
+            posix("/srv/telegram/.env", "/home/dev"),
+            "Read(//srv/telegram/.env)"
+        );
+        assert_eq!(posix("C:\\x\\.env", "C:"), "Read(/C:\\x\\.env)");
+        assert_eq!(
+            env_deny_rule(Path::new("/home/dev/.env"), "/home/dev"),
+            env_deny_rule_in(HOST_PATH_FLAVOR, Path::new("/home/dev/.env"), "/home/dev")
+        );
+    }
+
+    #[test]
+    fn checks_the_same_whisper_versions_the_install_pins() {
+        assert_eq!(
+            crate::install::WHISPER_PACKAGES,
+            ["faster-whisper==1.2.1", "av==18.1.0"]
+        );
+        assert_eq!(
+            WHISPER_CHECK,
+            "import importlib.metadata as m; assert m.version(\"faster-whisper\") == \"1.2.1\" and m.version(\"av\") == \"18.1.0\""
         );
     }
 

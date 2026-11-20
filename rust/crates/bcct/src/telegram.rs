@@ -13,6 +13,9 @@ use crate::messages::Messages;
 
 pub const API_ROOT_ENV: &str = "BETTER_CC_TELEGRAM_API_ROOT";
 pub const DEFAULT_API_ROOT: &str = "https://api.telegram.org";
+pub const GET_ME: &str = "getMe";
+pub const GET_UPDATES: &str = "getUpdates";
+pub const GET_CHAT: &str = "getChat";
 
 const SCHEME_END: &str = "://";
 const AUTHORITY_END: [char; 4] = ['/', '\\', '?', '#'];

@@ -8,8 +8,8 @@ use crate::ui::{frame, note};
 pub const SPINNER_FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 pub const SPINNER_INTERVAL: Duration = Duration::from_millis(80);
 pub const SPINNER_STOP_TIMEOUT: Duration = Duration::from_millis(1000);
+pub const WIDE_FROM: u32 = 0x1f000;
 
-const WIDE_FROM: u32 = 0x1f000;
 const SPINNER_COLUMNS: i64 = 3;
 const CLEAR_LINE: &str = "\r\u{1b}[2K";
 
