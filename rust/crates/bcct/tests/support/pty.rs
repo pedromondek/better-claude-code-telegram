@@ -82,6 +82,46 @@ fn unwritable_script(size: &str) -> String {
     format!("{size} && {{ sleep 1; exec \"$0\" \"$@\"; }} | true")
 }
 
+fn process_tree(root: i32) -> String {
+    let Ok(output) = Command::new("ps")
+        .args(["-A", "-o", "pid=,ppid=,pgid=,tpgid=,stat=,comm="])
+        .output()
+    else {
+        return String::new();
+    };
+    let table = String::from_utf8_lossy(&output.stdout);
+    let rows: Vec<(&str, &str, &str)> = table
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            let (child, rest) = line.split_once(' ')?;
+            let (parent, _) = rest.trim_start().split_once(' ')?;
+
+            Some((child, parent, line))
+        })
+        .collect();
+    let mut tree = vec![root.to_string()];
+    let mut grown = true;
+
+    while grown {
+        grown = false;
+
+        for (child, parent, _) in &rows {
+            if tree.iter().any(|known| known == parent) && !tree.iter().any(|known| known == child)
+            {
+                tree.push((*child).to_owned());
+                grown = true;
+            }
+        }
+    }
+
+    rows.iter()
+        .filter(|(child, _, _)| tree.iter().any(|known| known == child))
+        .map(|(_, _, line)| *line)
+        .collect::<Vec<_>>()
+        .join(" | ")
+}
+
 fn fail(message: &str) -> io::Error {
     io::Error::other(message.to_owned())
 }
@@ -285,8 +325,9 @@ pub(crate) fn record(run: &Run<'_>) -> io::Result<Vec<u8>> {
     while pump(&mut session, &mut out)?.is_some() {
         if started.elapsed() > LIMIT {
             return Err(fail(&format!(
-                "the program in the terminal did not end; it showed: {:?}",
-                String::from_utf8_lossy(&out)
+                "the program in the terminal did not end; it showed: {:?}; processes: {}",
+                String::from_utf8_lossy(&out),
+                process_tree(session.get_process().pid().as_raw())
             )));
         }
 
