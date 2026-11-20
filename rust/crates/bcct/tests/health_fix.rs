@@ -179,7 +179,7 @@ fn the_update_fix_runs_bcct_update_with_the_newer_version() {
 }
 
 #[test]
-fn the_token_rule_is_only_recommended_while_the_settings_are_invalid() {
+fn plans_the_token_rule_only_while_the_settings_file_is_valid() {
     let protection = entry(Check::Protection, Status::Fail);
 
     assert_eq!(
@@ -193,23 +193,50 @@ fn the_token_rule_is_only_recommended_while_the_settings_are_invalid() {
     );
     assert_eq!(
         planned(
-            &[protection, entry(Check::Config, Status::Fail)],
+            &[protection.clone(), entry(Check::Config, Status::Fail)],
+            "/bin/bash",
+            None,
+            Some("{}")
+        ),
+        vec![FixId::Protection]
+    );
+    assert_eq!(
+        planned(
+            &[protection.clone(), entry(Check::Config, Status::Fail)],
             "/bin/bash",
             None,
             None
+        ),
+        vec![FixId::Protection]
+    );
+    assert_eq!(
+        planned(
+            &[protection.clone(), entry(Check::Config, Status::Fail)],
+            "/bin/bash",
+            None,
+            Some("not json")
+        ),
+        vec![]
+    );
+    assert_eq!(
+        planned(
+            &[protection, entry(Check::Config, Status::Fail)],
+            "/bin/bash",
+            None,
+            Some("[]")
         ),
         vec![]
     );
 }
 
 #[test]
-fn the_token_rule_is_only_recommended_while_deny_is_not_a_list() {
+fn plans_the_token_rule_only_while_deny_is_a_list_or_missing() {
     let protection = [
         entry(Check::Protection, Status::Fail),
         entry(Check::Config, Status::Ok),
     ];
 
-    for deny in ["{}", "5", "true"] {
+    for deny in ["{}", "5", "true", "\"Read(x)\""] {
         let settings = format!(r#"{{"permissions":{{"deny":{deny}}}}}"#);
 
         assert_eq!(
@@ -219,7 +246,7 @@ fn the_token_rule_is_only_recommended_while_deny_is_not_a_list() {
         );
     }
 
-    for deny in ["[]", "\"Read(x)\"", "null"] {
+    for deny in ["[]", "null"] {
         let settings = format!(r#"{{"permissions":{{"deny":{deny}}}}}"#);
 
         assert_eq!(
