@@ -13,6 +13,10 @@ export function pushRange({ env = process.env, run = gitOutput } = {}) {
     return env.MUTATION_RANGE;
   }
 
+  if (env.MUTATION_BEFORE) {
+    return `${env.MUTATION_BEFORE}...HEAD`;
+  }
+
   const upstream = run([
     "rev-parse",
     "--abbrev-ref",

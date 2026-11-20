@@ -16,6 +16,7 @@ on:
           - All
           - Checks
           - Rust on macOS and Windows
+          - Mutation
           - Online audit of the workflows
       pr:
         description: Merged pull request whose merge commit and range the checks validate
@@ -44,7 +45,7 @@ defaults:
 jobs:
   checks:
     name: Checks
-    if: inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Online audit of the workflows'
+    if: inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Mutation' && inputs.stage != 'Online audit of the workflows'
     permissions:
       contents: read
     uses: $/.github/workflows/push-checks.yml
@@ -54,10 +55,20 @@ jobs:
 
   rust:
     name: Rust
-    if: inputs.stage != 'Checks' && inputs.stage != 'Online audit of the workflows'
+    if: inputs.stage != 'Checks' && inputs.stage != 'Mutation' && inputs.stage != 'Online audit of the workflows'
     permissions:
       contents: read
     uses: $/.github/workflows/check-rust-platforms.yml
+
+  mutation:
+    name: Mutation
+    if: inputs.stage != 'Checks' && inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Online audit of the workflows'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/check-mutation.yml
+    with:
+      before: ${{ github.event.pull_request.base.sha || github.event.before }}
+      full: ${{ github.event_name == 'workflow_dispatch' }}
 
   pull-request:
     name: Pull request
@@ -68,7 +79,7 @@ jobs:
 
   workflow-audit:
     name: Online audit of the workflows
-    if: inputs.stage != 'Checks' && inputs.stage != 'Rust on macOS and Windows'
+    if: inputs.stage != 'Checks' && inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Mutation'
     permissions:
       contents: read
       issues: read # finds the open issue of the online audit, to link it from an inherited finding
@@ -95,6 +106,7 @@ jobs:
     needs:
       - checks
       - rust
+      - mutation
       - pull-request
       - workflow-audit
     if: ${{ always() }}

@@ -36,6 +36,21 @@ describe("pushRange", () => {
     expect(git.calls).toEqual([]);
   });
 
+  it("compares with MUTATION_BEFORE from the CI, with MUTATION_RANGE winning over it", () => {
+    const git = gitAnswering({});
+
+    expect(pushRange({ env: { MUTATION_BEFORE: "abc" }, run: git.run })).toBe(
+      "abc...HEAD",
+    );
+    expect(
+      pushRange({
+        env: { MUTATION_BEFORE: "abc", MUTATION_RANGE: "x..y" },
+        run: git.run,
+      }),
+    ).toBe("x..y");
+    expect(git.calls).toEqual([]);
+  });
+
   it("compares with the upstream of the branch when there is one", () => {
     const git = gitAnswering({ [UPSTREAM]: "origin/0001-feature\n" });
 

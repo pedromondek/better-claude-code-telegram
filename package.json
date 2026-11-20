@@ -112,6 +112,7 @@
     "rust:deny": "sh scripts/mise-exec.sh cargo deny --manifest-path rust/Cargo.toml check advisories",
     "rust:mutation": "sh scripts/mise-exec.sh cargo mutants --manifest-path rust/Cargo.toml --in-place --test-tool=nextest --cargo-test-arg=--max-fail=1:immediate",
     "rust:mutation:prepush": "node scripts/rust-mutation-prepush.mjs",
+    "rust:mutation:ci": "node scripts/rust-mutation-ci.mjs",
     "rust:build": "cargo clean --manifest-path rust/Cargo.toml --release && cargo build --manifest-path rust/Cargo.toml --release --locked",
     "rust:clean": "cargo clean --manifest-path rust/Cargo.toml",
     "check:private": "node scripts/check-private-data.mjs",

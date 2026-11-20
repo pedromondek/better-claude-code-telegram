@@ -16,19 +16,28 @@ const ci = workflow(FILE);
 const TASKS = {
   checks: "push-checks.yml",
   rust: "check-rust-platforms.yml",
+  mutation: "check-mutation.yml",
   "pull-request": "check-pull-request.yml",
   "workflow-audit": "audit-workflows.yml",
   "workflow-audit-issue": "report-workflow-audit.yml",
 };
-const AGGREGATED = ["checks", "rust", "pull-request", "workflow-audit"];
+const AGGREGATED = [
+  "checks",
+  "rust",
+  "mutation",
+  "pull-request",
+  "workflow-audit",
+];
 const STAGES = {
   checks: "Checks",
   rust: "Rust on macOS and Windows",
+  mutation: "Mutation",
   "workflow-audit": "Online audit of the workflows",
 };
 const PERMISSIONS = {
   checks: { contents: "read" },
   rust: { contents: "read" },
+  mutation: { contents: "read" },
   "pull-request": { contents: "read" },
   "workflow-audit": { contents: "read", issues: "read" },
   "workflow-audit-issue": { contents: "read", issues: "write" },
@@ -135,6 +144,14 @@ describe("ci.yml orchestrates the CI: it only calls the tasks and closes with on
         before:
           "${{ github.event.pull_request.base.sha || github.event.before }}",
         force: "${{ github.event_name == 'workflow_dispatch' }}",
+      });
+    });
+
+    it("mutates the range of the pull request or of the push, from scratch only on a manual dispatch", () => {
+      expect(ci.jobs.mutation.with).toEqual({
+        before:
+          "${{ github.event.pull_request.base.sha || github.event.before }}",
+        full: "${{ github.event_name == 'workflow_dispatch' }}",
       });
     });
 

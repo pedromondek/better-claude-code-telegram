@@ -61,6 +61,7 @@ describe("vitest.setup", () => {
       "PREPUSH_SKIP_MUTATION",
       "PREPUSH_SKIP_BRANCH_CHECK",
       "MUTATION_RANGE",
+      "MUTATION_BEFORE",
       "MUTATION_FORCE",
       "COVERAGE_RANGE",
       "TEST_PROGRESS_FILE",

@@ -7,6 +7,7 @@ import { allWorkflows } from "./support/workflow.mjs";
 const GITHUB = join(import.meta.dirname, "..");
 const TESTS = import.meta.dirname;
 const MAIN_ONLY = "github.ref == 'refs/heads/main'";
+const PULL_REQUEST_SCOPED_CACHE = "rust-mutants-";
 const READ_ONLY = { contents: "read" };
 const READ_ISSUES = { contents: "read", issues: "read" };
 const WRITE_ISSUES = { contents: "read", issues: "write" };
@@ -217,14 +218,32 @@ describe("rules of every workflow", () => {
   });
 
   it("saves the cache only on main: every cache save step is gated by the main ref", () => {
-    const saves = allSteps().filter(({ step }) =>
-      (step.uses ?? "").startsWith("actions/cache/save@"),
+    const saves = allSteps().filter(
+      ({ step }) =>
+        (step.uses ?? "").startsWith("actions/cache/save@") &&
+        !step.with.key.startsWith(PULL_REQUEST_SCOPED_CACHE),
     );
 
     expect(saves.length).toBeGreaterThan(0);
     expect(saves.filter(({ step }) => !step.if.includes(MAIN_ONLY))).toEqual(
       [],
     );
+  });
+
+  it("saves on a pull request only the caught mutants, keyed by the branch, which main never restores from", () => {
+    const scoped = allSteps().filter(({ step }) =>
+      (step.with?.key ?? "").startsWith(PULL_REQUEST_SCOPED_CACHE),
+    );
+
+    expect(scoped.map(({ step }) => step.with.key)).toEqual([
+      "rust-mutants-${{ github.head_ref || github.ref_name }}-${{ github.sha }}",
+      "rust-mutants-${{ github.head_ref || github.ref_name }}-${{ github.sha }}",
+    ]);
+    expect(
+      scoped.map(({ step }) => step.with["restore-keys"]).filter(Boolean),
+    ).toEqual([
+      "rust-mutants-${{ github.head_ref || github.ref_name }}-\nrust-mutants-main-\n",
+    ]);
   });
 
   it("makes every rust-cache step save only on main, leaving the pull requests read-only", () => {

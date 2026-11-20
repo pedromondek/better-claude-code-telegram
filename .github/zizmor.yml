@@ -6,6 +6,7 @@ rules:
     ignore:
       - audit-workflows.yml
       - build-binaries.yml
+      - check-mutation.yml
       - check-rust-platforms.yml
       - push-checks.yml
       - report-workflow-audit.yml

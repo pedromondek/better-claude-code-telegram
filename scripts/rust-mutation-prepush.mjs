@@ -18,15 +18,27 @@ export function touchesRustSource(diff) {
   return RUST_SOURCE.test(diff);
 }
 
+export function rustDiff(range) {
+  return git(["diff", "--unified=0", "--relative=rust", range, "--", "rust/"]);
+}
+
+export function cargoMutantsArgs(diffFile, extra = []) {
+  return [
+    "scripts/mise-exec.sh",
+    "cargo",
+    "mutants",
+    "--manifest-path",
+    "rust/Cargo.toml",
+    "--in-place",
+    "--in-diff",
+    diffFile,
+    ...extra,
+    ...RUST_MUTATION_TEST_ARGS,
+  ];
+}
+
 function main() {
-  const diff = git([
-    "diff",
-    "--unified=0",
-    "--relative=rust",
-    pushRange(),
-    "--",
-    "rust/",
-  ]);
+  const diff = rustDiff(pushRange());
 
   if (!touchesRustSource(diff)) {
     console.log("✓ rust mutation skipped: no Rust source in the push");
@@ -39,21 +51,9 @@ function main() {
     const file = join(folder, "push.diff");
     writeFileSync(file, diff);
 
-    const result = spawnSync(
-      "sh",
-      [
-        "scripts/mise-exec.sh",
-        "cargo",
-        "mutants",
-        "--manifest-path",
-        "rust/Cargo.toml",
-        "--in-place",
-        "--in-diff",
-        file,
-        ...RUST_MUTATION_TEST_ARGS,
-      ],
-      { stdio: "inherit" },
-    );
+    const result = spawnSync("sh", cargoMutantsArgs(file), {
+      stdio: "inherit",
+    });
 
     if (result.error) {
       console.error(`✗ rust mutation could not start: ${result.error.message}`);

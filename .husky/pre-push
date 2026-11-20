@@ -135,15 +135,6 @@ run_mutation() {
     MUTATION_FAILED=1
   fi
 
-  printf '%s %s\n' '→' "rust mutation..."
-
-  if require_npm_script rust:mutation:prepush && npm run --silent rust:mutation:prepush; then
-    echo "✓ rust mutation OK"
-  else
-    echo "✗ rust mutation failed"
-    MUTATION_FAILED=1
-  fi
-
   if [ -f "$INCREMENTAL_FILE" ]; then
     mkdir -p "$ROOT/reports"
     cp "$INCREMENTAL_FILE" "$ROOT/$INCREMENTAL_FILE"

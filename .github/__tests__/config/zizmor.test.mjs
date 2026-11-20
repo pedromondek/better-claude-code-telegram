@@ -49,6 +49,7 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
     expect(tasks.map(({ file }) => file).toSorted()).toEqual([
       "audit-workflows.yml",
       "build-binaries.yml",
+      "check-mutation.yml",
       "check-rust-platforms.yml",
       "push-checks.yml",
       "report-workflow-audit.yml",
