@@ -27,6 +27,58 @@ const SHELL_WRAPPERS = new Set([
   "sudo",
   "xargs",
 ]);
+const NO_OPTIONS_WITH_VALUE = new Set();
+const WRAPPER_OPTIONS_WITH_VALUE = new Map([
+  [
+    "sudo",
+    new Set([
+      "-a",
+      "--auth-type",
+      "-C",
+      "--close-from",
+      "-c",
+      "--login-class",
+      "-D",
+      "--chdir",
+      "-g",
+      "--group",
+      "--host",
+      "-p",
+      "--prompt",
+      "-R",
+      "--chroot",
+      "-r",
+      "--role",
+      "-t",
+      "--type",
+      "-T",
+      "--command-timeout",
+      "-U",
+      "--other-user",
+      "-u",
+      "--user",
+    ]),
+  ],
+  [
+    "xargs",
+    new Set([
+      "-a",
+      "--arg-file",
+      "-d",
+      "--delimiter",
+      "-E",
+      "-I",
+      "-L",
+      "-n",
+      "--max-args",
+      "-P",
+      "--max-procs",
+      "-s",
+      "--max-chars",
+      "--process-slot-var",
+    ]),
+  ],
+]);
 const TIMEOUT_OPTIONS_WITH_VALUE = new Set([
   "-s",
   "--signal",
@@ -43,6 +95,28 @@ const GIT_OPTIONS_WITH_VALUE = new Set([
   "--namespace",
 ]);
 const ENV_OPTIONS_WITH_VALUE = new Set(["-u", "--unset", "-C", "--chdir"]);
+const NPM_OPTIONS_WITH_VALUE = new Set([
+  "-w",
+  "--workspace",
+  "-C",
+  "--prefix",
+  "-c",
+  "--call",
+  "-L",
+  "--location",
+  "-m",
+  "--message",
+  "--loglevel",
+  "--userconfig",
+  "--globalconfig",
+  "--cache",
+  "--registry",
+  "--script-shell",
+  "--tag",
+  "--include",
+  "--omit",
+]);
+const NPM_RUN_COMMANDS = new Set(["run", "run-script", "rum", "urn"]);
 const COMMIT_SCRIPTS = new Set(["commit", "fixup:fuse"]);
 
 const COMMIT_INTENT = [
@@ -198,6 +272,16 @@ function shellSegments(command) {
   );
 }
 
+function skipOptions(tokens, start, optionsWithValue) {
+  let index = start;
+
+  while (index < tokens.length && tokens[index].startsWith("-")) {
+    index += optionsWithValue.has(tokens[index]) ? 2 : 1;
+  }
+
+  return index;
+}
+
 function skipEnvPrefix(tokens) {
   let index = 0;
 
@@ -207,10 +291,7 @@ function skipEnvPrefix(tokens) {
     if (/^\w+=/.test(token)) {
       index += 1;
     } else if (token === "env") {
-      index += 1;
-      while (index < tokens.length && tokens[index].startsWith("-")) {
-        index += ENV_OPTIONS_WITH_VALUE.has(tokens[index]) ? 2 : 1;
-      }
+      index = skipOptions(tokens, index + 1, ENV_OPTIONS_WITH_VALUE);
     } else {
       break;
     }
@@ -223,14 +304,16 @@ function withoutWrappers(tokens) {
   let index = 0;
 
   while (index < tokens.length) {
-    if (SHELL_WRAPPERS.has(tokens[index])) {
-      index += 1;
-    } else if (tokens[index] === "timeout") {
-      index += 1;
-      while (index < tokens.length && tokens[index].startsWith("-")) {
-        index += TIMEOUT_OPTIONS_WITH_VALUE.has(tokens[index]) ? 2 : 1;
-      }
-      index += 1;
+    const token = tokens[index];
+
+    if (SHELL_WRAPPERS.has(token)) {
+      index = skipOptions(
+        tokens,
+        index + 1,
+        WRAPPER_OPTIONS_WITH_VALUE.get(token) ?? NO_OPTIONS_WITH_VALUE,
+      );
+    } else if (token === "timeout") {
+      index = skipOptions(tokens, index + 1, TIMEOUT_OPTIONS_WITH_VALUE) + 1;
     } else {
       break;
     }
@@ -241,7 +324,7 @@ function withoutWrappers(tokens) {
 
 function commandTokens(segment) {
   return segment
-    .replaceAll(/[(){}]/g, " ")
+    .replaceAll(/[()]|\{(?!\})|(?<!\{)\}/g, " ")
     .trim()
     .split(/\s+/)
     .filter((token) => token !== "");
@@ -251,22 +334,12 @@ function isHelpOnly(args) {
   return args.length === 1 && HELP_FLAGS.has(args[0]);
 }
 
-function gitSubcommandIndex(args) {
-  let index = 0;
-
-  while (index < args.length && args[index].startsWith("-")) {
-    index += GIT_OPTIONS_WITH_VALUE.has(args[index]) ? 2 : 1;
-  }
-
-  return index;
-}
-
 function npmScript(args) {
-  const run = args.findIndex((token) => !token.startsWith("-"));
+  const run = skipOptions(args, 0, NPM_OPTIONS_WITH_VALUE);
 
-  if (args[run] !== "run" && args[run] !== "run-script") return undefined;
+  if (!NPM_RUN_COMMANDS.has(args[run])) return undefined;
 
-  return args.slice(run + 1).find((token) => !token.startsWith("-"));
+  return args[skipOptions(args, run + 1, NPM_OPTIONS_WITH_VALUE)];
 }
 
 function prHead(args) {
@@ -295,7 +368,7 @@ function requiredCommand(segment) {
   const program = path?.split("/").at(-1);
 
   if (program === "git") {
-    const index = gitSubcommandIndex(args);
+    const index = skipOptions(args, 0, GIT_OPTIONS_WITH_VALUE);
     const subcommand = args[index];
 
     if (subcommand !== "commit" && subcommand !== "push") return undefined;

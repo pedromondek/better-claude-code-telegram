@@ -200,6 +200,43 @@ describe(
       expect(await verdictsOf(commands)).toEqual(all("deny", commands));
     });
 
+    it("denies git push and npm run commit behind the options of sudo, xargs and npm", async () => {
+      const commands = [
+        "sudo -u root git push",
+        "sudo --user root git push",
+        "sudo -E -u root -g staff git push",
+        "sudo -h git push",
+        "sudo -- git push",
+        "xargs -n1 git push",
+        "xargs -n 1 git push",
+        "xargs --max-args 1 git push",
+        "xargs -I {} git push origin {}",
+        "xargs -0 -P 4 git push",
+        "nohup -- git push",
+        "npm -w x run commit",
+        "npm --workspace x run commit",
+        "npm --prefix /repo run commit",
+        "npm run -w x commit",
+        "npm rum commit",
+        "npm urn fixup:fuse",
+      ];
+
+      expect(await verdictsOf(commands)).toEqual(all("deny", commands));
+    });
+
+    it("allows reads behind the options of sudo, xargs and npm", async () => {
+      const commands = [
+        "sudo -u root git status",
+        "xargs -n 1 git log",
+        "xargs -I {} echo git push {}",
+        "npm -w x run lint",
+        "npm run -w commit lint",
+        "npm --prefix commit run lint",
+      ];
+
+      expect(await verdictsOf(commands)).toEqual(all("silent", commands));
+    });
+
     it("allows reads and checks that only mention commit or push", async () => {
       const commands = [
         "git status --short",
