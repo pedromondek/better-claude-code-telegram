@@ -1459,21 +1459,24 @@ mod transcription_tests {
     use super::*;
     use crate::messages::{EN_US, PT_BR};
 
-    fn hint_of(model: &'static str, messages: &Messages) -> Option<String> {
-        match model_option(model, messages) {
-            ChoiceItem::Pick { hint, .. } => hint,
-            ChoiceItem::Heading(_) => None,
-        }
-    }
-
     #[test]
     fn gives_each_transcription_model_the_hint_of_its_name() {
         for messages in [&EN_US, &PT_BR] {
             let models = messages.transcription_models;
 
-            assert_eq!(hint_of("base", messages).as_deref(), Some(models.base));
-            assert_eq!(hint_of("small", messages).as_deref(), Some(models.small));
-            assert_eq!(hint_of("medium", messages).as_deref(), Some(models.medium));
+            for (model, hint) in [
+                ("base", models.base),
+                ("small", models.small),
+                ("medium", models.medium),
+            ] {
+                assert!(
+                    matches!(
+                        model_option(model, messages),
+                        ChoiceItem::Pick { hint: Some(given), .. } if given == hint
+                    ),
+                    "{model}"
+                );
+            }
         }
     }
 }
