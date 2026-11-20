@@ -149,6 +149,26 @@ export function collectTargets(
   return { directSources, specSources, mutate, unmapped, skipped, support };
 }
 
+export function widenToFullScope(targets, { tracked, layer, mutateGlobs }) {
+  const prefix = layerPrefix(layer);
+  const sources = tracked
+    .filter((file) => file.startsWith(prefix))
+    .map((file) => file.slice(prefix.length))
+    .filter(
+      (layerPath) =>
+        layerPath.startsWith(`${SOURCE_ROOT}/`) &&
+        !SPEC_SUFFIX.test(layerPath) &&
+        !TEST_SUPPORT.test(layerPath) &&
+        isMutationTarget(layerPath, mutateGlobs),
+    );
+
+  return {
+    ...targets,
+    directSources: new Set(sources),
+    mutate: new Set(sources),
+  };
+}
+
 export function restrictTargets(targets, only) {
   if (!only) return targets;
 
@@ -301,7 +321,12 @@ export function survivorsIn(
 }
 
 export function shouldForceMutation({ env, layer, files, support }) {
-  if (env.MUTATION_FORCE === "1") return true;
+  return (
+    env.MUTATION_FORCE === "1" || needsFullScope({ env, layer, files, support })
+  );
+}
+
+export function needsFullScope({ env, layer, files, support }) {
   if (env.CI !== "true") return false;
 
   const prefix = layerPrefix(layer);
@@ -343,17 +368,23 @@ async function main() {
   const strykerConfig = readJsonFile("stryker.config.json");
   const { mutate: mutateGlobs = [] } = strykerConfig;
   const files = changedFiles();
-  const { directSources, specSources, mutate, unmapped, skipped, support } =
-    restrictTargets(
-      collectTargets(files, { layer, mutateGlobs }),
-      process.env.MUTATION_ONLY,
-    );
-  const force = shouldForceMutation({
+  const rangeTargets = collectTargets(files, { layer, mutateGlobs });
+  const scope = {
     env: process.env,
     layer,
     files,
-    support,
-  });
+    support: rangeTargets.support,
+  };
+  const targets = needsFullScope(scope)
+    ? widenToFullScope(rangeTargets, {
+        tracked: run(["ls-files"]).split("\n").filter(Boolean),
+        layer,
+        mutateGlobs,
+      })
+    : rangeTargets;
+  const { directSources, specSources, mutate, unmapped, skipped, support } =
+    restrictTargets(targets, process.env.MUTATION_ONLY);
+  const force = shouldForceMutation(scope);
 
   for (const specKey of unmapped) {
     console.warn(`⚠ spec without a mappable source (ignored): ${specKey}`);

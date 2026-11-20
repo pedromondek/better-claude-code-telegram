@@ -15,6 +15,7 @@ import {
   collectTargets,
   fitsProgressBar,
   isMutationTarget,
+  needsFullScope,
   restrictTargets,
   shouldForceMutation,
   specToSource,
@@ -22,6 +23,7 @@ import {
   strykerArgs,
   survivorsIn,
   toLayerChangedLines,
+  widenToFullScope,
 } from "../mutation-prepush.mjs";
 
 const hasUtilLinuxScript =
@@ -564,6 +566,87 @@ describe("specToSource", () => {
         exists: existing(),
       }),
     ).toBeNull();
+  });
+});
+
+describe("needsFullScope", () => {
+  it("widens in CI when the range brings a dependency, config or test support file", () => {
+    for (const [files, support] of [
+      [["package-lock.json"], []],
+      [["stryker.config.json"], []],
+      [["vitest.setup.ts"], ["vitest.setup.ts"]],
+    ]) {
+      expect(
+        needsFullScope({ env: { CI: "true" }, layer: "", files, support }),
+      ).toBe(true);
+    }
+  });
+
+  it("keeps the range targets with MUTATION_FORCE=1 or outside CI", () => {
+    const files = ["package-lock.json"];
+
+    expect(
+      needsFullScope({
+        env: { MUTATION_FORCE: "1" },
+        layer: "",
+        files,
+        support: [],
+      }),
+    ).toBe(false);
+    expect(needsFullScope({ env: {}, layer: "", files, support: [] })).toBe(
+      false,
+    );
+    expect(
+      needsFullScope({
+        env: { CI: "true" },
+        layer: "",
+        files: [`${EXT}/config.ts`],
+        support: [],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("widenToFullScope", () => {
+  const tracked = [
+    `${EXT}/config.ts`,
+    `${EXT}/ask-format.ts`,
+    `${EXT}/__tests__/config.test.ts`,
+    `${EXT}/__tests__/support/helper.ts`,
+    "scripts/git.mjs",
+  ];
+
+  it("mutates every extension source when the range only changes a dependency", () => {
+    const targets = collectTargets(["package-lock.json"], {
+      layer: "",
+      mutateGlobs: EXT_MUTATE,
+    });
+
+    const widened = widenToFullScope(targets, {
+      tracked,
+      layer: "",
+      mutateGlobs: EXT_MUTATE,
+    });
+
+    expect([...targets.mutate]).toEqual([]);
+    expect([...widened.mutate]).toEqual([
+      `${EXT}/config.ts`,
+      `${EXT}/ask-format.ts`,
+    ]);
+    expect([...widened.directSources]).toEqual([...widened.mutate]);
+  });
+
+  it("keeps only the layer's own sources with a layer folder", () => {
+    const widened = widenToFullScope(
+      collectTargets([], { layer: "sub", mutateGlobs: EXT_MUTATE }),
+      {
+        tracked: [`sub/${EXT}/config.ts`, `${EXT}/config.ts`],
+        layer: "sub",
+        mutateGlobs: EXT_MUTATE,
+      },
+    );
+
+    expect([...widened.mutate]).toEqual([`${EXT}/config.ts`]);
   });
 });
 
