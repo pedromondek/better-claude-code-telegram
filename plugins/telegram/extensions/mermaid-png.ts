@@ -9,6 +9,7 @@ import { defaultAppDir, readLocale } from "./config.ts";
 import { messagesFor, type Messages } from "./i18n.ts";
 
 export const MERMAID_SCRIPT = fileURLToPath(import.meta.url);
+export const MMDC = "mmdc";
 
 export function mermaidCommand(): string {
   return `bun "${MERMAID_SCRIPT}"`;
@@ -53,8 +54,8 @@ export function renderMermaid(
   {
     messages = messagesFor(readLocale(defaultAppDir())),
     playwrightCache = playwrightCacheDir(),
-    hasMmdc = (): boolean => commandExists("mmdc"),
-    runMmdc = (args): number | null => runCommand("mmdc", args),
+    hasMmdc = commandExists.bind(null, MMDC),
+    runMmdc = runCommand.bind(null, MMDC),
     out = (line): void => console.log(line),
     err = (line): void => console.error(line),
   }: RenderOptions = {},

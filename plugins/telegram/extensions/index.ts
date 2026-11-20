@@ -8,7 +8,11 @@ import { cleanInbox } from "./inbox-cleanup.ts";
 import { createFileLog, writeHealth, type Log } from "./log.ts";
 import { createPermissionDelay } from "./permission-delay.ts";
 import { createQuietNotice } from "./quiet-notice.ts";
-import { withReplyContext, type RepliedMessage } from "./reply-context.ts";
+import {
+  withReplyContext,
+  type RepliedMessage,
+  type ReplyParticipants,
+} from "./reply-context.ts";
 import { createTranscriber, formatTranscription } from "./transcription.ts";
 import { createWaitingPing } from "./waiting-ping.ts";
 
@@ -37,6 +41,7 @@ export interface Extensions {
   withReplyContext: (
     text: string,
     replied: RepliedMessage | undefined,
+    participants: ReplyParticipants,
   ) => string;
 }
 
@@ -126,7 +131,7 @@ export function createExtensions({
     consumeText: askMirror.consumeText,
     noteInbound: waitingPing.noteInbound,
     deferPermission: permissionDelay.defer,
-    withReplyContext: (text, replied): string =>
-      withReplyContext(text, replied, messages()),
+    withReplyContext: (text, replied, participants): string =>
+      withReplyContext(text, replied, participants, messages()),
   };
 }

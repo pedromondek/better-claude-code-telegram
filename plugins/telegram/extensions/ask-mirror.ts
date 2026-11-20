@@ -350,26 +350,32 @@ export function createAskMirror({
     const sentMessages: SentMessage[] = [];
 
     for (const chatId of allowedChats()) {
-      if (record.context) {
-        await sendHtml(chatId, renderContextText(record.context, text));
-      }
+      try {
+        if (record.context) {
+          await sendHtml(chatId, renderContextText(record.context, text));
+        }
 
-      for (const [questionIndex, question] of record.questions.entries()) {
-        const messageId = await sendHtml(
-          chatId,
-          renderQuestionText(
-            question,
-            questionIndex,
-            total,
-            text,
-            record.instance ?? null,
-          ),
-          buildKeyboard(question, shortId, questionIndex, text),
-        );
+        for (const [questionIndex, question] of record.questions.entries()) {
+          const messageId = await sendHtml(
+            chatId,
+            renderQuestionText(
+              question,
+              questionIndex,
+              total,
+              text,
+              record.instance ?? null,
+            ),
+            buildKeyboard(question, shortId, questionIndex, text),
+          );
 
-        sentMessages.push({ chatId, questionIndex, messageId });
+          sentMessages.push({ chatId, questionIndex, messageId });
+        }
+      } catch (error) {
+        log(text.askCycleFailed(describeError(error)));
       }
     }
+
+    if (sentMessages.length === 0) return;
 
     saveSent(record.id, {
       shortId,
@@ -817,10 +823,16 @@ export function createAskMirror({
 
     const chosen = asks
       .flatMap((ask) =>
-        ask.sent.awaitingOther.toReversed().map((questionIndex) => ({
-          ask,
-          questionIndex,
-        })),
+        ask.sent.awaitingOther
+          .toReversed()
+          .filter((questionIndex) =>
+            ask.sent.otherPrompts.some(
+              (prompt) =>
+                prompt.chatId === chatId &&
+                prompt.questionIndex === questionIndex,
+            ),
+          )
+          .map((questionIndex) => ({ ask, questionIndex })),
       )
       .at(0);
 

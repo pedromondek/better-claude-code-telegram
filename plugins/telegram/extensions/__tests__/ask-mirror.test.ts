@@ -71,7 +71,7 @@ interface AskOptions {
 
 interface SetupOptions {
   messages?: () => Messages;
-  rejectSend?: (text: string) => boolean;
+  rejectSend?: (text: string, chatId: string) => boolean;
   failEdit?: boolean;
   failDelete?: boolean;
 }
@@ -232,7 +232,7 @@ function fakeApi({
         return Promise.resolve(true);
       },
       sendMessage: (chatId, text, options): Promise<{ message_id: number }> => {
-        if (rejectSend(text)) return Promise.reject(new Error("boom"));
+        if (rejectSend(text, chatId)) return Promise.reject(new Error("boom"));
 
         const markup = options?.reply_markup;
 
@@ -394,6 +394,41 @@ describe("question sending", () => {
       telegram.sent[0].text.startsWith("❓ Pergunta aberta no terminal (1/2)"),
     ).toBe(true);
     expect(telegram.sent[1].keyboard?.at(-1)?.[0].text).toBe("✅ Concluir");
+  });
+
+  it("keeps the question sent to the other chats when one chat refuses it", async (): Promise<void> => {
+    const blockedChat = "222";
+    const telegram = fakeApi({
+      rejectSend: (_text, chatId) => chatId === blockedChat,
+    });
+    const logs: string[] = [];
+    const mirror = createAskMirror({
+      api: telegram.api,
+      appDir,
+      allowedChats: () => [blockedChat, CHAT],
+      log: (message) => logs.push(message),
+      messages: () => PT,
+    });
+
+    writeAsk([SINGLE], { context: "Comparei Postgres e Redis." });
+    await mirror.tick();
+    await mirror.tick();
+
+    const tap = callback(`ask:${SHORT}:0:1`);
+
+    await mirror.handleCallback(tap.ctx);
+
+    expect(
+      telegram.sent
+        .filter((message) => message.keyboard !== undefined)
+        .map((message) => message.chatId),
+    ).toEqual([CHAT]);
+    expect(logs.slice(0, 2)).toEqual([
+      PT_TEXTS.logCycleFailed,
+      PT.askSent(ASK_ID, "telegram"),
+    ]);
+    expect(tap.answers).toEqual([null]);
+    expect(readAnswers()).toEqual({ "Qual banco?": "Redis" });
   });
 
   it("sends before the deadline when the last message came from Telegram", async (): Promise<void> => {
@@ -1887,6 +1922,48 @@ describe("questions waiting for text", () => {
     await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
 
     expect(readAnswers()).toEqual({ "Quais camadas?": "Backend" });
+  });
+
+  it("sends nothing to a chat that did not get the Other request and keeps it waiting", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const groupChat = "-100222222";
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
+
+    const sentBefore = telegram.sent.length;
+
+    expect(await mirror.consumeText(groupChat, "solto")).toBe(false);
+    expect(telegram.sent).toHaveLength(sentBefore);
+
+    expect(await mirror.consumeText(CHAT, "solto")).toBe(false);
+    expect(telegram.sent.slice(sentBefore)).toMatchObject([
+      { chatId: CHAT, text: noticeFor(1, "Banco") },
+    ]);
+  });
+
+  it("sends the notice of the question whose Other request reached the chat", async (): Promise<void> => {
+    const otherChat = 7;
+    const telegram = fakeApi({});
+    const mirror = createAskMirror({
+      api: telegram.api,
+      appDir,
+      allowedChats: () => [CHAT, String(otherChat)],
+      log: (): void => undefined,
+      messages: () => PT,
+    });
+
+    writeAsk([SEASON, ANIMAL]);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${SHORT}:1:o`).ctx);
+    await mirror.handleCallback(callback(`ask:${SHORT}:0:o`, otherChat).ctx);
+
+    expect(await mirror.consumeText(CHAT, "solto")).toBe(false);
+    expect(telegram.sent.at(-1)).toMatchObject({
+      chatId: CHAT,
+      text: noticeFor(2, "Animal"),
+    });
   });
 
   it("sends the notice for the newest ask when two asks wait for text", async (): Promise<void> => {

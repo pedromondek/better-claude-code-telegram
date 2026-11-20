@@ -391,7 +391,7 @@ function chunk(text: string, limit: number, mode: 'length' | 'newline'): string[
   return out
 }
 
-// .jpg/.jpeg/.png/.gif/.webp go as photos (Telegram compresses + shows inline);
+// .jpg/.jpeg/.png/.webp go as photos (Telegram compresses + shows inline), .gif/.mp4 as animations;
 // everything else goes as documents (raw file, no compression).
 const PHOTO_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp'])
 const ANIMATION_EXTS = new Set(['.gif', '.mp4'])
@@ -456,14 +456,13 @@ mcp.setNotificationHandler(
   async ({ params }) => {
     const { request_id, tool_name, description, input_preview } = params
     pendingPermissions.set(request_id, { tool_name, description, input_preview })
-    const access = loadAccess()
     const text = `🔐 Permission: ${tool_name}`
     const keyboard = new InlineKeyboard()
       .text('See more', `perm:more:${request_id}`)
       .text('✅ Allow', `perm:allow:${request_id}`)
       .text('❌ Deny', `perm:deny:${request_id}`)
     extensions.deferPermission(request_id, () => {
-    for (const chat_id of access.allowFrom) {
+    for (const chat_id of loadAccess().allowFrom) {
       void bot.api.sendMessage(chat_id, text, { reply_markup: keyboard }).catch(e => {
         process.stderr.write(`permission_request send to ${chat_id} failed: ${e}\n`)
       })
@@ -490,7 +489,7 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
           files: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Absolute file paths to attach. Images send as photos (inline preview); other types as documents. Max 50MB each.',
+            description: 'Absolute file paths to attach. .jpg/.jpeg/.png/.webp send as photos (inline preview), .gif and .mp4 as animations; other types as documents. Max 50MB each.',
           },
           format: {
             type: 'string',
@@ -862,14 +861,12 @@ bot.on('message:document', async ctx => {
 
 bot.on('message:voice', async ctx => {
   const voice = ctx.message.voice
-  const transcript = await extensions.transcribe(voice.file_id, String(ctx.from?.id ?? ''))
-  const text = transcript ?? ctx.message.caption ?? '(voice message)'
-  await handleInbound(ctx, text, undefined, transcript ? undefined : {
+  await handleInbound(ctx, ctx.message.caption ?? '(voice message)', undefined, {
     kind: 'voice',
     file_id: voice.file_id,
     size: voice.file_size,
     mime: voice.mime_type,
-  })
+  }, () => extensions.transcribe(voice.file_id, String(ctx.from?.id ?? '')))
 })
 
 bot.on('message:audio', async ctx => {
@@ -936,6 +933,7 @@ async function handleInbound(
   text: string,
   downloadImage: (() => Promise<string | undefined>) | undefined,
   attachment?: AttachmentMeta,
+  transcribeVoice?: () => Promise<string | null>,
 ): Promise<void> {
   const result = gate(ctx)
 
@@ -947,6 +945,12 @@ async function handleInbound(
       `${lead} — run in Claude Code:\n\n/telegram:access pair ${result.code}`,
     )
     return
+  }
+
+  const transcript = transcribeVoice ? await transcribeVoice() : null
+  if (transcript) {
+    text = transcript
+    attachment = undefined
   }
 
   const access = result.access
@@ -1000,7 +1004,7 @@ async function handleInbound(
   mcp.notification({
     method: 'notifications/claude/channel',
     params: {
-      content: extensions.withReplyContext(text, ctx.message?.reply_to_message),
+      content: extensions.withReplyContext(text, ctx.message?.reply_to_message, { senderId: from.id, botId: ctx.me.id }),
       meta: {
         chat_id,
         ...(msgId != null ? { message_id: String(msgId) } : {}),

@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MESSAGES } from "../i18n.ts";
 import {
   MERMAID_SCRIPT,
+  MMDC,
   mermaidCommand,
   mmdcArgs,
   pngPathFor,
@@ -22,6 +23,12 @@ import {
 } from "../mermaid-png.ts";
 
 const EN = MESSAGES["en-us"];
+
+describe("mermaid-png › constants", () => {
+  it("runs the mmdc of the PATH", (): void => {
+    expect(MMDC).toBe("mmdc");
+  });
+});
 
 describe("pngPathFor", () => {
   it("swaps the .mmd extension for .png", (): void => {

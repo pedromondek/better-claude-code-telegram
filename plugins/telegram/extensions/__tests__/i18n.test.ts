@@ -38,6 +38,7 @@ const FUNCTION_CALLS: Record<string, unknown[]> = {
   transcribed: ["small", "text-sample"],
   transcriptionFailed: ["err-sample"],
   replyHeader: [true],
+  replyHeaderOther: ["name-sample"],
   mermaidUsage: ["cmd-sample"],
   mermaidFailed: ["out-sample.png"],
   captureUsage: ["cmd-sample"],

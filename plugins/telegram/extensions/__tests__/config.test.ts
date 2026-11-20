@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CONFIG_FILE,
@@ -10,6 +10,7 @@ import {
   defaultAppDir,
   formatDelay,
   isQuietTime,
+  isRecord,
   kindMinutes,
   readConfig,
   readDelayMinutes,
@@ -359,9 +360,28 @@ describe("readInboxRetentionDays", () => {
   });
 });
 
+describe("isRecord", () => {
+  it("accepts a plain object", (): void => {
+    expect(isRecord({})).toBe(true);
+    expect(isRecord({ model: "base" })).toBe(true);
+  });
+
+  it("refuses null, an array and a primitive", (): void => {
+    expect(isRecord(null)).toBe(false);
+    expect(isRecord(undefined)).toBe(false);
+    expect(isRecord([])).toBe(false);
+    expect(isRecord("text")).toBe(false);
+    expect(isRecord(3)).toBe(false);
+  });
+});
+
 describe("isQuietTime", () => {
   const overnight = { start: "22:00", end: "08:00" };
   const daytime = { start: "12:00", end: "13:30" };
+
+  beforeEach((): void => {
+    vi.stubEnv("TZ", "America/Sao_Paulo");
+  });
 
   it("handles an interval that crosses midnight", (): void => {
     expect(isQuietTime(at(22), overnight)).toBe(true);

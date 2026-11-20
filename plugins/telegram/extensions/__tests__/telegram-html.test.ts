@@ -108,6 +108,32 @@ describe("toTelegramHtmlChunks", () => {
     ]);
   });
 
+  it("keeps the asterisks of a code span out of the bold that follows it", (): void => {
+    expect(
+      toTelegramHtmlChunks("Ignore `node_modules/**` in **every** config"),
+    ).toEqual(["Ignore <code>node_modules/**</code> in <b>every</b> config"]);
+  });
+
+  it("keeps the asterisks of two code spans on one line as code", (): void => {
+    expect(
+      toTelegramHtmlChunks("**Run `npm ci`** then `src/**/a` and `lib/**/b`"),
+    ).toEqual([
+      "<b>Run <code>npm ci</code></b> then <code>src/**/a</code> and <code>lib/**/b</code>",
+    ]);
+  });
+
+  it("keeps the digits outside a code span", (): void => {
+    expect(toTelegramHtmlChunks("Step 2 of 3: `npm ci` and **go**")).toEqual([
+      "Step 2 of 3: <code>npm ci</code> and <b>go</b>",
+    ]);
+  });
+
+  it("keeps a private use placeholder typed in the text as typed", (): void => {
+    expect(toTelegramHtmlChunks("a \u{E000}7\u{E001} b")).toEqual([
+      "a \u{E000}7\u{E001} b",
+    ]);
+  });
+
   it("puts the table in a monospaced block", (): void => {
     const [html] = toTelegramHtmlChunks(TABLE.join("\n"));
 
@@ -137,6 +163,27 @@ describe("toTelegramHtmlChunks", () => {
 
     expect(chunks.every((chunk) => chunk.length <= 1000)).toBe(true);
     expect(chunks.join("").split("x").length - 1).toBe(5000);
+  });
+
+  it("keeps whole each line that fits alone when the block is over the limit", (): void => {
+    const lines = ["a", "b", "c", "d", "e", "f"].map((letter) =>
+      letter.repeat(300),
+    );
+
+    expect(toTelegramHtmlChunks(lines.join("\n"), 1000)).toEqual([
+      lines.slice(0, 3).join("\n"),
+      lines.slice(3).join("\n"),
+    ]);
+  });
+
+  it("splits a long line of astral characters without breaking a surrogate pair", (): void => {
+    const line = `a${"😀".repeat(2500)}`;
+    const chunks = toTelegramHtmlChunks(line, 1000);
+
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every((chunk) => chunk.isWellFormed())).toBe(true);
+    expect(chunks.every((chunk) => chunk.length <= 1000)).toBe(true);
+    expect(chunks.join("").replaceAll("\n", "")).toBe(line);
   });
 
   it("only takes a heading at the start of the line, after the spaces", (): void => {

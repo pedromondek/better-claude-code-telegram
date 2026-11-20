@@ -46,7 +46,11 @@ const HANDLED_METHODS = new Set([
   "sendAnimation",
   "sendDocument",
   "deleteMessage",
+  "getFile",
 ]);
+const FILE_DOWNLOAD = "FILE_DOWNLOAD";
+const VOICE_FILE_PATH = "voice/file_0.oga";
+const TRANSCRIPT = "transcribed words";
 const SENT_MESSAGE_METHODS = new Set([
   "sendMessage",
   "sendPhoto",
@@ -113,6 +117,14 @@ function createFakeTelegram(): FakeTelegram {
     request.on("end", () => {
       response.setHeader("content-type", "application/json");
       (async (): Promise<void> => {
+        if ((request.url ?? "").startsWith("/file/")) {
+          calls.push({ method: FILE_DOWNLOAD, params: {} });
+          response.setHeader("content-type", "application/octet-stream");
+          response.end("ogg");
+
+          return;
+        }
+
         const method = (request.url ?? "").split("/").pop() ?? "";
         const isJson = (request.headers["content-type"] ?? "").includes("json");
         const params = body && isJson ? parseRecord(body) : {};
@@ -129,6 +141,14 @@ function createFakeTelegram(): FakeTelegram {
         }
 
         if (method === "getMe") result = BOT;
+
+        if (method === "getFile") {
+          result = {
+            file_id: params.file_id,
+            file_unique_id: "voice-unique",
+            file_path: VOICE_FILE_PATH,
+          };
+        }
 
         if (method === "getUpdates") {
           const deadline = Date.now() + 300;
@@ -198,7 +218,9 @@ function readJsonFile(path: string): Record<string, unknown> | null {
   }
 }
 
-async function startFork(language: string | null): Promise<Fork> {
+async function startFork(
+  config: Record<string, unknown> | null,
+): Promise<Fork> {
   const stateDir = mkdtempSync(join(tmpdir(), "bcct-state-"));
   const homeDir = mkdtempSync(join(tmpdir(), "bcct-home-"));
   const appDir = join(homeDir, ".claude", "better-claude-code-telegram");
@@ -214,10 +236,10 @@ async function startFork(language: string | null): Promise<Fork> {
     }),
   );
 
-  if (language) {
+  if (config) {
     writeFileSync(
       join(appDir, "better-cc-telegram.json"),
-      JSON.stringify({ language }),
+      JSON.stringify(config),
     );
   }
 
@@ -345,6 +367,61 @@ function pushDevReply(fork: Fork, text: string, repliedText: string): void {
   });
 }
 
+function channelContents(fork: Fork): unknown[] {
+  return fork.mcpMessages
+    .filter((message) => message.method === "notifications/claude/channel")
+    .map((message) =>
+      isRecord(message.params) ? message.params.content : null,
+    );
+}
+
+function pushVoice(fork: Fork, chat: Record<string, unknown>): void {
+  fork.telegram.push({
+    message: {
+      message_id: 50,
+      date: Math.floor(Date.now() / 1000),
+      chat,
+      from: DEV,
+      voice: {
+        file_id: "voice-1",
+        file_unique_id: "voice-unique",
+        duration: 2,
+        mime_type: "audio/ogg",
+        file_size: 3,
+      },
+    },
+  });
+}
+
+function pushDevText(fork: Fork, text: string): void {
+  fork.telegram.push({
+    message: {
+      message_id: 51,
+      date: Math.floor(Date.now() / 1000),
+      chat: CHAT,
+      from: DEV,
+      text,
+    },
+  });
+}
+
+function writeFakeWhisper(fork: Fork): () => number {
+  const binDir = join(fork.appDir, "whisper", "venv", "bin");
+  const marker = join(fork.homeDir, "whisper-calls");
+
+  mkdirSync(binDir, { recursive: true });
+  writeFileSync(
+    join(binDir, "python"),
+    `#!/bin/sh\necho call >> '${marker}'\necho '{"text": "${TRANSCRIPT}"}'\n`,
+    { mode: 0o755 },
+  );
+
+  return (): number =>
+    existsSync(marker)
+      ? readFileSync(marker, "utf8").split("\n").filter(Boolean).length
+      : 0;
+}
+
 async function waitForChannelContent(fork: Fork): Promise<unknown> {
   const notification = await waitFor(
     () =>
@@ -363,7 +440,7 @@ describe.skipIf(!canRun)(
     let fork: Fork;
 
     beforeAll(async (): Promise<void> => {
-      fork = await startFork("pt-br");
+      fork = await startFork({ language: "pt-br" });
     }, 60_000);
 
     afterAll(async (): Promise<void> => {
@@ -412,6 +489,21 @@ describe.skipIf(!canRun)(
           .filter((method) => SENT_MESSAGE_METHODS.has(method)),
       ).toEqual(["sendMessage", "sendAnimation", "sendAnimation", "sendPhoto"]);
       expect(fork.telegram.unhandled).toEqual([]);
+    });
+
+    it("tells Claude in the reply tool that a gif and an mp4 go as animations", async (): Promise<void> => {
+      fork.send({ id: 21, method: "tools/list" });
+
+      const tools = JSON.stringify(
+        await waitFor(
+          () => fork.mcpMessages.find((message) => message.id === 21),
+          "the tools list",
+        ),
+      );
+
+      expect(tools).toContain(
+        ".jpg/.jpeg/.png/.webp send as photos (inline preview), .gif and .mp4 as animations; other types as documents.",
+      );
     });
 
     it("tells Claude to write to the user in the language of the config", (): void => {
@@ -750,6 +842,168 @@ describe.skipIf(!canRun)(
 
     it("answers every Telegram API method the test expects and nothing else", (): void => {
       expect(fork.telegram.unhandled).toEqual([]);
+    });
+  },
+);
+
+describe.skipIf(!canRun)(
+  `Telegram fork end to end with voice transcription${skipNote}`,
+  () => {
+    let fork: Fork;
+    let whisperCalls: () => number;
+
+    beforeAll(async (): Promise<void> => {
+      fork = await startFork({ transcription: { model: "base" } });
+      whisperCalls = writeFakeWhisper(fork);
+    }, 60_000);
+
+    afterAll(async (): Promise<void> => {
+      await fork?.stop();
+    });
+
+    it("transcribes a dev voice message and delivers the transcript to Claude", async (): Promise<void> => {
+      pushVoice(fork, CHAT);
+
+      expect(await waitForChannelContent(fork)).toBe(
+        MESSAGES["en-us"].transcriptionText(TRANSCRIPT),
+      );
+      expect(whisperCalls()).toBe(1);
+      expect(
+        fork.telegram.calls.filter((call) => call.method === FILE_DOWNLOAD),
+      ).toHaveLength(1);
+    });
+
+    it("drops a voice from a group missing from access.json without downloading it", async (): Promise<void> => {
+      const callsBefore = fork.telegram.calls.length;
+      const contentsBefore = channelContents(fork).length;
+
+      pushVoice(fork, { id: -100777, type: "supergroup", title: "Team" });
+      pushDevText(fork, "sync");
+      await waitFor(
+        () => channelContents(fork).includes("sync"),
+        "the dev text sent after the group voice",
+      );
+
+      expect(
+        fork.telegram.calls
+          .slice(callsBefore)
+          .map(({ method }) => method)
+          .filter((method) => method === "getFile" || method === FILE_DOWNLOAD),
+      ).toEqual([]);
+      expect(whisperCalls()).toBe(1);
+      expect(channelContents(fork).slice(contentsBefore)).toEqual(["sync"]);
+    });
+
+    it("answers every Telegram API method the test expects and nothing else", (): void => {
+      expect(fork.telegram.unhandled).toEqual([]);
+    });
+  },
+);
+
+describe.skipIf(!canRun)(
+  `Telegram fork end to end with a held permission request${skipNote}`,
+  () => {
+    let fork: Fork;
+
+    beforeAll(async (): Promise<void> => {
+      fork = await startFork({ delays: { permissions: 0.05 } });
+    }, 60_000);
+
+    afterAll(async (): Promise<void> => {
+      await fork?.stop();
+    });
+
+    it("sends the held request only to the accounts in access.json when it goes out", async (): Promise<void> => {
+      const permissionText = "🔐 Permission: Write";
+
+      fork.send({
+        method: "notifications/claude/channel/permission_request",
+        params: {
+          request_id: "fghij",
+          tool_name: "Write",
+          description: "writes a file",
+          input_preview: "{}",
+        },
+      });
+      fork.send({ id: 30, method: "tools/list" });
+      await waitFor(
+        () => fork.mcpMessages.find((message) => message.id === 30),
+        "the tools list answered after the permission request",
+      );
+
+      expect(
+        fork
+          .sentMessages()
+          .filter((call) => call.params.text === permissionText),
+      ).toEqual([]);
+
+      writeFileSync(
+        join(fork.stateDir, "access.json"),
+        JSON.stringify({
+          dmPolicy: "allowlist",
+          allowFrom: ["77"],
+          groups: {},
+          pending: {},
+        }),
+      );
+
+      const request = await waitFor(
+        () =>
+          fork
+            .sentMessages()
+            .find((call) => call.params.text === permissionText),
+        "the held permission request",
+      );
+
+      expect(request.params.chat_id).toBe("77");
+      expect(
+        fork
+          .sentMessages()
+          .filter((call) => call.params.text === permissionText)
+          .map((call) => call.params.chat_id),
+      ).toEqual(["77"]);
+    });
+  },
+);
+
+describe.skipIf(!canRun)(
+  `Telegram fork outside claude --telegram${skipNote}`,
+  () => {
+    it("exits without touching the poller in bot.pid when BETTER_CC_TELEGRAM is not 1", async (): Promise<void> => {
+      const stateDir = mkdtempSync(join(tmpdir(), "bcct-state-"));
+      const homeDir = mkdtempSync(join(tmpdir(), "bcct-home-"));
+      const poller = spawn("bash", ["-c", 'exec -a "bun server.ts" sleep 30']);
+
+      try {
+        writeFileSync(join(stateDir, "bot.pid"), String(poller.pid));
+
+        const run = spawnSync("bun", ["server.ts"], {
+          cwd: PLUGIN_DIR,
+          env: {
+            PATH: process.env.PATH,
+            HOME: homeDir,
+            TELEGRAM_STATE_DIR: stateDir,
+            TELEGRAM_BOT_TOKEN: TOKEN,
+          },
+          encoding: "utf8",
+          input: "",
+          timeout: 20_000,
+        });
+
+        await sleep(200);
+
+        expect(run.status).toBe(0);
+        expect(run.stderr).toContain("only runs inside 'claude --telegram'");
+        expect(readFileSync(join(stateDir, "bot.pid"), "utf8")).toBe(
+          String(poller.pid),
+        );
+        expect(poller.signalCode).toBeNull();
+        expect(poller.exitCode).toBeNull();
+      } finally {
+        poller.kill();
+        rmSync(stateDir, { recursive: true, force: true });
+        rmSync(homeDir, { recursive: true, force: true });
+      }
     });
   },
 );

@@ -5,6 +5,8 @@ const TELEGRAM_LIMIT = 4000;
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 const FENCE = /^\s*```/;
+const CODE_SPAN = /`([^`]+)`/g;
+const CODE_PLACEHOLDER = /\u{E000}(\d+)\u{E001}/gu;
 
 export function escapeHtml(text: string): string {
   return text
@@ -18,9 +20,20 @@ function inlineMarkdown(line: string): string {
 
   if (heading) return `<b>${inlineMarkdown(heading[1])}</b>`;
 
+  const codeSpans: string[] = [];
+
   return escapeHtml(line)
-    .replaceAll(/`([^`]+)`/g, "<code>$1</code>")
-    .replaceAll(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+    .replaceAll(CODE_SPAN, (_match: string, code: string): string => {
+      codeSpans.push(code);
+
+      return `\u{E000}${codeSpans.length - 1}\u{E001}`;
+    })
+    .replaceAll(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replaceAll(CODE_PLACEHOLDER, (match: string, index: string): string => {
+      const code = codeSpans.at(Number(index));
+
+      return code === undefined ? match : `<code>${code}</code>`;
+    });
 }
 
 function tableCells(row: string): string[] {
@@ -127,13 +140,21 @@ function renderBlock(block: Block): string {
 function splitOversizedBlock(block: Block, limit: number): Block[] {
   const pieces: string[][] = [];
   const maxLineLength = Math.floor(limit / 5);
-  const lines = block.lines.flatMap((line) =>
-    Array.from(
-      { length: Math.max(1, Math.ceil(line.length / maxLineLength)) },
+  const lines = block.lines.flatMap((line) => {
+    if (renderBlock({ kind: block.kind, lines: [line] }).length <= limit) {
+      return [line];
+    }
+
+    const codePoints = [...line];
+
+    return Array.from(
+      { length: Math.ceil(codePoints.length / maxLineLength) },
       (_, index) =>
-        line.slice(index * maxLineLength, (index + 1) * maxLineLength),
-    ),
-  );
+        codePoints
+          .slice(index * maxLineLength, (index + 1) * maxLineLength)
+          .join(""),
+    );
+  });
 
   for (const line of lines) {
     const last = pieces.at(-1);

@@ -1,7 +1,13 @@
 import { readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 
+export const INBOX_FOLDER = "inbox";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function inboxDir(stateDir: string): string {
+  return join(stateDir, INBOX_FOLDER);
+}
 
 export function cleanInbox(
   stateDir: string,
@@ -10,7 +16,7 @@ export function cleanInbox(
 ): number {
   if (retentionDays === null) return 0;
 
-  const inbox = join(stateDir, "inbox");
+  const inbox = inboxDir(stateDir);
   const oldest = now - retentionDays * DAY_MS;
   let removed = 0;
 

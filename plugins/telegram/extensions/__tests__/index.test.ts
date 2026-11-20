@@ -376,12 +376,17 @@ describe("createExtensions", () => {
   it("adds the replied message to a reply in the language of the setup", () => {
     const extensions = build();
 
-    expect(extensions.withReplyContext("ok", undefined)).toBe("ok");
+    const participants = { senderId: 111, botId: 999 };
+
+    expect(extensions.withReplyContext("ok", undefined, participants)).toBe(
+      "ok",
+    );
     expect(
-      extensions.withReplyContext("ok", {
-        text: "Qual banco?",
-        from: { is_bot: true },
-      }),
+      extensions.withReplyContext(
+        "ok",
+        { text: "Qual banco?", from: { id: 999, first_name: "Claude" } },
+        participants,
+      ),
     ).toBe(`${EN.replyHeader(true)}:\n«Qual banco?»\n\nok`);
   });
 

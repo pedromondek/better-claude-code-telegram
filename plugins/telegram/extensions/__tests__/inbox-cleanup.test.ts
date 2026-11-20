@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cleanInbox } from "../inbox-cleanup.ts";
+import { cleanInbox, INBOX_FOLDER, inboxDir } from "../inbox-cleanup.ts";
 
 const fs = vi.hoisted(() => ({ goneAfterCheck: "" }));
 
@@ -56,6 +56,13 @@ beforeEach(() => {
 afterEach(() => {
   fs.goneAfterCheck = "";
   rmSync(stateDir, { recursive: true, force: true });
+});
+
+describe("inbox-cleanup › inbox folder", () => {
+  it("keeps the files under the inbox folder of the state folder", (): void => {
+    expect(INBOX_FOLDER).toBe("inbox");
+    expect(inboxDir("/state")).toBe(join("/state", "inbox"));
+  });
 });
 
 describe("cleanInbox", () => {

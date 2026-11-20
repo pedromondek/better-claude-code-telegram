@@ -11,6 +11,7 @@ import { promisify } from "node:util";
 
 import { readLocale, readTranscriptionSetting } from "./config.ts";
 import { describeError, messagesFor, type Messages } from "./i18n.ts";
+import { inboxDir } from "./inbox-cleanup.ts";
 import type { Log } from "./log.ts";
 
 export const TRANSCRIBE_SCRIPT = join(import.meta.dirname, "transcribe.py");
@@ -94,12 +95,12 @@ export function createTranscriber({
   runPython = defaultRunPython,
   messages = (): Messages => messagesFor(readLocale(appDir)),
 }: TranscriberOptions): Transcriber {
-  const inboxDir = join(stateDir, "inbox");
+  const inbox = inboxDir(stateDir);
 
   try {
-    for (const name of readdirSync(inboxDir)) {
+    for (const name of readdirSync(inbox)) {
       if (/^voice-\d+\.ogg$/.test(name)) {
-        rmSync(join(inboxDir, name), { force: true });
+        rmSync(join(inbox, name), { force: true });
       }
     }
   } catch {}
@@ -113,9 +114,9 @@ export function createTranscriber({
 
     if (!response.ok) return null;
 
-    const target = join(inboxDir, `voice-${Date.now()}.ogg`);
+    const target = join(inbox, `voice-${Date.now()}.ogg`);
 
-    mkdirSync(inboxDir, { recursive: true, mode: 0o700 });
+    mkdirSync(inbox, { recursive: true, mode: 0o700 });
     writeFileSync(target, Buffer.from(await response.arrayBuffer()), {
       mode: 0o600,
     });
