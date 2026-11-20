@@ -168,6 +168,10 @@ fn serve(stream: TcpStream, replies: &Mutex<Replies>, recorded: &Mutex<Vec<Value
         return;
     }
 
+    if let Some(delay) = answer.get("delayMs").and_then(Value::as_u64) {
+        std::thread::sleep(Duration::from_millis(delay));
+    }
+
     let payload = text(&answer, "body").as_bytes().to_vec();
     let head = format!(
         "HTTP/1.1 {} X\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n",
@@ -1512,6 +1516,24 @@ fn an_uninterrupted_call_answers_like_the_plain_one() {
         "method": "getMe",
         "status": 200,
         "body": "{\"ok\":true}",
+    })]);
+
+    let answer = abortable_post_json(
+        &format!("{}/botX/getMe", server.root),
+        "{}",
+        &Interruption::new(),
+    );
+
+    assert_eq!(answer, Some(b"{\"ok\":true}".to_vec()));
+}
+
+#[test]
+fn waits_for_a_slow_answer_while_nothing_interrupts() {
+    let server = FakeTelegram::start(&[json!({
+        "method": "getMe",
+        "status": 200,
+        "body": "{\"ok\":true}",
+        "delayMs": 200,
     })]);
 
     let answer = abortable_post_json(
