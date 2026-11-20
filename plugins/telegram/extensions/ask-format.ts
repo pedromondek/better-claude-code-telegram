@@ -57,7 +57,11 @@ export function shortIdFor(askId: string): string {
 }
 
 function truncate(text: string, limit: number): string {
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+  const codePoints = [...text];
+
+  return codePoints.length > limit
+    ? `${codePoints.slice(0, limit - 1).join("")}…`
+    : text;
 }
 
 export function renderContextText(context: string, messages: Messages): string {

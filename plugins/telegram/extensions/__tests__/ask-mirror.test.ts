@@ -506,6 +506,79 @@ describe("question sending", () => {
     expect(logs.at(-1)).toBe(PT.askSent(ASK_ID, "telegram"));
   });
 
+  it("deletes the context too when no chat got every question and keeps one copy after the resend", async (): Promise<void> => {
+    let failSecondQuestion = true;
+    const { telegram, mirror } = setup({
+      rejectSend: (text) =>
+        failSecondQuestion &&
+        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+    });
+
+    writeAsk([SINGLE, MULTI], { context: "Comparei Postgres e Redis." });
+    await mirror.tick();
+
+    expect(telegram.deleted).toEqual(
+      telegram.sent.map(({ chatId, messageId }) => ({ chatId, messageId })),
+    );
+
+    failSecondQuestion = false;
+    await mirror.tick();
+
+    const kept = telegram.sent.filter(
+      (message) =>
+        !telegram.deleted.some(
+          (deleted) => deleted.messageId === message.messageId,
+        ),
+    );
+
+    expect(kept.map((message) => message.text.slice(0, 35))).toEqual([
+      PT_TEXTS.context.slice(0, 35),
+      "❓ Pergunta aberta no terminal (1/2)",
+      "❓ Pergunta aberta no terminal (2/2)",
+    ]);
+  });
+
+  it("deletes every part of a long question when no chat got every question", async (): Promise<void> => {
+    const { telegram, mirror } = setup({
+      rejectSend: (text) =>
+        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+    });
+
+    writeAsk([
+      {
+        question: "Q?",
+        options: [{ label: "A", preview: "linha da prévia\n".repeat(600) }],
+      },
+      MULTI,
+    ]);
+    await mirror.tick();
+
+    expect(telegram.sent.length).toBeGreaterThan(1);
+    expect(telegram.deleted).toEqual(
+      telegram.sent.map(({ chatId, messageId }) => ({ chatId, messageId })),
+    );
+  });
+
+  it("deletes the parts already sent of a long question whose last part fails", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({
+      rejectSend: (text) => text.includes(PT.otherHint),
+    });
+
+    writeAsk([
+      {
+        question: "Q?",
+        options: [{ label: "A", preview: "linha da prévia\n".repeat(600) }],
+      },
+    ]);
+    await mirror.tick();
+
+    expect(telegram.sent.length).toBeGreaterThan(0);
+    expect(telegram.deleted).toEqual(
+      telegram.sent.map(({ chatId, messageId }) => ({ chatId, messageId })),
+    );
+    expect(logs).toEqual([PT_TEXTS.logCycleFailed]);
+  });
+
   it("deletes the questions of every chat that failed partway and none of a chat that got nothing", async (): Promise<void> => {
     const silentChat = "111";
     const partialChat = "222";

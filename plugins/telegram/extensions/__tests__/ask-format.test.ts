@@ -234,6 +234,19 @@ describe("finalKeyboard", () => {
       [{ text: "✅ 1. Postgres", data: ANSWERED_CALLBACK }],
     ]);
   });
+
+  it("keeps an emoji whole when the cut of the text falls on it", (): void => {
+    const [[button]] = finalKeyboard(`${"a".repeat(60)}😀bc`);
+
+    expect(button.text).toBe(`✅ ${"a".repeat(60)}😀…`);
+    expect(button.text.isWellFormed()).toBe(true);
+  });
+
+  it("counts an emoji as one character of the button limit", (): void => {
+    const answer = `${"a".repeat(61)}😀`;
+
+    expect(finalKeyboard(answer)[0][0].text).toBe(`✅ ${answer}`);
+  });
 });
 
 describe("parseAskCallback", () => {

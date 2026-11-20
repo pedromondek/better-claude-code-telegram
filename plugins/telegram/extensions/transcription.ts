@@ -6,7 +6,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, posix, win32 } from "node:path";
 import { promisify } from "node:util";
 
 import { readLocale, readTranscriptionSetting } from "./config.ts";
@@ -20,6 +20,7 @@ export const TRANSCRIPTION_MODELS = ["base", "small", "medium"] as const;
 export type TranscriptionModel = (typeof TRANSCRIPTION_MODELS)[number];
 
 const TRANSCRIBE_TIMEOUT_MS = 180_000;
+const WINDOWS_PLATFORM = "win32";
 const execFileAsync = promisify(execFile);
 
 type RunPython = (
@@ -50,8 +51,15 @@ export type Transcriber = (
   senderId: string,
 ) => Promise<string | null>;
 
-export function whisperPython(appDir: string): string {
-  return join(appDir, "whisper", "venv", "bin", "python");
+export function whisperPython(
+  appDir: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  if (platform === WINDOWS_PLATFORM) {
+    return win32.join(appDir, "whisper", "venv", "Scripts", "python.exe");
+  }
+
+  return posix.join(appDir, "whisper", "venv", "bin", "python");
 }
 
 function isTranscriptionModel(value: unknown): value is TranscriptionModel {

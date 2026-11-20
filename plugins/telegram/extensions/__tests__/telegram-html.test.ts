@@ -224,16 +224,21 @@ describe("toTelegramHtmlChunks", () => {
     expect(toTelegramHtmlChunks("x".repeat(50), 50)).toEqual(["x".repeat(50)]);
   });
 
-  it("renders an empty code block as an empty pre", (): void => {
-    expect(toTelegramHtmlChunks("Antes\n```\n```")).toEqual([
-      "Antes\n<pre></pre>",
+  it("drops an empty code block after a text and between two texts", (): void => {
+    expect(toTelegramHtmlChunks("Antes\n```\n```")).toEqual(["Antes"]);
+    expect(toTelegramHtmlChunks("Antes\n```\n\n```\nDepois")).toEqual([
+      "Antes\nDepois",
     ]);
   });
 
-  it("keeps an empty code block that lands exactly on the limit", (): void => {
-    expect(toTelegramHtmlChunks("```\n```", "<pre></pre>".length)).toEqual([
-      "<pre></pre>",
-    ]);
+  it("sends nothing for a message that is only an empty code block", (): void => {
+    expect(toTelegramHtmlChunks("```\n```")).toEqual([]);
+    expect(toTelegramHtmlChunks("```\n  \n\n```")).toEqual([]);
+    expect(toTelegramHtmlChunks("```")).toEqual([]);
+  });
+
+  it("keeps the blank lines of a code block that has content", (): void => {
+    expect(toTelegramHtmlChunks("```\n\nx\n```")).toEqual(["<pre>\nx</pre>"]);
   });
 
   it("fills each part of a long code block up to the limit", (): void => {

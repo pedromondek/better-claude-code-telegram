@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -168,9 +169,38 @@ describe("TRANSCRIPTION_MODELS", () => {
   });
 });
 
+interface WhisperPythonCase {
+  name: string;
+  platform: NodeJS.Platform;
+  appDir: string;
+  python: string;
+}
+
+const WHISPER_PYTHON_CASES = JSON.parse(
+  readFileSync(
+    join(import.meta.dirname, "fixtures", "whisper-python.json"),
+    "utf8",
+  ),
+) as WhisperPythonCase[];
+
 describe("whisperPython", () => {
   it("points at the Python of the whisper/venv environment that the setup creates", (): void => {
     expect(whisperPython("/app")).toBe("/app/whisper/venv/bin/python");
+  });
+
+  it("finds the Python of the venv of each platform, the same path the setup writes", (): void => {
+    expect(WHISPER_PYTHON_CASES.map(({ platform }) => platform)).toEqual([
+      "linux",
+      "darwin",
+      "win32",
+    ]);
+
+    for (const entry of WHISPER_PYTHON_CASES) {
+      expect({
+        name: entry.name,
+        python: whisperPython(entry.appDir, entry.platform),
+      }).toEqual({ name: entry.name, python: entry.python });
+    }
   });
 });
 

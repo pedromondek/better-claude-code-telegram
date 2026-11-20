@@ -45,6 +45,11 @@ interface SentMessage {
   messageId: number;
 }
 
+interface DeliveredMessage {
+  chatId: string;
+  messageId: number;
+}
+
 interface ClosedRequest {
   chatId: string;
   messageId: number;
@@ -300,6 +305,7 @@ export function createAskMirror({
   async function sendHtml(
     chatId: string,
     markdown: string,
+    delivered: DeliveredMessage[],
     keyboard?: KeyboardButton[][],
   ): Promise<number> {
     const chunks = toTelegramHtmlChunks(markdown);
@@ -315,6 +321,7 @@ export function createAskMirror({
       });
 
       lastMessageId = sent.message_id;
+      delivered.push({ chatId, messageId: lastMessageId });
     }
 
     return lastMessageId;
@@ -348,12 +355,17 @@ export function createAskMirror({
     const shortId = shortIdFor(record.id);
     const total = record.questions.length;
     const sentMessages: SentMessage[] = [];
+    const delivered: DeliveredMessage[] = [];
     let reachedEveryQuestion = false;
 
     for (const chatId of allowedChats()) {
       try {
         if (record.context) {
-          await sendHtml(chatId, renderContextText(record.context, text));
+          await sendHtml(
+            chatId,
+            renderContextText(record.context, text),
+            delivered,
+          );
         }
 
         for (const [questionIndex, question] of record.questions.entries()) {
@@ -366,6 +378,7 @@ export function createAskMirror({
               text,
               record.instance ?? null,
             ),
+            delivered,
             buildKeyboard(question, shortId, questionIndex, text),
           );
 
@@ -380,7 +393,7 @@ export function createAskMirror({
 
     if (!reachedEveryQuestion) {
       await Promise.all(
-        sentMessages.map((message) =>
+        delivered.map((message) =>
           api
             .deleteMessage(message.chatId, message.messageId)
             .catch((error: unknown) =>

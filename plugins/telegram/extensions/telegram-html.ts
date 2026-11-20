@@ -107,7 +107,10 @@ export function parseBlocks(markdown: string): Block[] {
         index += 1;
       }
 
-      blocks.push({ kind: "pre", lines: code });
+      if (code.some((codeLine) => codeLine.trim() !== "")) {
+        blocks.push({ kind: "pre", lines: code });
+      }
+
       index += 1;
       continue;
     }
@@ -137,7 +140,7 @@ function renderBlock(block: Block): string {
     : block.lines.map(inlineMarkdown).join("\n");
 }
 
-function splitOversizedBlock(block: Block, limit: number): Block[] {
+function splitBlockToLimit(block: Block, limit: number): Block[] {
   const pieces: string[][] = [];
   const maxLineLength = Math.floor(limit / 5);
   const lines = block.lines.flatMap((line) => {
@@ -180,12 +183,7 @@ export function toTelegramHtmlChunks(
   let current = "";
 
   for (const block of parseBlocks(markdown)) {
-    const pieces =
-      renderBlock(block).length > limit
-        ? splitOversizedBlock(block, limit)
-        : [block];
-
-    for (const piece of pieces) {
+    for (const piece of splitBlockToLimit(block, limit)) {
       const html = renderBlock(piece);
       const candidate = current === "" ? html : `${current}\n${html}`;
 
