@@ -322,6 +322,14 @@ describe("bcct skills", () => {
     );
   });
 
+  it("tells the update accepts only the newest stable when the plugins change", () => {
+    const update = skills().find(({ name }) => name === "update");
+
+    expect(update?.text).toContain(
+      "When the plugins need to change, the only stable version accepted is the newest stable: bcct refuses an older one with a line with ✘ that points to `bcct update stable`. Test versions (alpha, beta and rc) have no such limit.",
+    );
+  });
+
   it("switches the language of the Telegram replies in the session without a reconnect", () => {
     const language = skills().find(({ name }) => name === "language");
 
