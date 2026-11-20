@@ -1,15 +1,30 @@
+use std::path::Path;
+
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::predicate;
+
+const KEPT_VARIABLES: [&str; 2] = ["LLVM_PROFILE_FILE", "SYSTEMROOT"];
+
+fn bcct(home: &Path) -> assert_cmd::Command {
+    let kept = KEPT_VARIABLES
+        .into_iter()
+        .filter_map(|name| std::env::var_os(name).map(|value| (name, value)));
+    let mut command = cargo_bin_cmd!("bcct");
+    command
+        .env_clear()
+        .envs(kept)
+        .env("HOME", home)
+        .env("USERPROFILE", home)
+        .env("CLAUDE_CONFIG_DIR", home.join("claude"));
+    command
+}
 
 #[test]
 fn prints_the_package_version_with_the_binary_name() {
     let folder = tempfile::tempdir().unwrap();
 
-    cargo_bin_cmd!("bcct")
+    bcct(folder.path())
         .arg("--version")
-        .env("HOME", folder.path())
-        .env("CLAUDE_CONFIG_DIR", folder.path().join("claude"))
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
         .assert()
         .success()
         .stdout(format!("bcct {}\n", env!("CARGO_PKG_VERSION")))
@@ -18,7 +33,9 @@ fn prints_the_package_version_with_the_binary_name() {
 
 #[test]
 fn refuses_an_unknown_argument_with_exit_code_2_and_nothing_on_stdout() {
-    cargo_bin_cmd!("bcct")
+    let folder = tempfile::tempdir().unwrap();
+
+    bcct(folder.path())
         .arg("--nope")
         .assert()
         .code(2)
@@ -28,5 +45,7 @@ fn refuses_an_unknown_argument_with_exit_code_2_and_nothing_on_stdout() {
 
 #[test]
 fn refuses_to_run_without_a_subcommand_with_exit_code_2() {
-    cargo_bin_cmd!("bcct").assert().code(2).stdout("");
+    let folder = tempfile::tempdir().unwrap();
+
+    bcct(folder.path()).assert().code(2).stdout("");
 }
