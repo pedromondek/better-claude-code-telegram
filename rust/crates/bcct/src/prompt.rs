@@ -85,7 +85,6 @@ pub enum PromptError {
     Io(io::Error),
 }
 
-pub const CTRL_D_ABORT: &str = "Aborted with Ctrl+D";
 const BACK: &str = "back";
 
 impl PromptError {

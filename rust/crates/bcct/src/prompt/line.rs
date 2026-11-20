@@ -1,6 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::js::is_js_whitespace;
+use crate::spinner::WIDE_FROM;
 
 const MAX_UNDO: usize = 2048;
 const MAX_KILLS: usize = 32;
@@ -12,7 +13,6 @@ const BELL: char = '\u{7}';
 const STRING_TERMINATOR: char = '\u{9c}';
 const TAB_SIZE: u64 = 8;
 const MAX_DIGITS: usize = 4;
-const WIDE_FROM: u32 = 0x1f000;
 
 fn is_intermediate(character: char) -> bool {
     matches!(character, '[' | ']' | '(' | ')' | '#' | ';' | '?')

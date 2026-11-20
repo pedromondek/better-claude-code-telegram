@@ -759,6 +759,29 @@
       }
     },
     {
+      "name": "line aborts on Ctrl+D in portuguese",
+      "kind": "line",
+      "locale": "pt-br",
+      "text": "Minutos? ",
+      "choices": [
+        { "label": "off", "value": null },
+        { "label": "base", "hint": "fastest", "value": "base" },
+        { "label": "medium", "hint": "most accurate", "value": "medium" }
+      ],
+      "index": 0,
+      "columns": 80,
+      "outputTerminal": true,
+      "env": { "TERM": "xterm-256color" },
+      "keys": ["ctrl-d"],
+      "written": "\u001b[1G\u001b[0JMinutos? \u001b[10G",
+      "raw": [true, false],
+      "error": {
+        "message": "Interrompido com Ctrl+D",
+        "cancelled": false,
+        "interrupted": false
+      }
+    },
+    {
       "name": "line with a dumb terminal",
       "kind": "line",
       "locale": "en-us",

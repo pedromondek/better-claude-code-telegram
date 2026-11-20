@@ -121,7 +121,7 @@ fn check_outcome<T: Into<Value>>(name: &str, answer: Answer<T>, entry: &Value) {
 }
 
 #[test]
-fn render_choices_matches_the_js() {
+fn renders_the_choices_like_the_js() {
     let fixture = fixture();
 
     for entry in list(&fixture, "renders") {
@@ -569,7 +569,7 @@ fn check_calls(name: &str, fake: &FakePrompter, entry: &Value) {
 }
 
 #[test]
-fn guard_cancel_asks_to_leave_like_the_js() {
+fn asks_to_leave_when_a_question_is_cancelled_like_the_js() {
     let fixture = fixture();
     let choices = views(&json!([
         { "label": "off" },
@@ -707,7 +707,7 @@ fn blessing_rewrites_the_terminal_choices_from_the_binary() {
 }
 
 #[test]
-fn ask_choice_asks_and_validates_like_the_js() {
+fn asks_and_validates_a_choice_like_the_js() {
     let fixture = fixture();
 
     for entry in list(&fixture, "choices") {
@@ -765,7 +765,7 @@ fn as_values(items: Vec<ChoiceItem<f64>>) -> Vec<ChoiceItem<Value>> {
 }
 
 #[test]
-fn number_choices_and_marks_build_the_choices_of_the_js() {
+fn builds_the_number_choices_and_marks_like_the_js() {
     let fixture = fixture();
 
     for entry in list(&fixture, "choices") {
@@ -881,7 +881,7 @@ fn width_in_table(code: u32) -> u64 {
 }
 
 #[test]
-fn display_width_follows_the_table_node_uses_without_icu_with_emoji_wide() {
+fn measures_the_width_like_node_without_icu_and_emoji_wide() {
     for (low, high) in ZERO_WIDTH.iter().chain(&FULL_WIDTH) {
         for code in [low.wrapping_sub(1), *low, *high, high + 1] {
             if let Some(character) = char::from_u32(code) {
@@ -896,7 +896,7 @@ fn display_width_follows_the_table_node_uses_without_icu_with_emoji_wide() {
 }
 
 #[test]
-fn number_choices_find_the_current_value_like_includes() {
+fn finds_the_current_number_like_includes() {
     let label = |value: f64| format!("{value}");
     let answers = |choices: Vec<ChoiceItem<f64>>| -> Vec<String> {
         choices
@@ -932,7 +932,7 @@ fn number_choices_find_the_current_value_like_includes() {
 }
 
 #[test]
-fn ask_yes_no_matches_the_js() {
+fn answers_yes_or_no_like_the_js() {
     let fixture = fixture();
 
     for entry in list(&fixture, "yesNos") {
@@ -955,13 +955,17 @@ fn each_error_says_what_happened_and_what_kind_it_is() {
     let cancelled = PromptError::Cancelled(EN_US.cancelled);
     let interrupted = PromptError::Interrupted(EN_US.interrupted);
     let ended = PromptError::Ended(EN_US.cancelled);
-    let aborted = PromptError::Aborted(bcct::prompt::CTRL_D_ABORT);
+    let aborted = PromptError::Aborted(EN_US.aborted);
     let failed = PromptError::from(io::Error::other("disk"));
 
     assert_eq!(cancelled.to_string(), "Cancelled.");
     assert_eq!(interrupted.to_string(), "Setup interrupted.");
     assert_eq!(ended.to_string(), "Cancelled.");
     assert_eq!(aborted.to_string(), "Aborted with Ctrl+D");
+    assert_eq!(
+        PromptError::Aborted(PT_BR.aborted).to_string(),
+        "Interrompido com Ctrl+D"
+    );
     assert_eq!(failed.to_string(), "disk");
     assert!(cancelled.is_cancelled() && !cancelled.is_interrupted());
     assert!(interrupted.is_interrupted() && !interrupted.is_cancelled());

@@ -82,6 +82,15 @@ fn unwritable_script(size: &str) -> String {
     format!("{size} && {{ sleep 1; exec \"$0\" \"$@\"; }} | true")
 }
 
+#[cfg(target_os = "macos")]
+pub(crate) const JOB_SHELL: &str = "zsh";
+#[cfg(target_os = "macos")]
+pub(crate) const JOB_CONTROL: &str = "setopt monitor";
+#[cfg(not(target_os = "macos"))]
+pub(crate) const JOB_SHELL: &str = "bash";
+#[cfg(not(target_os = "macos"))]
+pub(crate) const JOB_CONTROL: &str = "set -m";
+
 fn process_tree(root: i32) -> String {
     let Ok(output) = Command::new("ps")
         .args(["-A", "-o", "pid=,ppid=,pgid=,tpgid=,stat=,comm="])

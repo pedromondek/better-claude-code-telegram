@@ -22,7 +22,7 @@ use serde_json::{Value, json};
 const FIXTURE: &str = include_str!("fixtures/setup-terminal.json");
 const DRIVE: &str = "BCCT_DRIVE";
 const ROWS: u16 = 24;
-const JOB_NOTICE: &str = "\r\n[1]+";
+const JOB_NOTICES: [&str; 3] = ["\r\n[1]+", "\r\n[1]  + ", "\r\nzsh: "];
 const LINE_END: &str = "\r\n";
 const DELAY_PRESETS: [f64; 6] = [1.0, 3.0, 4.0, 5.0, 10.0, 15.0];
 const RECOMMENDED_DELAY: f64 = 4.0;
@@ -416,7 +416,11 @@ fn a_key_release_reported_by_the_terminal_types_nothing() {
 }
 
 fn without_job_notice(flow: &str) -> String {
-    let Some(start) = flow.find(JOB_NOTICE) else {
+    let Some(start) = JOB_NOTICES
+        .iter()
+        .filter_map(|notice| flow.find(notice))
+        .min()
+    else {
         return flow.to_owned();
     };
     let after = start + LINE_END.len();
@@ -425,15 +429,15 @@ fn without_job_notice(flow: &str) -> String {
         .and_then(|rest| rest.find(LINE_END))
         .map_or(flow.len(), |offset| after + offset + LINE_END.len());
 
-    format!(
+    without_job_notice(&format!(
         "{}{}",
         flow.get(..start).unwrap_or_default(),
         flow.get(end..).unwrap_or_default()
-    )
+    ))
 }
 
 #[test]
-fn drops_the_stopped_job_line_that_some_bash_versions_print() {
+fn drops_the_job_notices_that_bash_and_zsh_print() {
     let printed =
         "\u{1b}[1G\u{1b}[0JQ? a\u{1b}[5G\r\n[1]+  Stopped                 \"$@\"\r\nb\r\r\n";
 
@@ -442,16 +446,24 @@ fn drops_the_stopped_job_line_that_some_bash_versions_print() {
         "\u{1b}[1G\u{1b}[0JQ? a\u{1b}[5Gb\r\r\n"
     );
     assert_eq!(without_job_notice("Q? b\r\r\n"), "Q? b\r\r\n");
+    assert_eq!(
+        without_job_notice(
+            "Q? a\r\nzsh: suspended  \"$@\"\r\n\r\n[1]  + continued  \"$@\"\r\nb\r\r\n"
+        ),
+        "Q? ab\r\r\n"
+    );
 }
 
 #[test]
 fn ctrl_z_suspends_a_typed_question_and_fg_goes_on_asking_it() {
-    let script = "set -m; \"$@\"; first=$?; fg > /dev/null; last=$?; \
-                  echo \"statuses=$first $last\"";
+    let script = format!(
+        "{}; \"$@\"; first=$?; fg > /dev/null; last=$?; echo \"statuses=$first $last\"",
+        pty::JOB_CONTROL
+    );
     let mut argv = vec![
-        "bash".to_owned(),
+        pty::JOB_SHELL.to_owned(),
         "-c".to_owned(),
-        script.to_owned(),
+        script,
         "bcct".to_owned(),
     ];
 

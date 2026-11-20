@@ -541,6 +541,11 @@ session("line aborts on Ctrl+D with nothing typed", "line", {
   text: "Minutes? ",
   keys: ["ctrl-d"],
 });
+session("line aborts on Ctrl+D in portuguese", "line", {
+  locale: "pt-br",
+  text: "Minutos? ",
+  keys: ["ctrl-d"],
+});
 session("line with a dumb terminal", "line", {
   text: "Minutes? ",
   env: { TERM: "dumb" },

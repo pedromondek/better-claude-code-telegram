@@ -4,7 +4,7 @@ use super::console::{Console, Input};
 use super::hidden::{Hidden, HiddenKey};
 use super::line::{LineEditor, LineKey};
 use super::select::{SHOW_CURSOR, Select, SelectKey};
-use super::{Answer, CTRL_D_ABORT, Choice, Colors, PromptError, Prompter};
+use super::{Answer, Choice, Colors, PromptError, Prompter};
 use crate::messages::Messages;
 
 #[derive(Debug)]
@@ -81,7 +81,7 @@ impl<C: Console> TerminalPrompter<C> {
                 }
                 LineKey::Aborted => {
                     self.release()?;
-                    return Err(PromptError::Aborted(CTRL_D_ABORT));
+                    return Err(PromptError::Aborted(messages.aborted));
                 }
                 LineKey::Back if self.back => {
                     self.console.write(&editor.finish_line())?;
