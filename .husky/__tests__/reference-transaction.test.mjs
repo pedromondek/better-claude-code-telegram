@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { HUSKY_HOOK_ARGS } from "./support/husky-hook.mjs";
+import { OLD_NODE_MESSAGE, oldNodeFolder } from "./support/old-node.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const REFERENCE_TRANSACTION = join(ROOT, ".husky", "reference-transaction");
@@ -90,6 +91,25 @@ describe(".husky/reference-transaction: a local branch is born in the <key>-<tit
     }
 
     expect(git("branch", "--list", "0043-topics")).toContain("0043-topics");
+  });
+
+  it("refuses the branch with the Node version message when the node of the PATH is too old", () => {
+    const result = spawnSync(
+      "sh",
+      [...HUSKY_HOOK_ARGS, REFERENCE_TRANSACTION, "prepared"],
+      {
+        cwd: repo,
+        encoding: "utf8",
+        input: `${ZERO_OID} ${"1".repeat(40)} refs/heads/0043-topics\n`,
+        env: {
+          ...process.env,
+          PATH: `${oldNodeFolder(repo)}:${process.env.PATH}`,
+        },
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(OLD_NODE_MESSAGE);
   });
 
   it("stays out of commit, tag, renaming to the pattern and deleting an old branch", () => {

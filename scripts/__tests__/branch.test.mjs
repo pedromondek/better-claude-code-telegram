@@ -221,6 +221,27 @@ describe("run", () => {
     expect(bad.out.join("\n")).toContain("outside the pattern");
   });
 
+  it("check exits 1 with the pattern explanation on the issue key 0000", () => {
+    const out = io();
+
+    expect(run(["check", "0000-x"], { ...out, gh: fakeGh(null) })).toBe(1);
+    expect(out.out.join("\n")).toContain(
+      'Branch "0000-x" is outside the pattern',
+    );
+  });
+
+  it("pr exits 1 with the expected title when the title has the key 0000", () => {
+    const out = io();
+
+    expect(
+      run(["pr", "0000: Fix chatting", "0043-fix-chatting"], {
+        ...out,
+        gh: fakeGh(null),
+      }),
+    ).toBe(1);
+    expect(out.out.join("\n")).toContain("0043: <title of the issue>");
+  });
+
   it("pr exits 0 on a title with the key of the branch and 1 with the explanation otherwise", () => {
     const ok = io();
     const bad = io();
@@ -263,6 +284,39 @@ describe("run", () => {
       }),
     ).toBe(0);
     expect(out.out.join("\n")).toContain("0043-chat-topics");
+  });
+
+  it("takes --epic before the issue number as the scope confirmation", () => {
+    const out = io();
+    const gh = fakeGh(OPEN_ISSUE, [44]);
+
+    expect(run(["--epic", "43", "chat"], { ...out, gh })).toBe(0);
+    expect(gh.calls).toContainEqual(["develop", 43, "0043-chat"]);
+  });
+
+  it.each([["--help"], ["-h"], ["--verbose", "chat"]])(
+    "shows the usage and exits 1 without calling GitHub when %s comes first",
+    (...argv) => {
+      const out = io();
+      const gh = fakeGh(OPEN_ISSUE);
+
+      expect(run(argv, { ...out, gh })).toBe(1);
+      expect(gh.calls).toEqual([]);
+      expect(out.out.join("\n")).toContain(
+        "npm run branch -- <issue number> [summary]",
+      );
+    },
+  );
+
+  it("shows the usage and exits 1 with --epic alone", () => {
+    const out = io();
+    const gh = fakeGh(OPEN_ISSUE);
+
+    expect(run(["--epic"], { ...out, gh })).toBe(1);
+    expect(gh.calls).toEqual([]);
+    expect(out.out.join("\n")).toContain(
+      "npm run branch -- <issue number> [summary]",
+    );
   });
 
   it("with a title instead of a number, opens the issue and creates its branch", () => {

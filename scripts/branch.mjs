@@ -135,21 +135,22 @@ export function run(argv, { gh, log }) {
     return 1;
   }
 
-  if (command === undefined) {
+  const epic = argv.includes(EPIC_FLAG);
+  const [target, ...words] = argv.filter((word) => word !== EPIC_FLAG);
+
+  if (target === undefined || target.startsWith("-")) {
     log(USAGE);
     return 1;
   }
 
-  const words = rest.filter((word) => word !== EPIC_FLAG);
-
   try {
-    if (!ISSUE_ARGUMENT.test(command)) {
-      if (rest.includes(EPIC_FLAG)) {
+    if (!ISSUE_ARGUMENT.test(target)) {
+      if (epic) {
         throw new Error(`${EPIC_FLAG} needs the number of an existing issue.`);
       }
 
       const { number, name } = createIssueAndBranch({
-        title: [command, ...words].join(" "),
+        title: [target, ...words].join(" "),
         gh,
       });
       log(
@@ -159,9 +160,9 @@ export function run(argv, { gh, log }) {
     }
 
     const name = createBranch({
-      issue: command,
+      issue: target,
       summary: words.length > 0 ? words.join(" ") : undefined,
-      epic: rest.includes(EPIC_FLAG),
+      epic,
       gh,
     });
     log(`✓ Branch ${name} created from main and linked to the issue.`);

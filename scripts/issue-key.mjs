@@ -53,7 +53,7 @@ export function branchName(number, title) {
 function canonicalNumber(digits) {
   const number = Number(digits);
 
-  return issueKey(number) === digits ? number : null;
+  return number > 0 && issueKey(number) === digits ? number : null;
 }
 
 export function issueNumberFromBranch(name) {

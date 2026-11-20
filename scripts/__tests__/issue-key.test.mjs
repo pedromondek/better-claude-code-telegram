@@ -85,6 +85,7 @@ describe("issueNumberFromBranch", () => {
     "0038-double--hyphen",
     "0038-hyphen-at-the-end-",
     "feature/0038-x",
+    "0000-zero-issue",
   ])("returns null for %s, outside the pattern", (name) => {
     expect(issueNumberFromBranch(name)).toBeNull();
   });
@@ -106,6 +107,7 @@ describe("isAllowedBranch", () => {
   it.each([
     "upgrade-node-24",
     "38-x",
+    "0000-x",
     "main2",
     "revert",
     "dependabot",
@@ -143,6 +145,7 @@ describe("issueNumberFromPrTitle", () => {
     "0043:Fix chatting",
     "0043: ",
     "[0043] Fix chatting",
+    "0000: Fix chatting",
   ])("returns null for %s, outside the pattern", (title) => {
     expect(issueNumberFromPrTitle(title)).toBeNull();
   });

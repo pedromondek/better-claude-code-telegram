@@ -20,7 +20,7 @@ while read -r old_value new_value ref_name; do
     *) continue ;;
   esac
 
-  node "$(dirname "$0")/../scripts/branch.mjs" check "${ref_name#refs/heads/}" >&2 || status=1
+  node "$(dirname "$0")/../scripts/require-node.cjs" >&2 && node "$(dirname "$0")/../scripts/branch.mjs" check "${ref_name#refs/heads/}" >&2 || status=1
 done
 
 exit "$status"
