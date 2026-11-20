@@ -27,17 +27,20 @@ describe("scripts/delete-pull-request-cache.mjs", () => {
   });
 
   it("refuses a missing or malformed pull request number without deleting anything", () => {
-    for (const env of [
-      {},
-      { PR_NUMBER: "" },
-      { PR_NUMBER: "0" },
-      { PR_NUMBER: "12/merge" },
+    for (const [env, shown] of [
+      [{}, ""],
+      [{ PR_NUMBER: "" }, ""],
+      [{ PR_NUMBER: "0" }, "0"],
+      [{ PR_NUMBER: "012" }, "012"],
+      [{ PR_NUMBER: "12/merge" }, "12/merge"],
     ]) {
       const { code, deleted, errors } = probe(env);
 
       expect(code).toBe(1);
       expect(deleted).toEqual([]);
-      expect(errors[0]).toContain("PR_NUMBER");
+      expect(errors).toEqual([
+        `✗ PR_NUMBER must be the number of a pull request, not "${shown}"`,
+      ]);
     }
   });
 

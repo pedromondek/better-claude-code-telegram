@@ -1,8 +1,12 @@
 import { execFileSync } from "node:child_process";
 
+import {
+  PULL_REQUEST_NUMBER,
+  invalidPullRequestNumber,
+} from "./pull-request.constants.mjs";
+
 const USAGE =
   "usage: npm run ci:cache:delete (the closed pull request in PR_NUMBER)";
-const PULL_REQUEST_NUMBER = /^[1-9]\d*$/u;
 
 export function run(args, { env, github, out, err }) {
   if (args.length > 0) {
@@ -13,7 +17,7 @@ export function run(args, { env, github, out, err }) {
   const number = env.PR_NUMBER ?? "";
 
   if (!PULL_REQUEST_NUMBER.test(number)) {
-    err(`✗ PR_NUMBER must be the number of a pull request, not "${number}"`);
+    err(`✗ ${invalidPullRequestNumber(number)}`);
     return 1;
   }
 
