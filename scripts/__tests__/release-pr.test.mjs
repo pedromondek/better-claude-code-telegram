@@ -245,7 +245,9 @@ describe("prepareRelease", () => {
     copyProject("0.1.0-alpha.1");
     const github = fakeGithub();
 
-    const { result, asked } = prepare("alpha", github);
+    const { result, asked } = prepare("alpha", github, {
+      released: sources(["0.1.0-alpha.1"]),
+    });
 
     expect(result).toEqual({
       version: "0.1.0-alpha.2",
@@ -298,7 +300,7 @@ describe("prepareRelease", () => {
     copyProject("0.1.0-alpha.1");
     const github = fakeGithub();
 
-    prepare("alpha", github);
+    prepare("alpha", github, { released: sources(["0.1.0-alpha.1"]) });
 
     const [, { headline, body }] = github.calls[1];
 
@@ -373,7 +375,9 @@ describe("prepareRelease", () => {
     copyProject("0.1.0-alpha.1");
     const github = fakeGithub({ refs: ["heads/release/v0.1.0-alpha.2"] });
 
-    expect(() => prepare("alpha", github)).toThrow(
+    expect(() =>
+      prepare("alpha", github, { released: sources(["0.1.0-alpha.1"]) }),
+    ).toThrow(
       "the branch release/v0.1.0-alpha.2 already exists: the version pull request opens once, so write its notes with /release-notes, or close it and delete the branch to prepare it again",
     );
     expect(github.calls).toEqual([]);
@@ -404,7 +408,9 @@ describe("prepareRelease", () => {
       copyProject("0.1.0-alpha.1");
       const github = fakeGithub({ failOn: step });
 
-      expect(() => prepare("alpha", github)).toThrow(`${step} failed`);
+      expect(() =>
+        prepare("alpha", github, { released: sources(["0.1.0-alpha.1"]) }),
+      ).toThrow(`${step} failed`);
       expect(github.calls.at(-1)).toEqual([
         "deleteBranch",
         "release/v0.1.0-alpha.2",
@@ -416,7 +422,9 @@ describe("prepareRelease", () => {
     copyProject("0.1.0-alpha.1");
     const github = fakeGithub({ failOn: "createBranch" });
 
-    expect(() => prepare("alpha", github)).toThrow("createBranch failed");
+    expect(() =>
+      prepare("alpha", github, { released: sources(["0.1.0-alpha.1"]) }),
+    ).toThrow("createBranch failed");
     expect(github.calls.map(([name]) => name)).toEqual(["createBranch"]);
   });
 
