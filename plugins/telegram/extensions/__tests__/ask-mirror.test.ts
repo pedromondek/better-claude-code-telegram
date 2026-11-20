@@ -1432,6 +1432,15 @@ describe("typed answer to the question it replies to", () => {
 
     await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
 
+    const saved = JSON.parse(readFileSync(sentStateFile(), "utf8")) as {
+      awaitingOther: unknown[];
+      otherPrompts: { questionIndex: number }[];
+    };
+
+    expect(saved.awaitingOther).toEqual([0]);
+    expect(saved.otherPrompts.map((prompt) => prompt.questionIndex)).toEqual([
+      0,
+    ]);
     expect(
       await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
     ).toBe(true);
