@@ -15,14 +15,15 @@ use std::rc::Rc;
 use bcct::config::Visuals;
 use bcct::health::Screen;
 use bcct::install::{
-    Asker, ClaudeUndo, CommandsChoice, Declined, Failure, Install, Installed, Journal, Kept,
-    MARKETPLACE_NAME, MERMAID_UNINSTALL_COMMAND, Machine, PLUGIN_IDS, Parsed, PluginChoice, System,
-    TRANSCRIPTION_MODELS, Tool, TranscriptionChoice, VisualsPick, declined_report,
-    huggingface_cache_dir, installer_for, manual_uninstall_commands, parse_inbox_days,
-    parse_transcription_model, plugin_plan,
+    Asker, ClaudeUndo, CommandsChoice, Declined, Failure, Install, Installed, Installer, Journal,
+    Kept, MARKETPLACE_NAME, MERMAID_UNINSTALL_COMMAND, Machine, PLUGIN_IDS, Parsed, PluginChoice,
+    System, TRANSCRIPTION_MODELS, Tool, TranscriptionChoice, VenvLayout, VisualsPick,
+    declined_report, huggingface_cache_dir, installer_for, installer_in, manual_uninstall_commands,
+    parse_inbox_days, parse_transcription_model, plugin_plan, python_env_failed_in, python_program,
+    uv_venv_args, venv_layout, whisper_python_in,
 };
 use bcct::journal::ChangeKind;
-use bcct::js::format_number;
+use bcct::js::{PathFlavor, format_number};
 use bcct::locale::Locale;
 use bcct::messages::{Messages, messages_for};
 use bcct::setup::git_version_from;
@@ -769,6 +770,147 @@ fn picks_the_installer_of_each_tool_like_the_js() {
 
         assert_eq!(found, case["installer"], "{case}");
     }
+}
+
+#[test]
+fn picks_the_powershell_installer_of_each_tool_on_windows() {
+    let home = Path::new("C:\\Users\\dev");
+
+    assert_eq!(
+        [Tool::Claude, Tool::Bun, Tool::Uv].map(|tool| installer_in(PathFlavor::Win32, tool, home)),
+        [
+            Installer {
+                command: "& ([scriptblock]::Create((irm https://claude.ai/install.ps1))) 2.1.303"
+                    .to_owned(),
+                bin_dir: PathBuf::from("C:\\Users\\dev\\.local\\bin"),
+            },
+            Installer {
+                command:
+                    "& ([scriptblock]::Create((irm https://bun.com/install.ps1))) -Version 1.4.3"
+                        .to_owned(),
+                bin_dir: PathBuf::from("C:\\Users\\dev\\.bun\\bin"),
+            },
+            Installer {
+                command: "irm https://astral.sh/uv/0.13.1/install.ps1 | iex".to_owned(),
+                bin_dir: PathBuf::from("C:\\Users\\dev\\.local\\bin"),
+            },
+        ]
+    );
+    assert_eq!(
+        installer_in(PathFlavor::Posix, Tool::Uv, Path::new("/h")),
+        installer_for(Tool::Uv, Path::new("/h"))
+    );
+}
+
+#[test]
+fn runs_the_installer_in_powershell_on_windows_and_returns_its_exit_code() {
+    let root = sandbox();
+    let bin = root.path().join("bin");
+    let empty = root.path().join("empty");
+    let powershell = bin.join("powershell");
+    std::fs::create_dir_all(&bin).unwrap();
+    std::fs::create_dir_all(&empty).unwrap();
+    std::fs::write(
+        &powershell,
+        "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"${0%/*}/arguments\"\nexit 7\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(
+        &powershell,
+        std::os::unix::fs::PermissionsExt::from_mode(0o755),
+    )
+    .unwrap();
+    let path_to = |folder: &Path| {
+        System::new(vec![(
+            OsString::from("PATH"),
+            folder.as_os_str().to_owned(),
+        )])
+    };
+    let command = "irm https://astral.sh/uv/0.13.1/install.ps1 | iex";
+
+    assert_eq!(
+        path_to(&bin).run_installer_in(PathFlavor::Win32, command),
+        Some(7)
+    );
+    assert_eq!(
+        std::fs::read_to_string(bin.join("arguments")).unwrap(),
+        format!("-NoProfile\n-ExecutionPolicy\nByPass\n-Command\n{command}\n")
+    );
+    assert_eq!(
+        path_to(&empty).run_installer_in(PathFlavor::Win32, command),
+        None
+    );
+}
+
+#[test]
+fn finds_the_whisper_python_of_each_platform_like_the_channel() {
+    let cases: Vec<Value> = serde_json::from_str(include_str!(
+        "../../../../plugins/telegram/extensions/__tests__/fixtures/whisper-python.json"
+    ))
+    .unwrap();
+
+    assert_eq!(cases.len(), 3);
+
+    for case in &cases {
+        let flavor = if text(case, "platform") == "win32" {
+            PathFlavor::Win32
+        } else {
+            PathFlavor::Posix
+        };
+
+        assert_eq!(
+            whisper_python_in(flavor, text(case, "appDir")),
+            text(case, "python"),
+            "{case}"
+        );
+    }
+}
+
+#[test]
+fn installs_whisper_with_the_pip_of_the_venv_of_each_platform() {
+    assert_eq!(
+        venv_layout(PathFlavor::Posix),
+        VenvLayout {
+            python: "bin/python",
+            pip: "bin/pip",
+        }
+    );
+    assert_eq!(
+        venv_layout(PathFlavor::Win32),
+        VenvLayout {
+            python: "Scripts/python.exe",
+            pip: "Scripts/pip.exe",
+        }
+    );
+}
+
+#[test]
+fn creates_the_whisper_venv_with_the_python_of_each_platform() {
+    assert_eq!(
+        [PathFlavor::Posix, PathFlavor::Win32].map(python_program),
+        ["python3", "py"]
+    );
+    assert_eq!(
+        uv_venv_args(PathFlavor::Posix, "/h/venv"),
+        ["venv", "/h/venv", "--python", "python3", "--clear", "-q"]
+    );
+    assert_eq!(
+        uv_venv_args(PathFlavor::Win32, "C:\\h\\venv"),
+        ["venv", "C:\\h\\venv", "--clear", "-q"]
+    );
+}
+
+#[test]
+fn hints_the_python_installers_of_each_platform_when_the_venv_fails() {
+    let messages = messages_for(Locale::EnUs);
+
+    assert_eq!(
+        [PathFlavor::Posix, PathFlavor::Win32].map(|flavor| python_env_failed_in(flavor, messages)),
+        [
+            "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+            "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\")\n  • Python from python.org, which brings the py launcher (https://www.python.org/downloads/)",
+        ]
+    );
 }
 
 #[test]

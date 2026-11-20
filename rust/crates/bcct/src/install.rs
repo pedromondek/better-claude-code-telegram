@@ -14,7 +14,8 @@ use crate::files::{FileFailure, create_private_dir, write_private};
 use crate::health::Screen;
 use crate::journal::{ChangeKind, link_target};
 use crate::js::{
-    format_number, join_path, js_number, js_template, js_trim, js_truthy, stringify_pretty,
+    HOST_PATH_FLAVOR, PathFlavor, format_number, join_in, join_path, js_number, js_template,
+    js_trim, js_truthy, stringify_pretty,
 };
 use crate::locale::Locale;
 use crate::messages::Messages;
@@ -28,6 +29,34 @@ use crate::setup_files::{current_inbox_days, review_name, templated_days, visual
 use crate::shell_rc::{rc_files_without_shell_line, source_line};
 use crate::spinner::{Pending, pending};
 use crate::ui::{bold, info, note, skipped, success, warn};
+
+#[macro_export]
+macro_rules! uv_posix_install_command {
+    () => {
+        "curl -LsSf https://astral.sh/uv/install.sh | sh"
+    };
+}
+
+#[macro_export]
+macro_rules! uv_windows_install_command {
+    () => {
+        "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+    };
+}
+
+#[macro_export]
+macro_rules! python_venv_apt_command {
+    () => {
+        "sudo apt install python3-venv"
+    };
+}
+
+#[macro_export]
+macro_rules! python_windows_download_url {
+    () => {
+        "https://www.python.org/downloads/"
+    };
+}
 
 #[macro_export]
 macro_rules! faster_whisper_version {
@@ -69,8 +98,25 @@ const STABLE_REF: &str = "stable";
 const STDIN_SCRIPT: &str = "-";
 const WHISPER_FOLDER: &str = "whisper";
 const VENV_FOLDER: &str = "whisper/venv";
-const VENV_PYTHON: &str = "bin/python";
-const VENV_PIP: &str = "bin/pip";
+const POSIX_VENV: VenvLayout = VenvLayout {
+    python: "bin/python",
+    pip: "bin/pip",
+};
+const WINDOWS_VENV: VenvLayout = VenvLayout {
+    python: "Scripts/python.exe",
+    pip: "Scripts/pip.exe",
+};
+const POSIX_PYTHON: &str = "python3";
+const WINDOWS_PYTHON: &str = "py";
+const POSIX_UV_PYTHON: [&str; 2] = ["--python", POSIX_PYTHON];
+const POSIX_INSTALLER_SHELL: InstallerShell = InstallerShell {
+    program: "sh",
+    args: &["-c"],
+};
+const WINDOWS_INSTALLER_SHELL: InstallerShell = InstallerShell {
+    program: "powershell",
+    args: &["-NoProfile", "-ExecutionPolicy", "ByPass", "-Command"],
+};
 const MODEL_PREFIX: &str = "models--Systran--faster-whisper-";
 const SCOPE: [&str; 2] = ["--scope", "user"];
 const PATH_VARIABLE: &str = "PATH";
@@ -109,27 +155,122 @@ pub struct Installer {
     pub bin_dir: PathBuf,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct InstallerShell {
+    program: &'static str,
+    args: &'static [&'static str],
+}
+
+const fn installer_shell(flavor: PathFlavor) -> InstallerShell {
+    match flavor {
+        PathFlavor::Posix => POSIX_INSTALLER_SHELL,
+        PathFlavor::Win32 => WINDOWS_INSTALLER_SHELL,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VenvLayout {
+    pub python: &'static str,
+    pub pip: &'static str,
+}
+
 #[must_use]
-pub fn installer_for(tool: Tool, home: &Path) -> Installer {
-    let (command, bin_dir) = match tool {
-        Tool::Claude => (
-            format!("curl -fsSL https://claude.ai/install.sh | bash -s {CLAUDE_CODE_VERSION}"),
-            ".local/bin",
+pub const fn venv_layout(flavor: PathFlavor) -> VenvLayout {
+    match flavor {
+        PathFlavor::Posix => POSIX_VENV,
+        PathFlavor::Win32 => WINDOWS_VENV,
+    }
+}
+
+#[must_use]
+pub const fn python_program(flavor: PathFlavor) -> &'static str {
+    match flavor {
+        PathFlavor::Posix => POSIX_PYTHON,
+        PathFlavor::Win32 => WINDOWS_PYTHON,
+    }
+}
+
+#[must_use]
+pub const fn python_env_failed_in(flavor: PathFlavor, messages: &Messages) -> &'static str {
+    match flavor {
+        PathFlavor::Posix => messages.python_env_failed.posix,
+        PathFlavor::Win32 => messages.python_env_failed.windows,
+    }
+}
+
+#[must_use]
+pub fn uv_venv_args(flavor: PathFlavor, venv: &str) -> Vec<&str> {
+    let request: &[&str] = match flavor {
+        PathFlavor::Posix => &POSIX_UV_PYTHON,
+        PathFlavor::Win32 => &[],
+    };
+
+    ["venv", venv]
+        .into_iter()
+        .chain(request.iter().copied())
+        .chain(["--clear", "-q"])
+        .collect()
+}
+
+#[must_use]
+pub fn whisper_python_in(flavor: PathFlavor, app_dir: &str) -> String {
+    join_in(
+        flavor,
+        &join_in(flavor, app_dir, VENV_FOLDER),
+        venv_layout(flavor).python,
+    )
+}
+
+#[must_use]
+pub fn whisper_python(app_dir: &Path) -> PathBuf {
+    PathBuf::from(whisper_python_in(
+        HOST_PATH_FLAVOR,
+        &app_dir.to_string_lossy(),
+    ))
+}
+
+fn posix_installer(tool: Tool) -> String {
+    match tool {
+        Tool::Claude => {
+            format!("curl -fsSL https://claude.ai/install.sh | bash -s {CLAUDE_CODE_VERSION}")
+        }
+        Tool::Bun => format!("curl -fsSL https://bun.sh/install | bash -s \"bun-v{BUN_VERSION}\""),
+        Tool::Uv => format!("curl -LsSf https://astral.sh/uv/{UV_VERSION}/install.sh | sh"),
+    }
+}
+
+fn windows_installer(tool: Tool) -> String {
+    match tool {
+        Tool::Claude => format!(
+            "& ([scriptblock]::Create((irm https://claude.ai/install.ps1))) {CLAUDE_CODE_VERSION}"
         ),
-        Tool::Bun => (
-            format!("curl -fsSL https://bun.sh/install | bash -s \"bun-v{BUN_VERSION}\""),
-            ".bun/bin",
+        Tool::Bun => format!(
+            "& ([scriptblock]::Create((irm https://bun.com/install.ps1))) -Version {BUN_VERSION}"
         ),
-        Tool::Uv => (
-            format!("curl -LsSf https://astral.sh/uv/{UV_VERSION}/install.sh | sh"),
-            ".local/bin",
-        ),
+        Tool::Uv => format!("irm https://astral.sh/uv/{UV_VERSION}/install.ps1 | iex"),
+    }
+}
+
+#[must_use]
+pub fn installer_in(flavor: PathFlavor, tool: Tool, home: &Path) -> Installer {
+    let command = match flavor {
+        PathFlavor::Posix => posix_installer(tool),
+        PathFlavor::Win32 => windows_installer(tool),
+    };
+    let bin_dir = match tool {
+        Tool::Claude | Tool::Uv => ".local/bin",
+        Tool::Bun => ".bun/bin",
     };
 
     Installer {
         command,
-        bin_dir: join_path(home, bin_dir),
+        bin_dir: PathBuf::from(join_in(flavor, &home.to_string_lossy(), bin_dir)),
     }
+}
+
+#[must_use]
+pub fn installer_for(tool: Tool, home: &Path) -> Installer {
+    installer_in(HOST_PATH_FLAVOR, tool, home)
 }
 
 #[must_use]
@@ -568,8 +709,16 @@ impl System {
 
     #[must_use]
     pub fn run_installer(&self, command: &str) -> Option<i32> {
-        self.command("sh")
-            .args(["-c", command])
+        self.run_installer_in(HOST_PATH_FLAVOR, command)
+    }
+
+    #[must_use]
+    pub fn run_installer_in(&self, flavor: PathFlavor, command: &str) -> Option<i32> {
+        let shell = installer_shell(flavor);
+
+        self.command(shell.program)
+            .args(shell.args)
+            .arg(command)
             .status()
             .ok()
             .and_then(|status| status.code())
@@ -631,10 +780,6 @@ fn model_dir(hf_cache: &Path, model: &str) -> PathBuf {
 
 fn model_installed(hf_cache: &Path, model: &str) -> bool {
     model_dir(hf_cache, model).exists()
-}
-
-fn whisper_python(app_dir: &Path) -> PathBuf {
-    join_path(&join_path(app_dir, VENV_FOLDER), VENV_PYTHON)
 }
 
 fn saved_quiet_hours(value: Option<&Value>) -> String {
@@ -1464,16 +1609,18 @@ impl<'r, 's, E> Install<'r, 's, E> {
     fn create_whisper_env(&mut self, venv: &Path) -> Result<PathBuf, Failure<E>> {
         let messages = self.messages;
         let system = self.machine.system;
-        let python = join_path(venv, VENV_PYTHON);
+        let layout = venv_layout(HOST_PATH_FLAVOR);
+        let python = join_path(venv, layout.python);
         let venv_text = venv.to_string_lossy();
         let python_text = python.to_string_lossy();
+        let python_command = python_program(HOST_PATH_FLAVOR);
 
         if system.has_command("uv") {
             self.while_pending(messages.whisper_env_creating, |_| {
                 system
                     .run_or_fail(
                         "uv",
-                        &["venv", &venv_text, "--python", "python3", "--clear", "-q"],
+                        &uv_venv_args(HOST_PATH_FLAVOR, &venv_text),
                         "uv venv",
                         messages,
                     )
@@ -1493,10 +1640,12 @@ impl<'r, 's, E> Install<'r, 's, E> {
         }
 
         self.while_pending(messages.whisper_env_creating, |_| {
-            if system.quiet("python3", &["-m", "venv", &venv_text]) == Some(0) {
+            if system.quiet(python_command, &["-m", "venv", &venv_text]) == Some(0) {
                 Ok(((), None))
             } else {
-                Err(Failure::Failed(messages.python_env_failed.to_owned()))
+                Err(Failure::Failed(
+                    python_env_failed_in(HOST_PATH_FLAVOR, messages).to_owned(),
+                ))
             }
         })?;
         self.while_pending(messages.whisper_installing, |_| {
@@ -1504,7 +1653,7 @@ impl<'r, 's, E> Install<'r, 's, E> {
             args.extend(WHISPER_PACKAGES);
             system
                 .run_or_fail(
-                    join_path(venv, VENV_PIP),
+                    join_path(venv, layout.pip),
                     &args,
                     messages.install_whisper,
                     messages,
@@ -1544,7 +1693,9 @@ impl<'r, 's, E> Install<'r, 's, E> {
             return self.say_last(&line);
         }
 
-        if !reuse && !system.has_command("uv") && !system.has_command("python3") {
+        let python_command = python_program(HOST_PATH_FLAVOR);
+
+        if !reuse && !system.has_command("uv") && !system.has_command(python_command) {
             self.ensure_requirements(&[Tool::Uv])?;
         }
 
