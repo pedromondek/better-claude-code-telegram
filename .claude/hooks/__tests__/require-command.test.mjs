@@ -169,6 +169,26 @@ describe(
         "git status & git push",
         "git push 2>&1 | tail -5",
         "GIT_AUTHOR_NAME=x git push",
+        "(cd /repo && git push)",
+        "(git push)",
+        "{ git push; }",
+        "if true; then git push; fi",
+        "if git push; then echo ok; fi",
+        "while git push; do sleep 1; done",
+        "! git push",
+        "timeout 120 git push",
+        "timeout -s KILL 120 git push",
+        "nohup git push",
+        "time git push",
+        "command git push",
+        "exec git push",
+        "sudo git push",
+        "xargs git push",
+        "env FOO=1 nohup git push",
+        "/usr/bin/git push",
+        "npm --silent run commit",
+        "npm run fixup:fuse -- -h",
+        "git commit -m -h",
       ];
 
       expect(await verdictsOf(commands)).toEqual(all("deny", commands));
@@ -190,6 +210,14 @@ describe(
         "git log --oneline 2>&1 | head -5",
         "npm run lint",
         "npm test",
+        "npm --silent run lint",
+        "git push --help",
+        "git commit -h",
+        "gh pr create --help",
+        "gh pr new -h",
+        "command -v git",
+        "timeout 5 git status",
+        "(git status)",
       ];
 
       expect(await verdictsOf(commands)).toEqual(all("silent", commands));
@@ -374,6 +402,10 @@ describe(
         "cd /repo && gh pr create --fill",
         "GH_TOKEN=x gh pr create --fill",
         "gh pr create --fill 2>&1 | tail -5",
+        "gh pr new --fill",
+        "gh pr create --fill --help",
+        "(gh pr create --fill)",
+        "timeout 60 gh pr create --fill",
       ];
 
       expect(await verdictsOf(commands)).toEqual(all("deny-pre-pr", commands));
