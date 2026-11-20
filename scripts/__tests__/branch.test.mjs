@@ -9,11 +9,17 @@ import {
   run,
 } from "../branch.mjs";
 
-function fakeGh(issue, openSubIssues = [], newIssue = 57) {
+function fakeGh(issue, openSubIssues = [], newIssue = 57, pullRequest = null) {
   const calls = [];
 
   return {
     calls,
+    viewPullRequest: (number) => {
+      calls.push(["viewPullRequest", number]);
+      if (pullRequest === null) throw new Error("pull request not found");
+
+      return pullRequest;
+    },
     createIssue: (title) => {
       calls.push(["create", title]);
 
@@ -255,6 +261,46 @@ describe("run", () => {
       run(["pr", "Fix chatting", "0043-fix-chatting"], { ...bad, gh }),
     ).toBe(1);
     expect(bad.out.join("\n")).toContain("0043: <title of the issue>");
+    expect(gh.calls).toEqual([]);
+  });
+
+  it("pr with a number checks the current title and head branch read from GitHub", () => {
+    const ok = io();
+    const bad = io();
+    const good = fakeGh(null, [], 57, {
+      title: "0043: Fix chatting",
+      headRefName: "0043-fix-chatting",
+    });
+    const edited = fakeGh(null, [], 57, {
+      title: "Fix chatting",
+      headRefName: "0043-fix-chatting",
+    });
+
+    expect(run(["pr", "#12"], { ...ok, gh: good })).toBe(0);
+    expect(ok.out).toEqual([]);
+    expect(good.calls).toEqual([["viewPullRequest", 12]]);
+    expect(run(["pr", "0012"], { ...bad, gh: edited })).toBe(1);
+    expect(bad.out.join("\n")).toContain(
+      'Pull request title "Fix chatting" does not start with the key',
+    );
+    expect(edited.calls).toEqual([["viewPullRequest", 12]]);
+  });
+
+  it("pr with a number exits 1 with the error when GitHub does not return the pull request", () => {
+    const out = io();
+
+    expect(run(["pr", "12"], { ...out, gh: fakeGh(null) })).toBe(1);
+    expect(out.out).toEqual(["✗ pull request not found"]);
+  });
+
+  it("pr with one argument that is not a number shows the usage without calling GitHub", () => {
+    const out = io();
+    const gh = fakeGh(null);
+
+    expect(run(["pr", "Fix chatting"], { ...out, gh })).toBe(1);
+    expect(out.out.join("\n")).toContain(
+      "npm run branch -- pr <pull request number>",
+    );
     expect(gh.calls).toEqual([]);
   });
 
