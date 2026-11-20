@@ -29,6 +29,30 @@ const SKILL_SUBCOMMANDS = {
   update: "update",
   visuals: "setup",
 };
+const HEALTH_CHECK_LABELS = {
+  Claude: "claude",
+  Bun: "bun",
+  Git: "git",
+  Plugins: "plugins",
+  Launcher: "launcher",
+  Version: "binary and plugin versions",
+  Shell: "shell line",
+  Path: "bcct on PATH",
+  AppDir: "app folder",
+  Hooks: "hook warnings",
+  Token: "bot token",
+  Groups: "bot kept out of groups",
+  Pairing: "pairing",
+  Polling: "connection",
+  User: "not running as root",
+  Protection: "the deny rule",
+  Config: "settings",
+  Transcription: "transcription",
+  Mermaid: "diagrams",
+  Chromium: "Chromium",
+  Ffmpeg: "ffmpeg",
+  Statusline: "status line",
+};
 
 function skills() {
   return readdirSync(SKILLS_DIR).map((name) => {
@@ -217,6 +241,52 @@ describe("bcct skills", () => {
     expect(health?.text).toContain(
       'Only after "Choose groups", call AskUserQuestion again, `multiSelect: true`, header "Groups"',
     );
+  });
+
+  it("describes each health group by the checks the bcct runs in it, without a Node check", () => {
+    const health = skills().find(({ name }) => name === "health");
+    const source = readFileSync(join(RUST_SOURCE, "health.rs"), "utf8");
+    const body = /fn checks\(self\)[\s\S]*?\n {4}\}\n/u.exec(source)?.[0] ?? "";
+    const groups = [...body.matchAll(/Self::(\w+) => &\[([^\]]*)\]/gu)].map(
+      ([, group, checks]) => [
+        group.toLowerCase(),
+        [...checks.matchAll(/Check::(\w+)/gu)].map(([, check]) => check),
+      ],
+    );
+
+    expect(groups.map(([group]) => group)).toEqual([
+      "install",
+      "telegram",
+      "security",
+      "extras",
+    ]);
+    for (const [group, checks] of groups) {
+      const option =
+        new RegExp(`\`${group}\` \\(([^)]*)\\)`, "u").exec(
+          health?.text ?? "",
+        )?.[1] ?? "";
+
+      expect(option).not.toMatch(/\bNode\b/u);
+      for (const check of checks) {
+        expect(option).toContain(HEALTH_CHECK_LABELS[check]);
+      }
+    }
+  });
+
+  it("points the setup to every skill that changes a setting", () => {
+    const setup = skills().find(({ name }) => name === "setup");
+    const line =
+      /^- Everything else can be changed from here: .*$/mu.exec(
+        setup?.text ?? "",
+      )?.[0] ?? "";
+    const settings = Object.entries(SKILL_SUBCOMMANDS)
+      .filter(([, subcommand]) => subcommand === "setup")
+      .map(([name]) => `\`/bcct:${name}\``);
+
+    expect(settings).toContain("`/bcct:inbox`");
+    for (const command of settings) {
+      expect(line).toContain(command);
+    }
   });
 
   it("offers a delay per kind and saves it through --set delays, with 0 for right away", () => {
