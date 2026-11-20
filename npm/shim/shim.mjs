@@ -7,6 +7,7 @@ const LOCALE_VARIABLES = ["LC_ALL", "LC_MESSAGES", "LANG"];
 const LOCALES = ["en-us", "pt-br"];
 const YES = new Set(["y", "yes", "s", "sim"]);
 const NO = new Set(["n", "no", "não", "nao"]);
+const TOP_LEVEL_COMMANDS = new Set(["health", "uninstall"]);
 
 const MESSAGES = {
   "en-us": {
@@ -28,6 +29,8 @@ const MESSAGES = {
     mismatch: (asset, expected, actual) =>
       `✗ ${asset} does not match the hash in checksums.txt (expected ${expected}, got ${actual}); nothing was installed.`,
     downloadFailed: (url, reason) => `✗ Could not download ${url}: ${reason}`,
+    spawnFailed: (binary, reason) =>
+      `✗ Could not run ${binary}: ${reason}. If the temporary folder does not allow running programs (noexec), set TMPDIR to one that does.`,
   },
   "pt-br": {
     unsupported: (name) =>
@@ -49,6 +52,8 @@ const MESSAGES = {
       `✗ ${asset} não bate com o hash do checksums.txt (esperado ${expected}, veio ${actual}); nada foi instalado.`,
     downloadFailed: (url, reason) =>
       `✗ Não foi possível baixar ${url}: ${reason}`,
+    spawnFailed: (binary, reason) =>
+      `✗ Não foi possível executar ${binary}: ${reason}. Se a pasta temporária não permite executar programas (noexec), aponte o TMPDIR para uma que permita.`,
   },
 };
 
@@ -88,7 +93,7 @@ export function expectedHash(checksums, version, asset) {
 export function binaryCommand(args) {
   const download = args.includes(DOWNLOAD_FLAG);
   const rest = args.filter((arg) => arg !== DOWNLOAD_FLAG);
-  const command = rest[0] === "uninstall" ? rest : ["setup", ...rest];
+  const command = TOP_LEVEL_COMMANDS.has(rest[0]) ? rest : ["setup", ...rest];
 
   return { command, download };
 }
@@ -121,15 +126,36 @@ function sha256(bytes) {
 
 async function agreesToDownload(ask, question) {
   for (;;) {
-    const answer = (await ask(question)).trim().toLowerCase();
+    const answer = await ask(question).then(
+      (text) => text.trim().toLowerCase(),
+      () => null,
+    );
+
+    if (answer === null || NO.has(answer)) {
+      return false;
+    }
 
     if (YES.has(answer)) {
       return true;
     }
+  }
+}
 
-    if (NO.has(answer)) {
-      return false;
+export function runBinary({ spawnSync, signals }, binary, args) {
+  const ignoreInterrupt = () => {};
+
+  signals.on("SIGINT", ignoreInterrupt);
+
+  try {
+    const result = spawnSync(binary, args, { stdio: "inherit" });
+
+    if (result.error !== undefined) {
+      throw result.error;
     }
+
+    return result.status ?? 1;
+  } finally {
+    signals.off("SIGINT", ignoreInterrupt);
   }
 }
 
@@ -219,6 +245,15 @@ export async function run(args, deps) {
     }
 
     return deps.spawn(binary, command);
+  } catch (error) {
+    deps.err(
+      text.spawnFailed(
+        binary,
+        error instanceof Error ? error.message : String(error),
+      ),
+    );
+
+    return 1;
   } finally {
     deps.removeExecutable(binary);
   }

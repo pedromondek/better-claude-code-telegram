@@ -1,6 +1,9 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { COMMAND, PACKAGE, PLATFORMS } from "../shim/shim.constants.mjs";
@@ -11,9 +14,11 @@ import {
   platformOf,
   releaseUrl,
   run,
+  runBinary,
 } from "../shim/shim.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
+const SHIM = join(ROOT, "npm/shim/shim.mjs");
 const VERSION = "0.2.0";
 const BINARY = Buffer.from("bcct binary");
 const HASH = createHash("sha256").update(BINARY).digest("hex");
@@ -48,7 +53,9 @@ function deps({
   downloadError = null,
   isTTY = false,
   answers = [],
+  askError = null,
   codes = [0, 0],
+  spawnError = null,
 } = {}) {
   const calls = [];
   const out = [];
@@ -86,21 +93,30 @@ function deps({
         ask: async (question) => {
           asked.push(question);
 
+          if (askError !== null) {
+            throw askError;
+          }
+
           return answers.shift() ?? "";
         },
-        writeExecutable: (bytes) => {
+        writeExecutable: (bytes, name) => {
           calls.push([
             "writeExecutable",
             createHash("sha256").update(bytes).digest("hex"),
+            name,
           ]);
 
-          return "/tmp/bcct-shim/bcct";
+          return `/tmp/bcct-shim/${name}`;
         },
         removeExecutable: (path) => {
           calls.push(["removeExecutable", path]);
         },
         spawn: (binary, binaryArgs) => {
           calls.push(["spawn", binary, binaryArgs]);
+
+          if (spawnError !== null) {
+            throw spawnError;
+          }
 
           return codes.shift() ?? 0;
         },
@@ -178,6 +194,8 @@ describe("binaryCommand", () => {
     [["--set", "wait=4"], ["setup", "--set", "wait=4"], false],
     [["uninstall"], ["uninstall"], false],
     [["uninstall", "0.1.0"], ["uninstall", "0.1.0"], false],
+    [["health"], ["health"], false],
+    [["health", "--download-binary"], ["health"], true],
     [["--download-binary"], ["setup"], true],
     [["path", "--download-binary"], ["setup", "path"], true],
   ])("turns %j into the bcct command %j", (args, command, download) => {
@@ -231,7 +249,7 @@ describe("run", () => {
     expect(await shim.run()).toBe(0);
     expect(shim.calls).toEqual([
       ["readInstalled", "@pedromondek/better-claude-code-telegram-linux-x64"],
-      ["writeExecutable", HASH],
+      ["writeExecutable", HASH, "bcct"],
       [
         "spawn",
         "/tmp/bcct-shim/bcct",
@@ -346,7 +364,7 @@ describe("run", () => {
           "download",
           "https://github.com/pedromondek/better-claude-code-telegram/releases/download/v0.2.0/bcct-linux-x64",
         ],
-        ["writeExecutable", HASH],
+        ["writeExecutable", HASH, "bcct"],
         [
           "spawn",
           "/tmp/bcct-shim/bcct",
@@ -416,6 +434,44 @@ describe("run", () => {
       ]);
     });
 
+    it.each([
+      ["Ctrl+C", { LANG: "en_US.UTF-8" }],
+      ["Ctrl+D", {}],
+    ])(
+      "explains the other ways and exits 1 when %s aborts the question",
+      async (keys) => {
+        const shim = deps({
+          installed: null,
+          isTTY: true,
+          askError: Object.assign(new Error(`Aborted with ${keys}`), {
+            name: "AbortError",
+            code: "ABORT_ERR",
+          }),
+        });
+
+        expect(await shim.run()).toBe(1);
+        expect(shim.asked).toHaveLength(1);
+        expect(shim.err).toEqual([...missing, ...manual]);
+        expect(shim.calls.map(([name]) => name)).toEqual(["readInstalled"]);
+      },
+    );
+
+    it("explains the other ways in Portuguese when the question is aborted", async () => {
+      const shim = deps({
+        installed: null,
+        isTTY: true,
+        env: { LANG: "pt_BR.UTF-8" },
+        askError: new Error("Aborted with Ctrl+C"),
+      });
+
+      expect(await shim.run()).toBe(1);
+      expect(shim.err.slice(-3)).toEqual([
+        "  Para instalar: rode de novo sem --omit=optional, ou rode de novo com --download-binary,",
+        "  ou baixe https://github.com/pedromondek/better-claude-code-telegram/releases/download/v0.2.0/bcct-linux-x64,",
+        `  torne o arquivo executável e rode: <arquivo> self-install <arquivo> --sha256 ${HASH}`,
+      ]);
+    });
+
     it("refuses a download whose hash is not the one of checksums.txt", async () => {
       const shim = deps({
         installed: null,
@@ -447,14 +503,146 @@ describe("run", () => {
     });
   });
 
-  it("names the .exe of Windows", async () => {
+  it("writes and runs the bcct.exe of the win32 package on Windows", async () => {
     const shim = deps({ platform: "win32", arch: "arm64" });
 
-    await shim.run();
-
-    expect(shim.calls[0]).toEqual([
-      "readInstalled",
-      "@pedromondek/better-claude-code-telegram-win32-arm64",
+    expect(await shim.run()).toBe(0);
+    expect(shim.calls.slice(0, 2)).toEqual([
+      ["readInstalled", "@pedromondek/better-claude-code-telegram-win32-arm64"],
+      ["writeExecutable", HASH, "bcct.exe"],
+    ]);
+    expect(shim.calls.at(-2)).toEqual([
+      "spawn",
+      "/tmp/bcct-shim/bcct.exe",
+      ["setup"],
     ]);
   });
+
+  it("routes health to the bcct health command instead of a setup step", async () => {
+    const shim = deps({ args: ["health"] });
+
+    expect(await shim.run()).toBe(0);
+    expect(shim.calls.at(-2)).toEqual([
+      "spawn",
+      "/tmp/bcct-shim/bcct",
+      ["health"],
+    ]);
+  });
+
+  it.each([
+    [
+      "en-us",
+      {},
+      "✗ Could not run /tmp/bcct-shim/bcct: spawnSync /tmp/bcct-shim/bcct EACCES. If the temporary folder does not allow running programs (noexec), set TMPDIR to one that does.",
+    ],
+    [
+      "pt-br",
+      { LANG: "pt_BR.UTF-8" },
+      "✗ Não foi possível executar /tmp/bcct-shim/bcct: spawnSync /tmp/bcct-shim/bcct EACCES. Se a pasta temporária não permite executar programas (noexec), aponte o TMPDIR para uma que permita.",
+    ],
+  ])(
+    "explains in %s a binary the system refuses to run and still removes it",
+    async (_locale, env, line) => {
+      const shim = deps({
+        env,
+        spawnError: new Error("spawnSync /tmp/bcct-shim/bcct EACCES"),
+      });
+
+      expect(await shim.run()).toBe(1);
+      expect(shim.err).toEqual([line]);
+      expect(shim.calls.filter(([name]) => name === "spawn")).toHaveLength(1);
+      expect(shim.calls.at(-1)).toEqual([
+        "removeExecutable",
+        "/tmp/bcct-shim/bcct",
+      ]);
+    },
+  );
+
+  it("explains a spawn failure that is not an Error with its text", async () => {
+    const shim = deps({ spawnError: "EPERM" });
+
+    expect(await shim.run()).toBe(1);
+    expect(shim.err[0]).toMatch(
+      /^✗ Could not run \/tmp\/bcct-shim\/bcct: EPERM\./u,
+    );
+  });
+});
+
+describe("runBinary", () => {
+  function signals() {
+    return new EventEmitter();
+  }
+
+  it("ignores SIGINT only while the child runs and returns its exit code", () => {
+    const emitter = signals();
+    const seen = [];
+
+    const code = runBinary(
+      {
+        spawnSync: (binary, args, options) => {
+          seen.push([binary, args, options, emitter.listenerCount("SIGINT")]);
+
+          return { status: 5 };
+        },
+        signals: emitter,
+      },
+      "/tmp/bcct-shim/bcct",
+      ["setup"],
+    );
+
+    expect(code).toBe(5);
+    expect(seen).toEqual([
+      ["/tmp/bcct-shim/bcct", ["setup"], { stdio: "inherit" }, 1],
+    ]);
+    expect(emitter.listenerCount("SIGINT")).toBe(0);
+  });
+
+  it("returns 1 when the child ends by a signal without an exit code", () => {
+    const emitter = signals();
+
+    expect(
+      runBinary(
+        {
+          spawnSync: () => ({ status: null, signal: "SIGKILL" }),
+          signals: emitter,
+        },
+        "bcct",
+        [],
+      ),
+    ).toBe(1);
+  });
+
+  it("throws the error of a child that could not start and stops ignoring SIGINT", () => {
+    const emitter = signals();
+    const error = new Error("spawnSync bcct EACCES");
+
+    expect(() =>
+      runBinary(
+        { spawnSync: () => ({ status: null, error }), signals: emitter },
+        "bcct",
+        [],
+      ),
+    ).toThrow(error);
+    expect(emitter.listenerCount("SIGINT")).toBe(0);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "keeps the shim alive until the child ends when the terminal sends SIGINT",
+    () => {
+      const script = [
+        'import { spawnSync } from "node:child_process";',
+        `import { runBinary } from ${JSON.stringify(pathToFileURL(SHIM).href)};`,
+        'process.exitCode = runBinary({ spawnSync, signals: process }, "/bin/sh", ["-c", "kill -INT $PPID; sleep 0.2; exit 7"]);',
+      ].join("\n");
+
+      const result = spawnSync(
+        process.execPath,
+        ["--input-type=module", "-e", script],
+        { encoding: "utf8" },
+      );
+
+      expect(result.signal).toBeNull();
+      expect(result.status).toBe(7);
+    },
+  );
 });

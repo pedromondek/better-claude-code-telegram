@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 import { APP_FOLDER, CONFIG_FILE } from "../shim.constants.mjs";
-import { run } from "../shim.mjs";
+import { run, runBinary } from "../shim.mjs";
 
 const SHIM_DIR = join(import.meta.dirname, "..");
 const require = createRequire(import.meta.url);
@@ -85,12 +85,6 @@ function removeExecutable(file) {
   rmSync(dirname(file), { recursive: true, force: true });
 }
 
-function spawn(binary, args) {
-  const result = spawnSync(binary, args, { stdio: "inherit" });
-
-  return result.status ?? 1;
-}
-
 const { version } = JSON.parse(
   readFileSync(join(SHIM_DIR, "package.json"), "utf8"),
 );
@@ -108,7 +102,8 @@ process.exitCode = await run(process.argv.slice(2), {
   ask,
   writeExecutable,
   removeExecutable,
-  spawn,
+  spawn: (binary, args) =>
+    runBinary({ spawnSync, signals: process }, binary, args),
   out: (line) => console.log(line),
   err: (line) => console.error(line),
 });
