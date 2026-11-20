@@ -34,16 +34,19 @@ pub fn read_json(path: &Path) -> Option<Value> {
     parse_json(&String::from_utf8_lossy(&bytes))
 }
 
+#[cfg(unix)]
 fn private_dir_builder() -> fs::DirBuilder {
-    let mut builder = fs::DirBuilder::new();
+    use std::os::unix::fs::DirBuilderExt;
 
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::DirBuilderExt;
-        builder.mode(PRIVATE_DIR_MODE);
-    }
+    let mut builder = fs::DirBuilder::new();
+    builder.mode(PRIVATE_DIR_MODE);
 
     builder
+}
+
+#[cfg(not(unix))]
+fn private_dir_builder() -> fs::DirBuilder {
+    fs::DirBuilder::new()
 }
 
 pub fn create_private_dir(path: &Path) -> io::Result<()> {
