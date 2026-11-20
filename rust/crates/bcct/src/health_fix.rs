@@ -295,6 +295,16 @@ fn give_write_permission(folder: &Path) -> io::Result<()> {
     }
 }
 
+fn io_reason<'a>(path: &'a Path, messages: &'a Messages) -> impl Fn(io::Error) -> String + 'a {
+    move |error| match Reason::of(&Abort::Io {
+        kind: error.kind(),
+        path: path.to_path_buf(),
+    }) {
+        Reason::Busy => (messages.file_not_saved)(&path.to_string_lossy()),
+        reason => reason.text(messages).to_owned(),
+    }
+}
+
 pub fn apply(
     fix: &Fix,
     machine: &Machine<'_>,
@@ -312,14 +322,6 @@ pub fn apply(
         home: &home,
     };
     let refused = |error: crate::setup_files::ConfigError| error.message(messages);
-    let io_failed = |error: io::Error| {
-        Reason::of(&Abort::Io {
-            kind: error.kind(),
-            path: fix.target.clone(),
-        })
-        .text(messages)
-        .to_owned()
-    };
 
     match fix.id {
         FixId::Shell => {
@@ -328,7 +330,7 @@ pub fn apply(
 
             create_private_dir(&paths.app_dir)
                 .and_then(|()| write_private(&script, contents.as_bytes()))
-                .map_err(io_failed)?;
+                .map_err(io_reason(&script, messages))?;
             install_shell_function(
                 &home,
                 text_var(machine, "SHELL").as_deref(),
@@ -349,7 +351,7 @@ pub fn apply(
         )
         .map_err(refused),
         FixId::AppDir => {
-            give_write_permission(&fix.target).map_err(io_failed)?;
+            give_write_permission(&fix.target).map_err(io_reason(&fix.target, messages))?;
             clear_reason(&paths.app_dir, Reason::NoPermission);
             Ok(())
         }
