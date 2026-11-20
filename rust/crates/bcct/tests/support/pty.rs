@@ -85,11 +85,27 @@ fn unwritable_script(size: &str) -> String {
 #[cfg(target_os = "macos")]
 pub(crate) const JOB_SHELL: &str = "zsh";
 #[cfg(target_os = "macos")]
+pub(crate) const JOB_FLAGS: &[&str] = &["-f", "-i", "-c"];
+#[cfg(target_os = "macos")]
 pub(crate) const JOB_CONTROL: &str = "setopt monitor";
+#[cfg(target_os = "macos")]
+pub(crate) const STOPPED_STATUS: i32 = 146;
 #[cfg(not(target_os = "macos"))]
 pub(crate) const JOB_SHELL: &str = "bash";
 #[cfg(not(target_os = "macos"))]
+pub(crate) const JOB_FLAGS: &[&str] = &["-c"];
+#[cfg(not(target_os = "macos"))]
 pub(crate) const JOB_CONTROL: &str = "set -m";
+#[cfg(not(target_os = "macos"))]
+pub(crate) const STOPPED_STATUS: i32 = 148;
+
+pub(crate) fn job_argv(script: &str, program: &str) -> Vec<String> {
+    std::iter::once(JOB_SHELL)
+        .chain(JOB_FLAGS.iter().copied())
+        .chain([script, program])
+        .map(str::to_owned)
+        .collect()
+}
 
 fn process_tree(root: i32) -> String {
     let Ok(output) = Command::new("ps")

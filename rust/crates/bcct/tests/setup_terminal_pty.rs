@@ -428,11 +428,19 @@ fn without_job_notice(flow: &str) -> String {
         .get(after..)
         .and_then(|rest| rest.find(LINE_END))
         .map_or(flow.len(), |offset| after + offset + LINE_END.len());
+    let rest = flow.get(end..).unwrap_or_default();
+    let joint = if JOB_NOTICES
+        .iter()
+        .any(|notice| rest.starts_with(notice.trim_start_matches(LINE_END)))
+    {
+        LINE_END
+    } else {
+        ""
+    };
 
     without_job_notice(&format!(
-        "{}{}",
-        flow.get(..start).unwrap_or_default(),
-        flow.get(end..).unwrap_or_default()
+        "{}{joint}{rest}",
+        flow.get(..start).unwrap_or_default()
     ))
 }
 
@@ -452,20 +460,19 @@ fn drops_the_job_notices_that_bash_and_zsh_print() {
         ),
         "Q? ab\r\r\n"
     );
+    assert_eq!(
+        without_job_notice("Q? a\r\nzsh: suspended  \"$@\"\r\n[1]  + continued  \"$@\"\r\nb\r\r\n"),
+        "Q? ab\r\r\n"
+    );
 }
 
 #[test]
-fn ctrl_z_suspends_a_typed_question_and_fg_goes_on_asking_it() {
+fn suspends_a_typed_question_on_ctrl_z_and_goes_on_asking_it_after_fg() {
     let script = format!(
         "{}; \"$@\"; first=$?; fg > /dev/null; last=$?; echo \"statuses=$first $last\"",
         pty::JOB_CONTROL
     );
-    let mut argv = vec![
-        pty::JOB_SHELL.to_owned(),
-        "-c".to_owned(),
-        script,
-        "bcct".to_owned(),
-    ];
+    let mut argv = pty::job_argv(&script, "bcct");
 
     argv.extend(driver_argv());
 
@@ -493,7 +500,8 @@ fn ctrl_z_suspends_a_typed_question_and_fg_goes_on_asking_it() {
         json!({ "value": "ab" })
     );
     assert!(
-        String::from_utf8_lossy(&output).ends_with("statuses=148 0\r\n"),
+        String::from_utf8_lossy(&output)
+            .ends_with(&format!("statuses={} 0\r\n", pty::STOPPED_STATUS)),
         "{}",
         String::from_utf8_lossy(&output)
     );
