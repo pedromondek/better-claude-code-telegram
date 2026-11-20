@@ -2148,7 +2148,7 @@ fn ends_without_offering_to_undo_when_the_terminal_output_is_closed() {
 }
 
 #[test]
-fn ctrl_z_gives_the_terminal_back_while_stopped_and_fg_goes_on_asking() {
+fn gives_the_terminal_back_on_ctrl_z_and_goes_on_asking_after_fg() {
     let folder = support::sandbox();
     let root = folder.path();
 
@@ -2164,9 +2164,7 @@ fn ctrl_z_gives_the_terminal_back_while_stopped_and_fg_goes_on_asking() {
         "{}; printf '<<<'; \"$0\" setup delay; echo \"[stopped=$?]\"; echo \"[modes]\"; stty -a; echo \"[/modes]\"; fg; echo \"[exit=$?]\"",
         pty::JOB_CONTROL
     );
-    let argv: Vec<String> = [pty::JOB_SHELL, "-c", &script, BCCT]
-        .map(str::to_owned)
-        .to_vec();
+    let argv = pty::job_argv(&script, BCCT);
     let down = b"\x1b[B".to_vec();
     let steps = [
         pty::Step::Key(down.clone()),
@@ -2189,7 +2187,10 @@ fn ctrl_z_gives_the_terminal_back_while_stopped_and_fg_goes_on_asking() {
     .unwrap();
     let shown = String::from_utf8_lossy(&output).into_owned();
 
-    assert!(shown.contains("[stopped=148]"), "{shown}");
+    assert!(
+        shown.contains(&format!("[stopped={}]", pty::STOPPED_STATUS)),
+        "{shown}"
+    );
     assert_cooked(modes_between(&shown));
     assert!(shown.contains("[exit=0]"), "{shown}");
 
