@@ -1,6 +1,8 @@
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { isRecord } from "./config.ts";
+
 export type Step =
   { click: string } | { hover: string } | { wait: number } | { script: string };
 
@@ -60,6 +62,7 @@ const DEFAULT_FPS = 12;
 const MAX_VIDEO_SECONDS = 30;
 const MAX_FPS = 30;
 const NAME_PATTERN = /^[\w-]+$/;
+const GENERATED_SUFFIX = /^-(?:\d+|sheet(?:-\d+)?)$/;
 const URL_SCHEME = /^[a-z][a-z\d+.-]+:/i;
 const STEP_KINDS = ["click", "hover", "wait", "script"] as const;
 
@@ -67,12 +70,8 @@ function fail(message: string): never {
   throw new SpecError(message);
 }
 
-function isFields(value: unknown): value is Fields {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function fieldsAt(value: unknown, path: string): Fields {
-  return isFields(value) ? value : fail(`${path} must be an object`);
+  return isRecord(value) ? value : fail(`${path} must be an object`);
 }
 
 function textAt(value: unknown, path: string): string {
@@ -147,6 +146,12 @@ function booleanAt(value: unknown, path: string): boolean {
     : fail(`${path} must be true or false`);
 }
 
+function generates(name: string, other: string): boolean {
+  return (
+    name.startsWith(other) && GENERATED_SUFFIX.test(name.slice(other.length))
+  );
+}
+
 class NameRegistry {
   private readonly used = new Set<string>();
 
@@ -158,6 +163,12 @@ class NameRegistry {
     }
 
     if (this.used.has(name)) fail(`${path} repeats ${name}`);
+
+    const clash = [...this.used].find(
+      (used) => generates(name, used) || generates(used, name),
+    );
+
+    if (clash !== undefined) fail(`${path} repeats the files of ${clash}`);
 
     this.used.add(name);
 

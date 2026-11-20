@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import {
   CDP_TIMEOUT_MS,
   CHROMIUM_ARGS,
+  CLOSE_TIMEOUT_MS,
   cdpClient,
   inSeconds,
   launchBrowser,
@@ -288,8 +289,7 @@ describe("withTimeout", () => {
 describe("launchBrowser", () => {
   function launch(
     child: FakeChild,
-    timeoutMs = 1000,
-    commandTimeoutMs?: number,
+    options: Parameters<typeof launchBrowser>[1] = {},
   ): ReturnType<typeof launchBrowser> {
     return launchBrowser("/cache/chrome", {
       spawnProcess: (command, args) => {
@@ -298,9 +298,22 @@ describe("launchBrowser", () => {
         return child;
       },
       Socket: FakeSocket,
-      timeoutMs,
-      ...(commandTimeoutMs === undefined ? {} : { commandTimeoutMs }),
+      timeoutMs: 1000,
+      closeTimeoutMs: 20,
+      ...options,
     });
+  }
+
+  function exitOnBrowserClose(child: FakeChild): void {
+    FakeSocket.respond = ({ method }): Record<string, unknown> => {
+      if (method === "Browser.close") {
+        queueMicrotask(() => {
+          child.emit("exit", 0);
+        });
+      }
+
+      return { result: {} };
+    };
   }
 
   function profileOf(): string {
@@ -329,7 +342,7 @@ describe("launchBrowser", () => {
       "4321",
     );
 
-    opened.close();
+    await opened.close();
   });
 
   it("writes no pid file when the Chromium has no pid", async (): Promise<void> => {
@@ -342,14 +355,14 @@ describe("launchBrowser", () => {
 
     expect(existsSync(join(profileOf(), "chromium.pid"))).toBe(false);
 
-    opened.close();
+    await opened.close();
   });
 
   it("gives up a page command after the command time of the launch", async (): Promise<void> => {
     FakeSocket.respond = (): null => null;
 
     const child = fakeChild();
-    const browser = launch(child, 1000, 10);
+    const browser = launch(child, { commandTimeoutMs: 10 });
 
     child.stderr.write("DevTools listening on ws://h/b\n");
 
@@ -359,7 +372,7 @@ describe("launchBrowser", () => {
       "Target.createTarget: no answer in 0.01 s",
     );
 
-    opened.close();
+    await opened.close();
   });
 
   let launched: string[][] = [];
@@ -399,7 +412,7 @@ describe("launchBrowser", () => {
       true,
     );
 
-    opened.close();
+    await opened.close();
 
     expect(FakeSocket.last?.closed).toBe(true);
     expect(child.kill).toHaveBeenCalledTimes(1);
@@ -524,11 +537,109 @@ describe("launchBrowser", () => {
 
     expect(basename(profile).startsWith("bcct-capture-")).toBe(true);
 
-    opened.close();
+    await opened.close();
+    await expect(opened.close()).resolves.toBeUndefined();
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    expect(
+      FakeSocket.last?.sent.filter(({ method }) => method === "Browser.close"),
+    ).toHaveLength(1);
+  });
 
-    expect(() => {
-      opened.close();
-    }).not.toThrow();
+  it("closes the Chromium through Browser.close and removes the profile once it exits", async (): Promise<void> => {
+    const child = fakeChild();
+    const browser = launch(child, { closeTimeoutMs: 5000 });
+
+    child.stderr.write("DevTools listening on ws://h/b\n");
+
+    const opened = await browser;
+
+    exitOnBrowserClose(child);
+    await opened.close();
+
+    expect(FakeSocket.last?.sent.map(({ method }) => method)).toEqual([
+      "Browser.close",
+    ]);
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(FakeSocket.last?.closed).toBe(true);
+    expect(existsSync(profileOf())).toBe(false);
+  });
+
+  it("waits for the exit of the Chromium when Browser.close answers an error", async (): Promise<void> => {
+    const child = fakeChild();
+    const browser = launch(child, { closeTimeoutMs: 5000 });
+
+    child.stderr.write("DevTools listening on ws://h/b\n");
+
+    const opened = await browser;
+
+    FakeSocket.respond = (): Record<string, unknown> => {
+      queueMicrotask(() => {
+        child.emit("exit", 0);
+      });
+
+      return { error: { message: "Browser.close is not allowed" } };
+    };
+    await opened.close();
+
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(existsSync(profileOf())).toBe(false);
+  });
+
+  it("kills the Chromium that does not exit within the close time", async (): Promise<void> => {
+    const child = fakeChild();
+    const browser = launch(child, { closeTimeoutMs: 10 });
+
+    child.stderr.write("DevTools listening on ws://h/b\n");
+
+    const opened = await browser;
+
+    await opened.close();
+
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    expect(FakeSocket.last?.closed).toBe(true);
+    expect(existsSync(profileOf())).toBe(false);
+  });
+
+  it("waits 5 s for the Chromium to close", (): void => {
+    expect(CLOSE_TIMEOUT_MS).toBe(5000);
+  });
+
+  it("stops the Chromium and removes its profile when the launch is aborted", async (): Promise<void> => {
+    const child = fakeChild();
+    const launching = new AbortController();
+
+    child.kill.mockImplementation((): boolean => {
+      child.emit("exit", null);
+
+      return true;
+    });
+
+    const browser = launch(child, { signal: launching.signal });
+
+    launching.abort();
+
+    expect(child.kill).toHaveBeenCalled();
+    expect(existsSync(profileOf())).toBe(false);
+    await expect(browser).rejects.toThrow(
+      "Chromium stopped before opening its DevTools address",
+    );
+  });
+
+  it("leaves the Chromium running when the abort comes after the launch", async (): Promise<void> => {
+    const child = fakeChild();
+    const launching = new AbortController();
+    const browser = launch(child, { signal: launching.signal });
+
+    child.stderr.write("DevTools listening on ws://h/b\n");
+
+    const opened = await browser;
+
+    launching.abort();
+
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(existsSync(profileOf())).toBe(true);
+
+    await opened.close();
   });
 
   it("fails and stops the Chromium when it cannot start", async (): Promise<void> => {
@@ -544,7 +655,7 @@ describe("launchBrowser", () => {
   it("fails and stops the Chromium when the address takes too long", async (): Promise<void> => {
     const child = fakeChild();
 
-    await expect(launch(child, 10)).rejects.toThrow(
+    await expect(launch(child, { timeoutMs: 10 })).rejects.toThrow(
       "Chromium took more than 10 ms to open its DevTools address",
     );
     expect(child.kill).toHaveBeenCalledTimes(1);
@@ -590,9 +701,10 @@ describe("launchBrowser › default process", () => {
     const browser = await launchBrowser(chromium, {
       Socket: FakeSocket,
       timeoutMs: 5000,
+      closeTimeoutMs: 10,
     });
 
     expect(FakeSocket.last?.url).toBe("ws://h/b");
-    browser.close();
+    await browser.close();
   });
 });

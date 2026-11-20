@@ -43,7 +43,10 @@ interface CaptureOptions {
   chromium?: () => string | null;
   hasFfmpeg?: () => boolean;
   runFfmpeg?: (args: string[]) => number | null;
-  launch?: (chromium: string) => Promise<Browser>;
+  launch?: (
+    chromium: string,
+    options: { signal: AbortSignal },
+  ) => Promise<Browser>;
   cleanTemp?: () => unknown;
   signals?: SignalSource;
   exit?: (code: number) => void;
@@ -174,11 +177,15 @@ export async function capturePage(
   }
 
   let browser: Browser | null = null;
+  const launching = new AbortController();
   const stops = (Object.keys(SIGNAL_EXIT_CODES) as StopSignal[]).map(
     (signal) => {
-      const stop = (): void => {
-        browser?.close();
+      const exitWithSignal = (): void => {
         exit(SIGNAL_EXIT_CODES[signal]);
+      };
+      const stop = (): void => {
+        launching.abort();
+        Promise.resolve(browser?.close()).then(exitWithSignal, exitWithSignal);
       };
 
       signals.once(signal, stop);
@@ -190,7 +197,7 @@ export async function capturePage(
   try {
     cleanTemp();
     mkdirSync(spec.out, { recursive: true });
-    browser = await launch(executable);
+    browser = await launch(executable, { signal: launching.signal });
     await captureAll(await browser.newPage(), spec, runFfmpeg, out);
 
     return 0;
@@ -203,7 +210,7 @@ export async function capturePage(
 
     return 1;
   } finally {
-    browser?.close();
+    await browser?.close();
 
     for (const release of stops) release();
   }

@@ -2,10 +2,12 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CdpPage } from "../cdp.ts";
 import {
   areaOfShot,
+  BLANK_URL,
   captureShot,
   CLIP_MARGIN_PX,
   evaluate,
@@ -44,12 +46,47 @@ const SHOT: Shot = {
 };
 const VIEWPORT = { width: 1280, height: 800, scale: 2 };
 
+function documentOf(url: string): string {
+  return url.split("#")[0];
+}
+
+function sameDocumentPage(): CdpPage & { navigated: string[] } {
+  const navigated: string[] = [];
+  let fireLoad: (() => void) | null = null;
+
+  return {
+    navigated,
+    send: (method, params): Promise<Record<string, unknown>> => {
+      if (method === "Page.navigate") {
+        const url = String(params?.url);
+        const current = navigated.at(-1) ?? BLANK_URL;
+        const sameDocument =
+          url.includes("#") && documentOf(url) === documentOf(current);
+
+        navigated.push(url);
+
+        if (!sameDocument) fireLoad?.();
+      }
+
+      return Promise.resolve({});
+    },
+    once: (): Promise<Record<string, unknown>> =>
+      new Promise((resolve) => {
+        fireLoad = (): void => resolve({});
+      }),
+  };
+}
+
 describe("page-actions › constants", () => {
   it("draws the outline in red #e11d48, 4 px wide and 4 px away, and splits parts at 2560 px", (): void => {
     expect(OUTLINE).toEqual({ color: "#e11d48", width: 4, offset: 4 });
     expect(CLIP_MARGIN_PX).toBe(16);
     expect(PART_MAX_HEIGHT_PX).toBe(2560);
     expect(JPEG_QUALITY).toBe(90);
+  });
+
+  it("opens the blank page between shots", (): void => {
+    expect(BLANK_URL).toBe("about:blank");
   });
 });
 
@@ -102,6 +139,8 @@ describe("openShot", () => {
       "Emulation.setDeviceMetricsOverride",
       "once Page.loadEventFired",
       "Page.navigate",
+      "once Page.loadEventFired",
+      "Page.navigate",
       "Runtime.evaluate",
       "Runtime.evaluate",
     ]);
@@ -111,7 +150,8 @@ describe("openShot", () => {
       deviceScaleFactor: 2,
       mobile: false,
     });
-    expect(page.calls[3][1]).toEqual({ url: "http://localhost:3000/" });
+    expect(page.calls[3][1]).toEqual({ url: BLANK_URL });
+    expect(page.calls[5][1]).toEqual({ url: "http://localhost:3000/" });
     expect(page.evaluated()).toEqual([
       pageCall(fontsReady),
       pageCall(addStyle, ".a { color: red }"),
@@ -127,8 +167,8 @@ describe("openShot", () => {
   });
 
   it("throws the URL and the error of a navigation that failed", async (): Promise<void> => {
-    const page = fakePage((method) =>
-      method === "Page.navigate"
+    const page = fakePage((method, params) =>
+      method === "Page.navigate" && params.url === SHOT.url
         ? { errorText: "net::ERR_CONNECTION_REFUSED" }
         : {},
     );
@@ -139,19 +179,54 @@ describe("openShot", () => {
   });
 
   it("gives up a page that never finishes loading", async (): Promise<void> => {
+    let loads = 0;
     const page = {
       ...fakePage(),
-      once: (): Promise<Record<string, unknown>> =>
-        new Promise(() => undefined),
+      once: (): Promise<Record<string, unknown>> => {
+        loads += 1;
+
+        return loads === 1 ? Promise.resolve({}) : new Promise(() => undefined);
+      },
     };
 
     await expect(openShot(page, VIEWPORT, SHOT, 10)).rejects.toThrow(
       "http://localhost:3000/ did not load in 0.01 s",
     );
   });
+
+  it("loads again a URL that differs from the open page only by its fragment", async (): Promise<void> => {
+    const page = sameDocumentPage();
+    const settings = { ...SHOT, url: "http://localhost:3000/#/settings" };
+
+    await openShot(page, VIEWPORT, settings, 50);
+    await openShot(page, VIEWPORT, settings, 50);
+    await openShot(
+      page,
+      VIEWPORT,
+      { ...SHOT, url: "http://localhost:3000/#/other" },
+      50,
+    );
+
+    expect(page.navigated).toEqual([
+      BLANK_URL,
+      "http://localhost:3000/#/settings",
+      BLANK_URL,
+      "http://localhost:3000/#/settings",
+      BLANK_URL,
+      "http://localhost:3000/#/other",
+    ]);
+  });
 });
 
 describe("runSteps", () => {
+  beforeEach((): void => {
+    vi.useFakeTimers();
+  });
+
+  afterEach((): void => {
+    vi.useRealTimers();
+  });
+
   it("moves the mouse to the center of the element to hover, and also presses and releases it to click", async (): Promise<void> => {
     const page = fakePage((method) =>
       method === "Runtime.evaluate" ? valueOf({ x: 60, y: 40 }) : {},
@@ -177,12 +252,25 @@ describe("runSteps", () => {
 
   it("runs a script step in the page and waits the milliseconds of a wait step", async (): Promise<void> => {
     const page = fakePage();
-    const started = Date.now();
+    let settled = false;
+    const running = runSteps(page, [
+      { script: "document.body.click()" },
+      { wait: 40 },
+    ]).finally((): void => {
+      settled = true;
+    });
 
-    await runSteps(page, [{ script: "document.body.click()" }, { wait: 40 }]);
+    await vi.advanceTimersByTimeAsync(39);
+
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(settled).toBe(true);
+
+    await running;
 
     expect(page.evaluated()).toEqual(["document.body.click()"]);
-    expect(Date.now() - started).toBeGreaterThanOrEqual(35);
   });
 
   it("throws when the element to click or hover is not on the page", async (): Promise<void> => {

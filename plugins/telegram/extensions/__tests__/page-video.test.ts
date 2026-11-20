@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OUTLINE } from "../page-actions.ts";
 import { centerOf, drawOutline, pageCall } from "../page-dom.ts";
@@ -412,17 +412,35 @@ describe("recordVideo", () => {
     await expect(record(videoPage(null))).rejects.toBeInstanceOf(Error);
   });
 
-  it("uses the real clock and timers by default", async (): Promise<void> => {
-    const started = Date.now();
-    const paths = await recordVideo(
-      videoPage(),
-      VIEWPORT,
-      { ...VIDEO, seconds: 0.1, fps: 20 },
-      out,
-      { runFfmpeg: () => 0 },
-    );
+  describe("recordVideo › default clock", () => {
+    beforeEach((): void => {
+      vi.useFakeTimers();
+    });
 
-    expect(Date.now() - started).toBeGreaterThanOrEqual(90);
-    expect(paths).toHaveLength(2);
+    afterEach((): void => {
+      vi.useRealTimers();
+    });
+
+    it("uses the global clock and timers by default", async (): Promise<void> => {
+      let settled = false;
+      const recording = recordVideo(
+        videoPage(),
+        VIEWPORT,
+        { ...VIDEO, seconds: 0.1, fps: 20 },
+        out,
+        { runFfmpeg: () => 0 },
+      ).finally((): void => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(99);
+
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(settled).toBe(true);
+      expect(await recording).toHaveLength(2);
+    });
   });
 });

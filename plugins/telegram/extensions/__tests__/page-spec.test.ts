@@ -203,8 +203,63 @@ describe("parseCaptureSpec › shots", () => {
       },
       "videos[0].name repeats a",
     ],
+    [
+      { url: "http://x/", shots: [{ name: "page" }, { name: "page-2" }] },
+      "shots[1].name repeats the files of page",
+    ],
+    [
+      { url: "http://x/", shots: [{ name: "page-2" }, { name: "page" }] },
+      "shots[1].name repeats the files of page-2",
+    ],
+    [
+      { url: "http://x/", shots: [{ name: "page" }, { name: "page-12" }] },
+      "shots[1].name repeats the files of page",
+    ],
+    [
+      { url: "http://x/", shots: [{ name: "v" }, { name: "v-sheet-3" }] },
+      "shots[1].name repeats the files of v",
+    ],
+    [
+      {
+        url: "http://x/",
+        shots: [{ name: "v-sheet" }],
+        videos: [{ name: "v", seconds: 1 }],
+      },
+      "videos[0].name repeats the files of v-sheet",
+    ],
   ])("refuses %j because %s", (spec, message): void => {
     expect(errorOf(spec)).toBe(message);
+  });
+
+  it("accepts names whose files never meet", (): void => {
+    expect(
+      parse({
+        url: "http://x/",
+        shots: [
+          { name: "today" },
+          { name: "today-open" },
+          { name: "a" },
+          { name: "a-closed" },
+          { name: "step-1" },
+          { name: "step-2" },
+          { name: "page" },
+          { name: "page-2-1" },
+          { name: "page-sheets" },
+          { name: "page-x-2" },
+        ],
+      }).shots.map((shot) => shot.name),
+    ).toEqual([
+      "today",
+      "today-open",
+      "a",
+      "a-closed",
+      "step-1",
+      "step-2",
+      "page",
+      "page-2-1",
+      "page-sheets",
+      "page-x-2",
+    ]);
   });
 
   it("refuses a file that is not JSON or not an object", (): void => {

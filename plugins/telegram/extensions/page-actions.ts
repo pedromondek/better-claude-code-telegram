@@ -1,6 +1,5 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
 
 import { CDP_TIMEOUT_MS, inSeconds, withTimeout, type CdpPage } from "./cdp.ts";
 import {
@@ -28,6 +27,7 @@ export const OUTLINE: OutlineStyle = { color: "#e11d48", width: 4, offset: 4 };
 export const CLIP_MARGIN_PX = 16;
 export const PART_MAX_HEIGHT_PX = 2560;
 export const JPEG_QUALITY = 90;
+export const BLANK_URL = "about:blank";
 
 type Fields = Record<string, unknown>;
 
@@ -39,6 +39,12 @@ function numbersIn(value: unknown, keys: string[]): boolean {
   const fields = fieldsOf(value);
 
   return keys.every((key) => typeof fields[key] === "number");
+}
+
+export function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
 }
 
 function isText(value: unknown): value is string {
@@ -74,6 +80,23 @@ export async function evaluate(
   return fieldsOf(result).value;
 }
 
+async function navigate(
+  page: CdpPage,
+  url: string,
+  loadTimeoutMs: number,
+): Promise<void> {
+  const loaded = page.once("Page.loadEventFired");
+  const { errorText } = await page.send("Page.navigate", { url });
+
+  if (isText(errorText)) throw new Error(`${url}: ${errorText}`);
+
+  await withTimeout(
+    loaded,
+    loadTimeoutMs,
+    `${url} did not load in ${inSeconds(loadTimeoutMs)}`,
+  );
+}
+
 export async function openShot(
   page: CdpPage,
   { width, height, scale }: Viewport,
@@ -88,16 +111,8 @@ export async function openShot(
     mobile: false,
   });
 
-  const loaded = page.once("Page.loadEventFired");
-  const { errorText } = await page.send("Page.navigate", { url: shot.url });
-
-  if (isText(errorText)) throw new Error(`${shot.url}: ${errorText}`);
-
-  await withTimeout(
-    loaded,
-    loadTimeoutMs,
-    `${shot.url} did not load in ${inSeconds(loadTimeoutMs)}`,
-  );
+  await navigate(page, BLANK_URL, loadTimeoutMs);
+  await navigate(page, shot.url, loadTimeoutMs);
   await evaluate(page, pageCall(fontsReady));
 
   if (shot.css !== null) await evaluate(page, pageCall(addStyle, shot.css));

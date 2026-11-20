@@ -1,7 +1,6 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
 import { tempPrefix } from "./capture-leftovers.ts";
@@ -13,6 +12,7 @@ import {
   outlineShot,
   runSteps,
   screenshot,
+  sleep as timerSleep,
   type Viewport,
 } from "./page-actions.ts";
 import { escapeHtml } from "./page-board.ts";
@@ -143,7 +143,7 @@ export async function recordVideo(
   viewport: Viewport,
   video: VideoShot,
   out: string,
-  { runFfmpeg, now = Date.now, sleep = delay }: VideoDeps,
+  { runFfmpeg, now = Date.now, sleep = timerSleep }: VideoDeps,
 ): Promise<string[]> {
   await openShot(page, viewport, video);
   await outlineShot(page, video.outline);

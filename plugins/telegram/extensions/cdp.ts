@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { Readable } from "node:stream";
 
 import { CHROMIUM_PID_FILE, tempPrefix } from "./capture-leftovers.ts";
+import { isRecord } from "./config.ts";
 
 type CdpResult = Record<string, unknown>;
 
@@ -36,7 +37,7 @@ export interface CdpPage {
 
 export interface Browser {
   newPage: () => Promise<CdpPage>;
-  close: () => void;
+  close: () => Promise<void>;
 }
 
 interface ChildLike {
@@ -51,6 +52,8 @@ interface LaunchOptions {
   Socket?: new (url: string) => SocketLike;
   timeoutMs?: number;
   commandTimeoutMs?: number;
+  closeTimeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 interface PendingCommand {
@@ -79,6 +82,7 @@ const DEVTOOLS_ADDRESS = /^DevTools listening on (ws:\/\/\S+)/m;
 const LAUNCH_TIMEOUT_MS = 15_000;
 
 export const CDP_TIMEOUT_MS = 30_000;
+export const CLOSE_TIMEOUT_MS = 5000;
 
 export function withTimeout<T>(
   promise: Promise<T>,
@@ -97,12 +101,20 @@ export function withTimeout<T>(
   });
 }
 
-export function inSeconds(milliseconds: number): string {
-  return `${milliseconds / 1000} s`;
+function settlesWithin(
+  work: Promise<unknown>,
+  timeoutMs: number,
+): Promise<boolean> {
+  return Promise.race([
+    work.then(() => true),
+    new Promise<boolean>((resolve) => {
+      setTimeout(resolve, timeoutMs, false).unref();
+    }),
+  ]);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+export function inSeconds(milliseconds: number): string {
+  return `${milliseconds / 1000} s`;
 }
 
 function recordOf(value: unknown): CdpResult {
@@ -233,6 +245,8 @@ export async function launchBrowser(
     Socket = WebSocket,
     timeoutMs = LAUNCH_TIMEOUT_MS,
     commandTimeoutMs = CDP_TIMEOUT_MS,
+    closeTimeoutMs = CLOSE_TIMEOUT_MS,
+    signal,
   }: LaunchOptions = {},
 ): Promise<Browser> {
   const profile = mkdtempSync(join(tmpdir(), tempPrefix("capture")));
@@ -240,14 +254,24 @@ export async function launchBrowser(
     ...CHROMIUM_ARGS,
     `--user-data-dir=${profile}`,
   ]);
+  const exited = new Promise<void>((resolve) => {
+    child.once("exit", () => {
+      resolve();
+    });
+  });
 
   if (child.pid !== undefined) {
     writeFileSync(join(profile, CHROMIUM_PID_FILE), String(child.pid));
   }
-  const stop = (): void => {
-    child.kill();
+  const removeProfile = (): void => {
     rmSync(profile, { recursive: true, force: true });
   };
+  const stop = (): void => {
+    child.kill();
+    removeProfile();
+  };
+
+  signal?.addEventListener("abort", stop);
 
   try {
     const socket = await openSocket(
@@ -255,6 +279,23 @@ export async function launchBrowser(
       await devtoolsAddress(child, timeoutMs),
     );
     const client = cdpClient(socket, commandTimeoutMs);
+    let closing: Promise<void> | null = null;
+
+    const shutDown = async (): Promise<void> => {
+      const closed = await settlesWithin(
+        Promise.all([
+          client.send("Browser.close").catch(() => undefined),
+          exited,
+        ]),
+        closeTimeoutMs,
+      );
+
+      socket.close();
+
+      if (!closed) child.kill();
+
+      removeProfile();
+    };
 
     return {
       async newPage(): Promise<CdpPage> {
@@ -273,14 +314,17 @@ export async function launchBrowser(
           once: (event): Promise<CdpResult> => client.once(event, session),
         };
       },
-      close(): void {
-        socket.close();
-        stop();
+      close(): Promise<void> {
+        closing ??= shutDown();
+
+        return closing;
       },
     };
   } catch (error) {
     stop();
 
     throw error;
+  } finally {
+    signal?.removeEventListener("abort", stop);
   }
 }

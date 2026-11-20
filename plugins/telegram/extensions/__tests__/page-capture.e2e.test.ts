@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -8,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -50,7 +52,10 @@ function pngSize(path: string): { width: number; height: number } {
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
-function capture(spec: unknown): {
+function capture(
+  spec: unknown,
+  env: Record<string, string> = {},
+): {
   status: number | null;
   stdout: string[];
   stderr: string;
@@ -62,7 +67,7 @@ function capture(spec: unknown): {
 
   const result = spawnSync("bun", [CAPTURE_SCRIPT, specPath], {
     encoding: "utf8",
-    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: BROWSERS },
+    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: BROWSERS, ...env },
     timeout: 60_000,
   });
 
@@ -139,6 +144,39 @@ describe.skipIf(!canRun)(
       ).toBe(true);
       expect(pngSize(join(out, "board.png")).width).toBe(2400);
       expect(readdirSync(out)).not.toContain("board.html");
+    });
+
+    it("captures every shot of a page whose url carries a fragment", (): void => {
+      const result = capture({
+        url: `${pathToFileURL(join(dir, "app.html")).href}#/settings`,
+        shots: [
+          { name: "today" },
+          { name: "styled", css: "body { color: red }" },
+        ],
+      });
+
+      expect({ status: result.status, stderr: result.stderr }).toEqual({
+        status: 0,
+        stderr: "",
+      });
+      expect(result.stdout).toEqual([
+        join(dir, "today.png"),
+        join(dir, "styled.png"),
+      ]);
+    });
+
+    it("leaves nothing in the temporary folder once the capture ends", (): void => {
+      const temp = join(dir, "tmp");
+
+      mkdirSync(temp);
+
+      const result = capture(
+        { url: "app.html", out: "out", shots: [{ name: "today" }] },
+        { TMPDIR: temp },
+      );
+
+      expect(result.status).toBe(0);
+      expect(readdirSync(temp)).toEqual([]);
     });
 
     it("fails naming the selector that matched nothing", (): void => {

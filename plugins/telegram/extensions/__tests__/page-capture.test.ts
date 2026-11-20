@@ -66,8 +66,10 @@ function answer(method: string, params: CdpResult): CdpResult {
 function browser(): Browser {
   return {
     newPage: (): Promise<FakeCdpPage> => Promise.resolve(page),
-    close: (): void => {
+    close: (): Promise<void> => {
       closed += 1;
+
+      return Promise.resolve();
     },
   };
 }
@@ -331,7 +333,7 @@ describe("capturePage › capture", () => {
 
   it("reports a failed capture and still closes the browser", async (): Promise<void> => {
     page = fakeCdpPage((method, params) =>
-      method === "Page.navigate"
+      method === "Page.navigate" && params.url === "http://x/"
         ? { errorText: "net::ERR_NAME_NOT_RESOLVED" }
         : answer(method, params),
     );
@@ -370,6 +372,8 @@ describe("capturePage › capture", () => {
       closed = 0;
       exits = [];
 
+      const order: string[] = [];
+
       await run(writeSpec({ url: "http://x/" }), {
         launch: () =>
           Promise.resolve({
@@ -378,15 +382,79 @@ describe("capturePage › capture", () => {
 
               return Promise.resolve(page);
             },
-            close: (): void => {
+            close: async (): Promise<void> => {
               closed += 1;
+              await Promise.resolve();
+              order.push("closed");
             },
           }),
+        exit: (code) => {
+          exits.push(code);
+          order.push("exit");
+        },
       });
 
       expect(exits).toEqual([exitCode]);
       expect(closed).toBe(2);
+      expect(order.slice(0, 2)).toEqual(["closed", "exit"]);
     }
+  });
+
+  it("exits with 143 on SIGTERM even when the browser fails to close", async (): Promise<void> => {
+    let closeAttempts = 0;
+
+    await run(writeSpec({ url: "http://x/" }), {
+      launch: () =>
+        Promise.resolve({
+          newPage: (): Promise<FakeCdpPage> => {
+            listeners.get("SIGTERM")?.();
+
+            return Promise.resolve(page);
+          },
+          close: (): Promise<void> => {
+            closeAttempts += 1;
+
+            return closeAttempts === 1
+              ? Promise.reject(new Error("socket gone"))
+              : Promise.resolve();
+          },
+        }),
+    });
+
+    expect(exits).toEqual([143]);
+  });
+
+  it("aborts the launch of the browser on a signal that arrives while it starts", async (): Promise<void> => {
+    let launchSignal: AbortSignal | undefined;
+
+    const { code } = await run(writeSpec({ url: "http://x/" }), {
+      launch: (_executable, options) => {
+        launchSignal = options.signal;
+        listeners.get("SIGTERM")?.();
+
+        return Promise.reject(new Error("Chromium stopped"));
+      },
+    });
+
+    expect(launchSignal?.aborted).toBe(true);
+    expect(exits).toEqual([143]);
+    expect(code).toBe(1);
+    expect(closed).toBe(0);
+  });
+
+  it("starts the browser with a launch that no signal aborted", async (): Promise<void> => {
+    let launchSignal: AbortSignal | undefined;
+
+    await run(writeSpec({ url: "http://x/" }), {
+      launch: (_executable, options) => {
+        launchSignal = options.signal;
+
+        return Promise.resolve(browser());
+      },
+    });
+
+    expect(launchSignal?.aborted).toBe(false);
+    expect(exits).toEqual([]);
   });
 
   it("stops listening for the signals once the capture ends, with success or failure", async (): Promise<void> => {
