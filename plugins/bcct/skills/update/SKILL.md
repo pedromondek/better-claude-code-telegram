@@ -12,7 +12,7 @@ allowed-tools:
 
 Arguments: `$ARGUMENTS`
 
-1. Take the target from the arguments: `stable`, `beta`, `alpha` or a version such as `0.3.0`. Anything else: say the usage is `/bcct:update [stable | beta | alpha | <version>]` and stop.
+1. Take the target from the arguments: `stable`, `beta`, `alpha` or a version such as `0.3.0`. Anything else: say the usage is `/bcct:update [stable | beta | alpha | <version>]` and stop. When the plugins need to change, the only stable version accepted is the newest stable: bcct refuses an older one with a line with ✘ that points to `bcct update stable`. Test versions (alpha, beta and rc) have no such limit.
 2. Run `"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" update <target> --check`, without `<target>` when there is none. It changes nothing. Read its last line:
    - Already on a version, or a line with ✘: show it and stop.
    - Would update from one version to another: call AskUserQuestion once, header "Update", with two options: `update` (Recommended), description the line itself, and `not now`, which changes nothing.
