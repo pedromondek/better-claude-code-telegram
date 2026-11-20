@@ -11,6 +11,17 @@ macro_rules! chromium_install_command {
     };
 }
 
+#[macro_export]
+macro_rules! ffmpeg_install_commands {
+    ($or:literal) => {
+        concat!(
+            "'sudo apt install ffmpeg', 'brew install ffmpeg' ",
+            $or,
+            " 'winget install ffmpeg'"
+        )
+    };
+}
+
 pub const CHROMIUM_INSTALL_COMMAND: &str = crate::chromium_install_command!();
 
 const PLAYWRIGHT_FOLDER: &str = "ms-playwright";
@@ -222,6 +233,18 @@ mod tests {
             .iter()
             .map(|(name, value)| (name.clone(), value.as_str().unwrap().to_owned()))
             .collect()
+    }
+
+    #[test]
+    fn lists_the_ffmpeg_install_commands_with_the_connector_of_the_language() {
+        assert_eq!(
+            crate::ffmpeg_install_commands!("or"),
+            "'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'"
+        );
+        assert_eq!(
+            crate::ffmpeg_install_commands!("ou"),
+            "'sudo apt install ffmpeg', 'brew install ffmpeg' ou 'winget install ffmpeg'"
+        );
     }
 
     #[test]
