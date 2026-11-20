@@ -253,6 +253,22 @@ mod tests {
     }
 
     #[test]
+    fn reads_only_plain_digits_as_the_chromium_version() {
+        assert_eq!(chromium_version("chromium-1243"), Some(1243.0));
+
+        for name in [
+            "chromium-",
+            "chromium-1e3",
+            "chromium-1.5",
+            "chromium-inf",
+            "chromium-12a",
+            "headless-1243",
+        ] {
+            assert_eq!(chromium_version(name), None, "{name}");
+        }
+    }
+
+    #[test]
     fn reads_the_names_in_a_folder_sorted() {
         let folder = tempfile::tempdir().unwrap();
 
