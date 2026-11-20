@@ -31,7 +31,11 @@ function report(result) {
 }
 
 function hasSystemdRun(run, platform) {
-  return platform === "linux" && run("systemd-run", ["--version"]).status === 0;
+  return (
+    platform === "linux" &&
+    run("systemd-run", ["--user", "--quiet", "--wait", "--collect", "true"])
+      .status === 0
+  );
 }
 
 function build({ env, platform, cwd, run }) {

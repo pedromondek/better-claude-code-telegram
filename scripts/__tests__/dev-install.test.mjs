@@ -77,7 +77,7 @@ const FAILED = { status: 1, stdout: "", stderr: "boom" };
 const MISSING = { error: { code: "ENOENT" } };
 
 describe("dev-install › binary", () => {
-  it("builds under the memory cap when systemd-run exists", () => {
+  it("builds under the memory cap when systemd-run starts a user unit", () => {
     const { code, calls } = binary({
       env: { ...ENV, CARGO_TARGET_DIR: "/mnt/d/target" },
     });
@@ -85,7 +85,7 @@ describe("dev-install › binary", () => {
     expect(code).toBe(0);
     expect(calls[0]).toMatchObject({
       command: "systemd-run",
-      args: ["--version"],
+      args: ["--user", "--quiet", "--wait", "--collect", "true"],
     });
     expect(calls[1].command).toBe("systemd-run");
     expect(calls[1].args).toEqual([
@@ -123,10 +123,10 @@ describe("dev-install › binary", () => {
     expect(calls[1].args.join(" ")).not.toContain("CARGO_TARGET_DIR");
   });
 
-  it("builds without the cap when systemd-run is missing or fails", () => {
+  it("builds without the cap when systemd-run is missing or cannot start a user unit", () => {
     for (const probe of [MISSING, FAILED]) {
       const { code, calls } = binary({
-        answers: { "systemd-run --version": probe },
+        answers: { "systemd-run --user --quiet --wait --collect true": probe },
       });
 
       expect(code).toBe(0);
@@ -182,7 +182,7 @@ describe("dev-install › binary", () => {
 
   it("stops without installing when the build fails", () => {
     const { code, calls, output } = binary({
-      answers: { "systemd-run --user": FAILED },
+      answers: { "systemd-run --user --wait": FAILED },
     });
 
     expect(code).toBe(1);
