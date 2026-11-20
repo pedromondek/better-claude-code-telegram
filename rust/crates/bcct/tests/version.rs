@@ -185,12 +185,10 @@ fn app_dir(root: &Path) -> PathBuf {
 fn bcct(root: &Path, args: &[&str]) -> std::process::Output {
     cargo_bin_cmd!("bcct")
         .args(args)
+        .env_clear()
+        .envs(support::coverage_env())
         .env("HOME", root.join("home"))
         .env("CLAUDE_CONFIG_DIR", root.join("claude"))
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
-        .env_remove("LC_MESSAGES")
-        .env_remove("LANG")
-        .env_remove("LC_ALL")
         .output()
         .unwrap()
 }
