@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 
+import { labeledIssues } from "./labeled-issues.mjs";
 import {
   UPSTREAM_COMMIT,
   UPSTREAM_LABEL,
@@ -186,59 +187,11 @@ const github = {
           return [path.slice(UPSTREAM_PATH.length + 1), sha];
         }),
     ),
-  openIssue: () => {
-    const [found] = JSON.parse(
-      gh([
-        "issue",
-        "list",
-        "--label",
-        UPSTREAM_LABEL,
-        "--state",
-        "open",
-        "--json",
-        "number,body,comments",
-        "--limit",
-        "1",
-      ]),
-    );
-
-    return found === undefined
-      ? null
-      : {
-          number: found.number,
-          texts: [found.body, ...found.comments.map(({ body }) => body)],
-        };
-  },
-  ensureLabel: () => {
-    gh([
-      "label",
-      "create",
-      UPSTREAM_LABEL,
-      "--color",
-      UPSTREAM_LABEL_COLOR,
-      "--description",
-      "A new version of the official Telegram plugin to adopt",
-      "--force",
-    ]);
-  },
-  createIssue: ({ title, label, body }) =>
-    Number(
-      /\/issues\/(\d+)/u.exec(
-        gh([
-          "issue",
-          "create",
-          "--title",
-          title,
-          "--label",
-          label,
-          "--body",
-          body,
-        ]),
-      )[1],
-    ),
-  comment: (number, body) => {
-    gh(["issue", "comment", String(number), "--body", body]);
-  },
+  ...labeledIssues(gh, {
+    label: UPSTREAM_LABEL,
+    color: UPSTREAM_LABEL_COLOR,
+    description: "A new version of the official Telegram plugin to adopt",
+  }),
 };
 
 if (import.meta.main) {
