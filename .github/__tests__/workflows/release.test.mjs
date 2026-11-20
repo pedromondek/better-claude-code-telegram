@@ -44,9 +44,9 @@ describe("release.yml publishes the version pull request that was merged", () =>
     });
   });
 
-  it("never cancels a release in progress, and runs one at a time", () => {
+  it("runs one release at a time without cancelling one, and queues only the runs that publish", () => {
     expect(definition.concurrency).toEqual({
-      group: "release",
+      group: `\${{ (${plan.if}) && 'release' || format('release-skipped-{0}', github.run_id) }}`,
       "cancel-in-progress": false,
     });
   });

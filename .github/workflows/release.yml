@@ -25,7 +25,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: release
+  group: ${{ (github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))) && 'release' || format('release-skipped-{0}', github.run_id) }}
   cancel-in-progress: false
 
 defaults:
