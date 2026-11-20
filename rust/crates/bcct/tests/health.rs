@@ -13,9 +13,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use assert_cmd::cargo::cargo_bin_cmd;
-use bcct::health::{Machine, Screen, run, run_with};
+use bcct::health::{Machine, Screen, check_all, run, run_with};
 #[cfg(target_os = "linux")]
 use bcct::js::stringify;
+use bcct::messages::EN_US;
 use bcct::prompt::{FakeCall, FakePrompter, Prompter, Reply};
 use bcct::setup::{shell_script, whisper_python_works};
 use bcct::spinner::Terminal;
@@ -698,6 +699,34 @@ fn run_prepared(
 
         (status, placeholders(&String::from_utf8(err).unwrap(), root))
     })
+}
+
+fn checked_all(scenario: &Value) -> bool {
+    sandboxed(scenario, &|_| {}, |machine, _| {
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let mut screen = Screen {
+            out: &mut out,
+            err: &mut err,
+            terminal: None,
+            colorize_out: false,
+            colorize_err: false,
+            spin: &|_, _| None,
+        };
+
+        check_all(machine, &mut screen, &EN_US).unwrap()
+    })
+}
+
+#[test]
+fn reports_a_failure_only_when_a_check_fails() {
+    let fixture = frozen(FIXTURE);
+
+    assert!(!checked_all(scenario_named(
+        &fixture,
+        "a healthy machine passes every check"
+    )));
+    assert!(checked_all(scenario_named(&fixture, "everything broken")));
 }
 
 fn sandboxed<R>(
