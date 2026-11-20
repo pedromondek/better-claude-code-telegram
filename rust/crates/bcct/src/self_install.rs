@@ -9,11 +9,13 @@ use semver::Version;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
+use crate::files::create_private_dir;
 use crate::js::stringify_pretty;
 use crate::messages::{Messages, messages_for};
 use crate::paths::Paths;
 use crate::setup::setup_locale;
 use crate::ui::{fail, should_colorize, success, warn};
+use crate::update::BODY_TIMEOUT;
 
 pub const LAUNCHER_SH: &str = concat!(
     r#"#!/bin/sh
@@ -66,6 +68,9 @@ const LAUNCHER_FILE: &str = if cfg!(windows) {
 } else {
     LAUNCHER_SH_FILE
 };
+pub(crate) const DOWNLOAD_PREFIX: &str = ".download-";
+const STAGING_PREFIX: &str = ".staging-";
+const LEFTOVER_PREFIXES: [&str; 2] = [DOWNLOAD_PREFIX, STAGING_PREFIX];
 const KEPT_PER_FOLDER: usize = 2;
 const EXECUTABLE_MODE: u32 = 0o755;
 const PRIVATE_MODE: u32 = 0o600;
@@ -222,11 +227,10 @@ impl Store {
             return Err(InstallError::HashMismatch);
         }
 
-        let versions = self.bin.join(VERSIONS_FOLDER);
-        fs::create_dir_all(&versions)?;
+        let versions = self.versions_dir()?;
 
         let staging = tempfile::Builder::new()
-            .prefix(".staging-")
+            .prefix(STAGING_PREFIX)
             .tempdir_in(&versions)?;
         let staged = staging.path().join(BINARY_FILE);
         fs::write(&staged, &bytes)?;
@@ -238,7 +242,7 @@ impl Store {
         fs::write(staging.path().join(VERIFIED_FILE), format!("{hash}\n"))?;
 
         let channel_dir = versions.join(channel.folder());
-        fs::create_dir_all(&channel_dir)?;
+        create_private_dir(&channel_dir)?;
         let target = channel_dir.join(&version);
 
         if !verified_as(&target, &hash) {
@@ -262,6 +266,15 @@ impl Store {
         prune(&channel_dir, &version)?;
 
         Ok(Installed { version, channel })
+    }
+
+    pub fn versions_dir(&self) -> io::Result<PathBuf> {
+        let versions = self.bin.join(VERSIONS_FOLDER);
+
+        create_private_dir(&versions)?;
+        remove_stale_leftovers(&versions);
+
+        Ok(versions)
     }
 
     #[must_use]
@@ -448,6 +461,40 @@ fn installed_versions(channel_dir: &Path) -> Vec<Version> {
         .filter_map(Result::ok)
         .filter_map(|entry| Version::parse(&entry.file_name().to_string_lossy()).ok())
         .collect()
+}
+
+fn is_stale_leftover(entry: &fs::DirEntry) -> bool {
+    let name = entry.file_name();
+    let name = name.to_string_lossy();
+
+    LEFTOVER_PREFIXES
+        .iter()
+        .any(|prefix| name.starts_with(prefix))
+        && entry
+            .metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.elapsed().ok())
+            .is_some_and(|age| age > BODY_TIMEOUT)
+}
+
+fn remove_stale_leftovers(versions: &Path) {
+    for entry in fs::read_dir(versions)
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+    {
+        if !is_stale_leftover(&entry) {
+            continue;
+        }
+
+        let path = entry.path();
+        let _removed = if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+            fs::remove_dir_all(&path)
+        } else {
+            fs::remove_file(&path)
+        };
+    }
 }
 
 fn prune(channel_dir: &Path, active: &str) -> io::Result<()> {

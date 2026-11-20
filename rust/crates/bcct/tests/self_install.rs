@@ -129,6 +129,59 @@ fn installing_a_version_copies_it_checks_it_and_makes_it_the_active_one() {
 }
 
 #[test]
+fn creates_every_missing_folder_of_the_app_as_private() {
+    let folder = sandbox();
+    let root = folder.path();
+    let app_dir = root.join("app");
+    let store = Store::new(&app_dir);
+
+    install(&store, root, "0.2.0-beta.1");
+    install(&store, root, "0.2.0");
+
+    for created in [
+        "",
+        "bin",
+        "bin/versions",
+        "bin/versions/unstable",
+        "bin/versions/unstable/beta",
+        "bin/versions/stable",
+    ] {
+        assert_eq!(mode_of(&app_dir.join(created)), 0o700, "{created}");
+    }
+}
+
+fn aged(path: &Path, seconds: u64) {
+    let modified = std::time::SystemTime::now() - std::time::Duration::from_secs(seconds);
+
+    let file = fs::File::open(path).unwrap();
+
+    file.set_modified(modified).unwrap();
+}
+
+#[test]
+fn removes_only_the_stale_leftovers_of_an_interrupted_install() {
+    let folder = sandbox();
+    let root = folder.path();
+    let app_dir = root.join("app");
+    let versions = app_dir.join("bin/versions");
+    let store = Store::new(&app_dir);
+    fs::create_dir_all(versions.join(".staging-old")).unwrap();
+    fs::write(versions.join(".staging-old/bcct"), "partial").unwrap();
+
+    for name in [".download-old", ".download-new", "notes"] {
+        fs::write(versions.join(name), "partial").unwrap();
+    }
+
+    for name in [".download-old", ".staging-old", "notes"] {
+        aged(&versions.join(name), 3600);
+    }
+
+    install(&store, root, "0.2.0");
+
+    assert_eq!(entries(&versions), vec![".download-new", "notes", "stable"]);
+}
+
+#[test]
 fn a_file_that_does_not_match_the_hash_is_refused_and_leaves_nothing_behind() {
     let folder = sandbox();
     let root = folder.path();
@@ -452,12 +505,10 @@ fn self_install(root: &Path, args: &[&str]) -> std::process::Output {
     cargo_bin_cmd!("bcct")
         .arg("self-install")
         .args(args)
+        .env_clear()
+        .envs(support::coverage_env())
         .env("HOME", root.join("home"))
         .env("CLAUDE_CONFIG_DIR", root.join("claude"))
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
-        .env_remove("LC_MESSAGES")
-        .env_remove("LANG")
-        .env_remove("LC_ALL")
         .output()
         .unwrap()
 }
