@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 
 const EMAIL = /[\w.%+-]+@[a-z\d-]+(?:\.[a-z\d-]+)*\.[a-z]{2,}/giu;
@@ -8,18 +8,40 @@ const PUBLIC_EMAIL_DOMAIN =
 const PUBLIC_EMAILS = new Set(["git@github.com"]);
 const HUNK_HEADER = /^@@ -\d+(?:,\d+)? \+(?<start>\d+)(?:,\d+)? @@/u;
 const DESTINATION = "+++ b/";
+const WSL_WINDOWS_PROFILES_FOLDER = "/mnt/c/Users";
+const SHARED_WINDOWS_PROFILES = new Set([
+  "all users",
+  "default",
+  "default user",
+  "public",
+]);
 
 function escapeRegExp(text) {
   return text.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
 }
 
-export function machinePathPattern({ username, home }) {
+export function windowsProfilesOf(folder) {
+  try {
+    return readdirSync(folder, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          entry.isDirectory() &&
+          !SHARED_WINDOWS_PROFILES.has(entry.name.toLowerCase()),
+      )
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+}
+
+export function machinePathPattern({ username, home, windowsProfiles = [] }) {
   const user = escapeRegExp(username);
+  const profiles = [username, ...windowsProfiles].map(escapeRegExp).join("|");
   const alternatives = [
     String.raw`/home/${user}(?![\w.-])`,
     String.raw`/Users/${user}(?![\w.-])`,
-    String.raw`[a-z]:[\\/]+Users[\\/]+${user}(?![\w.-])`,
-    String.raw`/mnt/[a-z]/Users/${user}(?![\w.-])`,
+    String.raw`[a-z]:[\\/]+Users[\\/]+(?:${profiles})(?![\w.-])`,
+    String.raw`/mnt/[a-z]/Users/(?:${profiles})(?![\w.-])`,
   ];
 
   if (home.split(/[\\/]/u).filter(Boolean).length >= 2) {
@@ -101,8 +123,9 @@ export function findPrivateData({
   localPatterns,
   username,
   home,
+  windowsProfiles,
 }) {
-  const machinePath = machinePathPattern({ username, home });
+  const machinePath = machinePathPattern({ username, home, windowsProfiles });
   const findings = [];
 
   for (const file of files) {
@@ -203,6 +226,7 @@ if (import.meta.main) {
       : [],
     username: userInfo().username,
     home: homedir(),
+    windowsProfiles: windowsProfilesOf(WSL_WINDOWS_PROFILES_FOLDER),
   });
 
   if (findings.length > 0) {

@@ -3,6 +3,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -12,6 +13,11 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { miseEnv } from "./support/mise-env.mjs";
+import {
+  OLD_NODE_MESSAGE,
+  SYSTEM_PATH,
+  oldNodeFolder,
+} from "./support/old-node.mjs";
 import { MISSPELLED, TYPOS_REPORT } from "./support/typo-fixtures.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
@@ -20,6 +26,9 @@ const COPIED = [
   ".husky/lib/node-env.sh",
   ".husky/lib/explain-lint-staged-failure.mjs",
   "scripts/check-private-data.mjs",
+  "scripts/require-node.cjs",
+  "scripts/node-version.cjs",
+  "package.json",
   "scripts/check-lockfile-sync.mjs",
   ".lockfile-lintrc.json",
   "scripts/mise-exec.sh",
@@ -30,6 +39,9 @@ const COPIED = [
   "mise.toml",
   "mise.lock",
 ];
+const ROOT_MANIFEST = JSON.parse(
+  readFileSync(join(ROOT, "package.json"), "utf8"),
+);
 const AT = "@";
 const COMMIT_TIMEOUT = 60_000;
 const UNALIGNED_TABLE = "| a | b |\n| - | - |\n| longer cell | x |\n";
@@ -113,6 +125,7 @@ describe(".husky/pre-commit", { timeout: COMMIT_TIMEOUT }, () => {
     const manifest = {
       name: "probe",
       version: "1.0.0",
+      engines: ROOT_MANIFEST.engines,
       scripts: {
         "lint:lockfile":
           "node scripts/check-lockfile-sync.mjs && lockfile-lint",
@@ -171,6 +184,28 @@ describe(".husky/pre-commit", { timeout: COMMIT_TIMEOUT }, () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("commit author");
+  });
+
+  it("stops the commit with the Node version message when the node of the PATH is too old", () => {
+    writeFileSync(
+      join(repo, "hooks", "pre-commit"),
+      "#!/bin/sh\nexec sh -e .husky/pre-commit\n",
+      { mode: 0o755 },
+    );
+    stage("notes.md", ALIGNED_TABLE);
+
+    const result = spawnSync("git", ["commit", "-q", "-m", "add notes"], {
+      cwd: repo,
+      encoding: "utf8",
+      env: {
+        HOME: process.env.HOME,
+        PATH: `${oldNodeFolder(repo)}:${SYSTEM_PATH}`,
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(OLD_NODE_MESSAGE);
+    expect(git("log", "--format=%s").stdout).toBe("base\n");
   });
 
   it("lets a clean commit through and commits what lint-staged formatted", () => {

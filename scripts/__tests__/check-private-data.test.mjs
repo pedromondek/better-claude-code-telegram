@@ -1,5 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -10,6 +16,7 @@ import {
   formatFindings,
   machinePathPattern,
   parseLocalPatterns,
+  windowsProfilesOf,
 } from "../check-private-data.mjs";
 
 const SCRIPT = join(import.meta.dirname, "..", "check-private-data.mjs");
@@ -34,6 +41,7 @@ function scan({
   files = [],
   identities = [],
   localPatterns = [],
+  windowsProfiles,
 } = {}) {
   return findPrivateData({
     diff,
@@ -42,6 +50,7 @@ function scan({
     localPatterns,
     username: USER,
     home: HOME,
+    windowsProfiles,
   });
 }
 
@@ -143,6 +152,32 @@ describe("findPrivateData", () => {
     expect(scan({ diff: diffOf("a.test.mjs", lines) })).toEqual([]);
   });
 
+  it("finds the Windows profile of this machine when its name differs from the Linux user", () => {
+    const lines = [
+      "/mnt/c/Users/WinProfile/Downloads/x",
+      "C:\\Users\\WinProfile\\Desktop",
+      "d:/Users/winprofile/Desktop",
+      "C:\\Users\\x",
+      "C:\\Users\\WinProfile-other\\Desktop",
+      "/home/WinProfile/app",
+    ];
+
+    expect(
+      scan({
+        diff: diffOf("notes.md", lines),
+        windowsProfiles: ["WinProfile"],
+      }).map(({ where }) => where),
+    ).toEqual(["notes.md:1", "notes.md:2", "notes.md:3"]);
+  });
+
+  it("checks the Windows forms only against the Linux user without Windows profiles", () => {
+    expect(
+      scan({
+        diff: diffOf("notes.md", ["/mnt/c/Users/WinProfile/Downloads/x"]),
+      }),
+    ).toEqual([]);
+  });
+
   it("checks the home literally only when it has at least two folders", () => {
     expect(
       machinePathPattern({ username: USER, home: "/" }).test("/usr/bin"),
@@ -192,6 +227,38 @@ describe("findPrivateData", () => {
         kind: "path of this machine in the file name",
       },
     ]);
+  });
+});
+
+describe("windowsProfilesOf", () => {
+  let folder;
+
+  beforeEach(() => {
+    folder = mkdtempSync(join(tmpdir(), "bcct-windows-profiles-"));
+  });
+
+  afterEach(() => {
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  it("returns the profile folders, without the shared ones, files and links", () => {
+    for (const name of [
+      "WinProfile",
+      "Public",
+      "Default",
+      "All Users",
+      "Default User",
+    ]) {
+      mkdirSync(join(folder, name));
+    }
+    writeFileSync(join(folder, "desktop.ini"), "");
+    symlinkSync(join(folder, "WinProfile"), join(folder, "Linked"));
+
+    expect(windowsProfilesOf(folder)).toEqual(["WinProfile"]);
+  });
+
+  it("returns an empty list when the folder does not exist", () => {
+    expect(windowsProfilesOf(join(folder, "missing"))).toEqual([]);
   });
 });
 
