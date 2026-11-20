@@ -635,10 +635,18 @@ pub fn run_version_process(stdout: &mut dyn Write, stderr: &mut dyn Write) -> io
     )
 }
 
-pub fn run_remove_process(version: &str, stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
+pub fn run_remove_process(typed: &str, stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
     let paths = Paths::from_process();
     let var = |name: &str| std::env::var_os(name);
     let messages = process_messages(&paths.app_dir);
+    let Ok(parsed) = Version::parse(typed.strip_prefix('v').unwrap_or(typed)) else {
+        let colorize = should_colorize(&var, io::stderr().is_terminal());
+        let invalid = (messages.uninstall_version_invalid)(typed);
+        let _shown = writeln!(stderr, "{}", fail(&invalid, colorize));
+        return USAGE;
+    };
+    let normalized = parsed.to_string();
+    let version = normalized.as_str();
     let store = Store::new(&paths.app_dir);
 
     let failure = match store.remove(version) {

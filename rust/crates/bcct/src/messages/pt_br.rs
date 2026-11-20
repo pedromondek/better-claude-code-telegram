@@ -756,6 +756,9 @@ pub(super) const MESSAGES: Messages = Messages {
         format!("A {version} está em uso. Troque antes com '{UPDATE_COMMAND}'.")
     },
     uninstall_version_missing: |version| format!("A {version} não está instalada."),
+    uninstall_version_invalid: |word| {
+        format!("{word} não é uma versão. Digite-a completa, como 0.2.1.")
+    },
     session_start_notice: |plugin, binary| {
         format!("bcct: o plugin está na {plugin} e o binário na {binary}. Rode '{UPDATE_COMMAND}'.")
     },

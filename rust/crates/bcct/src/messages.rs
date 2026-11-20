@@ -511,6 +511,7 @@ pub struct Messages {
     pub uninstall_version_removed: fn(&str) -> String,
     pub uninstall_version_active: fn(&str) -> String,
     pub uninstall_version_missing: fn(&str) -> String,
+    pub uninstall_version_invalid: fn(&str) -> String,
     pub session_start_notice: fn(&str, &str) -> String,
     pub path_question: &'static str,
     pub path_added: fn(&str) -> String,

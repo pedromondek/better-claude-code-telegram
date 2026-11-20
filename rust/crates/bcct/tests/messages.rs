@@ -444,6 +444,7 @@ catalog! { m, a;
     "uninstallVersionRemoved" => (m.uninstall_version_removed)(s(a, 0)),
     "uninstallVersionActive" => (m.uninstall_version_active)(s(a, 0)),
     "uninstallVersionMissing" => (m.uninstall_version_missing)(s(a, 0)),
+    "uninstallVersionInvalid" => (m.uninstall_version_invalid)(s(a, 0)),
     "sessionStartNotice" => (m.session_start_notice)(s(a, 0), s(a, 1)),
     "pathQuestion" => m.path_question.to_owned(),
     "pathAdded" => (m.path_added)(s(a, 0)),

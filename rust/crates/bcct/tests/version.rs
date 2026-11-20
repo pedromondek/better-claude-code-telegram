@@ -273,6 +273,78 @@ fn uninstalling_the_active_or_a_missing_version_is_refused_with_exit_1() {
 }
 
 #[test]
+fn deletes_a_kept_version_typed_with_a_leading_v() {
+    let folder = sandbox();
+    let root = folder.path();
+    let store = Store::new(&app_dir(root));
+    install(&store, root, "0.3.0-beta.1");
+    install(&store, root, "0.2.1");
+
+    let output = bcct(root, &["uninstall", "v0.3.0-beta.1"]);
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "✔ Deleted 0.3.0-beta.1.\n"
+    );
+    assert!(
+        !app_dir(root)
+            .join("bin/versions/unstable/beta/0.3.0-beta.1")
+            .exists()
+    );
+}
+
+#[test]
+fn refuses_a_word_that_is_not_a_version_with_exit_2_in_the_chosen_language() {
+    let folder = sandbox();
+    let root = folder.path();
+    let store = Store::new(&app_dir(root));
+    install(&store, root, "0.3.0-beta.1");
+    install(&store, root, "0.2.1");
+
+    for (word, message) in [
+        (
+            "0.1",
+            "✘ 0.1 is not a version. Type it in full, like 0.2.1.\n",
+        ),
+        (
+            "v0.1",
+            "✘ v0.1 is not a version. Type it in full, like 0.2.1.\n",
+        ),
+        ("", "✘  is not a version. Type it in full, like 0.2.1.\n"),
+    ] {
+        let output = bcct(root, &["uninstall", word]);
+
+        assert_eq!(output.status.code(), Some(2), "{word}");
+        assert_eq!(String::from_utf8_lossy(&output.stdout), "", "{word}");
+        assert_eq!(String::from_utf8_lossy(&output.stderr), message, "{word}");
+    }
+
+    fs::write(
+        app_dir(root).join(bcct::paths::CONFIG_FILE),
+        r#"{"language":"pt-br"}"#,
+    )
+    .unwrap();
+    let output = bcct(root, &["uninstall", "0.1"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "✘ 0.1 não é uma versão. Digite-a completa, como 0.2.1.\n"
+    );
+    assert!(
+        app_dir(root)
+            .join("bin/versions/unstable/beta/0.3.0-beta.1")
+            .exists()
+    );
+    assert!(
+        app_dir(root)
+            .join("bin/versions/stable/0.2.1/bcct")
+            .exists()
+    );
+}
+
+#[test]
 fn a_version_that_cannot_be_deleted_names_the_folder() {
     let folder = sandbox();
     let root = folder.path();

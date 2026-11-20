@@ -756,6 +756,9 @@ pub(super) const MESSAGES: Messages = Messages {
         format!("{version} is in use. Switch first with '{UPDATE_COMMAND}'.")
     },
     uninstall_version_missing: |version| format!("{version} is not installed."),
+    uninstall_version_invalid: |word| {
+        format!("{word} is not a version. Type it in full, like 0.2.1.")
+    },
     session_start_notice: |plugin, binary| {
         format!(
             "bcct: the plugin is on {plugin} and the binary on {binary}. Run '{UPDATE_COMMAND}'."

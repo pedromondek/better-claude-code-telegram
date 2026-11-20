@@ -139,7 +139,9 @@ where
             Ok(Command::Setup(parser.raw_args()?.collect()))
         }
         Some(lexopt::Arg::Value(word)) if word == "uninstall" => {
-            uninstall_command(first_word(parser.raw_args()?.next()).as_deref())
+            let version = first_word(parser.raw_args()?.next());
+
+            Ok(version.map_or(Command::Uninstall, Command::UninstallVersion))
         }
         Some(lexopt::Arg::Value(word)) if word == "self-install" => {
             Ok(Command::SelfInstall(parser.raw_args()?.collect()))
@@ -150,17 +152,6 @@ where
         Some(arg) => Err(arg.unexpected()),
         None => Err("missing subcommand".into()),
     }
-}
-
-fn uninstall_command(word: Option<&str>) -> Result<Command, lexopt::Error> {
-    let Some(typed) = word else {
-        return Ok(Command::Uninstall);
-    };
-    let version = typed.strip_prefix('v').unwrap_or(typed);
-
-    semver::Version::parse(version)
-        .map(|parsed| Command::UninstallVersion(parsed.to_string()))
-        .map_err(|_| format!("not a version: {typed}").into())
 }
 
 fn first_word(word: Option<OsString>) -> Option<String> {
@@ -240,28 +231,20 @@ mod tests {
 
     #[test]
     fn uninstalls_everything_only_without_a_word_after_uninstall() {
-        let parsed = |list: &[&str]| parse(args(list)).map_err(|error| error.to_string());
+        let parsed = |list: &[&str]| parse(args(list)).ok();
 
-        assert_eq!(parsed(&["bcct", "uninstall"]), Ok(Command::Uninstall));
+        assert_eq!(parsed(&["bcct", "uninstall"]), Some(Command::Uninstall));
         assert_eq!(
             parsed(&["bcct", "uninstall", "0.3.0-beta.1", "x"]),
-            Ok(Command::UninstallVersion("0.3.0-beta.1".to_owned()))
+            Some(Command::UninstallVersion("0.3.0-beta.1".to_owned()))
         );
         assert_eq!(
-            parsed(&["bcct", "uninstall", "v0.1.0"]),
-            Ok(Command::UninstallVersion("0.1.0".to_owned()))
-        );
-        assert_eq!(
-            parsed(&["bcct", "uninstall", "0.1"]),
-            Err("not a version: 0.1".to_owned())
-        );
-        assert_eq!(
-            parsed(&["bcct", "uninstall", "x"]),
-            Err("not a version: x".to_owned())
+            parsed(&["bcct", "uninstall", "v0.1"]),
+            Some(Command::UninstallVersion("v0.1".to_owned()))
         );
         assert_eq!(
             parsed(&["bcct", "uninstall", ""]),
-            Err("not a version: ".to_owned())
+            Some(Command::UninstallVersion(String::new()))
         );
     }
 
