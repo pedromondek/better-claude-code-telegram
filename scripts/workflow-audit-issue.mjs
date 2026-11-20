@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-import { AUDIT_LABEL } from "./workflow-audit.mjs";
+import { AUDIT_LABEL, openAuditIssue } from "./workflow-audit.mjs";
 
 export const AUDIT_LABEL_COLOR = "5319e7";
 export const LOG_LIMIT = 60_000;
@@ -150,24 +150,9 @@ function ensureLabel(gh, warn) {
   }
 }
 
-function openIssue(gh) {
-  return gh([
-    "issue",
-    "list",
-    "--label",
-    AUDIT_LABEL,
-    "--state",
-    "open",
-    "--json",
-    "url",
-    "--jq",
-    '.[0].url // ""',
-  ]);
-}
-
 function report(gh, warn, context) {
   const labels = ensureLabel(gh, warn);
-  const existing = openIssue(gh);
+  const existing = openAuditIssue(gh);
 
   if (existing) {
     gh(["issue", "comment", existing, "--body", auditIssueComment(context)]);

@@ -71,12 +71,25 @@ export function pinactFindings(report, root, readText) {
 export function classifyFindings(head, base) {
   if (base === null) return { added: head, inherited: [] };
 
-  const known = new Set(base.map((found) => found.key));
+  const known = new Map();
+  for (const found of base) {
+    known.set(found.key, (known.get(found.key) ?? 0) + 1);
+  }
 
-  return {
-    added: head.filter((found) => !known.has(found.key)),
-    inherited: head.filter((found) => known.has(found.key)),
-  };
+  const added = [];
+  const inherited = [];
+  for (const found of head) {
+    const left = known.get(found.key) ?? 0;
+
+    if (left > 0) {
+      known.set(found.key, left - 1);
+      inherited.push(found);
+    } else {
+      added.push(found);
+    }
+  }
+
+  return { added, inherited };
 }
 
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -271,24 +284,29 @@ async function auditBase(commit) {
   }
 }
 
+export function openAuditIssue(gh) {
+  return gh([
+    "issue",
+    "list",
+    "--label",
+    AUDIT_LABEL,
+    "--state",
+    "open",
+    "--json",
+    "url",
+    "--jq",
+    '.[0].url // ""',
+  ]).trim();
+}
+
 function openIssue() {
   try {
-    return execFileSync(
-      "gh",
-      [
-        "issue",
-        "list",
-        "--label",
-        AUDIT_LABEL,
-        "--state",
-        "open",
-        "--json",
-        "url",
-        "--jq",
-        '.[0].url // ""',
-      ],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-    ).trim();
+    return openAuditIssue((args) =>
+      execFileSync("gh", args, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+    );
   } catch {
     return "";
   }

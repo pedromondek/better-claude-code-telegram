@@ -14,7 +14,9 @@ import {
   AUDIT_STEP,
   annotations,
   auditLog,
+  AUDIT_LABEL,
   classifyFindings,
+  openAuditIssue,
   pinactFindings,
   shouldAudit,
   zizmorFindings,
@@ -97,7 +99,7 @@ describe("shouldAudit", () => {
 });
 
 describe("zizmorFindings", () => {
-  it("each finding becomes rule, file relative to the root, 1-based line and a key from the rule, file and YAML path", () => {
+  it("builds rule, relative file, 1-based line and key from each zizmor result", () => {
     const route = [
       { Key: "jobs" },
       { Key: "a" },
@@ -127,7 +129,7 @@ describe("zizmorFindings", () => {
     });
   });
 
-  it("the same rule on the same step has the same key at the head root and the merge-base root, even on another line", () => {
+  it("gives the same key to the same rule on the same step at the head and the merge-base", () => {
     const route = [{ Key: "jobs" }, { Key: "a" }];
     const [head] = zizmorFindings(
       [
@@ -158,7 +160,7 @@ describe("zizmorFindings", () => {
 });
 
 describe("pinactFindings", () => {
-  it("each SARIF result becomes rule, relative file and a key from the line text, not the number", () => {
+  it("keys each pinact result by the line text instead of the line number", () => {
     const content =
       "jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v4\n";
     const [found] = pinactFindings(
@@ -186,7 +188,7 @@ describe("pinactFindings", () => {
 });
 
 describe("classifyFindings", () => {
-  it("without a merge-base, everything is new", () => {
+  it("marks every finding as new without a merge-base", () => {
     const head = [finding({ key: "a" }), finding({ key: "b" })];
 
     expect(classifyFindings(head, null)).toEqual({
@@ -195,7 +197,7 @@ describe("classifyFindings", () => {
     });
   });
 
-  it("what is already on the merge-base is inherited; the rest is new", () => {
+  it("keeps the findings of the merge-base as inherited and the rest as new", () => {
     const old = finding({ key: "old" });
     const fresh = finding({ key: "new" });
 
@@ -204,16 +206,67 @@ describe("classifyFindings", () => {
       inherited: [old],
     });
   });
+
+  it("marks as new each repeat of a key beyond the times the merge-base has it", () => {
+    const first = finding({ key: "k", line: 5 });
+    const second = finding({ key: "k", line: 8 });
+    const third = finding({ key: "k", line: 11 });
+
+    expect(
+      classifyFindings([first, second, third], [finding({ key: "k" })]),
+    ).toEqual({ added: [second, third], inherited: [first] });
+    expect(
+      classifyFindings(
+        [first, second],
+        [finding({ key: "k" }), finding({ key: "k" })],
+      ),
+    ).toEqual({ added: [], inherited: [first, second] });
+  });
+});
+
+describe("openAuditIssue", () => {
+  it("returns the trimmed url of the first open issue with the audit label", () => {
+    const calls = [];
+    const url = openAuditIssue((args) => {
+      calls.push(args);
+
+      return `  ${ISSUE_URL}\n`;
+    });
+
+    expect(url).toBe(ISSUE_URL);
+    expect(calls).toEqual([
+      [
+        "issue",
+        "list",
+        "--label",
+        AUDIT_LABEL,
+        "--state",
+        "open",
+        "--json",
+        "url",
+        "--jq",
+        '.[0].url // ""',
+      ],
+    ]);
+  });
+
+  it("lets a failing gh throw to the caller", () => {
+    expect(() =>
+      openAuditIssue(() => {
+        throw new Error("gh: not logged in");
+      }),
+    ).toThrow("gh: not logged in");
+  });
 });
 
 describe("auditLog", () => {
-  it("without findings, a single ✓ line", () => {
+  it("writes a single ✓ step without findings", () => {
     expect(
       stepLines(auditLog({ added: [], inherited: [], failures: [] })),
     ).toEqual([`✓ ${AUDIT_STEP} OK`]);
   });
 
-  it("a new finding becomes a ✗ step, with the new and inherited ones indented below and the issue link", () => {
+  it("writes a ✗ step on a new finding, listing new and inherited ones with the issue link", () => {
     const log = auditLog({
       added: [finding({})],
       inherited: [
@@ -244,7 +297,7 @@ describe("auditLog", () => {
     );
   });
 
-  it("only inherited findings become a ⚠ step, which does not turn the checks red, with the issue link", () => {
+  it("writes a ⚠ step with the issue link when every finding is inherited", () => {
     const log = auditLog({
       added: [],
       inherited: [finding({}), finding({ key: "b" })],
@@ -258,7 +311,7 @@ describe("auditLog", () => {
     );
   });
 
-  it("inherited without an open issue says the main run opens one", () => {
+  it("says the weekly run opens the issue when an inherited finding has none open", () => {
     const [step] = stepLines(
       auditLog({ added: [], inherited: [finding({})], failures: [] }),
     );
@@ -268,7 +321,7 @@ describe("auditLog", () => {
     );
   });
 
-  it("a tool that does not run or does not return the expected format becomes a ✗ step with its output, without imitating a step", () => {
+  it("fails the audit with the indented output of a tool that did not return its format", () => {
     const log = auditLog({
       added: [],
       inherited: [],
@@ -287,7 +340,7 @@ describe("auditLog", () => {
 });
 
 describe("annotations", () => {
-  it("a new finding annotates an error and an inherited one a warning, on the file line, escaping the text", () => {
+  it("annotates a new finding as an error and an inherited one as a warning, escaping the text", () => {
     const lines = annotations({
       added: [finding({ message: "a, b: 100%\nmais" })],
       inherited: [
@@ -438,7 +491,7 @@ afterEach(() => {
 });
 
 describe("workflow-audit (script)", () => {
-  it("without a workflow change in the range, does not run the tools, leaves the log empty and exits 0", () => {
+  it("skips the tools and exits 0 with an empty log when the range changes no workflow", () => {
     const before = git("rev-parse", "HEAD");
     commit("backend/src/main.ts", "x\n");
 
@@ -449,7 +502,7 @@ describe("workflow-audit (script)", () => {
     expect(result.outputs).toEqual({ ran: "false", exit: "0" });
   });
 
-  it("with a changed workflow and no finding, exits 0 and writes the ✓ step", () => {
+  it("writes the ✓ step and exits 0 when a changed workflow has no finding", () => {
     const before = git("rev-parse", "HEAD");
     commit(".github/workflows/x.yml", "name: x\n");
 
@@ -460,7 +513,7 @@ describe("workflow-audit (script)", () => {
     expect(result.outputs).toEqual({ ran: "true", exit: "0" });
   });
 
-  it("a finding the change brings (zizmor and pinact): ✗ step, error annotation and exit 1", () => {
+  it("fails with a ✗ step and error annotations on the zizmor and pinact findings the change brings", () => {
     const before = git("rev-parse", "HEAD");
     commit(
       ".github/workflows/x.yml",
@@ -481,7 +534,7 @@ describe("workflow-audit (script)", () => {
     expect(result.outputs).toEqual({ ran: "true", exit: "1" });
   });
 
-  it("a finding already on the merge-base, even shifted by the change: ⚠ step with the open issue, warning annotation and exit 0", () => {
+  it("warns with the open issue and exits 0 on a finding already on the merge-base", () => {
     commit(
       ".github/workflows/x.yml",
       "name: x\n# VULN-injection\n      - uses: a/b@v1 # UNPINNED\n",
@@ -505,7 +558,7 @@ describe("workflow-audit (script)", () => {
     expect(result.outputs).toEqual({ ran: "true", exit: "0" });
   });
 
-  it("on a PR behind main, a finding only main gained later counts neither as inherited nor as new in the PR", () => {
+  it("ignores a finding only main gained after the merge-base of a pull request", () => {
     const base = git("rev-parse", "HEAD");
     commit(".github/workflows/main-only.yml", "# VULN-mainonly\n");
     const mainTip = git("rev-parse", "HEAD");
@@ -519,7 +572,7 @@ describe("workflow-audit (script)", () => {
     expect(result.log).not.toMatch(/mainonly/);
   });
 
-  it("forced and without a range (weekly run): every finding is new", () => {
+  it("marks every finding as new on a forced run without a range", () => {
     commit(".github/workflows/x.yml", "# VULN-injection\n");
     commit("backend/src/main.ts", "x\n");
 
@@ -530,7 +583,7 @@ describe("workflow-audit (script)", () => {
     expect(result.outputs).toEqual({ ran: "true", exit: "1" });
   });
 
-  it("an unknown range audits everything as new", () => {
+  it("audits every finding as new on an unknown range", () => {
     commit(".github/workflows/x.yml", "# VULN-injection\n");
 
     const result = run({ BEFORE: "0".repeat(40) });
@@ -539,7 +592,7 @@ describe("workflow-audit (script)", () => {
     expect(result.outputs.exit).toBe("1");
   });
 
-  it("a broken tool (output outside the format) fails the audit, never passing as clean", () => {
+  it("fails the audit when a tool prints output outside its format", () => {
     const before = git("rev-parse", "HEAD");
     commit(".github/workflows/x.yml", "name: x\n");
 
