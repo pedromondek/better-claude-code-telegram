@@ -202,6 +202,12 @@ pub struct TranscriptionModels {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct PythonEnvFailed {
+    pub posix: &'static str,
+    pub windows: &'static str,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct StatuslineChoices {
     pub after: &'static str,
     pub replace: &'static str,
@@ -443,7 +449,7 @@ pub struct Messages {
     pub transcription_off_label: &'static str,
     pub transcription_models: TranscriptionModels,
     pub transcription_disabled: &'static str,
-    pub python_env_failed: &'static str,
+    pub python_env_failed: PythonEnvFailed,
     pub git_missing_setup: &'static str,
     pub install_whisper: &'static str,
     pub downloading_model: fn(&str) -> String,

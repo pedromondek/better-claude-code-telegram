@@ -840,7 +840,8 @@
     "transcriptionModels.small": "more accurate, slower, uses more RAM, ~490 MB of storage",
     "transcriptionModels.medium": "most accurate, much slower, uses much more RAM, ~1.5 GB of storage",
     "transcriptionDisabled": "Transcription off:\n  • voice messages reach Claude as attachments",
-    "pythonEnvFailed": "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+    "pythonEnvFailed.posix": "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • Python's venv (on Debian and Ubuntu, sudo apt install python3-venv)",
+    "pythonEnvFailed.windows": "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\")\n  • Python from python.org, which brings the py launcher (https://www.python.org/downloads/)",
     "gitMissingSetup": "git is not installed, and Claude Code needs it to download the plugins. Install it and run the setup again:\n  • Debian and Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     "installWhisper": "install faster-whisper",
     "downloadingModel": [
@@ -2106,7 +2107,8 @@
     "transcriptionModels.small": "mais precisa, mais lenta, usa mais RAM, ~490 MB de armazenamento",
     "transcriptionModels.medium": "a mais precisa, bem mais lenta, usa muito mais RAM, ~1,5 GB de armazenamento",
     "transcriptionDisabled": "Transcrição desligada:\n  • o áudio chega ao Claude como anexo",
-    "pythonEnvFailed": "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • o venv do Python (no Debian e no Ubuntu, sudo apt install python3-venv)",
+    "pythonEnvFailed.posix": "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (curl -LsSf https://astral.sh/uv/install.sh | sh)\n  • o venv do Python (no Debian e no Ubuntu, sudo apt install python3-venv)",
+    "pythonEnvFailed.windows": "Não foi possível criar o ambiente Python. Instale um destes e rode o setup de novo:\n  • o uv (powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\")\n  • o Python do python.org, que traz o launcher py (https://www.python.org/downloads/)",
     "gitMissingSetup": "O git não está instalado, e o Claude Code precisa dele para baixar os plugins. Instale e rode o setup de novo:\n  • Debian e Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
     "installWhisper": "instalar o faster-whisper",
     "downloadingModel": [
