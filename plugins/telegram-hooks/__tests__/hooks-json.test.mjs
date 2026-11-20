@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -25,7 +26,7 @@ const MODES = ["permission", "prompt", "post", "stop", "stop-failure"];
 const GUARD =
   '[ "$BETTER_CC_TELEGRAM" = 1 ] || [ -f "${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid" ]';
 const ACTIVITY =
-  '[ "$BETTER_CC_TELEGRAM" = 1 ] && d="${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings" && mkdir -p "$d" && date +%s%3N > "$d/last-activity" 2>/dev/null || true';
+  '[ "$BETTER_CC_TELEGRAM" = 1 ] && d="${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings" && mkdir -p "$d" && { t=$(date +%s%3N 2>/dev/null); case $t in \'\'|*[!0-9]*) t=$(date +%s)000 ;; esac; echo "$t" > "$d/last-activity"; } 2>/dev/null || true';
 
 let workDir;
 let stateDir;
@@ -269,6 +270,33 @@ describe.each(["sh", "bash"])("the Telegram hooks under %s", (shell) => {
       readFileSync(join(appDir, "pings", "last-activity"), "utf8").trim(),
     ).toMatch(/^\d{13}$/);
   });
+
+  it.each([
+    ["leaves %3N unexpanded", 'printf "%s3N\\n" "$seconds"'],
+    ["fails on %3N", "exit 1"],
+  ])(
+    "writes the last-activity marker in milliseconds when date %s",
+    (_label, millisecondsOutput) => {
+      const fakeDate = join(binDir, "date");
+
+      writeFileSync(
+        fakeDate,
+        [
+          "#!/bin/sh",
+          "seconds=1795174083",
+          'if [ "$1" = +%s ]; then printf "%s\\n" "$seconds"; exit 0; fi',
+          millisecondsOutput,
+          "",
+        ].join("\n"),
+      );
+      chmodSync(fakeDate, 0o755);
+
+      expect(run(shell, ACTIVITY).status).toBe(0);
+      expect(readFileSync(join(appDir, "pings", "last-activity"), "utf8")).toBe(
+        "1795174083000\n",
+      );
+    },
+  );
 
   it("follows BETTER_CC_TELEGRAM_DIR for the last-activity marker", () => {
     const customDir = join(workDir, "custom-app");

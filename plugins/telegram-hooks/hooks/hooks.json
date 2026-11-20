@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && date +%s%3N > \"$d/last-activity\" 2>/dev/null || true"
+            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && { t=$(date +%s%3N 2>/dev/null); case $t in ''|*[!0-9]*) t=$(date +%s)000 ;; esac; echo \"$t\" > \"$d/last-activity\"; } 2>/dev/null || true"
           }
         ]
       }
@@ -62,7 +62,7 @@
           },
           {
             "type": "command",
-            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && date +%s%3N > \"$d/last-activity\" 2>/dev/null || true"
+            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && { t=$(date +%s%3N 2>/dev/null); case $t in ''|*[!0-9]*) t=$(date +%s)000 ;; esac; echo \"$t\" > \"$d/last-activity\"; } 2>/dev/null || true"
           }
         ]
       }
