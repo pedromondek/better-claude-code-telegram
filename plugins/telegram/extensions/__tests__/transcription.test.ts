@@ -52,6 +52,7 @@ interface SetupOptions {
   fetchOk?: boolean;
   messages?: () => Messages;
   filePath?: string;
+  failTyping?: boolean;
 }
 
 let stateDir = "";
@@ -77,6 +78,7 @@ function setup({
   fetchOk = true,
   messages,
   filePath = "voice/file.oga",
+  failTyping = false,
 }: SetupOptions = {}): {
   transcribe: ReturnType<typeof createTranscriber>;
   sent: { chatId: string; text: string }[];
@@ -102,7 +104,9 @@ function setup({
       sendChatAction: (chatId, action) => {
         actions.push({ chatId, action });
 
-        return Promise.resolve();
+        return failTyping
+          ? Promise.reject(new Error("typing refused"))
+          : Promise.resolve();
       },
     },
     stateDir,
@@ -315,6 +319,22 @@ describe("createTranscriber", () => {
     await transcribe("file-1", DEV);
 
     expect(actions).toEqual([{ chatId: DEV, action: "typing" }]);
+  });
+
+  it("returns the transcript without a warning when Telegram refuses the typing action", async (): Promise<void> => {
+    configure("small");
+    installFakePython();
+    const { transcribe, actions, sent, calls, logs } = setup({
+      failTyping: true,
+      messages: () => PT,
+    });
+
+    expect(await transcribe("file-1", DEV)).toBe("Oi, Claude.");
+    expect(actions).toEqual([{ chatId: DEV, action: "typing" }]);
+    expect(calls.length).toBe(1);
+    expect(sent).toEqual([]);
+    expect(logs).toEqual(["áudio transcrito com o modelo small: Oi, Claude."]);
+    expect(readdirSync(join(stateDir, "inbox"))).toEqual([]);
   });
 
   it("downloads the audio private to the user while Python reads it", async (): Promise<void> => {

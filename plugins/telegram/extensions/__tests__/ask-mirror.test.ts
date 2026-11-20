@@ -912,9 +912,50 @@ describe("mirror cycle edges", () => {
     expect(telegram.sent).toEqual([]);
     expect(readdirSync(asksDir())).toEqual([]);
   });
+
+  it("logs the failed cycle and sends again in the next one when the sent state cannot be saved", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup();
+
+    writeAsk([SINGLE]);
+    mkdirSync(sentStateFile());
+    await mirror.tick();
+
+    expect(telegram.sent.length).toBe(1);
+    expect(logs).toEqual([
+      PT.askCycleFailed(
+        `Error: EISDIR: illegal operation on a directory, open '${sentStateFile()}'`,
+      ),
+    ]);
+
+    rmSync(sentStateFile(), { recursive: true });
+    await mirror.tick();
+
+    expect(telegram.sent.length).toBe(2);
+    expect(JSON.parse(readFileSync(sentStateFile(), "utf8"))).toMatchObject({
+      shortId: SHORT,
+      messages: [{ chatId: CHAT, questionIndex: 0, messageId: 102 }],
+    });
+    expect(logs.at(-1)).toBe(PT.askSent(ASK_ID, "telegram"));
+  });
 });
 
 describe("clicks whose acknowledgment Telegram refuses", () => {
+  it("still writes the answer of a valid click", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+
+    const click = rejectingCallback(`ask:${SHORT}:0:1`);
+
+    expect(await mirror.handleCallback(click.ctx)).toBe(true);
+    expect(click.calls.count).toBe(1);
+    expect(readAnswers()).toEqual({ "Qual banco?": "Redis" });
+    expect(telegram.edits.at(-1)?.keyboard).toEqual([
+      [{ text: "✅ Redis", callback_data: "ask:answered" }],
+    ]);
+  });
+
   it("handles a click on an answered button", async (): Promise<void> => {
     const { mirror } = setup();
     const click = rejectingCallback("ask:answered");
