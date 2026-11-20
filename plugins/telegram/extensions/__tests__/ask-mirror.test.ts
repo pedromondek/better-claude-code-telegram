@@ -443,6 +443,9 @@ describe("question sending", () => {
     await mirror.tick();
 
     expect(logs).toEqual([PT_TEXTS.logCycleFailed]);
+    expect(telegram.deleted).toEqual([
+      { chatId: CHAT, messageId: telegram.sent[0].messageId },
+    ]);
 
     failSecondQuestion = false;
     await mirror.tick();
@@ -455,6 +458,9 @@ describe("question sending", () => {
       "❓ Pergunta aberta no terminal (1/2)",
       "❓ Pergunta aberta no terminal (1/2)",
       "❓ Pergunta aberta no terminal (2/2)",
+    ]);
+    expect(telegram.deleted).toEqual([
+      { chatId: CHAT, messageId: withKeyboard[0].messageId },
     ]);
     expect(logs).toEqual([
       PT_TEXTS.logCycleFailed,
@@ -469,6 +475,72 @@ describe("question sending", () => {
       "Qual banco?": "Redis",
       "Quais camadas?": "Backend",
     });
+  });
+
+  it("logs the failed delete and still sends every question again when no chat got them all", async (): Promise<void> => {
+    let failSecondQuestion = true;
+    const { telegram, mirror, logs } = setup({
+      failDelete: true,
+      rejectSend: (text) =>
+        failSecondQuestion &&
+        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+
+    expect(telegram.deleted).toEqual([]);
+    expect(logs).toEqual([
+      PT_TEXTS.logCycleFailed,
+      PT.askDeleteFailed("Error: boom"),
+    ]);
+
+    failSecondQuestion = false;
+    await mirror.tick();
+
+    expect(telegram.sent.map((message) => message.text.slice(0, 35))).toEqual([
+      "❓ Pergunta aberta no terminal (1/2)",
+      "❓ Pergunta aberta no terminal (1/2)",
+      "❓ Pergunta aberta no terminal (2/2)",
+    ]);
+    expect(logs.at(-1)).toBe(PT.askSent(ASK_ID, "telegram"));
+  });
+
+  it("deletes the questions of every chat that failed partway and none of a chat that got nothing", async (): Promise<void> => {
+    const silentChat = "111";
+    const partialChat = "222";
+    const telegram = fakeApi({
+      rejectSend: (text, chatId) =>
+        chatId === silentChat ||
+        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+    });
+    const logs: string[] = [];
+    const mirror = createAskMirror({
+      api: telegram.api,
+      appDir,
+      allowedChats: () => [silentChat, partialChat, CHAT],
+      log: (message) => logs.push(message),
+      messages: () => PT,
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+
+    expect(telegram.deleted).toEqual(
+      telegram.sent.map((message) => ({
+        chatId: message.chatId,
+        messageId: message.messageId,
+      })),
+    );
+    expect(telegram.deleted.map((message) => message.chatId)).toEqual([
+      partialChat,
+      CHAT,
+    ]);
+    expect(logs).toEqual([
+      PT_TEXTS.logCycleFailed,
+      PT_TEXTS.logCycleFailed,
+      PT_TEXTS.logCycleFailed,
+    ]);
   });
 
   it("edits the keyboard of a chat that failed partway when another chat got every question", async (): Promise<void> => {

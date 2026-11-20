@@ -378,7 +378,19 @@ export function createAskMirror({
       }
     }
 
-    if (!reachedEveryQuestion) return;
+    if (!reachedEveryQuestion) {
+      await Promise.all(
+        sentMessages.map((message) =>
+          api
+            .deleteMessage(message.chatId, message.messageId)
+            .catch((error: unknown) =>
+              log(text.askDeleteFailed(describeError(error))),
+            ),
+        ),
+      );
+
+      return;
+    }
 
     saveSent(record.id, {
       shortId,
