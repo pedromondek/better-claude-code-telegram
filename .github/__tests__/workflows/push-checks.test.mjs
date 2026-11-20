@@ -177,11 +177,11 @@ describe("push-checks.yml runs the pre-push on the server, called by ci.yml or b
   });
 
   describe("node_modules cache", () => {
-    it("restores it with a key made of the runner, the .nvmrc and the package-lock.json", () => {
+    it("restores it with a key made of the runner, the .nvmrc, the package-lock.json and the patches", () => {
       expect(modules.uses).toMatch(/^actions\/cache\/restore@/);
       expect(modules.with.path).toBe("node_modules");
       expect(modules.with.key).toBe(
-        "node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}",
+        "node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('patches/**') }}",
       );
     });
 
