@@ -10,6 +10,8 @@ use crate::files::{create_private_dir, read_json, write_private};
 use crate::hook::{Abort, Context, millis};
 use crate::js::{join_path, js_trim, stringify};
 use crate::messages::{StopFailureTexts, messages_for};
+use crate::paths::PINGS_FOLDER;
+use crate::settings::SETTINGS_FILE;
 use crate::usage_reset::{Moment, Reset, parse};
 
 pub const REPEAT_INTERVAL_MS: u64 = 300_000;
@@ -20,7 +22,6 @@ pub const NOTICE_SUFFIX: &str = ".notice.json";
 pub const NOTICE_KIND: &str = "failure";
 pub const AUTO_CONTINUE_KEY: &str = "autoContinueAtUsageLimit";
 
-const SETTINGS_FILE: &str = "settings.json";
 const MANAGED_FILE: &str = "managed-settings.json";
 const DROP_IN_FOLDER: &str = "managed-settings.d";
 const JSON_SUFFIX: &str = ".json";
@@ -350,7 +351,7 @@ pub(crate) fn record(
         return Ok(());
     }
 
-    let pings_dir = ctx.app_dir.join("pings");
+    let pings_dir = ctx.app_dir.join(PINGS_FOLDER);
     let mut mark = Mark::load(&mark_file(&pings_dir, key));
     let before = mark.to_value();
 
