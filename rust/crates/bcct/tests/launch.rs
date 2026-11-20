@@ -50,9 +50,50 @@ impl Pids {
     }
 
     fn hide(&self, text: &str) -> String {
-        text.replace(&self.server.pid(), "{server}")
-            .replace(&self.plain.pid(), "{plain}")
+        let text = whole_number_replaced(text, &self.server.pid(), "{server}");
+
+        whole_number_replaced(&text, &self.plain.pid(), "{plain}")
     }
+}
+
+fn whole_number_replaced(text: &str, number: &str, placeholder: &str) -> String {
+    let is_digit = |found: Option<char>| found.is_some_and(|character| character.is_ascii_digit());
+    let mut replaced = String::with_capacity(text.len());
+    let mut copied = 0;
+
+    for (at, _) in text.match_indices(number) {
+        let before = text.get(..at).and_then(|head| head.chars().next_back());
+        let after = text
+            .get(at + number.len()..)
+            .and_then(|tail| tail.chars().next());
+
+        if is_digit(before) || is_digit(after) {
+            continue;
+        }
+
+        replaced.push_str(text.get(copied..at).unwrap_or_default());
+        replaced.push_str(placeholder);
+        copied = at + number.len();
+    }
+
+    replaced.push_str(text.get(copied..).unwrap_or_default());
+    replaced
+}
+
+#[test]
+fn hides_a_pid_only_where_it_is_a_whole_number() {
+    assert_eq!(
+        whole_number_replaced("{\"launchedAt\":1763712345678}", "12345", "{server}"),
+        "{\"launchedAt\":1763712345678}"
+    );
+    assert_eq!(
+        whole_number_replaced("12345\npid 12345, 123456 and 12345", "12345", "{server}"),
+        "{server}\npid {server}, 123456 and {server}"
+    );
+    assert_eq!(
+        whole_number_replaced("no pid here", "12345", "{server}"),
+        "no pid here"
+    );
 }
 
 #[test]
