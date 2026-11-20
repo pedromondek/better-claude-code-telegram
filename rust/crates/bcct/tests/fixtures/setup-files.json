@@ -62,8 +62,24 @@
       "shellFile": "/repo/shell.sh",
       "sourceLine": "[ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"",
       "loads": true,
-      "withBlock": null,
+      "withBlock": "a\n# /repo/shell.sh\nb\n\n# Added by better-claude-code-telegram setup\n[ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"\n",
       "withoutBlock": "a\nb"
+    },
+    {
+      "text": "  # [ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"\n",
+      "shellFile": "/repo/shell.sh",
+      "sourceLine": "[ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"",
+      "loads": true,
+      "withBlock": "  # [ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"\n\n# Added by better-claude-code-telegram setup\n[ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"\n",
+      "withoutBlock": ""
+    },
+    {
+      "text": "# /repo/shell.sh\n  [ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"",
+      "shellFile": "/repo/shell.sh",
+      "sourceLine": "[ -f \"/repo/shell.sh\" ] && . \"/repo/shell.sh\"",
+      "loads": true,
+      "withBlock": null,
+      "withoutBlock": ""
     },
     {
       "text": "source /repo/shell.sh",
@@ -190,8 +206,24 @@
       "shellFile": "{repo}/scripts/shell.sh",
       "sourceLine": "[ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"",
       "loads": true,
-      "withBlock": null,
+      "withBlock": "a\n# {repo}/scripts/shell.sh\nb\n\n# Added by better-claude-code-telegram setup\n[ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"\n",
       "withoutBlock": "a\nb"
+    },
+    {
+      "text": "  # [ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"\n",
+      "shellFile": "{repo}/scripts/shell.sh",
+      "sourceLine": "[ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"",
+      "loads": true,
+      "withBlock": "  # [ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"\n\n# Added by better-claude-code-telegram setup\n[ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"\n",
+      "withoutBlock": ""
+    },
+    {
+      "text": "# {repo}/scripts/shell.sh\n  [ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"",
+      "shellFile": "{repo}/scripts/shell.sh",
+      "sourceLine": "[ -f \"{repo}/scripts/shell.sh\" ] && . \"{repo}/scripts/shell.sh\"",
+      "loads": true,
+      "withBlock": null,
+      "withoutBlock": ""
     },
     {
       "text": "source {repo}/scripts/shell.sh",
@@ -318,8 +350,24 @@
       "shellFile": "/a b/$x.sh",
       "sourceLine": "[ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"",
       "loads": true,
-      "withBlock": null,
+      "withBlock": "a\n# /a b/$x.sh\nb\n\n# Added by better-claude-code-telegram setup\n[ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"\n",
       "withoutBlock": "a\nb"
+    },
+    {
+      "text": "  # [ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"\n",
+      "shellFile": "/a b/$x.sh",
+      "sourceLine": "[ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"",
+      "loads": true,
+      "withBlock": "  # [ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"\n\n# Added by better-claude-code-telegram setup\n[ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"\n",
+      "withoutBlock": ""
+    },
+    {
+      "text": "# /a b/$x.sh\n  [ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"",
+      "shellFile": "/a b/$x.sh",
+      "sourceLine": "[ -f \"/a b/$x.sh\" ] && . \"/a b/$x.sh\"",
+      "loads": true,
+      "withBlock": null,
+      "withoutBlock": ""
     },
     {
       "text": "source /a b/$x.sh",
@@ -450,6 +498,22 @@
       "withoutBlock": ""
     },
     {
+      "text": "  # [ -f \"\" ] && . \"\"\n",
+      "shellFile": "",
+      "sourceLine": "[ -f \"\" ] && . \"\"",
+      "loads": true,
+      "withBlock": null,
+      "withoutBlock": ""
+    },
+    {
+      "text": "# \n  [ -f \"\" ] && . \"\"",
+      "shellFile": "",
+      "sourceLine": "[ -f \"\" ] && . \"\"",
+      "loads": true,
+      "withBlock": null,
+      "withoutBlock": ""
+    },
+    {
       "text": "source ",
       "shellFile": "",
       "sourceLine": "[ -f \"\" ] && . \"\"",
@@ -518,31 +582,87 @@
     {
       "envFile": "/home/dev/.claude/channels/telegram/.env",
       "home": "/home/dev",
+      "platform": "linux",
       "rule": "Read(~/.claude/channels/telegram/.env)"
     },
     {
       "envFile": "/srv/telegram/.env",
       "home": "/home/dev",
+      "platform": "linux",
       "rule": "Read(//srv/telegram/.env)"
     },
-    { "envFile": "/home/dev", "home": "/home/dev", "rule": "Read(//home/dev)" },
-    { "envFile": "/home/dev/", "home": "/home/dev", "rule": "Read(~/)" },
+    {
+      "envFile": "/home/dev",
+      "home": "/home/dev",
+      "platform": "linux",
+      "rule": "Read(//home/dev)"
+    },
+    {
+      "envFile": "/home/dev/",
+      "home": "/home/dev",
+      "platform": "linux",
+      "rule": "Read(~/)"
+    },
     {
       "envFile": "/home/devx/.env",
       "home": "/home/dev",
+      "platform": "linux",
       "rule": "Read(//home/devx/.env)"
     },
     {
       "envFile": "relative/.env",
       "home": "/home/dev",
+      "platform": "linux",
       "rule": "Read(/relative/.env)"
     },
     {
       "envFile": "/home/dev/.env",
       "home": "/",
+      "platform": "linux",
       "rule": "Read(//home/dev/.env)"
     },
-    { "envFile": "/home/dev/.env", "home": "", "rule": "Read(~/home/dev/.env)" }
+    {
+      "envFile": "/home/dev/.env",
+      "home": "",
+      "platform": "linux",
+      "rule": "Read(~/home/dev/.env)"
+    },
+    {
+      "envFile": "C:\\x\\.env",
+      "home": "C:",
+      "platform": "linux",
+      "rule": "Read(/C:\\x\\.env)"
+    },
+    {
+      "envFile": "C:\\Users\\x\\.claude\\channels\\telegram\\.env",
+      "home": "C:\\Users\\x",
+      "platform": "win32",
+      "rule": "Read(~/.claude/channels/telegram/.env)"
+    },
+    {
+      "envFile": "D:\\state\\.env",
+      "home": "C:\\Users\\x",
+      "platform": "win32",
+      "rule": "Read(//d/state/.env)"
+    },
+    {
+      "envFile": "c:/Users/x/.env",
+      "home": "C:\\Users\\x",
+      "platform": "win32",
+      "rule": "Read(~/.env)"
+    },
+    {
+      "envFile": "state\\.env",
+      "home": "C:\\Users\\x",
+      "platform": "win32",
+      "rule": "Read(/state/.env)"
+    },
+    {
+      "envFile": "/home/dev/.env",
+      "home": "/home/dev",
+      "platform": "win32",
+      "rule": "Read(~/.env)"
+    }
   ],
   "rule": "Read(~/x/.env)",
   "envDenied": [
@@ -995,12 +1115,7 @@
       "en": "screenshots and video",
       "pt": "prints e vídeo"
     },
-    {
-      "key": "visuals",
-      "value": { "value": "gif" },
-      "en": "gif",
-      "pt": "gif"
-    },
+    { "key": "visuals", "value": { "value": "gif" }, "en": "gif", "pt": "gif" },
     {
       "key": "visualReview",
       "value": { "value": false },

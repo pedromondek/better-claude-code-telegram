@@ -7,7 +7,9 @@ use crate::journal::{Change, Journal};
 use crate::js::{js_basename, js_template, js_truthy, ordered_entries, parse_json, stringify};
 use crate::messages::Messages;
 use crate::paths::CONFIG_FILE;
-use crate::settings::{ENABLED_PLUGINS, PERMISSIONS, STATUS_LINE, deny_includes};
+use crate::settings::{
+    DENY, ENABLED_PLUGINS, PERMISSIONS, SETTINGS_FILE, STATUS_LINE, deny_includes,
+};
 use crate::setup::{StatuslineKind, read_text, statusline_kind};
 use crate::setup_files::{review_name, templated_days, templated_delay, visuals_text};
 use crate::ui::{green, info, note};
@@ -22,8 +24,6 @@ pub const VISUALS_ICON: &str = "🖼";
 pub const STATUSLINE_ICON: &str = "📊";
 pub const SECURITY_RULE_ICON: &str = "🔒";
 
-const SETTINGS_FILE: &str = "settings.json";
-const DENY: &str = "deny";
 const PROTECTION_FAILED: &str = "((intermediate value) ?? []).includes is not a function";
 const CHANGE_SEPARATOR: &str = "\n  • ";
 const OPTION_PREFIX: &str = "\n    – ";

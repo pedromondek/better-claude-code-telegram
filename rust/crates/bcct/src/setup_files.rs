@@ -313,7 +313,8 @@ pub fn save_inbox_days(
     Ok(())
 }
 
-fn customized(app_dir: &Path) -> bool {
+#[must_use]
+pub fn statusline_customized(app_dir: &Path) -> bool {
     read_config(app_dir).get(CUSTOMIZED_KEY) == Some(&Value::Bool(true))
 }
 
@@ -323,7 +324,7 @@ pub fn statusline_custom_left(
     messages: &Messages,
     colorize: bool,
 ) -> Option<String> {
-    customized(app_dir).then(|| {
+    statusline_customized(app_dir).then(|| {
         warn(
             &(messages.statusline_custom_left)(&statusline_command(app_dir)),
             colorize,
@@ -520,7 +521,7 @@ pub fn apply_statusline(
         return Ok(());
     }
 
-    printer.skipped(if customized(files.app_dir) {
+    printer.skipped(if statusline_customized(files.app_dir) {
         messages.statusline_custom_kept
     } else {
         messages.statusline_kept
@@ -653,7 +654,7 @@ mod tests {
     }
 
     #[test]
-    fn iso_time_matches_the_js_date_format() {
+    fn formats_the_time_like_the_js_date() {
         assert_eq!(iso_time(0), "1970-01-01T00:00:00.000Z");
         assert_eq!(iso_time(1_700_000_000_123), "2023-11-14T22:13:20.123Z");
         assert_eq!(iso_time(951_782_400_000), "2000-02-29T00:00:00.000Z");
@@ -679,7 +680,7 @@ mod tests {
     }
 
     #[test]
-    fn iso_time_walks_every_day_of_more_than_four_centuries() {
+    fn formats_every_day_of_more_than_four_centuries() {
         let (mut year, mut month, mut day) = (1970_u64, 1_u64, 1_u64);
 
         for days in 0..160_000_u64 {

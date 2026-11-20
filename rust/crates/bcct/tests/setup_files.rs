@@ -11,15 +11,15 @@ use std::path::{Path, PathBuf};
 
 use bcct::changes::{ChangeContext, describe_changes, parsed_json, setting_text};
 use bcct::journal::{Change, ChangeKind, Journal};
-use bcct::js::{parse_json, stringify_pretty};
+use bcct::js::{PathFlavor, parse_json, stringify_pretty};
 use bcct::locale::Locale;
 use bcct::messages::{Messages, messages_for};
 use bcct::settings::{
     is_our_statusline, statusline_preview, with_env_denied, with_statusline, without_env_denied,
 };
 use bcct::setup::{
-    SetupPaths, StatuslineKind, env_deny_rule, read_settings, shell_file, shell_rc_files,
-    statusline_kind,
+    SetupPaths, StatuslineKind, env_deny_rule, env_deny_rule_in, read_settings, shell_file,
+    shell_rc_files, statusline_kind,
 };
 use bcct::setup_files::{
     ConfigError, Printer, SetupFiles, StatuslineChoice, apply_statusline, current_inbox_days,
@@ -174,10 +174,20 @@ fn the_shell_lines_match_the_js() {
 }
 
 #[test]
-fn the_deny_rules_match_the_js() {
+fn writes_the_deny_rules_like_the_js() {
     for entry in list(&fixture(), "denyRules") {
+        let flavor = if text(entry, "platform") == "win32" {
+            PathFlavor::Win32
+        } else {
+            PathFlavor::Posix
+        };
+
         assert_eq!(
-            env_deny_rule(Path::new(text(entry, "envFile")), text(entry, "home")),
+            env_deny_rule_in(
+                flavor,
+                Path::new(text(entry, "envFile")),
+                text(entry, "home")
+            ),
             text(entry, "rule"),
             "{entry}"
         );
@@ -277,7 +287,7 @@ fn the_setting_texts_match_the_js() {
 }
 
 #[test]
-fn parsed_json_matches_the_js() {
+fn parses_the_json_text_like_the_js() {
     for entry in list(&fixture(), "parsed") {
         let parsed = Value::Object(parsed_json(entry["text"].as_str()));
         let expected = match &entry["out"] {

@@ -19,8 +19,9 @@ use crate::setup::{StatuslineKind, read_text, statusline_kind};
 pub const STATUS_LINE: &str = "statusLine";
 pub const PERMISSIONS: &str = "permissions";
 pub const ENABLED_PLUGINS: &str = "enabledPlugins";
+pub const DENY: &str = "deny";
+pub const SETTINGS_FILE: &str = "settings.json";
 
-const DENY: &str = "deny";
 const COMMAND: &str = "command";
 const TYPE: &str = "type";
 const COMMAND_TYPE: &str = "command";

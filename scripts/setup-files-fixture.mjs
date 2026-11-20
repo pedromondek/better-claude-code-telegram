@@ -160,6 +160,8 @@ const shellTexts = [
   `a\n[ -f "{shell}" ] && . "{shell}"\nb\n`,
   `a\n\n# Added by better-claude-code-telegram setup\n[ -f "{shell}" ] && . "{shell}"\nb\n`,
   "a\n# {shell}\nb",
+  `  # [ -f "{shell}" ] && . "{shell}"\n`,
+  `# {shell}\n  [ -f "{shell}" ] && . "{shell}"`,
   "source {shell}",
   "{shell}{shell}\nkeep\n",
   "\n",
@@ -200,10 +202,17 @@ const denyRules = [
   ["relative/.env", "/home/dev"],
   ["/home/dev/.env", "/"],
   ["/home/dev/.env", ""],
-].map(([envFile, home]) => ({
+  ["C:\\x\\.env", "C:"],
+  ["C:\\Users\\x\\.claude\\channels\\telegram\\.env", "C:\\Users\\x", "win32"],
+  ["D:\\state\\.env", "C:\\Users\\x", "win32"],
+  ["c:/Users/x/.env", "C:\\Users\\x", "win32"],
+  ["state\\.env", "C:\\Users\\x", "win32"],
+  ["/home/dev/.env", "/home/dev", "win32"],
+].map(([envFile, home, platform = "linux"]) => ({
   envFile,
   home,
-  rule: setup.envDenyRule(envFile, home),
+  platform,
+  rule: setup.envDenyRule(envFile, home, platform),
 }));
 
 const RULE = "Read(~/x/.env)";
