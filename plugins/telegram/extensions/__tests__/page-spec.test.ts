@@ -164,6 +164,17 @@ describe("parseCaptureSpec › shots", () => {
       "shots[0].outline must be a text or a list of texts",
     ],
     [
+      { url: "http://x/", shots: [{ name: "a", outline: 1 }] },
+      "shots[0].outline must be a text or a list of texts",
+    ],
+    [
+      {
+        url: "http://x/",
+        shots: [{ name: "a", outline: { selector: "#menu" } }],
+      },
+      "shots[0].outline must be a text or a list of texts",
+    ],
+    [
       { url: "http://x/", shots: [{ name: "a", fullPage: "yes" }] },
       "shots[0].fullPage must be true or false",
     ],
