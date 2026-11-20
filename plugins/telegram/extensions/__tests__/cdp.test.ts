@@ -10,7 +10,15 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { PassThrough } from "node:stream";
 
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest";
 
 import {
   CDP_TIMEOUT_MS,
@@ -244,6 +252,38 @@ describe("cdpClient", () => {
     socket.close();
 
     await expect(pending).rejects.toThrow("Page.navigate: the browser closed");
+  });
+
+  describe("after the socket closed", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("rejects at once a command sent after the socket closed", async (): Promise<void> => {
+      FakeSocket.respond = (): null => null;
+
+      const socket = new FakeSocket("ws://x");
+      const client = cdpClient(socket);
+      let failure: unknown = null;
+
+      socket.close();
+      client.send("Page.navigate").catch((error: unknown) => {
+        failure = error;
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure).toHaveProperty(
+        "message",
+        "Page.navigate: the browser closed",
+      );
+      expect(socket.sent).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 });
 
@@ -585,19 +625,64 @@ describe("launchBrowser", () => {
     expect(existsSync(profileOf())).toBe(false);
   });
 
-  it("kills the Chromium that does not exit within the close time", async (): Promise<void> => {
-    const child = fakeChild();
-    const browser = launch(child, { closeTimeoutMs: 10 });
+  describe("close time", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
 
-    child.stderr.write("DevTools listening on ws://h/b\n");
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
-    const opened = await browser;
+    it("kills the Chromium that does not exit within the close time", async (): Promise<void> => {
+      const child = fakeChild();
+      const browser = launch(child, { closeTimeoutMs: 10 });
 
-    await opened.close();
+      child.stderr.write("DevTools listening on ws://h/b\n");
 
-    expect(child.kill).toHaveBeenCalledTimes(1);
-    expect(FakeSocket.last?.closed).toBe(true);
-    expect(existsSync(profileOf())).toBe(false);
+      const opened = await browser;
+      const closing = opened.close();
+
+      await vi.advanceTimersByTimeAsync(9);
+
+      expect(child.kill).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      await closing;
+
+      expect(child.kill).toHaveBeenCalledTimes(1);
+      expect(FakeSocket.last?.closed).toBe(true);
+      expect(existsSync(profileOf())).toBe(false);
+    });
+
+    it("closes at once a Chromium that already exited and closed its socket", async (): Promise<void> => {
+      const child = fakeChild();
+      const browser = launch(child, { closeTimeoutMs: 5000 });
+
+      child.stderr.write("DevTools listening on ws://h/b\n");
+
+      const opened = await browser;
+      let closed = false;
+
+      FakeSocket.respond = (): null => null;
+      child.emit("exit", null);
+      FakeSocket.last?.emit("close", {});
+
+      const closing = (async (): Promise<void> => {
+        await opened.close();
+        closed = true;
+      })();
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(closed).toBe(true);
+
+      await closing;
+
+      expect(child.kill).not.toHaveBeenCalled();
+      expect(FakeSocket.last?.sent).toEqual([]);
+      expect(existsSync(profileOf())).toBe(false);
+    });
   });
 
   it("waits 5 s for the Chromium to close", (): void => {

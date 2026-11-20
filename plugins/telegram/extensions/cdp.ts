@@ -117,6 +117,10 @@ export function inSeconds(milliseconds: number): string {
   return `${milliseconds / 1000} s`;
 }
 
+function browserClosedError(method: string): Error {
+  return new Error(`${method}: the browser closed`);
+}
+
 function recordOf(value: unknown): CdpResult {
   return isRecord(value) ? value : {};
 }
@@ -128,6 +132,7 @@ export function cdpClient(
   const pending = new Map<number, PendingCommand>();
   const waiters: EventWaiter[] = [];
   let lastId = 0;
+  let closed = false;
 
   socket.addEventListener("message", ({ data }) => {
     const message: unknown = JSON.parse(String(data));
@@ -158,13 +163,19 @@ export function cdpClient(
       waiters.splice(index, 1)[0].resolve(recordOf(message.params));
   });
   socket.addEventListener("close", () => {
+    closed = true;
+
     for (const command of pending.values()) {
-      command.reject(new Error(`${command.method}: the browser closed`));
+      command.reject(browserClosedError(command.method));
     }
   });
 
   return {
     send(method, params = {}, sessionId): Promise<CdpResult> {
+      if (closed) {
+        return Promise.reject(browserClosedError(method));
+      }
+
       lastId += 1;
 
       const id = lastId;
