@@ -1,5 +1,7 @@
+use crate::launch::TELEGRAM_COMMAND;
 use crate::package::SETUP_COMMAND;
 use crate::setup_run::SET_FLAG;
+use crate::update::UPDATE_COMMAND;
 
 use super::{
     BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
@@ -69,12 +71,12 @@ pub(super) const MESSAGES: Messages = Messages {
     },
     not_configured: |missing, command| {
         format!(
-            "'claude --telegram' is not set up yet. Missing:\n  • {missing}\nRun '{command}' first."
+            "'{TELEGRAM_COMMAND}' is not set up yet. Missing:\n  • {missing}\nRun '{command}' first."
         )
     },
     already_running: |pid| {
         format!(
-            "A 'claude --telegram' instance is already open (bot in process {pid}). Close it before opening another one."
+            "A '{TELEGRAM_COMMAND}' instance is already open (bot in process {pid}). Close it before opening another one."
         )
     },
     unknown_steps: |unknown, all| {
@@ -102,6 +104,7 @@ pub(super) const MESSAGES: Messages = Messages {
     invalid_answer: |value, hint| format!("'{value}' is not valid. Use:\n  • {hint}"),
     enter_keeps_default: "Press Enter on an empty answer to keep the default or the existing setting.",
     cancelled: "Cancelled.",
+    aborted: "Aborted with Ctrl+D",
     exit_prompt: "Leave the setup?",
     continue_setup: "Go on where it stopped",
     exit_setup: "Leave",
@@ -190,7 +193,11 @@ pub(super) const MESSAGES: Messages = Messages {
         crate::chromium_install_command!(),
         "'."
     ),
-    ffmpeg_missing_warning: "ffmpeg is missing for the video: install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
+    ffmpeg_missing_warning: concat!(
+        "ffmpeg is missing for the video: install it with ",
+        crate::ffmpeg_install_commands!("or"),
+        "."
+    ),
     language_kept: |locale| format!("Language kept:\n  • {locale}"),
     delay_kept: |minutes| format!("Wait time kept:\n  • {}", format_delay(minutes)),
     quiet_kept: |value| format!("Quiet hours kept:\n  • {value}"),
@@ -215,7 +222,7 @@ pub(super) const MESSAGES: Messages = Messages {
     inbox_forever: "kept forever",
     not_settable: |step, steps| {
         format!(
-            "'{step}' cannot be set with --set, only {steps}. The token, the pairing and the plugins go through '{SETUP_COMMAND}' in your own terminal."
+            "'{step}' cannot be set with {SET_FLAG}, only {steps}. The token, the pairing and the plugins go through '{SETUP_COMMAND}' in your own terminal."
         )
     },
     unknown_health_groups: |groups, valid| {
@@ -286,9 +293,17 @@ pub(super) const MESSAGES: Messages = Messages {
         regular_user: "no, runs as a regular user (as recommended)",
         root: "running as root; use a regular user, so Claude cannot change the whole machine",
         connected: "connected",
-        not_open: "'claude --telegram' is not open",
-        connecting: "connecting; 'claude --telegram' was just opened",
-        down: "the bot stopped receiving messages; reopen 'claude --telegram'",
+        not_open: concat!("'", crate::telegram_command!(), "' is not open"),
+        connecting: concat!(
+            "connecting; '",
+            crate::telegram_command!(),
+            "' was just opened"
+        ),
+        down: concat!(
+            "the bot stopped receiving messages; reopen '",
+            crate::telegram_command!(),
+            "'"
+        ),
         down_here: "the channel server is not running in this instance; type /mcp reconnect all",
         protected: "Claude cannot read the bot token",
         unprotected: |command| format!("Claude can read the bot token. Run '{command}'."),
@@ -298,14 +313,22 @@ pub(super) const MESSAGES: Messages = Messages {
         model: |model| format!("model {model}"),
         broken: |command| format!("the Python environment does not work. Run '{command}'."),
         chromium_missing: concat!("missing. Run '", crate::chromium_install_command!(), "'."),
-        ffmpeg_missing: "missing. Install it with 'sudo apt install ffmpeg', 'brew install ffmpeg' or 'winget install ffmpeg'.",
+        ffmpeg_missing: concat!(
+            "missing. Install it with ",
+            crate::ffmpeg_install_commands!("or"),
+            "."
+        ),
         statusline: StatuslineDetail {
             ours: "Telegram indicator on",
             ours_after: "Telegram indicator after your status line",
             other: "another status line, without the indicator",
             none: "no status line",
             custom: "yours, with the indicator Claude added",
-            custom_pending: "Claude fits the indicator into yours on the next 'claude --telegram'",
+            custom_pending: concat!(
+                "Claude fits the indicator into yours on the next '",
+                crate::telegram_command!(),
+                "'"
+            ),
         },
         shell_commented: |rc| {
             format!("the line in {rc} is commented out. Run '{SETUP_COMMAND} plugin'.")
@@ -325,7 +348,7 @@ pub(super) const MESSAGES: Messages = Messages {
         ),
         version_same: |version| format!("binary and plugins on {version}"),
         version_differs: |plugin, binary| {
-            format!("the plugin is on {plugin} and the binary on {binary}. Run 'bcct update'.")
+            format!("the plugin is on {plugin} and the binary on {binary}. Run '{UPDATE_COMMAND}'.")
         },
         version_unknown: "nothing to compare (see Launcher and Plugins)",
         app_writable: "writable",
@@ -389,7 +412,7 @@ pub(super) const MESSAGES: Messages = Messages {
     plan_header: "To finish this step, the setup needs to:",
     plan_marketplace: |name| format!("register the marketplace '{name}' from GitHub"),
     plan_plugin: |id| format!("install the plugin '{id}' for your user"),
-    plan_shell_line: |file| format!("add to {file} the line that loads 'claude --telegram'"),
+    plan_shell_line: |file| format!("add to {file} the line that loads '{TELEGRAM_COMMAND}'"),
     plan_prompt: "Go ahead with the installation?",
     nothing_installed: "Nothing was installed.",
     by_hand: "To do it by hand, run:",
@@ -399,24 +422,24 @@ pub(super) const MESSAGES: Messages = Messages {
     plugin_installing: |id| format!("Installing the plugin '{id}'…"),
     plugin_removing: |id| format!("Removing the plugin '{id}'…"),
     plugin_enabling: |id| format!("Enabling '{id}' in every instance…"),
-    plugin_disabling: |id| format!("Disabling '{id}' outside 'claude --telegram'…"),
+    plugin_disabling: |id| format!("Disabling '{id}' outside '{TELEGRAM_COMMAND}'…"),
     plugin_added: |id| format!("Plugin '{id}' installed for your user."),
     marketplace_registered: |name| format!("Marketplace '{name}' already registered."),
     plugin_installed: |id| format!("Plugin '{id}' already installed."),
-    plugin_disabled_outside: |id| format!("Plugin '{id}' disabled outside 'claude --telegram'."),
+    plugin_disabled_outside: |id| format!("Plugin '{id}' disabled outside '{TELEGRAM_COMMAND}'."),
     plugin_enabled: |id| format!("Plugin '{id}' enabled in every instance."),
     plugin_already_disabled_outside: |id| {
-        format!("Plugin '{id}' already disabled outside 'claude --telegram'.")
+        format!("Plugin '{id}' already disabled outside '{TELEGRAM_COMMAND}'.")
     },
     plugin_already_enabled: |id| format!("Plugin '{id}' already enabled in every instance."),
-    rc_already_loads: |rc_file| format!("{rc_file} already loads 'claude --telegram'."),
-    rc_now_loads: |rc_file| format!("{rc_file} now loads 'claude --telegram'."),
+    rc_already_loads: |rc_file| format!("{rc_file} already loads '{TELEGRAM_COMMAND}'."),
+    rc_now_loads: |rc_file| format!("{rc_file} now loads '{TELEGRAM_COMMAND}'."),
     shell_unsupported: |shell, line| {
         format!(
-            "The {shell} shell cannot load 'claude --telegram'. Load this line in bash or zsh:\n  {line}"
+            "The {shell} shell cannot load '{TELEGRAM_COMMAND}'. Load this line in bash or zsh:\n  {line}"
         )
     },
-    rc_no_longer_loads: |rc_file| format!("{rc_file} no longer loads 'claude --telegram'."),
+    rc_no_longer_loads: |rc_file| format!("{rc_file} no longer loads '{TELEGRAM_COMMAND}'."),
     statusline_removed: |file| format!("Telegram status line removed from {file}."),
     env_rule_removed: |file| {
         format!("Rule that kept Claude from reading the bot token removed from {file}.")
@@ -448,7 +471,11 @@ pub(super) const MESSAGES: Messages = Messages {
     claude_missing_for_uninstall: |commands| {
         format!("'claude' is not in the PATH. To remove the plugins later, run:\n{commands}")
     },
-    close_instance_before_uninstall: "Close 'claude --telegram' before uninstalling; nothing was changed.",
+    close_instance_before_uninstall: concat!(
+        "Close '",
+        crate::telegram_command!(),
+        "' before uninstalling; nothing was changed."
+    ),
     transcription_found: |paths| {
         format!("Local transcription installed by the setup:\n  • {paths}")
     },
@@ -474,7 +501,11 @@ pub(super) const MESSAGES: Messages = Messages {
     use_saved_bot: |username| format!("Use the saved bot, @{username}?"),
     token_prompt: "Bot token (from @BotFather; hidden while you type): ",
     token_saved: |username, file| format!("Token of bot @{username} saved in {file}."),
-    no_pairing_message: "No message with the code arrived in 3 min. Run the setup again.",
+    no_pairing_message: concat!(
+        "No message with the code arrived in ",
+        crate::pairing_timeout_minutes!(),
+        " min. Run the setup again."
+    ),
     already_paired: |accounts| format!("Bot already paired with {accounts}."),
     pairing_choice_question: |accounts| {
         format!("The bot is already paired with {accounts}. What now?")
@@ -490,7 +521,7 @@ pub(super) const MESSAGES: Messages = Messages {
     },
     permissions_skipped: |option| {
         format!(
-            "'claude --telegram' does not start with {option}:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option."
+            "'{TELEGRAM_COMMAND}' does not start with {option}:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option."
         )
     },
     groups_warning: |username| {
@@ -498,18 +529,29 @@ pub(super) const MESSAGES: Messages = Messages {
             "@{username} can be added to groups. In @BotFather send /setjoingroups, pick @{username} and choose Disable."
         )
     },
-    close_instance_before_pairing: "Close the 'claude --telegram' instance before pairing, because it holds the bot.",
+    close_instance_before_pairing: concat!(
+        "Close the '",
+        crate::telegram_command!(),
+        "' instance before pairing, because it holds the bot."
+    ),
     webhook_configured: |username| {
         format!("Bot @{username} has a webhook set; use a bot only for Claude.")
     },
     send_pairing_code: |username, code, link| {
+        let minutes = crate::pairing_timeout_minutes!();
+
         format!(
-            "To pair, open this link and tap Start:\n  • {link}\nOr send this code to @{username}:\n  • {code}\nWaiting up to 3 min. Only the message with this code pairs."
+            "To pair, open this link and tap Start:\n  • {link}\nOr send this code to @{username}:\n  • {code}\nWaiting up to {minutes} min. Only the message with this code pairs."
         )
     },
     confirm_pairing: |label, user_id| format!("Pair with {label} (id {user_id})?"),
     pairing_cancelled: "Pairing cancelled.",
-    paired_chat_message: "Paired with Claude Code.\n\nRun 'claude --telegram' to chat here.",
+    no_pairing_code: "Could not generate the pairing code.",
+    paired_chat_message: concat!(
+        "Paired with Claude Code.\n\nRun '",
+        crate::telegram_command!(),
+        "' to chat here."
+    ),
     paired_with: |label| format!("Paired with {label}; only this account talks to the bot."),
     delay_question: "Minutes without an answer in the terminal before going to Telegram",
     delay_label: format_delay,
@@ -526,6 +568,7 @@ pub(super) const MESSAGES: Messages = Messages {
     delays_saved: |summary, file| format!("Delay per kind saved in {file}:\n  • {summary}"),
     delays_kept: |summary| format!("Delay per kind kept:\n  • {summary}"),
     delays_cleared: "Delay per kind turned off: the single delay applies to everything.",
+    delays_already_off: "Delay per kind kept: off, the single delay applies to everything.",
     delay_saved: |minutes, file| format!("Delay of {} saved in {file}.", format_delay(minutes)),
     quiet_question: "Quiet hours, when nothing goes to Telegram",
     quiet_off_label: "Off",
@@ -597,11 +640,19 @@ pub(super) const MESSAGES: Messages = Messages {
     statusline_choice_hints: StatuslineChoiceHints {
         after: "yours stays and the indicator shows beside it",
         replace: "only the indicator; yours is saved and comes back on uninstall",
-        custom: "on the next 'claude --telegram', Claude fits the indicator into yours the way you want",
+        custom: concat!(
+            "on the next '",
+            crate::telegram_command!(),
+            "', Claude fits the indicator into yours the way you want"
+        ),
         keep: "nothing changes",
     },
     statusline_custom_kept: "Status line kept:\n  • yours, with the indicator Claude added",
-    statusline_custom_requested: "Request noted:\n  • on the next 'claude --telegram', Claude asks how to fit the indicator into your status line",
+    statusline_custom_requested: concat!(
+        "Request noted:\n  • on the next '",
+        crate::telegram_command!(),
+        "', Claude asks how to fit the indicator into your status line"
+    ),
     statusline_custom_needs_own: "There is no status line of yours to fit the indicator into; use on to show only the indicator.",
     statusline_custom_prompt: |settings_file, current, indicator, example| {
         format!(
@@ -646,9 +697,18 @@ pub(super) const MESSAGES: Messages = Messages {
         crate::repository_url!(),
         "/blob/main/docs/secretary/secretary.md"
     ),
-    done_all: "Done. Open a new terminal and run 'claude --telegram'.",
-    done_reopen: "Done. Reopen 'claude --telegram' for it to apply.",
+    done_all: concat!(
+        "Done. Open a new terminal and run '",
+        crate::telegram_command!(),
+        "'."
+    ),
+    done_reopen: concat!(
+        "Done. Reopen '",
+        crate::telegram_command!(),
+        "' for it to apply."
+    ),
     done_live: "Done. It applies to the next messages, nothing to reopen.",
+    done_new_terminal: "Done. Open a new terminal for it to apply.",
     question_released: |instance, headers| {
         format!("Released the question from [{instance}]: {headers}")
     },
@@ -689,15 +749,17 @@ pub(super) const MESSAGES: Messages = Messages {
         " uninstall"
     ),
     version_unstable: |channel| {
-        format!("Test version ({channel}). For the stable one: 'bcct update stable'.")
+        format!("Test version ({channel}). For the stable one: '{UPDATE_COMMAND} stable'.")
     },
     uninstall_version_removed: |version| format!("Deleted {version}."),
     uninstall_version_active: |version| {
-        format!("{version} is in use. Switch first with 'bcct update'.")
+        format!("{version} is in use. Switch first with '{UPDATE_COMMAND}'.")
     },
     uninstall_version_missing: |version| format!("{version} is not installed."),
     session_start_notice: |plugin, binary| {
-        format!("bcct: the plugin is on {plugin} and the binary on {binary}. Run 'bcct update'.")
+        format!(
+            "bcct: the plugin is on {plugin} and the binary on {binary}. Run '{UPDATE_COMMAND}'."
+        )
     },
     path_question: "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
     path_added: |file| format!("{file} now adds bcct to your PATH. It applies to new terminals."),
@@ -805,7 +867,7 @@ pub(super) const MESSAGES: Messages = Messages {
         the_current: "(the current one)",
         which: |numbers, default| format!("Which one? ({numbers}; Enter: {default}):"),
         pick: |version, options| format!("Test version {version}. Pick with {options}."),
-        pick_option: |channel, version| format!("'bcct update {channel}' ({version})"),
+        pick_option: |channel, version| format!("'{UPDATE_COMMAND} {channel}' ({version})"),
         or: " or ",
         and: " and ",
         cleanup_question: |count, versions| {
@@ -827,27 +889,40 @@ pub(super) const MESSAGES: Messages = Messages {
             crate::setup_command!(),
             "'."
         ),
-        no_git: "git is not installed, and Claude Code needs it to update the plugins. Install git and run 'bcct update' again.",
-        plugin_failed: |line| format!("Plugins: {line}. Run 'bcct update' again."),
+        no_git: concat!(
+            "git is not installed, and Claude Code needs it to update the plugins. Install git and run '",
+            crate::update_command!(),
+            "' again."
+        ),
+        plugin_failed: |line| format!("Plugins: {line}. Run '{UPDATE_COMMAND}' again."),
         plugin_stayed: |have, want| {
             format!(
-                "The telegram-hooks plugin stayed on {have}, not {want}. Run 'bcct update' again."
+                "The telegram-hooks plugin stayed on {have}, not {want}. Run '{UPDATE_COMMAND}' again."
+            )
+        },
+        only_newest_stable: |version, newest| {
+            format!(
+                "Only the newest stable ({newest}) can be installed, not {version}. Run '{UPDATE_COMMAND} stable'."
             )
         },
         no_hash: |version, platform| format!("Plugin {version} has no binary hash for {platform}."),
         download_failed: |version, reason| {
             format!(
-                "Binary: could not download {version} from GitHub ({reason}). The plugins are already on {version}. Run 'bcct update' again."
+                "Binary: could not download {version} from GitHub ({reason}). The plugins are already on {version}. Run '{UPDATE_COMMAND}' again."
             )
         },
         binary_failed: |version, reason| {
             format!(
-                "Binary: could not install {version} ({reason}). The plugins are already on {version}. Run 'bcct update' again."
+                "Binary: could not install {version} ({reason}). The plugins are already on {version}. Run '{UPDATE_COMMAND}' again."
             )
         },
         hash_mismatch: "hash mismatch",
         not_bcct: |version| format!("did not answer as bcct {version}"),
-        usage: "Usage: bcct update [stable|beta|alpha|<version>] [--check]",
+        usage: concat!(
+            "Usage: ",
+            crate::update_command!(),
+            " [stable|beta|alpha|<version>] [--check]"
+        ),
     },
     fix: FixTexts {
         can_fix: "I can fix:",
@@ -870,6 +945,6 @@ pub(super) const MESSAGES: Messages = Messages {
             format!("replace the old command (from the clone) with the current one in {settings}")
         },
         app_dir: |folder| format!("give write permission to {folder}"),
-        update: "run 'bcct update'",
+        update: concat!("run '", crate::update_command!(), "'"),
     },
 };

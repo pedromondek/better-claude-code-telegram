@@ -87,6 +87,7 @@
     ],
     "enterKeepsDefault": "Press Enter on an empty answer to keep the default or the existing setting.",
     "cancelled": "Cancelled.",
+    "aborted": "Aborted with Ctrl+D",
     "exitPrompt": "Leave the setup?",
     "continueSetup": "Go on where it stopped",
     "exitSetup": "Leave",
@@ -959,6 +960,8 @@
     "doneAll": "Done. Open a new terminal and run 'claude --telegram'.",
     "doneReopen": "Done. Reopen 'claude --telegram' for it to apply.",
     "doneLive": "Done. It applies to the next messages, nothing to reopen.",
+    "doneNewTerminal": "Done. Open a new terminal for it to apply.",
+    "delaysAlreadyOff": "Delay per kind kept: off, the single delay applies to everything.",
     "questionReleased": [
       {
         "args": ["alpha 1", "beta 'two'"],
@@ -1329,6 +1332,7 @@
     ],
     "enterKeepsDefault": "Confirmar (Enter) vazio confirma o padrão ou mantém a configuração existente.",
     "cancelled": "Cancelado.",
+    "aborted": "Interrompido com Ctrl+D",
     "exitPrompt": "Sair do setup?",
     "continueSetup": "Continuar de onde parou",
     "exitSetup": "Sair",
@@ -2210,6 +2214,8 @@
     "doneAll": "Pronto. Abra um terminal novo e rode 'claude --telegram'.",
     "doneReopen": "Pronto. Reabra o 'claude --telegram' para valer.",
     "doneLive": "Pronto. Já vale para as próximas mensagens, sem reabrir nada.",
+    "doneNewTerminal": "Pronto. Abra um terminal novo para valer.",
+    "delaysAlreadyOff": "Atraso por tipo mantido: desligado, o atraso único vale para tudo.",
     "questionReleased": [
       {
         "args": ["alpha 1", "beta 'two'"],
