@@ -462,6 +462,35 @@ fn a_newer_stable_updates_the_plugins_in_place_and_then_the_binary() {
 }
 
 #[test]
+fn removes_a_stale_download_left_by_an_interrupted_update() {
+    let folder = sandbox();
+    let fake = Fake::new(folder.path())
+        .tags(&json!({ "latest": "0.3.0" }))
+        .plugins("0.2.1", Some("0.3.0"), &[])
+        .release("0.3.0", "0.3.0", None);
+    fake.active("0.2.1");
+    let versions = fake.app.join("bin/versions");
+    let modified = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+
+    for name in [".download-old", ".download-new"] {
+        fs::write(versions.join(name), "partial").unwrap();
+    }
+
+    let stale = fs::File::open(versions.join(".download-old")).unwrap();
+    stale.set_modified(modified).unwrap();
+
+    let outcome = fake.run(&[], Vec::new(), false);
+    let mut left: Vec<String> = fs::read_dir(&versions)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+
+    assert_eq!(outcome.code, 0, "{}", outcome.err);
+    assert_eq!(left, vec![".download-new", "stable"]);
+}
+
+#[test]
 fn the_newest_stable_already_in_place_changes_nothing() {
     let folder = sandbox();
     let fake = Fake::new(folder.path())
@@ -489,6 +518,58 @@ fn the_newest_stable_already_in_place_changes_nothing() {
         by_name.run(&["0.2.1"], Vec::new(), false).out,
         "Looking for versions on npm\n○ Already on 0.2.1.\n"
     );
+}
+
+#[test]
+fn refuses_an_older_stable_the_plugins_cannot_follow() {
+    let folder = sandbox();
+    let refused =
+        "✘ Only the newest stable (0.3.0) can be installed, not 0.2.0. Run 'bcct update stable'.\n";
+
+    for (plugins, wanted) in [
+        ("0.3.0", &["0.2.0", "--check"][..]),
+        ("0.3.0", &["0.2.0"][..]),
+        ("0.4.0-alpha.1", &["0.2.0"][..]),
+        ("0.4.0-alpha.1", &["v0.2.0"][..]),
+    ] {
+        let mut fake = Fake::new(folder.path())
+            .tags(&json!({ "latest": "0.3.0", "alpha": "0.4.0-alpha.1" }))
+            .plugins(plugins, Some("0.2.0"), &[])
+            .release("0.2.0", "0.2.0", None);
+        fake.responses
+            .insert(format!("{PACKAGE_URL}0.2.0"), Ok((200, b"{}".to_vec())));
+        fake.active("0.1.0");
+
+        let outcome = fake.run(wanted, Vec::new(), false);
+
+        assert_eq!(outcome.code, 1, "{plugins} {wanted:?}");
+        assert_eq!(outcome.err, refused, "{plugins} {wanted:?}");
+        assert_eq!(
+            outcome.calls,
+            vec!["plugin list --json".to_owned()],
+            "{plugins} {wanted:?}"
+        );
+        assert_eq!(Store::new(&fake.app).current().as_deref(), Some("0.1.0"));
+    }
+}
+
+#[test]
+fn installs_only_the_binary_of_an_older_stable_the_plugins_already_have() {
+    let folder = sandbox();
+    let mut fake = Fake::new(folder.path())
+        .tags(&json!({ "latest": "0.3.0" }))
+        .plugins("0.2.0", None, &[])
+        .release("0.2.0", "0.2.0", None);
+    fake.responses
+        .insert(format!("{PACKAGE_URL}0.2.0"), Ok((200, b"{}".to_vec())));
+    fake.active("0.1.0");
+
+    let outcome = fake.run(&["0.2.0"], Vec::new(), false);
+
+    assert_eq!(outcome.err, "");
+    assert_eq!(outcome.code, 0);
+    assert_eq!(outcome.calls, vec!["plugin list --json".to_owned()]);
+    assert_eq!(Store::new(&fake.app).current().as_deref(), Some("0.2.0"));
 }
 
 #[test]
@@ -1099,14 +1180,13 @@ fn the_health_fix_runs_the_quiet_update_of_the_binary() {
 
     let output = cargo_bin_cmd!("bcct")
         .args(["health", "install", "--fix", "--only", "update"])
+        .env_clear()
+        .envs(support::coverage_env())
         .env("PATH", &bin)
         .env("HOME", root.join("home"))
         .env("CLAUDE_CONFIG_DIR", root.join("claude"))
         .env("BETTER_CC_TELEGRAM_DIR", root.join("app"))
         .env("BETTER_CC_TELEGRAM_NPM_ROOT", &closed)
-        .env_remove("LC_MESSAGES")
-        .env_remove("LANG")
-        .env_remove("LC_ALL")
         .output()
         .unwrap();
     let shown = String::from_utf8_lossy(&output.stdout);
@@ -1254,14 +1334,12 @@ fn the_update_command_reads_the_roots_from_the_environment() {
 
     let output = cargo_bin_cmd!("bcct")
         .arg("update")
+        .env_clear()
+        .envs(support::coverage_env())
         .env("HOME", folder.path().join("home"))
         .env("CLAUDE_CONFIG_DIR", folder.path().join("claude"))
         .env("BETTER_CC_TELEGRAM_NPM_ROOT", format!("{root}/"))
         .env("BETTER_CC_TELEGRAM_RELEASES_ROOT", "")
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
-        .env_remove("LC_MESSAGES")
-        .env_remove("LANG")
-        .env_remove("LC_ALL")
         .output()
         .unwrap();
 
@@ -1291,14 +1369,12 @@ fn the_update_command_reads_the_roots_from_the_environment() {
     let tags = serve(vec![response("200 OK", "{\"latest\":\"0.3.0\"}")]);
     let listed = cargo_bin_cmd!("bcct")
         .arg("update")
+        .env_clear()
+        .envs(support::coverage_env())
         .env("PATH", &bin)
         .env("HOME", folder.path().join("home"))
         .env("CLAUDE_CONFIG_DIR", folder.path().join("claude"))
         .env("BETTER_CC_TELEGRAM_NPM_ROOT", &tags)
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
-        .env_remove("LC_MESSAGES")
-        .env_remove("LANG")
-        .env_remove("LC_ALL")
         .output()
         .unwrap();
 
@@ -1311,9 +1387,10 @@ fn the_update_command_reads_the_roots_from_the_environment() {
 
     let usage = cargo_bin_cmd!("bcct")
         .args(["update", "--yes"])
+        .env_clear()
+        .envs(support::coverage_env())
         .env("HOME", folder.path().join("home"))
         .env("CLAUDE_CONFIG_DIR", folder.path().join("claude"))
-        .env_remove("BETTER_CC_TELEGRAM_DIR")
         .output()
         .unwrap();
 

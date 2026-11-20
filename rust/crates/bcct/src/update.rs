@@ -12,10 +12,18 @@ use crate::install::{MARKETPLACE_NAME, MARKETPLACE_REPO, System, marketplace_sou
 use crate::messages::{Messages, messages_for};
 use crate::paths::Paths;
 use crate::prompt::{FakePrompter, Prompter, create_prompter};
-use crate::self_install::{Channel, InstallError, Origin, Store};
+use crate::self_install::{Channel, DOWNLOAD_PREFIX, InstallError, Origin, Store};
 use crate::setup::{HOOKS_PLUGIN_ID, has_command, setup_locale};
 use crate::ui::{fail, info, should_colorize, skipped, success, warn};
 
+#[macro_export]
+macro_rules! update_command {
+    () => {
+        "bcct update"
+    };
+}
+
+pub const UPDATE_COMMAND: &str = crate::update_command!();
 pub const NPM_ROOT_ENV: &str = "BETTER_CC_TELEGRAM_NPM_ROOT";
 pub const RELEASES_ROOT_ENV: &str = "BETTER_CC_TELEGRAM_RELEASES_ROOT";
 
@@ -27,7 +35,7 @@ const DOWNLOAD_LIMIT: u64 = 256 * 1024 * 1024;
 const LIST_LIMIT: u64 = 1024 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
-const BODY_TIMEOUT: Duration = Duration::from_secs(300);
+pub(crate) const BODY_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_REDIRECTS: u32 = 10;
 const HTTP_OK: u16 = 200;
 const HTTP_NOT_FOUND: u16 = 404;
@@ -561,11 +569,12 @@ impl Run<'_, '_> {
         let Some(hash) = hash_from_checksums(&checksums, target, &asset) else {
             return Err(self.screen.failed(&(texts.no_hash)(target, &platform())));
         };
-        let versions = self.world.app_dir.join("bin").join("versions");
-        let downloaded = fs::create_dir_all(&versions)
-            .and_then(|()| {
+        let downloaded = self
+            .store
+            .versions_dir()
+            .and_then(|versions| {
                 tempfile::Builder::new()
-                    .prefix(".download-")
+                    .prefix(DOWNLOAD_PREFIX)
                     .tempfile_in(&versions)
             })
             .map_err(|error| {
@@ -673,6 +682,16 @@ impl Run<'_, '_> {
             let colorize = self.screen.colorize_out;
             self.screen.line(&skipped(&text, colorize));
             return SUCCESS;
+        }
+
+        if let Some(newest_stable) = newest.of(Channel::Stable)
+            && newest_stable != target
+            && plugins.hooks_version != target
+            && !Channel::of(&target).is_unstable()
+        {
+            return self
+                .screen
+                .failed(&(texts.only_newest_stable)(&target, newest_stable));
         }
 
         if request.check {
