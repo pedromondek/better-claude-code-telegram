@@ -117,6 +117,8 @@ const enUs = {
     "⚠️ I couldn't transcribe the audio; it went to Claude as an attachment.",
   replyHeader: (fromBot: boolean): string =>
     `↩️ In reply to ${fromBot ? "Claude's message" : "their own message"}`,
+  replyHeaderOther: (name: string): string =>
+    `↩️ In reply to a message from ${name}`,
   instanceNameSample: "name",
   mermaidUsage: (command: string): string => `Usage: ${command} <file.mmd>`,
   mermaidMissingCli:
@@ -207,6 +209,7 @@ const ptBr: Messages = {
     "⚠️ Não consegui transcrever o áudio; ele foi como anexo para o Claude.",
   replyHeader: (fromBot) =>
     `↩️ Em resposta ${fromBot ? "à mensagem do Claude" : "à própria mensagem"}`,
+  replyHeaderOther: (name) => `↩️ Em resposta a uma mensagem de ${name}`,
   instanceNameSample: "nome",
   mermaidUsage: (command) => `Uso: ${command} <arquivo.mmd>`,
   mermaidMissingCli:
