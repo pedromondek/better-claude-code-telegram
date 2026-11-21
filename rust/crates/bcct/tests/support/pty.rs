@@ -280,7 +280,7 @@ fn wait_for(session: &mut PtySession, out: &mut Vec<u8>, needle: &[u8]) -> io::R
 }
 
 fn command_of(run: &Run<'_>) -> io::Result<Command> {
-    let size = format!("stty cols {} rows {}", run.columns, run.rows);
+    let size = format!("read -r _ && stty cols {} rows {}", run.columns, run.rows);
     let script = match run.redirect {
         None => format!("{size} && exec \"$0\" \"$@\""),
         Some(Redirect::File(path)) => format!(
@@ -310,6 +310,8 @@ pub(crate) fn record(run: &Run<'_>) -> io::Result<Vec<u8>> {
         .get_process_mut()
         .set_window_size(run.columns, run.rows)
         .map_err(|error| fail(&error.to_string()))?;
+    session.write_all(b"\n")?;
+    session.flush()?;
 
     let mut out = Vec::new();
     let blind = run.redirect.is_some();
