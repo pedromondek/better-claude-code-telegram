@@ -639,18 +639,27 @@ describe("runBinary", () => {
     expect(childSignals).toEqual([]);
   });
 
-  function shimEnding(command) {
-    const script = [
-      'import { spawnSync } from "node:child_process";',
-      `import { exitAsChild, runBinary } from ${JSON.stringify(pathToFileURL(SHIM).href)};`,
-      "let childSignal = null;",
-      `const code = runBinary({ spawnSync, signals: process, onSignal: (signal) => { childSignal = signal; } }, "/bin/sh", ["-c", ${JSON.stringify(command)}]);`,
-      "exitAsChild(process, code, childSignal);",
-    ].join("\n");
+  const SHIM_ENDING_SCRIPT = [
+    'import { spawnSync } from "node:child_process";',
+    "const { exitAsChild, runBinary } = await import(process.env.SHIM_URL);",
+    "let childSignal = null;",
+    'const code = runBinary({ spawnSync, signals: process, onSignal: (signal) => { childSignal = signal; } }, "/bin/sh", ["-c", process.env.SHIM_COMMAND]);',
+    "exitAsChild(process, code, childSignal);",
+  ].join("\n");
 
-    return spawnSync(process.execPath, ["--input-type=module", "-e", script], {
-      encoding: "utf8",
-    });
+  function shimEnding(command) {
+    return spawnSync(
+      process.execPath,
+      ["--input-type=module", "-e", SHIM_ENDING_SCRIPT],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SHIM_URL: pathToFileURL(SHIM).href,
+          SHIM_COMMAND: command,
+        },
+      },
+    );
   }
 
   it.skipIf(process.platform === "win32")(
