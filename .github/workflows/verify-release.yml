@@ -1,0 +1,75 @@
+name: Verify release
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: Merged version pull request whose Release and npm packages to verify
+        required: true
+        type: string
+    outputs:
+      commit:
+        description: Commit that recorded the checksums of the version, where the tag and the Release are
+        value: ${{ jobs.verify.outputs.commit }}
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Merged version pull request whose Release and npm packages to verify
+        required: true
+        type: choice
+        options:
+          - Last merged PR
+          - Second to last merged PR
+          - Third to last merged PR
+      pr_number:
+        description: Another merged version pull request (number), which wins over the select
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify:
+    name: Verify the Release and the npm packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      attestations: read # gh attestation verify and gh release verify-asset read the attestations of the binaries
+    outputs:
+      commit: ${{ steps.verify.outputs.commit }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Merged pull request of the dispatch
+        id: target
+        if: inputs.pr != ''
+        env:
+          PR_CHOICE: ${{ inputs.pr }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: npm run --silent merged-pr
+
+      - name: Release and npm packages of the record
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.target.outputs.number || inputs.pr_number }}
+        run: npm run --silent release:verify

@@ -1,0 +1,13 @@
+diff --git a/node_modules/@stryker-mutator/instrumenter/dist/src/mutators/conditional-expression-mutator.js b/node_modules/@stryker-mutator/instrumenter/dist/src/mutators/conditional-expression-mutator.js
+index 08c758a..67cf612 100644
+--- a/node_modules/@stryker-mutator/instrumenter/dist/src/mutators/conditional-expression-mutator.js
++++ b/node_modules/@stryker-mutator/instrumenter/dist/src/mutators/conditional-expression-mutator.js
+@@ -71,7 +71,7 @@ function isTestOfCondition(path) {
+     if (!parentPath) {
+         return false;
+     }
+-    return (parentPath.isIfStatement() /*|| parentPath.isConditionalExpression()*/ &&
++    return ((parentPath.isIfStatement() || parentPath.isConditionalExpression()) &&
+         parentPath.node.test === path.node);
+ }
+ function isBooleanExpression(path) {

@@ -1,0 +1,38 @@
+name: Weekly online audit of the workflows
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: audit-workflows-on-schedule
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  audit:
+    name: Online audit of the workflows
+    permissions:
+      contents: read
+      issues: read # finds the open issue of the online audit, to link it from an inherited finding
+    uses: $/.github/workflows/audit-workflows.yml
+    with:
+      force: true
+
+  issue:
+    name: Issue of the online audit
+    needs:
+      - audit
+    if: always() && needs.audit.result == 'failure'
+    permissions:
+      contents: read
+      issues: write # opens the issue of the online audit, or comments on the open one
+    uses: $/.github/workflows/report-workflow-audit.yml
+    with:
+      origin: Weekly run

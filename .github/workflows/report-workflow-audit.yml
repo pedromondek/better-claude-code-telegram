@@ -1,0 +1,62 @@
+name: Issue of the online audit of the workflows
+
+on:
+  workflow_call:
+    inputs:
+      origin:
+        description: Merge on main or Weekly run, which changes the text of the issue
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      rehearsal:
+        description: Rehearsal that opens no issue, with the simulated origin
+        required: true
+        type: choice
+        options:
+          - Merge on main
+          - Weekly run
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  report:
+    name: Issue of the online audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # opens the issue of the online audit, or comments on the open one
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        continue-on-error: true
+        with:
+          name: workflow-audit-${{ github.sha }}
+          path: workflow-audit-artifacts
+
+      - name: Issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AUDIT_ORIGIN: ${{ inputs.origin || inputs.rehearsal }}
+          DRY_RUN: ${{ inputs.rehearsal != '' && '1' || '' }}
+          LOG_FILE: workflow-audit-artifacts/workflow-audit.log
+        run: npm run --silent audit:workflows:issue

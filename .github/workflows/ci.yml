@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Every task, or a single one to run again on its own
+        required: true
+        type: choice
+        default: All
+        options:
+          - All
+          - Checks
+          - Rust on macOS and Windows
+          - Mutation
+          - Online audit of the workflows
+      pr:
+        description: Merged pull request whose merge commit and range the checks validate
+        required: true
+        type: choice
+        options:
+          - Last merged PR
+          - Second to last merged PR
+          - Third to last merged PR
+      pr_number:
+        description: Another merged pull request (number), which wins over the select
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || format('ci-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    name: Checks
+    if: inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Mutation' && inputs.stage != 'Online audit of the workflows'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/push-checks.yml
+    with:
+      pr: ${{ inputs.pr }}
+      pr_number: ${{ inputs.pr_number }}
+
+  rust:
+    name: Rust
+    if: inputs.stage != 'Checks' && inputs.stage != 'Mutation' && inputs.stage != 'Online audit of the workflows'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/check-rust-platforms.yml
+
+  mutation:
+    name: Mutation
+    if: inputs.stage != 'Checks' && inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Online audit of the workflows'
+    permissions:
+      contents: read
+    uses: $/.github/workflows/check-mutation.yml
+    with:
+      before: ${{ github.event.pull_request.base.sha || github.event.before }}
+      full: ${{ github.event_name == 'workflow_dispatch' }}
+
+  pull-request:
+    name: Pull request
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read # reads the current title of the pull request, which a re-run keeps from the first event
+    uses: $/.github/workflows/check-pull-request.yml
+
+  workflow-audit:
+    name: Online audit of the workflows
+    if: inputs.stage != 'Checks' && inputs.stage != 'Rust on macOS and Windows' && inputs.stage != 'Mutation'
+    permissions:
+      contents: read
+      issues: read # finds the open issue of the online audit, to link it from an inherited finding
+    uses: $/.github/workflows/audit-workflows.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha }}
+      before: ${{ github.event.pull_request.base.sha || github.event.before }}
+      force: ${{ github.event_name == 'workflow_dispatch' }}
+
+  workflow-audit-issue:
+    name: Issue of the online audit
+    needs:
+      - workflow-audit
+    if: always() && github.event_name == 'push' && needs.workflow-audit.result == 'failure'
+    permissions:
+      contents: read
+      issues: write # opens the issue of the online audit, or comments on the open one
+    uses: $/.github/workflows/report-workflow-audit.yml
+    with:
+      origin: Merge on main
+
+  ci-passed:
+    name: CI passed
+    needs:
+      - checks
+      - rust
+      - mutation
+      - pull-request
+      - workflow-audit
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: A task failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

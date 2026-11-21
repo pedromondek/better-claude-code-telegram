@@ -1,0 +1,22 @@
+better-claude-code-telegram
+Copyright 2026 pedromondek
+
+This product includes software from the official Telegram channel plugin for
+Claude Code (https://github.com/anthropics/claude-plugins-official,
+external_plugins/telegram), licensed under the Apache License, Version 2.0.
+
+The files under plugins/telegram/ outside plugins/telegram/extensions/ are a
+copy of upstream version 0.0.7, with five changes: plugins/telegram/server.ts
+carries a small patch that calls the code in plugins/telegram/extensions/,
+sends .gif and .mp4 files as animations, so Telegram plays them, runs only when
+BETTER_CC_TELEGRAM is 1 (the 'claude --telegram' instance) and takes the Bot
+API root from BETTER_CC_TELEGRAM_API_ROOT when it is set,
+plugins/telegram/skills/configure/SKILL.md is rewritten so the bot token is
+never saved through Claude, plugins/telegram/skills/channel-guide/ is added
+with the sending details that do not fit in the 4,096 characters Claude Code
+reads of the channel instructions, the version in
+plugins/telegram/.claude-plugin/plugin.json and plugins/telegram/package.json
+follows the version of this project, and plugins/telegram/bun.lock is resolved
+again within the ranges of plugins/telegram/package.json, so no dependency
+carries a known high or critical advisory. Every other upstream file is
+unchanged.

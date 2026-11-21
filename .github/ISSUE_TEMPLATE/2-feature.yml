@@ -1,0 +1,31 @@
+name: Feature request
+description: Something new, or a change in what the bridge does.
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste the bot token, a chat id or `access.json`, in any field or screenshot.
+        Prefer Portuguese? Open the **Pedir uma funcionalidade** form instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do and what gets in the way today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What the feature would do, from the side of who uses it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways you thought of or tried, and why they fall short.

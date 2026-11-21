@@ -1,0 +1,75 @@
+{
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "node"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "import/no-unassigned-import": "error",
+    "import/no-named-as-default": "off",
+    "oxc/no-map-spread": "off",
+    "no-await-in-loop": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "eqeqeq": ["error", "always"],
+    "no-shadow": "error",
+    "no-unused-vars": "error",
+    "preserve-caught-error": "error",
+    "complexity": ["error", 23],
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-param-reassign": "error",
+    "no-throw-literal": "error",
+    "promise/no-nesting": "error",
+    "promise/always-return": ["error", { "ignoreLastCallback": true }],
+    "unicorn/error-message": "error",
+    "unicorn/throw-new-error": "error",
+    "unicorn/prefer-type-error": "error",
+    "unicorn/no-process-exit": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/prefer-string-replace-all": "error",
+    "unicorn/prefer-string-starts-ends-with": "error",
+    "unicorn/no-array-sort": "error",
+    "unicorn/prefer-set-has": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.{ts,mts,cts}"],
+      "rules": {
+        "no-throw-literal": "off",
+        "no-implied-eval": "off"
+      }
+    },
+    {
+      "files": ["**/__tests__/**"],
+      "plugins": ["vitest"],
+      "rules": {
+        "vitest/require-to-throw-message": "error",
+        "vitest/expect-expect": [
+          "error",
+          { "assertFunctionNames": ["expect", "fc.assert"] }
+        ],
+        "vitest/no-focused-tests": "error",
+        "vitest/no-disabled-tests": "error",
+        "vitest/no-conditional-expect": "error",
+        "vitest/valid-expect": ["error", { "alwaysAwait": true }]
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "target/**",
+    "tmp/**",
+    "reports/**",
+    ".stryker-tmp/**",
+    "plugins/telegram/server.ts"
+  ]
+}

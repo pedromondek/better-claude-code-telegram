@@ -1,0 +1,20 @@
+[
+  {
+    "name": "linux runs the Python under bin of the venv",
+    "platform": "linux",
+    "appDir": "/home/dev/.local/share/better-claude-code-telegram",
+    "python": "/home/dev/.local/share/better-claude-code-telegram/whisper/venv/bin/python"
+  },
+  {
+    "name": "macOS runs the Python under bin of the venv",
+    "platform": "darwin",
+    "appDir": "/Users/dev/Library/Application Support/better-claude-code-telegram",
+    "python": "/Users/dev/Library/Application Support/better-claude-code-telegram/whisper/venv/bin/python"
+  },
+  {
+    "name": "windows runs the python.exe under Scripts of the venv",
+    "platform": "win32",
+    "appDir": "C:\\Users\\dev\\AppData\\Local\\better-claude-code-telegram",
+    "python": "C:\\Users\\dev\\AppData\\Local\\better-claude-code-telegram\\whisper\\venv\\Scripts\\python.exe"
+  }
+]

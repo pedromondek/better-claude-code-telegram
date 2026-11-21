@@ -1,0 +1,36 @@
+name: Task
+description: Technical work with no visible change for who uses it, such as an upgrade, a refactor, the CI or the docs.
+type: Task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste the bot token, a chat id or `access.json`, in any field or screenshot.
+        Prefer Portuguese? Open the **Tarefa** form instead.
+
+  - type: textarea
+    id: what-to-do
+    attributes:
+      label: What to do
+      description: The technical change and where it touches.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem, or the risk of not doing it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done-criteria
+    attributes:
+      label: Done when
+      description: How to tell it is done, in items that can be checked.
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true

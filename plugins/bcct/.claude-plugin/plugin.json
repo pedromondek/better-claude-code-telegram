@@ -1,0 +1,10 @@
+{
+  "name": "bcct",
+  "description": "Commands to check and change the better-claude-code-telegram setup from Claude Code: health, update, language, delay, quiet hours, transcription, status line and pending questions. The token and the pairing stay in your own terminal.",
+  "version": "0.1.0",
+  "author": {
+    "name": "pedromondek"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["telegram", "setup", "health"]
+}

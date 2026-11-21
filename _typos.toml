@@ -1,0 +1,26 @@
+[files]
+ignore-hidden = false
+extend-exclude = [
+  ".git/",
+  "*.pt-br.md",
+  "*.pt-br.yml",
+  "docs/decisions/",
+  "docs/releases/",
+]
+
+[default.extend-words]
+aprove = "aprove"
+atual = "atual"
+comando = "comando"
+comandos = "comandos"
+comercial = "comercial"
+eles = "eles"
+erro = "erro"
+foto = "foto"
+instale = "instale"
+isntall = "isntall"
+limite = "limite"
+programas = "programas"
+reinstale = "reinstale"
+transcrito = "transcrito"
+udpate = "udpate"

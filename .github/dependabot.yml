@@ -1,0 +1,64 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "🔐 security(root)"
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: cargo
+    directory: /rust
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "🔐 security(rust)"
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: bun
+    directory: /plugins/telegram
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: grammy
+    ignore:
+      - dependency-name: grammy
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+    cooldown:
+      semver-major-days: 30
+    commit-message:
+      prefix: "⬆️ upgrade(telegram)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "🔐 security(ci)"
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"

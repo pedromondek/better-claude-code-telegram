@@ -1,0 +1,37 @@
+[
+  {
+    "name": "no config keeps the illustrations off and the review on",
+    "config": {},
+    "expected": { "visuals": "off", "review": true }
+  },
+  {
+    "name": "prints turns the screenshots on",
+    "config": { "visuals": "prints" },
+    "expected": { "visuals": "prints", "review": true }
+  },
+  {
+    "name": "video turns the screenshots and the videos on, and false sends them without review",
+    "config": { "visuals": "video", "visualReview": false },
+    "expected": { "visuals": "video", "review": false }
+  },
+  {
+    "name": "an unknown mode keeps the illustrations off",
+    "config": { "visuals": "gif", "visualReview": true },
+    "expected": { "visuals": "off", "review": true }
+  },
+  {
+    "name": "a mode that is not a string keeps the illustrations off",
+    "config": { "visuals": 1 },
+    "expected": { "visuals": "off", "review": true }
+  },
+  {
+    "name": "only the boolean false turns the review off",
+    "config": { "visuals": "prints", "visualReview": "false" },
+    "expected": { "visuals": "prints", "review": true }
+  },
+  {
+    "name": "the review stays as saved while the illustrations are off",
+    "config": { "visuals": "off", "visualReview": false },
+    "expected": { "visuals": "off", "review": false }
+  }
+]

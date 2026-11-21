@@ -1,0 +1,4 @@
+. "$(dirname "$0")/lib/node-env.sh"
+
+node "$(dirname "$0")/../scripts/require-node.cjs"
+node "$(dirname "$0")/lib/validate-commit-msg.mjs" "$1"

@@ -1,0 +1,13 @@
+rules:
+  adhoc-packages:
+    ignore:
+      - push-checks.yml
+  concurrency-limits:
+    ignore:
+      - audit-workflows.yml
+      - build-binaries.yml
+      - check-mutation.yml
+      - check-rust-platforms.yml
+      - push-checks.yml
+      - report-workflow-audit.yml
+      - verify-release.yml

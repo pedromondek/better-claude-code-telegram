@@ -1,0 +1,968 @@
+use crate::launch::TELEGRAM_COMMAND;
+use crate::package::SETUP_COMMAND;
+use crate::setup_run::SET_FLAG;
+use crate::update::UPDATE_COMMAND;
+
+use super::{
+    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
+    HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed, QuietPresets,
+    SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices, StatuslineDetail,
+    StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts,
+    TranscriptionModels, UpdateTexts, format_delay,
+};
+
+const MONTHS: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const WEEKDAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HALF_DAY_HOURS: u32 = 12;
+
+fn english_month(month: u32) -> String {
+    month
+        .checked_sub(1)
+        .and_then(|index| MONTHS.get(usize::try_from(index).ok()?))
+        .map_or_else(|| month.to_string(), |name| (*name).to_owned())
+}
+
+fn english_weekday(weekday: u32) -> String {
+    usize::try_from(weekday)
+        .ok()
+        .and_then(|index| WEEKDAYS.get(index))
+        .map_or_else(|| weekday.to_string(), |name| (*name).to_owned())
+}
+
+fn english_clock(hour: u32, minute: u32) -> String {
+    let suffix = if hour < HALF_DAY_HOURS { "AM" } else { "PM" };
+    let shown = match hour % HALF_DAY_HOURS {
+        0 => HALF_DAY_HOURS,
+        other => other,
+    };
+
+    format!("{shown}:{minute:02} {suffix}")
+}
+
+pub(super) const MESSAGES: Messages = Messages {
+    status_main: "(Main)",
+    status_secondary: "(Secondary)",
+    status_connected: |role| format!("📱 {role} Telegram connected"),
+    status_down: |role| format!("📱 {role} Telegram down"),
+    status_down_here: |role| format!("📱 {role} Telegram down · type /mcp reconnect all"),
+    status_connecting: |role| format!("📱 {role} Telegram connecting…"),
+    step_labels: StepLabels {
+        token: "bot token",
+        pairing: "pairing",
+    },
+    step_titles: StepTitles {
+        language: "Language / Idioma",
+        plugin: "Plugins",
+        token: "Bot token",
+        pairing: "Pairing",
+        delay: "Wait time",
+        quiet_hours: "Quiet hours",
+        transcription: "Audio transcription",
+        inbox: "Received files",
+        visuals: "Illustrations on Telegram",
+        statusline: "Status line",
+        path: "bcct command in the terminal",
+        health: "Final check",
+    },
+    health_has_failures: |command| {
+        format!("Some checks failed. Fix what is marked with ✘ and run '{command}' again.")
+    },
+    not_configured: |missing, command| {
+        format!(
+            "'{TELEGRAM_COMMAND}' is not set up yet. Missing:\n  • {missing}\nRun '{command}' first."
+        )
+    },
+    already_running: |pid| {
+        format!(
+            "A '{TELEGRAM_COMMAND}' instance is already open (bot in process {pid}). Close it before opening another one."
+        )
+    },
+    unknown_steps: |unknown, all| {
+        format!(
+            "Unknown step:\n  • {unknown}\nUse one or more of these (none runs them all):\n  • {all}"
+        )
+    },
+    network_failure: |method| format!("Network failure calling Telegram ({method})."),
+    telegram_refused: |method, description| {
+        format!("Telegram refused {method}:\n  • {description}")
+    },
+    no_description: "no description",
+    failed: |description| format!("Failed:\n  • {description}"),
+    yes_no_hint: |default_yes| format!("(y/n) [default: {}]", if default_yes { "y" } else { "n" }),
+    default_hint: |value| format!("[default: {value}]"),
+    language_default_hint: |value| format!("[default / padrão: {value}]"),
+    select_hint: "↑/↓ to move · Enter to confirm",
+    back_hint: "← or Esc goes back",
+    back_label: "← Back",
+    yes: "Yes",
+    no: "No",
+    custom: "Custom",
+    recommended: "Recommended",
+    previous_choice: "previously chosen",
+    invalid_answer: |value, hint| format!("'{value}' is not valid. Use:\n  • {hint}"),
+    enter_keeps_default: "Press Enter on an empty answer to keep the default or the existing setting.",
+    cancelled: "Cancelled.",
+    aborted: "Aborted with Ctrl+D",
+    exit_prompt: "Leave the setup?",
+    continue_setup: "Go on where it stopped",
+    exit_setup: "Leave",
+    interrupted: "Setup interrupted.",
+    nothing_changed: "Nothing was changed.",
+    done_so_far: |changes| format!("So far the setup has:\n  • {changes}"),
+    undo_prompt: "Undo what the setup did?",
+    undo_all: "Undo everything",
+    keep_done: "Keep it as it is",
+    undone: "Everything the setup did was undone.",
+    undo_left: |changes| format!("Could not undo:\n  • {changes}"),
+    kept_done: |command| format!("Kept. Run '{command}' to go on later."),
+    changed_setting: |label, before, after| format!("{label}: {before} → {after}"),
+    not_set: "not set",
+    rule_on: "on",
+    rule_off: "off",
+    plugin_on: "enabled",
+    plugin_off: "disabled",
+    plugin_setting: |plugin_id| format!("plugin '{plugin_id}'"),
+    undoing: |change| format!("Undoing: {change}…"),
+    undone_item: |change| format!("Undone:\n  • {change}"),
+    settings_keys: SettingsKeys {
+        status_line: "status line",
+        permissions: "security rule for the token file",
+        enabled_plugins: "enabled plugins",
+    },
+    change_kinds: ChangeKinds {
+        file_created: |target| format!("created {target}"),
+        file_changed: |target| format!("changed {target}"),
+        dir_created: |target| format!("created the folder {target}"),
+        marketplace_added: |target| format!("registered the marketplace '{target}'"),
+        plugin_installed: |target| format!("installed the plugin '{target}'"),
+        plugin_removed: |target| format!("removed the plugin '{target}'"),
+        tool_installed: |target| {
+            format!("installed {target}, which stays installed (remove it by hand if you want)")
+        },
+        user_path_changed: |target| format!("changed the Windows user PATH ({target})"),
+    },
+    tools_declined: |tools| format!("Nothing was installed; {tools} is still missing from PATH."),
+    invalid_setting: |step, value, hint| {
+        format!(
+            "'{value}' is not valid for {SET_FLAG} {step}. Use:\n  • {hint}\nNothing was changed."
+        )
+    },
+    setting_hints: SettingHints {
+        language: "en-us or pt-br",
+        delay: "the minutes, 0 or more (for example 3, or 0 for right away)",
+        delays: "questions/permissions/waiting notice in minutes, 0 or more (for example 0/4/4), or off",
+        quiet_hours: "HH:MM-HH:MM (for example 22:00-08:00) or off",
+        transcription: "base, small, medium or off",
+        inbox: "the days, greater than 0, or off",
+        visuals: "off, prints or video",
+        visual_review: "on or off",
+        statusline: "on, after, replace, custom or off",
+    },
+    inbox_question: "Days to keep the photos and files received on Telegram before deleting them",
+    inbox_days_label: |days| format!("{days} day(s)"),
+    inbox_forever_label: "Never delete",
+    inbox_custom_prompt: "Days (greater than 0): ",
+    inbox_custom_hint: "a whole number of days greater than 0",
+    inbox_saved: |retention, file| format!("Received files:\n  • {retention}\nSaved in {file}."),
+    inbox_kept: |retention| format!("Received files kept:\n  • {retention}"),
+    visuals_question: "They cost more tokens: Claude takes screenshots and records video.",
+    visuals_labels: [
+        "Off",
+        "Screenshots only (today × proposal, area in red)",
+        "Screenshots and transition video",
+    ],
+    visuals_names: ["off", "screenshots only", "screenshots and video"],
+    visual_review_question: "Review before sending",
+    visual_review_labels: [
+        "Claude checks each image before sending (more tokens)",
+        "Send directly",
+    ],
+    visual_review_names: ["with review", "sent directly"],
+    visuals_saved: |summary, file| {
+        format!("Illustrations on Telegram:\n  • {summary}\nSaved in {file}.")
+    },
+    visuals_kept: |summary| format!("Illustrations on Telegram kept:\n  • {summary}"),
+    visual_review_saved: |summary, file| {
+        format!("Review before sending:\n  • {summary}\nSaved in {file}.")
+    },
+    visual_review_kept: |summary| format!("Review before sending kept:\n  • {summary}"),
+    chromium_missing_warning: concat!(
+        "The Chromium of Playwright is missing: install it with '",
+        crate::chromium_install_command!(),
+        "'."
+    ),
+    ffmpeg_missing_warning: concat!(
+        "ffmpeg is missing for the video: install it with ",
+        crate::ffmpeg_install_commands!("or"),
+        "."
+    ),
+    language_kept: |locale| format!("Language kept:\n  • {locale}"),
+    delay_kept: |minutes| format!("Wait time kept:\n  • {}", format_delay(minutes)),
+    quiet_kept: |value| format!("Quiet hours kept:\n  • {value}"),
+    transcription_model_kept: |model| {
+        format!("Local transcription kept with the {model} model, already installed.")
+    },
+    transcription_kept_off: "Local transcription stays off.",
+    transcription_switched: |model| {
+        format!("Local transcription on with the {model} model, already installed.")
+    },
+    remove_models_question: "Which transcription models should be uninstalled?",
+    remove_models_keep: "None (keep it as it is)",
+    remove_models_all: |models| format!("All of them ({models})"),
+    remove_model: |model| format!("Only the {model} model"),
+    model_in_use: "in use",
+    model_used_until_now: "used until now",
+    transcription_uninstall: "Uninstall",
+    transcription_installed_heading: "Installed:",
+    transcription_available_heading: "To download:",
+    models_removed: |models| format!("Transcription models removed:\n  • {models}"),
+    inbox_days: |days| format!("deleted after {days} day(s)"),
+    inbox_forever: "kept forever",
+    not_settable: |step, steps| {
+        format!(
+            "'{step}' cannot be set with {SET_FLAG}, only {steps}. The token, the pairing and the plugins go through '{SETUP_COMMAND}' in your own terminal."
+        )
+    },
+    unknown_health_groups: |groups, valid| {
+        format!("Unknown group:\n  • {groups}\nUse all, or one or more of these:\n  • {valid}")
+    },
+    health_group_titles: HealthGroupTitles {
+        install: "Install",
+        telegram: "Telegram",
+        security: "Security",
+        extras: "Extras",
+    },
+    health_labels: HealthLabels {
+        user: "Running as root",
+        claude: "claude",
+        bun: "bun",
+        git: "Git",
+        plugins: "Plugins",
+        shell: "Shell",
+        path: "bcct on PATH",
+        token: "Bot token",
+        groups: "Groups",
+        pairing: "Pairing",
+        polling: "Connection",
+        protection: "Token protection",
+        config: "Settings",
+        transcription: "Transcription",
+        mermaid: "Diagrams (mmdc)",
+        chromium: "Chromium (screenshots)",
+        ffmpeg: "ffmpeg (video)",
+        statusline: "Status line",
+        launcher: "Launcher",
+        version: "Version",
+        app_dir: "App folder",
+        hooks: "Hooks",
+    },
+    health_detail: HealthDetail {
+        found: "found",
+        missing: "missing",
+        git_missing: "not installed. Claude Code needs it to download and update the plugins.",
+        installed: "installed",
+        not_installed: |ids| format!("missing {ids}. Run '{SETUP_COMMAND} plugin'."),
+        loaded_in: |file| format!("loaded by {file}"),
+        not_loaded: |file| format!("not loaded by {file}. Run '{SETUP_COMMAND} plugin'."),
+        path_on: str::to_owned,
+        path_pending: |file| format!("turned on in {file}; it applies to new terminals"),
+        path_off: concat!("off (optional). Run '", crate::setup_command!(), " path'."),
+        bot: |username| format!("@{username}"),
+        no_token: concat!(
+            "no token. Run '",
+            crate::setup_command!(),
+            " token' in your own terminal."
+        ),
+        paired: |account| format!("paired with one account ({account})"),
+        not_paired: concat!("not paired. Run '", crate::setup_command!(), " pairing'."),
+        not_allowlist: |policy| {
+            format!(
+                "dmPolicy is {policy}, so strangers who write to the bot get a pairing code. Run '{SETUP_COMMAND} pairing'."
+            )
+        },
+        pending_pairings: |count| {
+            format!("{count} pairing(s) pending in access.json. Run '{SETUP_COMMAND} pairing'.")
+        },
+        groups_allowed: |count| {
+            format!("{count} group(s) can talk to the bot. Run '{SETUP_COMMAND} pairing'.")
+        },
+        groups_off: "the bot cannot be added to groups",
+        groups_unknown: "needs a working bot token",
+        regular_user: "no, runs as a regular user (as recommended)",
+        root: "running as root; use a regular user, so Claude cannot change the whole machine",
+        connected: "connected",
+        not_open: concat!("'", crate::telegram_command!(), "' is not open"),
+        connecting: concat!(
+            "connecting; '",
+            crate::telegram_command!(),
+            "' was just opened"
+        ),
+        down: concat!(
+            "the bot stopped receiving messages; reopen '",
+            crate::telegram_command!(),
+            "'"
+        ),
+        down_here: "the channel server is not running in this instance; type /mcp reconnect all",
+        protected: "Claude cannot read the bot token",
+        unprotected: |command| format!("Claude can read the bot token. Run '{command}'."),
+        valid: "valid",
+        invalid: |file| format!("{file} is not valid JSON"),
+        off: "off",
+        model: |model| format!("model {model}"),
+        broken: |command| format!("the Python environment does not work. Run '{command}'."),
+        chromium_missing: concat!("missing. Run '", crate::chromium_install_command!(), "'."),
+        ffmpeg_missing: concat!(
+            "missing. Install it with ",
+            crate::ffmpeg_install_commands!("or"),
+            "."
+        ),
+        statusline: StatuslineDetail {
+            ours: "Telegram indicator on",
+            ours_after: "Telegram indicator after your status line",
+            other: "another status line, without the indicator",
+            none: "no status line",
+            custom: "yours, with the indicator Claude added",
+            custom_pending: concat!(
+                "Claude fits the indicator into yours on the next '",
+                crate::telegram_command!(),
+                "'"
+            ),
+        },
+        shell_commented: |rc| {
+            format!("the line in {rc} is commented out. Run '{SETUP_COMMAND} plugin'.")
+        },
+        shell_script_missing: |rc, script| {
+            format!("{rc} loads {script}, which does not exist. Run '{SETUP_COMMAND} plugin'.")
+        },
+        shell_script_outdated: |script| {
+            format!("{script} is out of date. Run '{SETUP_COMMAND} plugin'.")
+        },
+        launcher_active: |version, channel| format!("version {version} active ({channel})"),
+        launcher_missing: |folder| format!("no launcher in {folder}. Run '{SETUP_COMMAND}'."),
+        launcher_no_version: concat!(
+            "the launcher has no active version. Run '",
+            crate::setup_command!(),
+            "'."
+        ),
+        version_same: |version| format!("binary and plugins on {version}"),
+        version_differs: |plugin, binary| {
+            format!("the plugin is on {plugin} and the binary on {binary}. Run '{UPDATE_COMMAND}'.")
+        },
+        version_unknown: "nothing to compare (see Launcher and Plugins)",
+        app_writable: "writable",
+        app_no_permission: |folder| {
+            format!("cannot write to {folder} (no write permission). Run 'chmod u+rwx {folder}'.")
+        },
+        app_other_owner: |folder, user| {
+            format!("{folder} belongs to another user. Run 'sudo chown -R {user} {folder}'.")
+        },
+        app_blocked: |folder, reason| {
+            format!(
+                "cannot write to {folder} ({reason}). Free some space or mount the disk read-write."
+            )
+        },
+        no_hook_failures: "no recent failures",
+        hook_write_failed: |event, file, reason| {
+            format!("the {event} hook could not write {file} ({reason})")
+        },
+        hook_failed_often: |event, count, reason| {
+            format!("the {event} hook failed {count} times in 24 h ({reason})")
+        },
+        no_home: "HOME is not set, so the shell rc cannot be found.",
+        bot_answer_unexpected: "Telegram answered getMe without the bot data. Try again in a moment.",
+        deny_not_a_list: |settings| {
+            format!(
+                "permissions.deny in {settings} is not a list. Fix the file and run '{SETUP_COMMAND} token'."
+            )
+        },
+    },
+    install_tool_prompt: |tool, command| {
+        format!("'{tool}' is missing. Install it now with the official installer ({command})?")
+    },
+    tool_installed: |tool, bin_dir| {
+        format!(
+            "'{tool}' installed in {bin_dir}. Open a new terminal later so your shell finds it."
+        )
+    },
+    install_failed: |tool| format!("The installer of '{tool}' failed; nothing else was changed."),
+    tool_still_missing: |tool, bin_dir| {
+        format!("'{tool}' was installed but is not in {bin_dir}; check the installer output.")
+    },
+    bcct_prompt: "(optional) Also add the /bcct: commands to Claude Code (setup steps and health from inside a session)?",
+    bcct_installed_question: "(optional) The /bcct: commands are already in Claude Code. What should happen to them?",
+    bcct_choices: BcctChoices {
+        keep: "Keep them",
+        remove: "Remove them",
+    },
+    bcct_hints: BcctHints {
+        keep: "nothing changes",
+        remove: "the /bcct: commands leave Claude Code; the setup goes on from the terminal",
+    },
+    plugins_checked: "Checked:",
+    required_plugins: |installed, total| {
+        format!("{installed} of {total} required plugins installed")
+    },
+    optional_plugins: |installed, total| {
+        format!("{installed} of {total} optional plugin installed")
+    },
+    marketplace_found: "Marketplace registered",
+    marketplace_missing: "Marketplace not registered yet",
+    plan_header: "To finish this step, the setup needs to:",
+    plan_marketplace: |name| format!("register the marketplace '{name}' from GitHub"),
+    plan_plugin: |id| format!("install the plugin '{id}' for your user"),
+    plan_shell_line: |file| format!("add to {file} the line that loads '{TELEGRAM_COMMAND}'"),
+    plan_prompt: "Go ahead with the installation?",
+    nothing_installed: "Nothing was installed.",
+    by_hand: "To do it by hand, run:",
+    marketplace_added: |name| format!("Marketplace '{name}' registered."),
+    plugins_checking: "Checking the marketplace and the installed plugins…",
+    marketplace_adding: |name| format!("Registering the marketplace '{name}'…"),
+    plugin_installing: |id| format!("Installing the plugin '{id}'…"),
+    plugin_removing: |id| format!("Removing the plugin '{id}'…"),
+    plugin_enabling: |id| format!("Enabling '{id}' in every instance…"),
+    plugin_disabling: |id| format!("Disabling '{id}' outside '{TELEGRAM_COMMAND}'…"),
+    plugin_added: |id| format!("Plugin '{id}' installed for your user."),
+    marketplace_registered: |name| format!("Marketplace '{name}' already registered."),
+    plugin_installed: |id| format!("Plugin '{id}' already installed."),
+    plugin_disabled_outside: |id| format!("Plugin '{id}' disabled outside '{TELEGRAM_COMMAND}'."),
+    plugin_enabled: |id| format!("Plugin '{id}' enabled in every instance."),
+    plugin_already_disabled_outside: |id| {
+        format!("Plugin '{id}' already disabled outside '{TELEGRAM_COMMAND}'.")
+    },
+    plugin_already_enabled: |id| format!("Plugin '{id}' already enabled in every instance."),
+    rc_already_loads: |rc_file| format!("{rc_file} already loads '{TELEGRAM_COMMAND}'."),
+    rc_now_loads: |rc_file| format!("{rc_file} now loads '{TELEGRAM_COMMAND}'."),
+    shell_unsupported: |shell, line| {
+        format!(
+            "The {shell} shell cannot load '{TELEGRAM_COMMAND}'. Load this line in bash or zsh:\n  {line}"
+        )
+    },
+    rc_no_longer_loads: |rc_file| format!("{rc_file} no longer loads '{TELEGRAM_COMMAND}'."),
+    statusline_removed: |file| format!("Telegram status line removed from {file}."),
+    env_rule_removed: |file| {
+        format!("Rule that kept Claude from reading the bot token removed from {file}.")
+    },
+    env_protected: |env_file, settings_file| {
+        format!(
+            "Security rule added:\n  • Claude Code may not read {env_file}, the file that holds the bot token (deny rule in {settings_file})"
+        )
+    },
+    env_already_protected: |env_file, settings_file| {
+        format!(
+            "Security rule already on:\n  • Claude Code may not read {env_file} (deny rule in {settings_file})"
+        )
+    },
+    plugin_removed: |plugin_id| format!("Plugin '{plugin_id}' removed."),
+    plugin_not_removed: |plugin_id| {
+        format!(
+            "Could not remove the plugin '{plugin_id}'. To do it by hand, run:\n  claude plugin uninstall {plugin_id} --scope user"
+        )
+    },
+    plugin_not_installed: |plugin_id| format!("Plugin '{plugin_id}' was not installed."),
+    marketplace_removed: |name| format!("Marketplace '{name}' removed."),
+    marketplace_not_removed: |name| {
+        format!(
+            "Could not remove the marketplace '{name}'. To do it by hand, run:\n  claude plugin marketplace remove {name}"
+        )
+    },
+    marketplace_not_registered: |name| format!("Marketplace '{name}' was not registered."),
+    claude_missing_for_uninstall: |commands| {
+        format!("'claude' is not in the PATH. To remove the plugins later, run:\n{commands}")
+    },
+    close_instance_before_uninstall: concat!(
+        "Close '",
+        crate::telegram_command!(),
+        "' before uninstalling; nothing was changed."
+    ),
+    transcription_found: |paths| {
+        format!("Local transcription installed by the setup:\n  • {paths}")
+    },
+    delete_transcription_prompt: "Remove the local transcription (Python environment and downloaded models)?",
+    transcription_removed: "Local transcription removed.",
+    transcription_kept: "Local transcription kept.",
+    delete_mermaid_prompt: "Also remove mermaid-cli (mmdc), used for the diagrams? The setup did not install it, and other tools may use it.",
+    mermaid_removed: "mermaid-cli removed.",
+    mermaid_not_removed: |command| {
+        format!("Could not remove mermaid-cli. To do it by hand, run:\n  {command}")
+    },
+    delete_state_prompt: |channel_dir, app_dir| {
+        format!(
+            "Also delete the bot token and the pairing in {channel_dir} and the settings in {app_dir}?"
+        )
+    },
+    state_deleted: |channel_dir, app_dir| format!("{channel_dir} and {app_dir} deleted."),
+    state_kept: |channel_dir, app_dir| {
+        format!("Bot token and pairing kept in {channel_dir}, settings in {app_dir}.")
+    },
+    uninstall_done: "Done. Open a new terminal, so it loads the shell without bcct.",
+    no_saved_token: |command| format!("No saved token. Run this first:\n  {command}"),
+    use_saved_bot: |username| format!("Use the saved bot, @{username}?"),
+    token_prompt: "Bot token (from @BotFather; hidden while you type): ",
+    token_saved: |username, file| format!("Token of bot @{username} saved in {file}."),
+    no_pairing_message: concat!(
+        "No message with the code arrived in ",
+        crate::pairing_timeout_minutes!(),
+        " min. Run the setup again."
+    ),
+    already_paired: |accounts| format!("Bot already paired with {accounts}."),
+    pairing_choice_question: |accounts| {
+        format!("The bot is already paired with {accounts}. What now?")
+    },
+    pairing_choices: PairingChoices {
+        keep: "Keep this account",
+        replace: "Pair another account (with a new code)",
+    },
+    too_many_accounts: |count, command| {
+        format!(
+            "access.json lets {count} Telegram accounts talk to the bot, but it only talks to one. Run '{command}' to keep only yours."
+        )
+    },
+    permissions_skipped: |option| {
+        format!(
+            "'{TELEGRAM_COMMAND}' does not start with {option}:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option."
+        )
+    },
+    groups_warning: |username| {
+        format!(
+            "@{username} can be added to groups. In @BotFather send /setjoingroups, pick @{username} and choose Disable."
+        )
+    },
+    close_instance_before_pairing: concat!(
+        "Close the '",
+        crate::telegram_command!(),
+        "' instance before pairing, because it holds the bot."
+    ),
+    webhook_configured: |username| {
+        format!("Bot @{username} has a webhook set; use a bot only for Claude.")
+    },
+    send_pairing_code: |username, code, link| {
+        let minutes = crate::pairing_timeout_minutes!();
+
+        format!(
+            "To pair, open this link and tap Start:\n  • {link}\nOr send this code to @{username}:\n  • {code}\nWaiting up to {minutes} min. Only the message with this code pairs."
+        )
+    },
+    confirm_pairing: |label, user_id| format!("Pair with {label} (id {user_id})?"),
+    pairing_cancelled: "Pairing cancelled.",
+    no_pairing_code: "Could not generate the pairing code.",
+    paired_chat_message: concat!(
+        "Paired with Claude Code.\n\nRun '",
+        crate::telegram_command!(),
+        "' to chat here."
+    ),
+    paired_with: |label| format!("Paired with {label}; only this account talks to the bot."),
+    delay_question: "Minutes without an answer in the terminal before going to Telegram",
+    delay_label: format_delay,
+    delay_custom_prompt: "Minutes (0 = right away): ",
+    delay_custom_hint: "a number of minutes, 0 or more",
+    delay_right_away_label: "Right away",
+    delay_per_kind: "Per kind…",
+    delay_per_kind_answer: "kind",
+    delay_kinds_info: "questions, permissions and waiting notice",
+    delay_kind_labels: ["Questions", "Permission requests", "Waiting notice"],
+    delay_kind_prompt: |kind| format!("{kind}, in minutes (0 = right away): "),
+    delay_kind_hint: "a number of minutes, 0 or more",
+    delay_right_away: "right away",
+    delays_saved: |summary, file| format!("Delay per kind saved in {file}:\n  • {summary}"),
+    delays_kept: |summary| format!("Delay per kind kept:\n  • {summary}"),
+    delays_cleared: "Delay per kind turned off: the single delay applies to everything.",
+    delays_already_off: "Delay per kind kept: off, the single delay applies to everything.",
+    delay_saved: |minutes, file| format!("Delay of {} saved in {file}.", format_delay(minutes)),
+    quiet_question: "Quiet hours, when nothing goes to Telegram",
+    quiet_off_label: "Off",
+    quiet_presets: QuietPresets {
+        outside_work: "Outside business hours",
+        full_night: "All night",
+        night: "Night",
+        late_night: "Small hours",
+    },
+    quiet_start_prompt: "Start of the quiet hours (HH:MM): ",
+    quiet_end_prompt: "End of the quiet hours (HH:MM): ",
+    time_hint: "HH:MM, from 00:00 to 23:59",
+    quiet_end_hint: |start| format!("HH:MM, from 00:00 to 23:59 and other than {start}"),
+    quiet_saved: |value, file| format!("Quiet hours {value} saved in {file}."),
+    quiet_off: "off",
+    transcription_purpose: "Turns the voice messages you send on Telegram into text, here on your machine, so Claude can read what you said.",
+    transcription_question: "Local voice transcription",
+    transcription_off_label: "Off",
+    transcription_models: TranscriptionModels {
+        base: "fastest, uses the least RAM, fine for clear speech, ~150 MB of storage",
+        small: "more accurate, slower, uses more RAM, ~490 MB of storage",
+        medium: "most accurate, much slower, uses much more RAM, ~1.5 GB of storage",
+    },
+    transcription_disabled: "Transcription off:\n  • voice messages reach Claude as attachments",
+    python_env_failed: PythonEnvFailed {
+        posix: concat!(
+            "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (",
+            crate::uv_posix_install_command!(),
+            ")\n  • Python's venv (on Debian and Ubuntu, ",
+            crate::python_venv_apt_command!(),
+            ")"
+        ),
+        windows: concat!(
+            "Could not create the Python environment. Install one of these and run the setup again:\n  • uv (",
+            crate::uv_windows_install_command!(),
+            ")\n  • Python from python.org, which brings the py launcher (",
+            crate::python_windows_download_url!(),
+            ")"
+        ),
+    },
+    git_missing_setup: "git is not installed, and Claude Code needs it to download the plugins. Install it and run the setup again:\n  • Debian and Ubuntu: sudo apt install git\n  • Fedora: sudo dnf install git\n  • macOS: xcode-select --install",
+    install_whisper: "install faster-whisper",
+    downloading_model: |model| {
+        format!("Downloading the {model} transcription model (first time only)…")
+    },
+    model_download: "download the model",
+    saved_bot_checking: "Checking the saved bot…",
+    token_checking: "Checking the token with Telegram…",
+    paired_account_checking: "Looking up the paired account…",
+    pairing_preparing: "Getting the pairing ready…",
+    pairing_waiting: "Waiting for the message with the code on Telegram…",
+    pairing_finishing: "Finishing the pairing…",
+    whisper_env_creating: "Creating the Python environment of the transcription…",
+    whisper_installing: "Installing faster-whisper…",
+    model_removing: |model| format!("Removing the {model} model…"),
+    marketplace_removing: |name| format!("Removing the marketplace '{name}'…"),
+    transcription_removing: "Deleting the transcription files…",
+    mermaid_removing: "Removing mermaid-cli…",
+    transcription_ready: |model| {
+        format!("Installed:\n  • the {model} model of the local transcription")
+    },
+    language_question: "Language / Idioma",
+    language_saved: |locale, file| format!("Language {locale} saved in {file}."),
+    statusline_prompt: |example| {
+        format!(
+            "Claude Code's footer (status line) can show whether Telegram is connected, like this:\n  • {example}\nShow it?"
+        )
+    },
+    statusline_installed: |file| format!("Status line set in {file}."),
+    statusline_kept: "Status line kept:\n  • yours stays, without the Telegram indicator",
+    statusline_skipped: "Status line left unchanged.",
+    statusline_choice_question: |preview, example| {
+        format!(
+            "You already have a status line ({preview}).\nWhere should the Telegram indicator ({example}) go?"
+        )
+    },
+    statusline_choices: StatuslineChoices {
+        after: "Next to yours",
+        replace: "Instead of yours",
+        custom: "Ask Claude to fit it into mine",
+        keep: "Nowhere (keep only yours)",
+        keep_custom: "Keep yours (it already has the indicator)",
+    },
+    statusline_choice_hints: StatuslineChoiceHints {
+        after: "yours stays and the indicator shows beside it",
+        replace: "only the indicator; yours is saved and comes back on uninstall",
+        custom: concat!(
+            "on the next '",
+            crate::telegram_command!(),
+            "', Claude fits the indicator into yours the way you want"
+        ),
+        keep: "nothing changes",
+    },
+    statusline_custom_kept: "Status line kept:\n  • yours, with the indicator Claude added",
+    statusline_custom_requested: concat!(
+        "Request noted:\n  • on the next '",
+        crate::telegram_command!(),
+        "', Claude asks how to fit the indicator into your status line"
+    ),
+    statusline_custom_needs_own: "There is no status line of yours to fit the indicator into; use on to show only the indicator.",
+    statusline_custom_prompt: |settings_file, current, indicator, example| {
+        format!(
+            "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {settings_file}):\n  {current}\n\nThe indicator is this command:\n  {indicator}\nIt prints the Telegram state with ANSI color (for example {example}) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed"
+        )
+    },
+    statusline_custom_left: |command| {
+        format!(
+            "Your status line still calls the Telegram indicator, which Claude added to it. Ask Claude to remove this call:\n  {command}"
+        )
+    },
+    statusline_chained: |file| {
+        format!("Telegram indicator added after your status line in {file}.")
+    },
+    statusline_replaced: |file, backup| {
+        format!("Status line replaced in {file}; the previous settings are in {backup}.")
+    },
+    statusline_already: "The Telegram indicator is already in your status line.",
+    statusline_ours_question: |example| {
+        format!(
+            "The Telegram indicator ({example}) is already in your status line. What should happen to it?"
+        )
+    },
+    statusline_ours_choices: StatuslineOursChoices {
+        keep: "Keep it",
+        remove: "Remove it",
+    },
+    statusline_ours_hints: StatuslineOursHints {
+        keep: "nothing changes",
+        restore: "your previous status line comes back",
+        remove: "the footer is left without a status line",
+    },
+    statusline_ours_kept: "Status line kept with the Telegram indicator.",
+    statusline_restored: |file| format!("Your previous status line is back in {file}."),
+    settings_invalid: |file| {
+        format!(
+            "{file} is not a valid JSON object. Fix it and run the setup again; nothing was changed."
+        )
+    },
+    secretary_tip: concat!(
+        "💡 Tip: keep one Claude Code session just for Telegram (the secretary), or hand Telegram to your orchestrator session: ",
+        crate::repository_url!(),
+        "/blob/main/docs/secretary/secretary.md"
+    ),
+    done_all: concat!(
+        "Done. Open a new terminal and run '",
+        crate::telegram_command!(),
+        "'."
+    ),
+    done_reopen: concat!(
+        "Done. Reopen '",
+        crate::telegram_command!(),
+        "' for it to apply."
+    ),
+    done_live: "Done. It applies to the next messages, nothing to reopen.",
+    done_new_terminal: "Done. Open a new terminal for it to apply.",
+    question_released: |instance, headers| {
+        format!("Released the question from [{instance}]: {headers}")
+    },
+    nothing_pending: |session_prefix| match session_prefix {
+        Some(prefix) if !prefix.is_empty() => {
+            format!("No pending question from session {prefix}.")
+        }
+        _ => "No pending question.".to_owned(),
+    },
+    file_not_saved: |file| format!("Could not save {file}."),
+    file_not_removed: |file| format!("Could not remove {file}."),
+    statusline_not_shown: "Could not show the status line.",
+    health_not_shown: "Could not show the result.",
+    output_not_shown: "Could not write to the output.",
+    self_install_done: |version, channel| format!("bcct {version} installed ({channel})."),
+    self_install_unstable: |channel| {
+        format!("This is a test version ({channel}): it may change or break before the stable one.")
+    },
+    self_install_hash_mismatch: "The file does not match the expected hash; nothing was installed.",
+    self_install_not_bcct: "The file did not answer as bcct; nothing was installed.",
+    self_install_failed: "Could not install bcct: the file or the app folder could not be read or written.",
+    self_install_usage: "Usage: bcct self-install <file> --sha256 <hash> [--from npm|release|manual]",
+    version_installed: "Installed:",
+    version_active: "active",
+    version_channels: ChannelNames {
+        stable: "stable",
+        beta: "beta",
+        alpha: "alpha",
+    },
+    version_remove_hint: concat!(
+        "To delete a kept one: ",
+        crate::setup_command!(),
+        " uninstall <version>"
+    ),
+    version_uninstall_hint: concat!(
+        "To uninstall everything: ",
+        crate::setup_command!(),
+        " uninstall"
+    ),
+    version_unstable: |channel| {
+        format!("Test version ({channel}). For the stable one: '{UPDATE_COMMAND} stable'.")
+    },
+    uninstall_version_removed: |version| format!("Deleted {version}."),
+    uninstall_version_active: |version| {
+        format!("{version} is in use. Switch first with '{UPDATE_COMMAND}'.")
+    },
+    uninstall_version_missing: |version| format!("{version} is not installed."),
+    uninstall_version_invalid: |word| {
+        format!("{word} is not a version. Type it in full, like 0.2.1.")
+    },
+    session_start_notice: |plugin, binary| {
+        format!(
+            "bcct: the plugin is on {plugin} and the binary on {binary}. Run '{UPDATE_COMMAND}'."
+        )
+    },
+    path_question: "Add the bcct command to your PATH, so 'bcct setup', 'bcct health' and the others work right in the terminal, without npx?",
+    path_added: |file| format!("{file} now adds bcct to your PATH. It applies to new terminals."),
+    path_already: |file| format!("{file} already adds bcct to your PATH."),
+    path_removed: |file| format!("{file} no longer adds bcct to your PATH."),
+    path_off: concat!(
+        "bcct stays off your PATH. To use it directly later, run '",
+        crate::setup_command!(),
+        " path'."
+    ),
+    user_path_added: "bcct is now on your Windows user PATH (PowerShell, cmd and Git Bash). It applies to new terminals.",
+    user_path_already: "bcct is already on your Windows user PATH.",
+    user_path_removed: "bcct is no longer on your Windows user PATH.",
+    user_path_failed: |reason| {
+        format!("Could not change your Windows user PATH ({reason}). Nothing was changed.")
+    },
+    hook_write_failed: |file, reason| {
+        format!(
+            "bcct: could not write {file} ({reason}). Telegram messages may not arrive. Run /bcct:health."
+        )
+    },
+    hook_failed_often: |event, count, reason| {
+        format!("bcct: the {event} hook failed {count} times in 24 h ({reason}). Run /bcct:health.")
+    },
+    hook_reasons: HookReasons {
+        no_permission: "no write permission",
+        disk_full: "disk full",
+        read_only: "read-only file system",
+        quota: "disk quota exceeded",
+        busy: "file busy or changed by another instance",
+        input: "unexpected input from Claude Code",
+    },
+    stop_failure: StopFailureTexts {
+        who: |instance| match instance {
+            Some(name) => format!("The Claude instance [{name}]"),
+            None => "Claude".to_owned(),
+        },
+        usage_limit: |who| format!("⚠️ {who} stopped: the usage limit of your plan was reached"),
+        throttle: |who| {
+            format!("⚠️ {who} stopped: the API is limiting requests (not your plan's usage limit)")
+        },
+        billing: |who| format!("⚠️ {who} stopped: there is a billing problem with your account"),
+        account_on_hold: |who| format!("⚠️ {who} stopped: your account is on hold"),
+        authentication: |who| format!("⚠️ {who} stopped: authentication failed, log in again"),
+        oauth_org_not_allowed: |who| {
+            format!("⚠️ {who} stopped: your organization is not allowed to use this login")
+        },
+        cloud_credential: |who| {
+            format!("⚠️ {who} stopped: the cloud provider credentials could not be loaded")
+        },
+        server_error: |who| format!("⚠️ {who} stopped: the API keeps failing (server error)"),
+        invalid_request: |who, detail| match detail {
+            Some(line) => format!("⚠️ {who} stopped: the API rejected the request ({line})"),
+            None => format!("⚠️ {who} stopped: the API rejected the request"),
+        },
+        unknown: |who, detail| match detail {
+            Some(line) => format!("⚠️ {who} stopped on an error: {line}"),
+            None => format!("⚠️ {who} stopped on an unknown error"),
+        },
+        continues_by_itself: |_hour, when| format!(" · it continues by itself at {when}"),
+        back_will_not_continue: |_hour, when| {
+            format!(" · back at {when} · it will not continue by itself")
+        },
+        back_on_will_not_continue: |when| {
+            format!(" · back on {when} · it will not continue by itself")
+        },
+        back_weekday_will_not_continue: |when| {
+            format!(" · back {when} · it will not continue by itself")
+        },
+        clock: english_clock,
+        date_clock: |month, day, hour, minute| {
+            format!(
+                "{} {day}, {}",
+                english_month(month),
+                english_clock(hour, minute)
+            )
+        },
+        weekday_clock: |weekday, hour, minute| {
+            format!(
+                "{} {}",
+                english_weekday(weekday),
+                english_clock(hour, minute)
+            )
+        },
+        failure_released: |instance, text| {
+            format!("Released the error notice from [{instance}]: {text}")
+        },
+        waiting_released: |instance| format!("Released the waiting notice from [{instance}]"),
+    },
+    update: UpdateTexts {
+        looking: "Looking for versions on npm",
+        switching: |from, to| format!("Switching channel: #{from} → #{to}"),
+        plugins: |from, to| format!("Plugins: {from} → {to}"),
+        binary: |from, to| format!("Binary: {from} → {to}"),
+        reload: "It applies to new Claude Code sessions; in open ones, run /reload-plugins.",
+        newest_stable: |version| format!("Already on {version}, the newest stable."),
+        already: |version| format!("Already on {version}."),
+        check: |from, to| format!("Would update from {from} to {to} (plugins and binary)."),
+        unstable_intro: |channel, version| {
+            format!("You are on a test version ({channel} {version}).")
+        },
+        newest_alpha: |version| format!("Newest alpha: {version}"),
+        newest_beta: |version| format!("Newest beta: {version}"),
+        newest_stable_option: |version| format!("Newest stable: {version}"),
+        the_current: "(the current one)",
+        which: |numbers, default| format!("Which one? ({numbers}; Enter: {default}):"),
+        pick: |version, options| format!("Test version {version}. Pick with {options}."),
+        pick_option: |channel, version| format!("'{UPDATE_COMMAND} {channel}' ({version})"),
+        or: " or ",
+        and: " and ",
+        cleanup_question: |count, versions| {
+            format!(
+                "There are {count} test versions kept ({versions}). Delete the ones not in use? (y/N):"
+            )
+        },
+        cleaned: |versions| format!("Deleted {versions}."),
+        npm_failed: |reason| {
+            format!("Could not fetch the versions from npm ({reason}). Try again.")
+        },
+        bad_list: "The version list came in an unexpected format. Try again in a moment.",
+        no_version: |version, newest| {
+            format!("Version {version} does not exist. Newest: {newest}.")
+        },
+        no_channel: |channel| format!("There is no {channel} version yet."),
+        no_plugins: concat!(
+            "The plugins are not installed. Run '",
+            crate::setup_command!(),
+            "'."
+        ),
+        no_git: concat!(
+            "git is not installed, and Claude Code needs it to update the plugins. Install git and run '",
+            crate::update_command!(),
+            "' again."
+        ),
+        plugin_failed: |line| format!("Plugins: {line}. Run '{UPDATE_COMMAND}' again."),
+        plugin_stayed: |have, want| {
+            format!(
+                "The telegram-hooks plugin stayed on {have}, not {want}. Run '{UPDATE_COMMAND}' again."
+            )
+        },
+        only_newest_stable: |version, newest| {
+            format!(
+                "Only the newest stable ({newest}) can be installed, not {version}. Run '{UPDATE_COMMAND} stable'."
+            )
+        },
+        no_hash: |version, platform| format!("Plugin {version} has no binary hash for {platform}."),
+        download_failed: |version, reason| {
+            format!(
+                "Binary: could not download {version} from GitHub ({reason}). The plugins are already on {version}. Run '{UPDATE_COMMAND}' again."
+            )
+        },
+        binary_failed: |version, reason| {
+            format!(
+                "Binary: could not install {version} ({reason}). The plugins are already on {version}. Run '{UPDATE_COMMAND}' again."
+            )
+        },
+        hash_mismatch: "hash mismatch",
+        not_bcct: |version| format!("did not answer as bcct {version}"),
+        usage: concat!(
+            "Usage: ",
+            crate::update_command!(),
+            " [stable|beta|alpha|<version>] [--check]"
+        ),
+    },
+    fix: FixTexts {
+        can_fix: "I can fix:",
+        only_recommend: "I only recommend:",
+        question: "Which ones? (1, 2, ... or all; Enter: none):",
+        nothing: "Nothing I can fix on my own.",
+        fixed: |action| format!("Fixed: {action}"),
+        could_not: |action, error| format!("Could not: {action} ({error})"),
+        checking_again: "Checking again:",
+        how_to_apply: "To apply, run 'bcct health --fix --yes' or pick with '--only shell,protection'.",
+        invalid_answer: |count| {
+            format!("Answer with numbers from the list (1 to {count}), 'all' or Enter.")
+        },
+        unknown: |ids, valid| format!("Unknown fixes: {ids}. The possible ones are: {valid}."),
+        shell: |rc| format!("rewrite shell.sh and the line in {rc}"),
+        protection: |settings| {
+            format!("add the rule that keeps Claude from reading the token to {settings}")
+        },
+        statusline: |settings| {
+            format!("replace the old command (from the clone) with the current one in {settings}")
+        },
+        app_dir: |folder| format!("give write permission to {folder}"),
+        update: concat!("run '", crate::update_command!(), "'"),
+    },
+};

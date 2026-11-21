@@ -1,0 +1,2 @@
+exclude_globs = ["crates/bcct/src/windows.rs"]
+profile = "mutants"

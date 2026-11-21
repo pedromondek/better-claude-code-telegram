@@ -1,0 +1,24 @@
+{
+  "name": "better-claude-code-telegram",
+  "description": "Telegram for Claude Code: answer AskUserQuestion with buttons, get a notice when Claude waits on you, and reach every instance on your machine through one bot.",
+  "owner": {
+    "name": "pedromondek"
+  },
+  "plugins": [
+    {
+      "name": "telegram",
+      "source": "./plugins/telegram",
+      "description": "Telegram channel for Claude Code, forked from the official plugin: AskUserQuestion mirrored with buttons, waiting notices, delayed permission requests, quiet hours and local voice transcription. Enable it only in the 'claude --telegram' instance."
+    },
+    {
+      "name": "telegram-hooks",
+      "source": "./plugins/telegram-hooks",
+      "description": "Hooks that bring every Claude Code instance on the machine to the Telegram bot while it is up: AskUserQuestion answered from Telegram and waiting notices. Install it at user scope."
+    },
+    {
+      "name": "bcct",
+      "source": "./plugins/bcct",
+      "description": "Commands to check and change the setup from Claude Code: /bcct:health, /bcct:update, language, delay, quiet hours, transcription, status line and pending questions. The token and the pairing stay in your own terminal. Install it at user scope."
+    }
+  ]
+}

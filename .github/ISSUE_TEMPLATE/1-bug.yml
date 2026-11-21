@@ -1,0 +1,103 @@
+name: Bug report
+description: Something that should work and does not.
+type: Bug
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `npx @pedromondek/better-claude-code-telegram health` and paste its output below: it shows most of what helps to reproduce the bug.
+        Never paste the bot token, a chat id or `access.json`, in any field or screenshot.
+        Prefer Portuguese? Open the **Relatar um bug** form instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The behavior you saw, with the exact error message when there is one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The scenario step by step, from the command you ran.
+      placeholder: |
+        1. Run `claude --telegram`
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: The right behavior in the same scenario.
+    validations:
+      required: true
+
+  - type: input
+    id: bcct-version
+    attributes:
+      label: bcct version
+      description: The first line that `bcct -v` prints.
+      placeholder: bcct 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: claude-code-version
+    attributes:
+      label: Claude Code version
+      description: What `claude --version` prints.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      description: Where Claude Code runs.
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - WSL
+    validations:
+      required: true
+
+  - type: textarea
+    id: health
+    attributes:
+      label: Output of bcct health
+      description: Pasted as text, without the token or the chat id.
+      render: shell
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Did it work before?
+      description: If it is a regression, what changed since it worked helps to find the cause.
+      options:
+        - Yes, it worked before
+        - No, it never worked
+        - I don't know
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      description: Repeating the same scenario.
+      options:
+        - Always
+        - Sometimes
+        - Only once
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log or error
+      description: A piece of the log or the error message, pasted as text.
+      render: shell

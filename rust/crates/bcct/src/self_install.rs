@@ -1,0 +1,745 @@
+use std::ffi::OsString;
+use std::fmt::Write as _;
+use std::fs;
+use std::io::{self, IsTerminal, Write};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
+use semver::Version;
+use serde_json::{Map, Value};
+use sha2::{Digest, Sha256};
+
+use crate::files::create_private_dir;
+use crate::js::stringify_pretty;
+use crate::messages::{Messages, messages_for};
+use crate::paths::Paths;
+use crate::setup::setup_locale;
+use crate::ui::{fail, should_colorize, success, warn};
+use crate::update::BODY_TIMEOUT;
+
+pub const LAUNCHER_SH: &str = concat!(
+    r#"#!/bin/sh
+bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+current=$(cat "$bin_dir/current" 2>/dev/null)
+binary="$bin_dir/versions/$current/bcct"
+if [ -z "$current" ] || [ ! -x "$binary" ]; then
+  echo 'bcct: no installed version found. Run: "#,
+    crate::setup_command!(),
+    r#"' >&2
+  echo 'bcct: nenhuma versão instalada encontrada. Rode: "#,
+    crate::setup_command!(),
+    r#"' >&2
+  exit 127
+fi
+exec "$binary" "$@"
+"#
+);
+
+pub const LAUNCHER_CMD: &str = concat!(
+    "@echo off\r\n",
+    "setlocal\r\n",
+    "set \"current=\"\r\n",
+    "if exist \"%~dp0current\" set /p current=<\"%~dp0current\"\r\n",
+    "if not defined current goto missing\r\n",
+    "set \"current=%current:/=\\%\"\r\n",
+    "if not exist \"%~dp0versions\\%current%\\bcct.exe\" goto missing\r\n",
+    "\"%~dp0versions\\%current%\\bcct.exe\" %*\r\n",
+    "exit /b %errorlevel%\r\n",
+    ":missing\r\n",
+    "echo bcct: no installed version found. Run: ",
+    crate::setup_command!(),
+    " 1>&2\r\n",
+    "echo bcct: nenhuma versao instalada encontrada. Rode: ",
+    crate::setup_command!(),
+    " 1>&2\r\n",
+    "exit /b 127\r\n",
+);
+
+const BIN_FOLDER: &str = "bin";
+const VERSIONS_FOLDER: &str = "versions";
+const CURRENT_FILE: &str = "current";
+const RECEIPT_FILE: &str = "install.json";
+const VERIFIED_FILE: &str = ".verified";
+const LAUNCHER_SH_FILE: &str = "bcct";
+const LAUNCHER_CMD_FILE: &str = "bcct.cmd";
+const BINARY_FILE: &str = if cfg!(windows) { "bcct.exe" } else { "bcct" };
+const LAUNCHER_FILE: &str = if cfg!(windows) {
+    LAUNCHER_CMD_FILE
+} else {
+    LAUNCHER_SH_FILE
+};
+pub(crate) const DOWNLOAD_PREFIX: &str = ".download-";
+const STAGING_PREFIX: &str = ".staging-";
+const LEFTOVER_PREFIXES: [&str; 2] = [DOWNLOAD_PREFIX, STAGING_PREFIX];
+const KEPT_PER_FOLDER: usize = 2;
+const EXECUTABLE_MODE: u32 = 0o755;
+const PRIVATE_MODE: u32 = 0o600;
+const VERSION_PREFIX: &str = "bcct ";
+const SUCCESS: u8 = 0;
+const FAILURE: u8 = 1;
+const USAGE: u8 = 2;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Channel {
+    Stable,
+    Beta,
+    Alpha,
+}
+
+impl Channel {
+    pub const ALL: [Self; 3] = [Self::Stable, Self::Beta, Self::Alpha];
+
+    #[must_use]
+    pub fn of(version: &str) -> Self {
+        match version.split_once('-') {
+            None => Self::Stable,
+            Some((_, suffix)) if suffix.starts_with("alpha") => Self::Alpha,
+            Some(_) => Self::Beta,
+        }
+    }
+
+    #[must_use]
+    pub fn folder(self) -> &'static str {
+        match self {
+            Self::Stable => "stable",
+            Self::Beta => "unstable/beta",
+            Self::Alpha => "unstable/alpha",
+        }
+    }
+
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Stable => "stable",
+            Self::Beta => "beta",
+            Self::Alpha => "alpha",
+        }
+    }
+
+    #[must_use]
+    pub fn is_unstable(self) -> bool {
+        self != Self::Stable
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Origin {
+    Npm,
+    Release,
+    Manual,
+}
+
+impl Origin {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Npm => "npm",
+            Self::Release => "release",
+            Self::Manual => "manual",
+        }
+    }
+
+    fn parse(text: &str) -> Option<Self> {
+        [Self::Npm, Self::Release, Self::Manual]
+            .into_iter()
+            .find(|origin| origin.name() == text)
+    }
+}
+
+#[derive(Debug)]
+pub enum InstallError {
+    HashMismatch,
+    NotBcct,
+    Io(io::Error),
+}
+
+impl From<io::Error> for InstallError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Installed {
+    pub version: String,
+    pub channel: Channel,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveVersion {
+    pub channel: String,
+    pub version: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Kept {
+    pub channel: Channel,
+    pub versions: Vec<String>,
+}
+
+#[derive(Debug)]
+pub enum RemoveError {
+    Active,
+    Missing,
+    Io(io::Error),
+}
+
+fn is_executable(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    }
+
+    #[cfg(not(unix))]
+    {
+        metadata.is_file()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Store {
+    bin: PathBuf,
+}
+
+impl Store {
+    #[must_use]
+    pub fn new(app_dir: &Path) -> Self {
+        Self {
+            bin: app_dir.join(BIN_FOLDER),
+        }
+    }
+
+    pub fn install(
+        &self,
+        source: &Path,
+        sha256: &str,
+        origin: Origin,
+    ) -> Result<Installed, InstallError> {
+        let bytes = fs::read(source)?;
+        let hash = hex_digest(&bytes);
+
+        if !hash.eq_ignore_ascii_case(sha256.trim()) {
+            return Err(InstallError::HashMismatch);
+        }
+
+        let versions = self.versions_dir()?;
+
+        let staging = tempfile::Builder::new()
+            .prefix(STAGING_PREFIX)
+            .tempdir_in(&versions)?;
+        let staged = staging.path().join(BINARY_FILE);
+        fs::write(&staged, &bytes)?;
+        #[cfg(unix)]
+        set_mode(&staged, EXECUTABLE_MODE)?;
+
+        let version = answered_version(&staged).ok_or(InstallError::NotBcct)?;
+        let channel = Channel::of(&version);
+        fs::write(staging.path().join(VERIFIED_FILE), format!("{hash}\n"))?;
+
+        let channel_dir = versions.join(channel.folder());
+        create_private_dir(&channel_dir)?;
+        let target = channel_dir.join(&version);
+
+        if !verified_as(&target, &hash) {
+            replace_dir(&staging.keep(), &target)?;
+        }
+
+        let current = format!("{}/{version}\n", channel.folder());
+        let fields = receipt(origin, &version, channel);
+
+        let files = [
+            (CURRENT_FILE, current.as_str(), PRIVATE_MODE),
+            (RECEIPT_FILE, fields.as_str(), PRIVATE_MODE),
+            (LAUNCHER_SH_FILE, LAUNCHER_SH, EXECUTABLE_MODE),
+            (LAUNCHER_CMD_FILE, LAUNCHER_CMD, EXECUTABLE_MODE),
+        ];
+
+        for (name, contents, mode) in files {
+            write_if_changed(&self.bin.join(name), contents, mode)?;
+        }
+
+        prune(&channel_dir, &version)?;
+
+        Ok(Installed { version, channel })
+    }
+
+    pub fn versions_dir(&self) -> io::Result<PathBuf> {
+        let versions = self.bin.join(VERSIONS_FOLDER);
+
+        create_private_dir(&versions)?;
+        remove_stale_leftovers(&versions);
+
+        Ok(versions)
+    }
+
+    #[must_use]
+    pub fn active(&self) -> Option<ActiveVersion> {
+        let text = fs::read_to_string(self.bin.join(CURRENT_FILE)).ok()?;
+        let (folder, version) = text.trim().rsplit_once('/')?;
+        let channel = folder.rsplit('/').next().unwrap_or(folder);
+        let binary = self
+            .bin
+            .join(VERSIONS_FOLDER)
+            .join(folder)
+            .join(version)
+            .join(BINARY_FILE);
+
+        (!channel.is_empty() && !version.is_empty() && is_executable(&binary)).then(|| {
+            ActiveVersion {
+                channel: channel.to_owned(),
+                version: version.to_owned(),
+            }
+        })
+    }
+
+    #[must_use]
+    pub fn has_launcher(&self) -> bool {
+        is_executable(&self.bin.join(LAUNCHER_FILE))
+    }
+
+    #[must_use]
+    pub fn current(&self) -> Option<String> {
+        let text = fs::read_to_string(self.bin.join(CURRENT_FILE)).ok()?;
+
+        text.trim()
+            .rsplit('/')
+            .next()
+            .filter(|version| !version.is_empty())
+            .map(str::to_owned)
+    }
+
+    #[must_use]
+    pub fn unstable_versions(&self) -> Vec<String> {
+        let mut versions: Vec<Version> = Channel::ALL
+            .into_iter()
+            .filter(|channel| channel.is_unstable())
+            .flat_map(|channel| {
+                installed_versions(&self.bin.join(VERSIONS_FOLDER).join(channel.folder()))
+            })
+            .collect();
+        versions.sort();
+
+        versions.iter().map(Version::to_string).collect()
+    }
+
+    #[must_use]
+    pub fn kept(&self) -> Vec<Kept> {
+        Channel::ALL
+            .into_iter()
+            .filter_map(|channel| {
+                let mut versions =
+                    installed_versions(&self.bin.join(VERSIONS_FOLDER).join(channel.folder()));
+                versions.sort_by(|left, right| right.cmp(left));
+
+                (!versions.is_empty()).then(|| Kept {
+                    channel,
+                    versions: versions.iter().map(Version::to_string).collect(),
+                })
+            })
+            .collect()
+    }
+
+    pub fn remove(&self, version: &str) -> Result<(), RemoveError> {
+        let folder = self.version_dir(version);
+
+        if Version::parse(version).is_err() || !folder.is_dir() {
+            return Err(RemoveError::Missing);
+        }
+
+        if self.current().as_deref() == Some(version) {
+            return Err(RemoveError::Active);
+        }
+
+        fs::remove_dir_all(&folder).map_err(RemoveError::Io)
+    }
+
+    #[must_use]
+    pub fn version_dir(&self, version: &str) -> PathBuf {
+        self.bin
+            .join(VERSIONS_FOLDER)
+            .join(Channel::of(version).folder())
+            .join(version)
+    }
+}
+
+fn hex_digest(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .fold(String::new(), |mut out, byte| {
+            let _written = write!(out, "{byte:02x}");
+            out
+        })
+}
+
+fn answered_version(binary: &Path) -> Option<String> {
+    let output = Command::new(binary)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()
+        .filter(|output| output.status.success())?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let version = text.lines().next()?.trim().strip_prefix(VERSION_PREFIX)?;
+
+    Version::parse(version)
+        .ok()
+        .map(|parsed| parsed.to_string())
+}
+
+fn verified_as(target: &Path, hash: &str) -> bool {
+    fs::read_to_string(target.join(VERIFIED_FILE)).is_ok_and(|text| text.trim() == hash)
+        && target.join(BINARY_FILE).is_file()
+}
+
+fn replace_dir(staged: &Path, target: &Path) -> io::Result<()> {
+    if target.exists() {
+        let aside = tempfile::Builder::new()
+            .prefix(".replaced-")
+            .tempdir_in(target.parent().unwrap_or(target))?
+            .keep();
+        fs::remove_dir(&aside)?;
+        fs::rename(target, &aside)?;
+        fs::rename(staged, target)?;
+        return fs::remove_dir_all(&aside);
+    }
+
+    fs::rename(staged, target)
+}
+
+fn receipt(origin: Origin, version: &str, channel: Channel) -> String {
+    let fields = Map::from_iter([
+        ("origin".to_owned(), Value::from(origin.name())),
+        ("version".to_owned(), Value::from(version)),
+        ("channel".to_owned(), Value::from(channel.name())),
+    ]);
+
+    format!("{}\n", stringify_pretty(&Value::Object(fields)))
+}
+
+fn write_if_changed(path: &Path, contents: &str, mode: u32) -> io::Result<()> {
+    if fs::read_to_string(path).is_ok_and(|current| current == contents) {
+        return Ok(());
+    }
+
+    write_file(path, contents.as_bytes(), mode)
+}
+
+fn write_file(path: &Path, contents: &[u8], mode: u32) -> io::Result<()> {
+    let folder = path.parent().unwrap_or(path);
+    let mut temporary = tempfile::Builder::new()
+        .prefix(".bcct-")
+        .tempfile_in(folder)?;
+
+    temporary.write_all(contents)?;
+    temporary.as_file().sync_all()?;
+    #[cfg(unix)]
+    set_mode(temporary.path(), mode)?;
+    #[cfg(not(unix))]
+    let _ = mode;
+    temporary.persist(path).map_err(|error| error.error)?;
+
+    Ok(())
+}
+
+#[cfg(unix)]
+fn set_mode(path: &Path, mode: u32) -> io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::set_permissions(path, fs::Permissions::from_mode(mode))
+}
+
+fn installed_versions(channel_dir: &Path) -> Vec<Version> {
+    fs::read_dir(channel_dir)
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+        .filter_map(|entry| Version::parse(&entry.file_name().to_string_lossy()).ok())
+        .collect()
+}
+
+fn is_stale_leftover(entry: &fs::DirEntry) -> bool {
+    let name = entry.file_name();
+    let name = name.to_string_lossy();
+
+    LEFTOVER_PREFIXES
+        .iter()
+        .any(|prefix| name.starts_with(prefix))
+        && entry
+            .metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.elapsed().ok())
+            .is_some_and(is_stale)
+}
+
+fn is_stale(age: std::time::Duration) -> bool {
+    age > BODY_TIMEOUT
+}
+
+fn remove_stale_leftovers(versions: &Path) {
+    for entry in fs::read_dir(versions)
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+    {
+        if !is_stale_leftover(&entry) {
+            continue;
+        }
+
+        let path = entry.path();
+        let _removed = if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+            fs::remove_dir_all(&path)
+        } else {
+            fs::remove_file(&path)
+        };
+    }
+}
+
+fn prune(channel_dir: &Path, active: &str) -> io::Result<()> {
+    let mut versions = installed_versions(channel_dir);
+    versions.sort();
+
+    let mut excess = versions.len().saturating_sub(KEPT_PER_FOLDER);
+
+    for version in versions {
+        if excess == 0 {
+            break;
+        }
+
+        let name = version.to_string();
+
+        if name != active {
+            fs::remove_dir_all(channel_dir.join(name))?;
+            excess -= 1;
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Request {
+    file: PathBuf,
+    sha256: String,
+    origin: Origin,
+}
+
+fn parse_request(args: &[OsString]) -> Option<Request> {
+    let mut file = None;
+    let mut sha256 = None;
+    let mut origin = Origin::Manual;
+    let mut words = args.iter().map(|arg| arg.to_str());
+
+    while let Some(word) = words.next() {
+        match word? {
+            "--sha256" => sha256 = Some(words.next()??.to_owned()),
+            "--from" => origin = Origin::parse(words.next()??)?,
+            flag if flag.starts_with("--") => return None,
+            path if file.is_none() => file = Some(PathBuf::from(path)),
+            _ => return None,
+        }
+    }
+
+    Some(Request {
+        file: file?,
+        sha256: sha256?,
+        origin,
+    })
+}
+
+fn process_messages(app_dir: &Path) -> &'static Messages {
+    messages_for(setup_locale(app_dir, &|name| std::env::var_os(name)))
+}
+
+pub fn write_version(
+    version: &str,
+    store: &Store,
+    messages: &Messages,
+    colorize: bool,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> io::Result<()> {
+    let mut text = format!("{VERSION_PREFIX}{version}\n");
+    let kept = store.kept();
+    let channels = messages.version_channels;
+    let label = |channel: Channel| match channel {
+        Channel::Stable => channels.stable,
+        Channel::Beta => channels.beta,
+        Channel::Alpha => channels.alpha,
+    };
+
+    if !kept.is_empty() {
+        let width = kept
+            .iter()
+            .map(|entry| label(entry.channel).chars().count())
+            .max()
+            .unwrap_or_default();
+        let active = store.current();
+
+        let _written = writeln!(text, "{}", messages.version_installed);
+
+        for entry in &kept {
+            let versions: Vec<String> = entry
+                .versions
+                .iter()
+                .map(|kept_version| {
+                    if active.as_deref() == Some(kept_version.as_str()) {
+                        format!("{kept_version} ({})", messages.version_active)
+                    } else {
+                        kept_version.clone()
+                    }
+                })
+                .collect();
+
+            let _written = writeln!(
+                text,
+                "  {:<width$}  {}",
+                label(entry.channel),
+                versions.join(", ")
+            );
+        }
+
+        let _written = writeln!(text, "{}", messages.version_remove_hint);
+        let _written = writeln!(text, "{}", messages.version_uninstall_hint);
+    }
+
+    stdout.write_all(text.as_bytes())?;
+    stdout.flush()?;
+
+    let channel = Channel::of(version);
+
+    if channel.is_unstable() {
+        let _warned = writeln!(
+            stderr,
+            "{}",
+            warn(&(messages.version_unstable)(channel.name()), colorize)
+        );
+    }
+
+    Ok(())
+}
+
+pub fn run_version_process(stdout: &mut dyn Write, stderr: &mut dyn Write) -> io::Result<()> {
+    let paths = Paths::from_process();
+    let var = |name: &str| std::env::var_os(name);
+
+    write_version(
+        env!("CARGO_PKG_VERSION"),
+        &Store::new(&paths.app_dir),
+        process_messages(&paths.app_dir),
+        should_colorize(&var, io::stderr().is_terminal()),
+        stdout,
+        stderr,
+    )
+}
+
+pub fn run_remove_process(typed: &str, stdout: &mut dyn Write, stderr: &mut dyn Write) -> u8 {
+    let paths = Paths::from_process();
+    let var = |name: &str| std::env::var_os(name);
+    let messages = process_messages(&paths.app_dir);
+    let Ok(parsed) = Version::parse(typed.strip_prefix('v').unwrap_or(typed)) else {
+        let colorize = should_colorize(&var, io::stderr().is_terminal());
+        let invalid = (messages.uninstall_version_invalid)(typed);
+        let _shown = writeln!(stderr, "{}", fail(&invalid, colorize));
+        return USAGE;
+    };
+    let normalized = parsed.to_string();
+    let version = normalized.as_str();
+    let store = Store::new(&paths.app_dir);
+
+    let failure = match store.remove(version) {
+        Ok(()) => {
+            let colorize = should_colorize(&var, io::stdout().is_terminal());
+            let _shown = writeln!(
+                stdout,
+                "{}",
+                success(&(messages.uninstall_version_removed)(version), colorize)
+            );
+            return SUCCESS;
+        }
+        Err(RemoveError::Active) => (messages.uninstall_version_active)(version),
+        Err(RemoveError::Missing) => (messages.uninstall_version_missing)(version),
+        Err(RemoveError::Io(_)) => {
+            (messages.file_not_removed)(&store.version_dir(version).display().to_string())
+        }
+    };
+    let colorize = should_colorize(&var, io::stderr().is_terminal());
+    let _shown = writeln!(stderr, "{}", fail(&failure, colorize));
+
+    FAILURE
+}
+
+pub fn run_process<O: Write, E: Write>(args: &[OsString], stdout: &mut O, stderr: &mut E) -> u8 {
+    let paths = Paths::from_process();
+
+    run(
+        args,
+        &paths.app_dir,
+        process_messages(&paths.app_dir),
+        stdout,
+        stderr,
+    )
+}
+
+fn run<O: Write, E: Write>(
+    args: &[OsString],
+    app_dir: &Path,
+    messages: &Messages,
+    stdout: &mut O,
+    stderr: &mut E,
+) -> u8 {
+    let Some(request) = parse_request(args) else {
+        let _shown = writeln!(stderr, "{}", messages.self_install_usage);
+        return USAGE;
+    };
+
+    match Store::new(app_dir).install(&request.file, &request.sha256, request.origin) {
+        Ok(installed) => {
+            let _shown = writeln!(
+                stdout,
+                "{}",
+                (messages.self_install_done)(&installed.version, installed.channel.name())
+            );
+
+            if installed.channel.is_unstable() {
+                let _warned = writeln!(
+                    stdout,
+                    "{}",
+                    (messages.self_install_unstable)(installed.channel.name())
+                );
+            }
+
+            SUCCESS
+        }
+        Err(failure) => {
+            let text = match failure {
+                InstallError::HashMismatch => messages.self_install_hash_mismatch,
+                InstallError::NotBcct => messages.self_install_not_bcct,
+                InstallError::Io(_) => messages.self_install_failed,
+            };
+            let _shown = writeln!(stderr, "{text}");
+
+            FAILURE
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn counts_a_leftover_as_stale_only_past_the_download_timeout() {
+        assert!(!is_stale(
+            BODY_TIMEOUT.saturating_sub(std::time::Duration::from_nanos(1))
+        ));
+        assert!(!is_stale(BODY_TIMEOUT));
+        assert!(is_stale(BODY_TIMEOUT + std::time::Duration::from_nanos(1)));
+    }
+}

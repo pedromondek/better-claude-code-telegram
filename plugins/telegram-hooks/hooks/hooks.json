@@ -1,0 +1,81 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook session-start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if { [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; }; then \"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook permission; fi",
+            "timeout": 86400
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if { [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; }; then \"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook prompt; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if { [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; }; then \"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook post; fi"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && { t=$(date +%s%3N 2>/dev/null); case $t in ''|*[!0-9]*) t=$(date +%s)000 ;; esac; echo \"$t\" > \"$d/last-activity\"; } 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if { [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; }; then \"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook stop; fi"
+          },
+          {
+            "type": "command",
+            "command": "[ \"$BETTER_CC_TELEGRAM\" = 1 ] && d=\"${BETTER_CC_TELEGRAM_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/better-claude-code-telegram}/pings\" && mkdir -p \"$d\" && { t=$(date +%s%3N 2>/dev/null); case $t in ''|*[!0-9]*) t=$(date +%s)000 ;; esac; echo \"$t\" > \"$d/last-activity\"; } 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if { [ \"$BETTER_CC_TELEGRAM\" = 1 ] || [ -f \"${TELEGRAM_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/channels/telegram}/bot.pid\" ]; }; then \"${CLAUDE_PLUGIN_ROOT}/scripts/bcct\" hook stop-failure; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

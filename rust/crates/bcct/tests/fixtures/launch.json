@@ -1,0 +1,5094 @@
+{
+  "now": 1700000000123,
+  "missing": [
+    {
+      "files": {
+        "state/.env": "",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": { "state/.env": "", "state/access.json": "{\"allowFrom\":[]}" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "", "state/access.json": "{}" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "", "state/access.json": "[[\"42\"]]" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "", "state/access.json": "null" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "", "state/access.json": "{" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "", "state/access.json": "" },
+      "out": ["token", "pairing"]
+    },
+    { "files": { "state/.env": "" }, "out": ["token", "pairing"] },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    { "files": { "state/.env": "TELEGRAM_BOT_TOKEN=abc" }, "out": ["pairing"] },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=abc\n" },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=  abc  \r\n" },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=", "state/access.json": "" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \n",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=   \n" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=   \nTELEGRAM_BOT_TOKEN=abc\n"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "OTHER=1\nTELEGRAM_BOT_TOKEN=abc\n" },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": " TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": " TELEGRAM_BOT_TOKEN=abc" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "telegram_bot_token=abc",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "telegram_bot_token=abc" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN =abc",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN =abc" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "export TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "export TELEGRAM_BOT_TOKEN=abc" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "X=1\rTELEGRAM_BOT_TOKEN=abc" },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "X=1\u2028TELEGRAM_BOT_TOKEN=abc" },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "X=1\u2029TELEGRAM_BOT_TOKEN=abc\u2029" },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN= ﻿",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN= ﻿" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=", "state/access.json": "" },
+      "out": ["pairing"]
+    },
+    { "files": { "state/.env": "TELEGRAM_BOT_TOKEN=" }, "out": ["pairing"] },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": ["token"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/.env": "﻿TELEGRAM_BOT_TOKEN=abc" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=\r\nTELEGRAM_BOT_TOKEN=abc"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{\"allowFrom\":[\"42\"]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{\"allowFrom\":[]}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{\"allowFrom\":[null]}"
+      },
+      "out": []
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{\"allowFrom\":\"42\"}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{}"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "[[\"42\"]]"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "null"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": "{"
+      },
+      "out": ["pairing"]
+    },
+    {
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN==",
+        "state/access.json": ""
+      },
+      "out": ["pairing"]
+    },
+    { "files": { "state/.env": "TELEGRAM_BOT_TOKEN==" }, "out": ["pairing"] },
+    {
+      "files": { "state/access.json": "{\"allowFrom\":[\"42\"]}" },
+      "out": ["token"]
+    },
+    {
+      "files": { "state/access.json": "{\"allowFrom\":[]}" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/access.json": "{\"allowFrom\":[null]}" },
+      "out": ["token"]
+    },
+    {
+      "files": { "state/access.json": "{\"allowFrom\":\"42\"}" },
+      "out": ["token", "pairing"]
+    },
+    {
+      "files": { "state/access.json": "{\"allowFrom\":{\"0\":\"42\"}}" },
+      "out": ["token", "pairing"]
+    },
+    { "files": { "state/access.json": "{}" }, "out": ["token", "pairing"] },
+    {
+      "files": { "state/access.json": "[[\"42\"]]" },
+      "out": ["token", "pairing"]
+    },
+    { "files": { "state/access.json": "null" }, "out": ["token", "pairing"] },
+    { "files": { "state/access.json": "{" }, "out": ["token", "pairing"] },
+    { "files": { "state/access.json": "" }, "out": ["token", "pairing"] },
+    { "files": {}, "out": ["token", "pairing"] }
+  ],
+  "permissions": [
+    { "args": [], "settings": null, "out": null },
+    {
+      "args": [],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": [],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": [],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": [],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    { "args": [], "settings": { "permissions": null }, "out": null },
+    {
+      "args": [],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    { "args": [], "settings": [], "out": null },
+    { "args": [], "settings": "bypassPermissions", "out": null },
+    { "args": [], "settings": 5, "out": null },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": null,
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": { "permissions": null },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": [],
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": "bypassPermissions",
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--dangerously-skip-permissions"],
+      "settings": 5,
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": null,
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": { "permissions": null },
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": [],
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": "bypassPermissions",
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--allow-dangerously-skip-permissions"],
+      "settings": 5,
+      "out": "--allow-dangerously-skip-permissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": null,
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": { "permissions": null },
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": [],
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": "bypassPermissions",
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=bypassPermissions"],
+      "settings": 5,
+      "out": "--permission-mode=bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": null,
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": null },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": [],
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": "bypassPermissions",
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypassPermissions"],
+      "settings": 5,
+      "out": "--permission-mode bypassPermissions"
+    },
+    { "args": ["--permission-mode"], "settings": null, "out": null },
+    {
+      "args": ["--permission-mode"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    { "args": ["--permission-mode"], "settings": [], "out": null },
+    {
+      "args": ["--permission-mode"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    { "args": ["--permission-mode"], "settings": 5, "out": null },
+    { "args": ["--permission-mode", "plan"], "settings": null, "out": null },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    { "args": ["--permission-mode", "plan"], "settings": [], "out": null },
+    {
+      "args": ["--permission-mode", "plan"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    { "args": ["--permission-mode", "plan"], "settings": 5, "out": null },
+    { "args": ["--permission-mode=plan"], "settings": null, "out": null },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    { "args": ["--permission-mode=plan"], "settings": [], "out": null },
+    {
+      "args": ["--permission-mode=plan"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    { "args": ["--permission-mode=plan"], "settings": 5, "out": null },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": null,
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": { "permissions": null },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": [],
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": "bypassPermissions",
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--dangerously-skip-permissions"
+      ],
+      "settings": 5,
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": null,
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": { "permissions": null },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": [],
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": "bypassPermissions",
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": [
+        "--dangerously-skip-permissions",
+        "--permission-mode",
+        "bypassPermissions"
+      ],
+      "settings": 5,
+      "out": "--dangerously-skip-permissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": null,
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": null },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": [],
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": "bypassPermissions",
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "settings": 5,
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": null,
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": [],
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    {
+      "args": ["bypassPermissions", "--permission-mode"],
+      "settings": 5,
+      "out": null
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": null,
+      "out": null
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    { "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"], "settings": [], "out": null },
+    {
+      "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    { "args": ["--DANGEROUSLY-SKIP-PERMISSIONS"], "settings": 5, "out": null },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": null,
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": [],
+      "out": null
+    },
+    {
+      "args": [" --dangerously-skip-permissions"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    { "args": [" --dangerously-skip-permissions"], "settings": 5, "out": null },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": null,
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "defaultMode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": { "permissions": null },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": [],
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": "bypassPermissions",
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "bypasspermissions"],
+      "settings": 5,
+      "out": null
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": null,
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "bypassPermissions" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": "plan" } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": { "defaultMode": ["bypassPermissions"] } },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": { "permissions": null },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": { "defaultMode": "bypassPermissions" },
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": [],
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": "bypassPermissions",
+      "out": "--permission-mode bypassPermissions"
+    },
+    {
+      "args": ["--permission-mode", "--permission-mode", "bypassPermissions"],
+      "settings": 5,
+      "out": "--permission-mode bypassPermissions"
+    }
+  ],
+  "running": [
+    { "pidText": null, "out": null },
+    { "pidText": "", "out": null },
+    { "pidText": "  \n", "out": null },
+    { "pidText": "abc", "out": null },
+    { "pidText": "{server}", "out": "{server}" },
+    { "pidText": " {server}\n", "out": "{server}" },
+    { "pidText": "{plain}", "out": null },
+    { "pidText": "{dead}", "out": null },
+    { "pidText": "{server} {plain}", "out": "{server} {plain}" },
+    { "pidText": "{plain},{server}", "out": "{plain},{server}" },
+    { "pidText": "{plain} {plain}", "out": null },
+    { "pidText": "-{server}", "out": null },
+    { "pidText": "{server}x", "out": null },
+    { "pidText": "0", "out": null }
+  ],
+  "checks": [
+    {
+      "name": "nothing set up",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "only the token is missing",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "only the pairing is missing",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n" },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "nothing set up in pt-br",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n"
+    },
+    {
+      "name": "the system language suggests pt-br",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt_BR.UTF-8"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n"
+    },
+    {
+      "name": "an unknown config language falls back to the system",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt_BR.UTF-8"
+      },
+      "args": [],
+      "files": {
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"fr\"}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n"
+    },
+    {
+      "name": "the config language wins over the system",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt_BR.UTF-8"
+      },
+      "args": [],
+      "files": {
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"en-us\"}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "LC_ALL wins over LANG",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LC_ALL": "en_US.UTF-8",
+        "LANG": "pt_BR.UTF-8"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "an empty LC_ALL falls to LC_MESSAGES",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LC_ALL": "",
+        "LC_MESSAGES": "pt_BR",
+        "LANG": "en_US"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n"
+    },
+    {
+      "name": "LC_MESSAGES wins over LANG",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LC_MESSAGES": "en",
+        "LANG": "pt_BR"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "the system language is case insensitive",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "PT-BR"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n"
+    },
+    {
+      "name": "a short system language is not enough",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "a longer system language still matches",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt_br_x"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n"
+    },
+    {
+      "name": "a padded system language does not match",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": " pt_BR"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "ready opens",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 0,
+      "stderr": ""
+    },
+    {
+      "name": "ready with arguments opens",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--continue", "hello"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 0,
+      "stderr": ""
+    },
+    {
+      "name": "two accounts",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"allowFrom\":[\"1\",\"2\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ access.json lets 2 Telegram accounts talk to the bot, but it only talks to one. Run 'npm run setup:pairing' to keep only yours.\n"
+    },
+    {
+      "name": "three accounts in pt-br",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"allowFrom\":[\"1\",\"2\",\"3\"]}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O access.json deixa 3 contas do Telegram falarem com o bot, mas ele só fala com uma. Rode 'npm run setup:pairing' para deixar só a sua.\n"
+    },
+    {
+      "name": "skip flag [\"--dangerously-skip-permissions\"]",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--dangerously-skip-permissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with --dangerously-skip-permissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "skip flag [\"--allow-dangerously-skip-permissions\"]",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--allow-dangerously-skip-permissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with --allow-dangerously-skip-permissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "skip flag [\"--permission-mode=bypassPermissions\"]",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--permission-mode=bypassPermissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with --permission-mode=bypassPermissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "skip flag [\"--permission-mode\",\"bypassPermissions\"]",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--permission-mode", "bypassPermissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with --permission-mode bypassPermissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "skip flag [\"--permission-mode\"]",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--permission-mode"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": null,
+      "code": 0,
+      "stderr": ""
+    },
+    {
+      "name": "skip flag in pt-br",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--dangerously-skip-permissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ O 'claude --telegram' não abre com --dangerously-skip-permissions:\n  • com o canal ligado, uma mensagem no Telegram poderia fazer o Claude executar qualquer coisa sem te perguntar\nAbra sem essa opção.\n"
+    },
+    {
+      "name": "bypass in the settings",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/settings.json": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with defaultMode bypassPermissions ({root}/claude/settings.json):\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "bypass in the home settings",
+      "env": { "HOME": "{root}/home", "TELEGRAM_STATE_DIR": "{root}/state" },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "home/.claude/settings.json": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with defaultMode bypassPermissions ({root}/home/.claude/settings.json):\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "bypass in settings under a dotted claude dir",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude/./x/..",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/settings.json": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with defaultMode bypassPermissions ({root}/claude/settings.json):\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "an empty claude dir uses the home settings",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "home/.claude/settings.json": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with defaultMode bypassPermissions ({root}/home/.claude/settings.json):\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "the flags win over the settings",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--permission-mode=bypassPermissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/settings.json": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with --permission-mode=bypassPermissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "broken settings do not stop it",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/settings.json": "{"
+      },
+      "running": null,
+      "code": 0,
+      "stderr": ""
+    },
+    {
+      "name": "plan mode in the settings",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/settings.json": "{\"permissions\":{\"defaultMode\":\"plan\"}}"
+      },
+      "running": null,
+      "code": 0,
+      "stderr": ""
+    },
+    {
+      "name": "an instance already running",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": "4242",
+      "code": 1,
+      "stderr": "✘ A 'claude --telegram' instance is already open (bot in process 4242). Close it before opening another one.\n"
+    },
+    {
+      "name": "an instance already running in pt-br",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "running": "4242",
+      "code": 1,
+      "stderr": "✘ Já existe uma instância do 'claude --telegram' aberta (bot no processo 4242). Feche-a antes de abrir outra.\n"
+    },
+    {
+      "name": "an instance pid kept as text",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": "0042 7",
+      "code": 1,
+      "stderr": "✘ A 'claude --telegram' instance is already open (bot in process 0042 7). Close it before opening another one.\n"
+    },
+    {
+      "name": "missing setup comes before the running instance",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": [],
+      "files": { "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n" },
+      "running": "4242",
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "too many accounts comes before the skip flag",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--dangerously-skip-permissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"allowFrom\":[\"1\",\"2\"]}"
+      },
+      "running": null,
+      "code": 1,
+      "stderr": "✘ access.json lets 2 Telegram accounts talk to the bot, but it only talks to one. Run 'npm run setup:pairing' to keep only yours.\n"
+    },
+    {
+      "name": "the skip flag comes before the running instance",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "args": ["--dangerously-skip-permissions"],
+      "files": {
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "running": "4242",
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' does not start with --dangerously-skip-permissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"1\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "1"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "\u001b[31m✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\u001b[39m\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": ""
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "\u001b[31m✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\u001b[39m\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"true\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "true"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "\u001b[31m✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\u001b[39m\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"2\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "2"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "\u001b[31m✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\u001b[39m\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"3\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "3"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "\u001b[31m✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\u001b[39m\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"0\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "0"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"false\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "false"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    },
+    {
+      "name": "FORCE_COLOR=\"yes\"",
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "yes"
+      },
+      "args": [],
+      "files": {},
+      "running": null,
+      "code": 1,
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n"
+    }
+  ],
+  "marks": [
+    {
+      "name": "creates the nested app folder",
+      "files": {},
+      "threw": false,
+      "after": {
+        "claude/": { "mode": "700" },
+        "claude/better-claude-code-telegram/": { "mode": "700" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/launch.json"]
+    },
+    {
+      "name": "keeps an existing app folder",
+      "files": { "claude/better-claude-code-telegram/": "" },
+      "threw": false,
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/launch.json"]
+    },
+    {
+      "name": "replaces a public launch file",
+      "files": {
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "old",
+          "mode": 420
+        }
+      },
+      "threw": false,
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "644"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/launch.json"]
+    },
+    {
+      "name": "replaces a private launch file",
+      "files": {
+        "claude/better-claude-code-telegram/launch.json": "{\"launchedAt\":1}"
+      },
+      "threw": false,
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/launch.json"]
+    },
+    {
+      "name": "fails when the app folder is a file",
+      "files": { "claude/better-claude-code-telegram": "x" },
+      "threw": true,
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram": { "content": "x", "mode": "600" }
+      },
+      "written": []
+    }
+  ],
+  "prompts": [
+    {
+      "name": "no request leaves everything",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "a request with a status line of yours",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request in pt-br from the config",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\",\"delayMinutes\":3}"
+      },
+      "threw": false,
+      "out": "O setup do better-claude-code-telegram pediu que você junte o indicador do Telegram à minha statusline.\n\nMinha statusline hoje (statusLine em {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nO indicador é este comando:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nEle imprime o estado do Telegram com cor ANSI (por exemplo 📱 (Principal) Telegram conectado) ou nada, e não lê a entrada.\n\nFaça assim:\n  • antes de mudar algo, pergunte como eu quero juntar os dois (onde fica o indicador, separador, cor)\n  • mude só a minha statusline, para ela chamar também o indicador\n  • se o arquivo do indicador não existir mais, a statusline continua funcionando sem ele\n  • no fim, mostre o que mudou",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"language\": \"pt-br\",\n  \"delayMinutes\": 3,\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request in pt-br from the system",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt_BR.UTF-8"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "O setup do better-claude-code-telegram pediu que você junte o indicador do Telegram à minha statusline.\n\nMinha statusline hoje (statusLine em {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nO indicador é este comando:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nEle imprime o estado do Telegram com cor ANSI (por exemplo 📱 (Principal) Telegram conectado) ou nada, e não lê a entrada.\n\nFaça assim:\n  • antes de mudar algo, pergunte como eu quero juntar os dois (onde fica o indicador, separador, cor)\n  • mude só a minha statusline, para ela chamar também o indicador\n  • se o arquivo do indicador não existir mais, a statusline continua funcionando sem ele\n  • no fim, mostre o que mudou",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request replaces statuslineCustomized in place",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"statuslineCustomized\":false,\"language\":\"en-us\"}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true,\n  \"language\": \"en-us\"\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request keeps the config order and numbers",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"z\":1.0,\"2\":\"two\",\"quietHours\":{\"start\":\"22:00\",\"end\":\"07:00\"},\"list\":[1,[],{}],\"empty\":{},\"1\":null}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"1\": null,\n  \"2\": \"two\",\n  \"z\": 1,\n  \"quietHours\": {\n    \"start\": \"22:00\",\n    \"end\": \"07:00\"\n  },\n  \"list\": [\n    1,\n    [],\n    {}\n  ],\n  \"empty\": {},\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request over a broken config",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request over an array config",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "[1]"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request over a public config",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\"language\":\"en-us\"}",
+          "mode": 420
+        }
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"language\": \"en-us\",\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "644"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "a request with our status line is dropped",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "a request with ours after yours is dropped",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\" --after-previous\"}}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\" --after-previous\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "a request without settings is dropped",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" }
+      },
+      "written": []
+    },
+    {
+      "name": "a request with broken settings is dropped",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": { "content": "{", "mode": "600" }
+      },
+      "written": []
+    },
+    {
+      "name": "status line null",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":null}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":null}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "status line false",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":false}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":false}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "status line zero",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":0}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":0}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "status line empty string",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":\"\"}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":\"\"}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "status line string",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":\"x\"}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  \"x\"\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":\"x\"}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "status line true",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":true}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  true\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":true}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "status line empty object",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "status line number command",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"command\":5}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"command\":5}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"command\":5}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "status line ordered fields",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"1\":1,\"padding\":0,\"command\":\"a \\\"b\\\" é \u2028\",\"type\":\"command\"}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"1\":1,\"padding\":0,\"command\":\"a \\\"b\\\" é \u2028\",\"type\":\"command\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"1\":1,\"padding\":0,\"command\":\"a \\\"b\\\" é \u2028\",\"type\":\"command\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "status line array",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":[{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}]}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  [{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}]\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":[{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}]}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "settings that are an array are none",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "[{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}]"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "[{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}]",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "without take it only builds the prompt",
+      "take": false,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/statusline-customize.json": {
+          "content": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "without take and without a request it still builds the prompt",
+      "take": false,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "without take ours is still none of yours",
+      "take": false,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}}"
+      },
+      "threw": false,
+      "out": "",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "a request that is a folder throws",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json/": "",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": true,
+      "out": null,
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/statusline-customize.json/": {
+          "mode": "750"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "a config that is a folder throws after dropping the request",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json/": ""
+      },
+      "threw": true,
+      "out": null,
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json/": {
+          "mode": "750"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": []
+    },
+    {
+      "name": "the settings path is normalized",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude/./",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    },
+    {
+      "name": "the home settings when the claude dir is unset",
+      "take": true,
+      "env": {
+        "HOME": "{root}/home",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/claude/better-claude-code-telegram"
+      },
+      "files": {
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "home/.claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "threw": false,
+      "out": "The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/home/.claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed",
+      "after": {
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "home/": { "mode": "750" },
+        "home/.claude/": { "mode": "750" },
+        "home/.claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        }
+      },
+      "written": ["claude/better-claude-code-telegram/better-cc-telegram.json"]
+    }
+  ],
+  "colors": [
+    { "env": {}, "colors": false },
+    { "env": { "TERM": "xterm" }, "colors": true },
+    { "env": { "TERM": "xterm-256color" }, "colors": true },
+    { "env": { "TERM": "dumb" }, "colors": false },
+    { "env": { "TERM": "DUMB" }, "colors": false },
+    { "env": { "TERM": "vt100" }, "colors": true },
+    { "env": { "TERM": "vt220" }, "colors": true },
+    { "env": { "TERM": "vt52" }, "colors": false },
+    { "env": { "TERM": "linux" }, "colors": true },
+    { "env": { "TERM": "screen" }, "colors": true },
+    { "env": { "TERM": "screen.xterm" }, "colors": true },
+    { "env": { "TERM": "tmux" }, "colors": false },
+    { "env": { "TERM": "rxvt" }, "colors": true },
+    { "env": { "TERM": "cons25" }, "colors": true },
+    { "env": { "TERM": "con80x25" }, "colors": true },
+    { "env": { "TERM": "con80" }, "colors": false },
+    { "env": { "TERM": "conx1" }, "colors": true },
+    { "env": { "TERM": "my-ansi-term" }, "colors": true },
+    { "env": { "TERM": "direct" }, "colors": true },
+    { "env": { "TERM": "truecolor" }, "colors": true },
+    { "env": { "TERM": "eterm" }, "colors": true },
+    { "env": { "TERM": "Eterm" }, "colors": true },
+    { "env": { "TERM": "KONSOLE" }, "colors": true },
+    { "env": { "TERM": "Konsole" }, "colors": true },
+    { "env": { "TERM": "st" }, "colors": true },
+    { "env": { "TERM": "putty" }, "colors": true },
+    { "env": { "TERM": "mosh" }, "colors": true },
+    { "env": { "TERM": "xterm-kitty" }, "colors": true },
+    { "env": { "TERM": "kitty" }, "colors": false },
+    { "env": { "TERM": "foot" }, "colors": false },
+    { "env": { "TERM": "unknown" }, "colors": false },
+    { "env": { "TERM": "" }, "colors": false },
+    { "env": { "TERM": "constructor" }, "colors": false },
+    { "env": { "TERM": "toString" }, "colors": false },
+    { "env": { "TERM": "__proto__" }, "colors": false },
+    { "env": { "TERM": "hasOwnProperty", "COLORTERM": "1" }, "colors": true },
+    { "env": { "TERM": "valueOf" }, "colors": false },
+    { "env": { "TERM": "isPrototypeOf" }, "colors": false },
+    { "env": { "TERM": "propertyIsEnumerable" }, "colors": false },
+    { "env": { "TERM": "toLocaleString" }, "colors": false },
+    { "env": { "TERM": "__defineGetter__" }, "colors": false },
+    { "env": { "TERM": "__defineSetter__" }, "colors": false },
+    { "env": { "TERM": "__lookupGetter__" }, "colors": false },
+    { "env": { "TERM": "__lookupSetter__" }, "colors": false },
+    { "env": { "TERM": "Constructor" }, "colors": false },
+    { "env": { "COLORTERM": "truecolor" }, "colors": true },
+    { "env": { "COLORTERM": "24bit" }, "colors": true },
+    { "env": { "COLORTERM": "1" }, "colors": true },
+    { "env": { "COLORTERM": "" }, "colors": false },
+    { "env": { "TERM": "unknown", "COLORTERM": "yes" }, "colors": true },
+    { "env": { "TMUX": "/tmp/tmux" }, "colors": true },
+    { "env": { "TMUX": "" }, "colors": false },
+    { "env": { "TMUX": "1", "TERM": "dumb" }, "colors": false },
+    { "env": { "TF_BUILD": "", "AGENT_NAME": "" }, "colors": true },
+    { "env": { "TF_BUILD": "1" }, "colors": false },
+    { "env": { "CI": "" }, "colors": false },
+    { "env": { "CI": "1", "TERM": "xterm" }, "colors": false },
+    { "env": { "CI": "1", "GITHUB_ACTIONS": "" }, "colors": true },
+    { "env": { "CI": "1", "GITLAB_CI": "1" }, "colors": true },
+    { "env": { "CI": "1", "TRAVIS": "1" }, "colors": true },
+    { "env": { "CI": "1", "APPVEYOR": "1" }, "colors": true },
+    { "env": { "CI": "1", "BUILDKITE": "1" }, "colors": true },
+    { "env": { "CI": "1", "CIRCLECI": "1" }, "colors": true },
+    { "env": { "CI": "1", "DRONE": "1" }, "colors": true },
+    { "env": { "CI": "1", "GITEA_ACTIONS": "1" }, "colors": true },
+    { "env": { "CI": "1", "CI_NAME": "codeship" }, "colors": true },
+    { "env": { "CI": "1", "CI_NAME": "other" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "9.1.0" }, "colors": true },
+    { "env": { "TEAMCITY_VERSION": "9.0.1" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "9.01.0" }, "colors": true },
+    { "env": { "TEAMCITY_VERSION": "9.00.1" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "10.0" }, "colors": true },
+    { "env": { "TEAMCITY_VERSION": "2023.1" }, "colors": true },
+    { "env": { "TEAMCITY_VERSION": "8.1.0" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "9." }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "9.1" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "1.0" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "" }, "colors": false },
+    { "env": { "TEAMCITY_VERSION": "x10." }, "colors": false },
+    { "env": { "TERM_PROGRAM": "iTerm.app" }, "colors": true },
+    {
+      "env": { "TERM_PROGRAM": "iTerm.app", "TERM_PROGRAM_VERSION": "3.4" },
+      "colors": true
+    },
+    {
+      "env": { "TERM_PROGRAM": "iTerm.app", "TERM_PROGRAM_VERSION": "2.1" },
+      "colors": true
+    },
+    { "env": { "TERM_PROGRAM": "HyperTerm" }, "colors": true },
+    { "env": { "TERM_PROGRAM": "MacTerm" }, "colors": true },
+    { "env": { "TERM_PROGRAM": "Apple_Terminal" }, "colors": true },
+    { "env": { "TERM_PROGRAM": "vscode" }, "colors": false },
+    {
+      "env": { "TERM_PROGRAM": "vscode", "TERM": "xterm-256color" },
+      "colors": true
+    },
+    { "env": { "NO_COLOR": "1", "TERM": "xterm" }, "colors": false },
+    { "env": { "NO_COLOR": "", "TERM": "xterm" }, "colors": true },
+    { "env": { "NODE_DISABLE_COLORS": "1", "TERM": "xterm" }, "colors": false },
+    { "env": { "NODE_DISABLE_COLORS": "", "TERM": "xterm" }, "colors": true },
+    { "env": { "NO_COLOR": "1", "TMUX": "1" }, "colors": false },
+    { "env": { "FORCE_COLOR": "1" }, "colors": true },
+    { "env": { "FORCE_COLOR": "" }, "colors": true },
+    { "env": { "FORCE_COLOR": "true" }, "colors": true },
+    { "env": { "FORCE_COLOR": "2" }, "colors": true },
+    { "env": { "FORCE_COLOR": "3" }, "colors": true },
+    { "env": { "FORCE_COLOR": "0" }, "colors": false },
+    { "env": { "FORCE_COLOR": "false" }, "colors": false },
+    { "env": { "FORCE_COLOR": "4" }, "colors": false },
+    { "env": { "FORCE_COLOR": "TRUE" }, "colors": false },
+    { "env": { "FORCE_COLOR": " 1" }, "colors": false },
+    { "env": { "FORCE_COLOR": "0", "TERM": "xterm" }, "colors": false },
+    { "env": { "FORCE_COLOR": "1", "NO_COLOR": "1" }, "colors": true },
+    { "env": { "FORCE_COLOR": "1", "TERM": "dumb" }, "colors": true }
+  ],
+  "launches": [
+    {
+      "name": "not set up stops before claude",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        }
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        }
+      }
+    },
+    {
+      "name": "not set up in pt-br",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\"language\":\"pt-br\"}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "not set up with the system in pt-br",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "LANG": "pt_BR.UTF-8"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        }
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ O 'claude --telegram' ainda não está configurado. Falta:\n  • token do bot, pareamento\nRode 'npm run setup' antes.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        }
+      }
+    },
+    {
+      "name": "only the pairing is missing",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • pairing\nRun 'npm run setup' first.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "two accounts stop it",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"allowFrom\":[\"1\",\"2\"]}"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ access.json lets 2 Telegram accounts talk to the bot, but it only talks to one. Run 'npm run setup:pairing' to keep only yours.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"allowFrom\":[\"1\",\"2\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the skip flag stops it",
+      "args": ["--dangerously-skip-permissions"],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ 'claude --telegram' does not start with --dangerously-skip-permissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the permission mode pair stops it",
+      "args": ["-c", "--permission-mode", "bypassPermissions"],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ 'claude --telegram' does not start with --permission-mode bypassPermissions:\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "bypass in the settings stops it",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/settings.json": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ 'claude --telegram' does not start with defaultMode bypassPermissions ({root}/claude/settings.json):\n  • with the channel on, a message on Telegram could make Claude run anything without asking you\nStart it without that option.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"permissions\":{\"defaultMode\":\"bypassPermissions\"}}",
+          "mode": "600"
+        },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "FORCE_COLOR paints the refusal red",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "1"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        }
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "\u001b[31m✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\u001b[39m\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        }
+      }
+    },
+    {
+      "name": "FORCE_COLOR=0 keeps it plain",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FORCE_COLOR": "0"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        }
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ 'claude --telegram' is not set up yet. Missing:\n  • bot token, pairing\nRun 'npm run setup' first.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        }
+      }
+    },
+    {
+      "name": "a running instance stops it",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "state/bot.pid": "{server}"
+      },
+      "status": 1,
+      "stdout": "",
+      "stderr": "✘ A 'claude --telegram' instance is already open (bot in process {server}). Close it before opening another one.\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        },
+        "state/bot.pid": { "content": "{server}", "mode": "600" }
+      }
+    },
+    {
+      "name": "ready opens claude",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "700" },
+        "claude/better-claude-code-telegram/": { "mode": "700" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "ready passes the arguments after the channel",
+      "args": ["--continue", "--model", "opus"],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "700" },
+        "claude/better-claude-code-telegram/": { "mode": "700" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000--continue\u0000--model\u0000opus\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "odd arguments pass untouched",
+      "args": ["a b", "", "é 😀", "--x=\"y\"", "-", "--", "$HOME", "*"],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "700" },
+        "claude/better-claude-code-telegram/": { "mode": "700" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000a b\u0000\u0000é 😀\u0000--x=\"y\"\u0000-\u0000--\u0000$HOME\u0000*\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the environment reaches claude",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "EXTRA": "kept"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "700" },
+        "claude/better-claude-code-telegram/": { "mode": "700" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|kept", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "claude exit code comes back",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "FAKE_EXIT": "7"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}"
+      },
+      "status": 7,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "700" },
+        "claude/better-claude-code-telegram/": { "mode": "700" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the request becomes the first prompt",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the request goes with flags only",
+      "args": ["--continue", "-", "--"],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000--continue\u0000-\u0000--\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "a prompt argument keeps the request",
+      "args": ["--continue", "hello"],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude/better-claude-code-telegram/statusline-customize.json": {
+          "content": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000--continue\u0000hello\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "an empty argument keeps the request",
+      "args": [""],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude/better-claude-code-telegram/statusline-customize.json": {
+          "content": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the request in pt-br",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+        "claude/better-claude-code-telegram/better-cc-telegram.json": "{\"language\":\"pt-br\"}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/better-cc-telegram.json": {
+          "content": "{\n  \"language\": \"pt-br\",\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000O setup do better-claude-code-telegram pediu que você junte o indicador do Telegram à minha statusline.\n\nMinha statusline hoje (statusLine em {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nO indicador é este comando:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nEle imprime o estado do Telegram com cor ANSI (por exemplo 📱 (Principal) Telegram conectado) ou nada, e não lê a entrada.\n\nFaça assim:\n  • antes de mudar algo, pergunte como eu quero juntar os dois (onde fica o indicador, separador, cor)\n  • mude só a minha statusline, para ela chamar também o indicador\n  • se o arquivo do indicador não existir mais, a statusline continua funcionando sem ele\n  • no fim, mostre o que mudou\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the request with our status line is dropped",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the request without a status line is dropped",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "claude/better-claude-code-telegram/statusline-customize.json": "{\"requestedAt\":\"2026-01-01T00:00:00.000Z\"}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/better-claude-code-telegram/": { "mode": "750" },
+        "claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "the home folders when nothing is set",
+      "args": [],
+      "env": { "HOME": "{root}/home" },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "home/.claude/channels/telegram/.env": "TELEGRAM_BOT_TOKEN=1\n",
+        "home/.claude/channels/telegram/access.json": "{\"allowFrom\":[\"1\"]}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "home/": { "mode": "750" },
+        "home/.claude/": { "mode": "750" },
+        "home/.claude/better-claude-code-telegram/": { "mode": "700" },
+        "home/.claude/better-claude-code-telegram/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "home/.claude/channels/": { "mode": "750" },
+        "home/.claude/channels/telegram/": { "mode": "750" },
+        "home/.claude/channels/telegram/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=1\n",
+          "mode": "600"
+        },
+        "home/.claude/channels/telegram/access.json": {
+          "content": "{\"allowFrom\":[\"1\"]}",
+          "mode": "600"
+        }
+      }
+    },
+    {
+      "name": "an explicit app folder",
+      "args": [],
+      "env": {
+        "HOME": "{root}/home",
+        "CLAUDE_CONFIG_DIR": "{root}/claude",
+        "TELEGRAM_STATE_DIR": "{root}/state",
+        "BETTER_CC_TELEGRAM_DIR": "{root}/app"
+      },
+      "files": {
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": 493
+        },
+        "state/.env": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+        "state/access.json": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+        "app/statusline-customize.json": "{}",
+        "claude/settings.json": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}"
+      },
+      "status": 0,
+      "stdout": "claude out\n",
+      "stderr": "claude err\n",
+      "after": {
+        "app/": { "mode": "750" },
+        "app/better-cc-telegram.json": {
+          "content": "{\n  \"statuslineCustomized\": true\n}\n",
+          "mode": "600"
+        },
+        "app/launch.json": {
+          "content": "{\"launchedAt\":1700000000123}\n",
+          "mode": "600"
+        },
+        "bin/": { "mode": "750" },
+        "bin/claude": {
+          "content": "#!/bin/sh\nhere=\"$(dirname \"$0\")/..\"\nprintf '%s\\0' \"$@\" > \"$here/claude-args\"\nprintf '%s|%s' \"${BETTER_CC_TELEGRAM-unset}\" \"${EXTRA-unset}\" > \"$here/claude-env\"\nprintf 'claude out\\n'\nprintf 'claude err\\n' >&2\nexit \"${FAKE_EXIT:-0}\"\n",
+          "mode": "755"
+        },
+        "claude/": { "mode": "750" },
+        "claude/settings.json": {
+          "content": "{\"statusLine\":{\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}}",
+          "mode": "600"
+        },
+        "claude-args": {
+          "content": "--name\u0000telegram\u0000The better-claude-code-telegram setup asked you to fit the Telegram indicator into my status line.\n\nMy status line today (statusLine in {root}/claude/settings.json):\n  {\"type\":\"command\",\"command\":\"~/bin/my-line.sh\"}\n\nThe indicator is this command:\n  node \"{repo}/plugins/telegram-hooks/statusline.mjs\"\nIt prints the Telegram state with ANSI color (for example 📱 (Main) Telegram connected) or nothing, and does not read its input.\n\nDo it like this:\n  • before changing anything, ask how I want the two together (where the indicator goes, separator, color)\n  • change only my status line, so it also calls the indicator\n  • if the indicator file no longer exists, the status line keeps working without it\n  • at the end, show what changed\u0000--settings\u0000{\"enabledPlugins\":{\"telegram@better-claude-code-telegram\":true}}\u0000--dangerously-load-development-channels\u0000plugin:telegram@better-claude-code-telegram\u0000",
+          "mode": "644"
+        },
+        "claude-env": { "content": "1|unset", "mode": "644" },
+        "state/": { "mode": "750" },
+        "state/.env": {
+          "content": "TELEGRAM_BOT_TOKEN=123:FAKE\n",
+          "mode": "600"
+        },
+        "state/access.json": {
+          "content": "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"42\"]}",
+          "mode": "600"
+        }
+      }
+    }
+  ]
+}
