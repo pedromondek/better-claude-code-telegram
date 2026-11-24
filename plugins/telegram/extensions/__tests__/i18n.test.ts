@@ -31,6 +31,7 @@ const FUNCTION_CALLS: Record<string, unknown[]> = {
   waitingPing: ["who-sample", "3 min", "text-sample"],
   pingFailed: ["err-sample"],
   pingSent: ["inst-sample"],
+  pingRepeated: ["inst-sample"],
   permissionSentNow: ["req-sample"],
   permissionResolvedInTerminal: ["req-sample"],
   permissionSent: ["req-sample"],

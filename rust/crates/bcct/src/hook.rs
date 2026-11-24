@@ -28,6 +28,7 @@ const TRANSCRIPT_TAIL_BYTES: usize = 4_194_304;
 const LAST_PROMPT_FILE: &str = "last-prompt";
 const DEFAULT_SESSION: &str = "session";
 const JSON_SUFFIX: &str = ".json";
+const SENT_SUFFIX: &str = ".sent";
 const LABEL_SESSION_UNITS: usize = 4;
 const DEFAULT_FOLDER_LABEL: &str = "claude";
 const LOWEST_REAL_PID: f64 = 1.0;
@@ -528,6 +529,7 @@ fn prompt(ctx: &Context, now: u64, ping_file: &Path, key: &str) -> Result<(), Ab
     create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
     clear_after_prompt(&pings_dir, key)?;
     remove_ping(ping_file)?;
+    remove_ping(&join_path(&pings_dir, &format!("{key}{SENT_SUFFIX}")))?;
 
     if ctx.telegram_instance {
         write_private(&last_prompt_file, now.to_string().as_bytes())
@@ -818,6 +820,25 @@ mod tests {
         }
 
         Context::resolve(&|name| variables.get(name).cloned(), &folder.join("home"))
+    }
+
+    #[test]
+    fn fails_when_the_mark_of_the_waiting_notice_cannot_be_removed_at_the_prompt() {
+        let folder = tempfile::tempdir().unwrap();
+        let ctx = context_in(folder.path(), &[("BETTER_CC_TELEGRAM", "1")]);
+        fs::create_dir_all(ctx.app_dir.join("pings/s1.sent/inner")).unwrap();
+
+        assert!(matches!(
+            handle_event(
+                Mode::Prompt,
+                &json!({"session_id": "s1", "prompt": "go"}),
+                &ctx,
+                0,
+                &|_| false
+            ),
+            Err(Abort::Io { .. })
+        ));
+        assert!(!ctx.app_dir.join("pings/last-prompt").exists());
     }
 
     fn input(value: &Value) -> Vec<u8> {

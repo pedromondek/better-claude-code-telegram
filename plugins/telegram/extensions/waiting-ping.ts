@@ -53,6 +53,9 @@ export interface WaitingPingChannel {
 export const LAST_PROMPT_FILE = "last-prompt";
 export const LAST_INBOUND_FILE = "last-inbound";
 export const FAILURE_KIND = "failure";
+export const SENT_SUFFIX = ".sent";
+
+const PING_SUFFIX = /\.json$/u;
 
 function followsTheConversation(ping: WaitingPing): boolean {
   return !ping.instance && ping.kind !== FAILURE_KIND;
@@ -105,6 +108,14 @@ export function readPingTimestamp(appDir: string, name: string): number | null {
   }
 }
 
+export function readPingText(appDir: string, name: string): string | null {
+  try {
+    return readFileSync(join(appDir, "pings", name)).toString();
+  } catch {
+    return null;
+  }
+}
+
 export function conversationOnTelegram(appDir: string): boolean {
   return conversationIsOnTelegram(
     readPingTimestamp(appDir, LAST_INBOUND_FILE),
@@ -146,6 +157,24 @@ export function createWaitingPing({
     rmSync(join(pingsDir, name), { force: true });
   }
 
+  function sentName(name: string): string {
+    return name.replace(PING_SUFFIX, SENT_SUFFIX);
+  }
+
+  function repeatsLastSent(name: string, ping: WaitingPing): boolean {
+    return readPingText(appDir, sentName(name)) === ping.text;
+  }
+
+  function rememberSent(name: string, ping: WaitingPing): void {
+    if (ping.kind === FAILURE_KIND) return;
+
+    try {
+      writeFileSync(join(pingsDir, sentName(name)), ping.text, {
+        mode: 0o600,
+      });
+    } catch {}
+  }
+
   function noteInbound(): void {
     try {
       mkdirSync(pingsDir, { recursive: true, mode: 0o700 });
@@ -184,18 +213,30 @@ export function createWaitingPing({
 
       const text = messages();
 
-      for (const chatId of allowedChats()) {
-        for (const chunk of toTelegramHtmlChunks(
-          formatWaitingPing(ping, text),
-        )) {
-          await api
-            .sendMessage(chatId, chunk, { parse_mode: "HTML" })
-            .catch((error: unknown) =>
-              log(text.pingFailed(describeError(error))),
-            );
-        }
+      if (repeatsLastSent(name, ping)) {
+        log(text.pingRepeated(ping.instance ?? "telegram"));
+        continue;
       }
 
+      let delivered = false;
+      const chunks = toTelegramHtmlChunks(formatWaitingPing(ping, text));
+
+      for (const chatId of allowedChats()) {
+        let complete = true;
+
+        for (const chunk of chunks) {
+          await api
+            .sendMessage(chatId, chunk, { parse_mode: "HTML" })
+            .catch((error: unknown) => {
+              complete = false;
+              log(text.pingFailed(describeError(error)));
+            });
+        }
+
+        if (complete) delivered = true;
+      }
+
+      if (delivered) rememberSent(name, ping);
       log(text.pingSent(ping.instance ?? "telegram"));
     }
   }
@@ -203,14 +244,16 @@ export function createWaitingPing({
   function held(): number {
     const onTelegram = conversationOnTelegram(appDir);
 
-    return pingFiles()
-      .map(readPing)
-      .filter(
-        (ping) =>
-          ping !== null &&
-          (ping.released === true || now() >= ping.dueAt) &&
-          (!onTelegram || !followsTheConversation(ping)),
-      ).length;
+    return pingFiles().filter((name) => {
+      const ping = readPing(name);
+
+      return (
+        ping !== null &&
+        (ping.released === true || now() >= ping.dueAt) &&
+        (!onTelegram || !followsTheConversation(ping)) &&
+        !repeatsLastSent(name, ping)
+      );
+    }).length;
   }
 
   return { tick, noteInbound, held };

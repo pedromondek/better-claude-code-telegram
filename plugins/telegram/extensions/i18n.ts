@@ -94,6 +94,8 @@ const enUs = {
     `ping: failed to notify the chat: ${error}`,
   pingSent: (instance: string): string =>
     `ping: notice from [${instance}] sent`,
+  pingRepeated: (instance: string): string =>
+    `ping: notice from [${instance}] same as the last one, not sent`,
   quietStarted: (end: string): string =>
     `🌙 Quiet hours until ${end}: waiting notices, questions and permission requests stay in the terminal until then.\nTo let a question through now: /bcct:release in the terminal.\nTo turn them off: /bcct:quiet-hours.`,
   quietEnded: ({ questions, notices, permissions }: HeldCounts): string =>
@@ -192,6 +194,8 @@ const ptBr: Messages = {
     `⏳ ${who} está esperando você no terminal há mais de ${delay}.\n\nÚltima mensagem dele:\n\n${text}`,
   pingFailed: (error) => `ping: falha ao avisar no chat: ${error}`,
   pingSent: (instance) => `ping: aviso de [${instance}] enviado`,
+  pingRepeated: (instance) =>
+    `ping: aviso de [${instance}] igual ao último, não enviado`,
   quietStarted: (end) =>
     `🌙 Silêncio até ${end}: avisos de espera, perguntas e pedidos de permissão ficam no terminal até lá.\nPara soltar uma pergunta agora: /bcct:release no terminal.\nPara desligar: /bcct:quiet-hours.`,
   quietEnded: ({ questions, notices, permissions }) =>

@@ -803,6 +803,39 @@ fn keeps_the_limit_hits_and_drops_the_notice_and_the_ping_on_an_automatic_contin
 }
 
 #[test]
+fn drops_the_mark_of_the_last_waiting_notice_only_on_a_typed_prompt() {
+    let sandbox = Sandbox::new();
+    let mark = sandbox.pings().join("s1.sent");
+    let other = sandbox.pings().join("s2.sent");
+    let run = |input: String| {
+        sandbox
+            .command("prompt", true)
+            .write_stdin(input)
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    };
+
+    fs::create_dir_all(sandbox.pings()).unwrap();
+    fs::write(&mark, "Nenhuma pergunta aberta.").unwrap();
+    fs::write(&other, "Igual.").unwrap();
+
+    run(
+        json!({"session_id": "s1", "prompt": "<channel source=\"plugin:telegram:telegram\">hi"})
+            .to_string(),
+    );
+    run(json!({"session_id": "s1", "prompt": LIMIT_RESET_PROMPT}).to_string());
+
+    assert!(mark.exists());
+
+    run(json!({"session_id": "s1", "prompt": "go"}).to_string());
+
+    assert!(!mark.exists());
+    assert!(other.exists());
+}
+
+#[test]
 fn warns_on_an_automatic_continue_when_the_notice_cannot_be_removed() {
     let sandbox = Sandbox::new();
     sandbox
