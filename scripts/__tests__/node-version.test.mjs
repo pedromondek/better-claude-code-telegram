@@ -4,19 +4,17 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import nodeVersion from "../node-version.cjs";
-import { MINIMUM_NODE } from "../setup.mjs";
 
 const ROOT_DIR = join(import.meta.dirname, "..", "..");
 const { minimumNode, nodeIsSupported, nodeTooOldMessage } = nodeVersion;
 
 describe("node-version", () => {
-  it("reads the minimum from the engines of package.json, the same the setup uses", () => {
+  it("reads the minimum from the engines of package.json", () => {
     const { engines } = JSON.parse(
       readFileSync(join(ROOT_DIR, "package.json"), "utf8"),
     );
 
     expect(minimumNode()).toBe(engines.node.replace(">=", ""));
-    expect(minimumNode().startsWith(`${MINIMUM_NODE}.`)).toBe(true);
   });
 
   it("accepts the minimum and anything newer, and refuses anything older", () => {
@@ -48,21 +46,5 @@ describe("node-version", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("ran\n");
-  });
-
-  it("runs the check before every setup, uninstall and health script", () => {
-    const { scripts } = JSON.parse(
-      readFileSync(join(ROOT_DIR, "package.json"), "utf8"),
-    );
-    const guarded = Object.entries(scripts).filter(([name]) =>
-      /^(setup|uninstall|health)(:|$)/.test(name),
-    );
-
-    expect(guarded.length).toBeGreaterThan(10);
-    for (const [, command] of guarded) {
-      expect(command.startsWith("node -r ./scripts/require-node.cjs ")).toBe(
-        true,
-      );
-    }
   });
 });

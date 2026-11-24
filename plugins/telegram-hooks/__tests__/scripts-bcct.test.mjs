@@ -18,7 +18,7 @@ import {
   writeFakeBcct,
 } from "../../../scripts/__tests__/fixtures/fake-bcct.mjs";
 
-import { SETUP_COMMAND } from "../lib/package.constants.mjs";
+import { SETUP_COMMAND } from "../../../npm/shim/shim.constants.mjs";
 
 const PLUGINS = join(import.meta.dirname, "..", "..");
 const COPIES = ["bcct", "telegram-hooks"].map((plugin) =>
@@ -76,7 +76,7 @@ describe("the bcct script of the plugins", () => {
     }
   });
 
-  it("names the setup command once, the same SETUP_COMMAND as the hooks plugin", () => {
+  it("names the setup command once, the same SETUP_COMMAND as the npm shim", () => {
     const text = readFileSync(SCRIPT, "utf8");
 
     expect(text).toContain(`setup="${SETUP_COMMAND}"\n`);

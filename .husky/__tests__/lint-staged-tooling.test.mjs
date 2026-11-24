@@ -87,8 +87,8 @@ describe("lint-staged: every file", () => {
 describe("lint-staged: code", () => {
   it.each([
     "plugins/telegram/extensions/i18n.ts",
-    "plugins/telegram-hooks/telegram.mjs",
-    "scripts/setup.mjs",
+    "npm/shim/shim.mjs",
+    "scripts/branch.mjs",
     ".husky/lib/validate-commit-msg.mjs",
     ".husky/__tests__/commit-msg.test.mjs",
   ])(
@@ -99,7 +99,7 @@ describe("lint-staged: code", () => {
   );
 
   it("runs each tool once with every file of the commit", () => {
-    const files = ["scripts/setup.mjs", "plugins/telegram/extensions/i18n.ts"];
+    const files = ["scripts/branch.mjs", "plugins/telegram/extensions/i18n.ts"];
 
     expect(tasksForFiles(files)).toEqual(codeTasks(...files));
   });
@@ -121,10 +121,10 @@ describe("lint-staged: configs at the root", () => {
   );
 
   it("still runs the related tests of the code in folders committed with a config", () => {
-    const tasks = tasksForFiles(["vitest.config.ts", "scripts/setup.mjs"]);
+    const tasks = tasksForFiles(["vitest.config.ts", "scripts/branch.mjs"]);
 
     expect(tasks).toContain(
-      `vitest related --run --passWithNoTests ${quoted(["scripts/setup.mjs"])}`,
+      `vitest related --run --passWithNoTests ${quoted(["scripts/branch.mjs"])}`,
     );
   });
 });
@@ -342,18 +342,18 @@ describe("lint-staged: git hooks", () => {
 
 describe("lint-staged: shell scripts", () => {
   it("runs the test named after the shell script, without prettier", () => {
-    expect(tasksFor("scripts/telegram.sh")).toEqual([
-      ...everyFileTasks("scripts/telegram.sh"),
-      'vitest run --passWithNoTests "scripts/__tests__/telegram.test.mjs"',
+    expect(tasksFor("scripts/mise-exec.sh")).toEqual([
+      ...everyFileTasks("scripts/mise-exec.sh"),
+      'vitest run --passWithNoTests "scripts/__tests__/mise-exec.test.mjs"',
     ]);
   });
 
   it("runs the tests of several shell scripts in one go", () => {
-    const files = ["scripts/shell.sh", "scripts/telegram.sh"];
+    const files = ["scripts/mise-exec.sh", "scripts/sample.sh"];
 
     expect(tasksForFiles(files)).toEqual([
       ...everyFileTasks(...files),
-      'vitest run --passWithNoTests "scripts/__tests__/shell.test.mjs" "scripts/__tests__/telegram.test.mjs"',
+      'vitest run --passWithNoTests "scripts/__tests__/mise-exec.test.mjs" "scripts/__tests__/sample.test.mjs"',
     ]);
   });
 

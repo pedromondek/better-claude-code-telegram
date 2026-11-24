@@ -110,8 +110,8 @@ describe("isCoverageTarget follows the include and exclude of the coverage confi
     `${EXTENSIONS}/i18n.test.ts`,
     `${EXTENSIONS}/i18n.spec.ts`,
     "plugins/telegram/server.ts",
-    "plugins/telegram-hooks/telegram.mjs",
-    "scripts/setup.mjs",
+    "npm/shim/shim.mjs",
+    "scripts/branch.mjs",
   ])("does not count %s", (file) => {
     expect(isCoverageTarget(file, COVERAGE)).toBe(false);
   });
@@ -158,7 +158,7 @@ describe("uncoveredChangedLines", () => {
   it("skips a changed file that is not a coverage target", () => {
     const changed = new Map([
       ["plugins/telegram/server.ts", new Set([1])],
-      ["scripts/setup.mjs", new Set([1])],
+      ["scripts/branch.mjs", new Set([1])],
     ]);
 
     expect(uncoveredChangedLines(changed, coverage, options)).toEqual({

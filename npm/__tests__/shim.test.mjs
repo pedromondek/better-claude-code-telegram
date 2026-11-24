@@ -6,7 +6,12 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { COMMAND, PACKAGE, PLATFORMS } from "../shim/shim.constants.mjs";
+import {
+  COMMAND,
+  PACKAGE,
+  PLATFORMS,
+  SETUP_COMMAND,
+} from "../shim/shim.constants.mjs";
 import {
   binaryCommand,
   exitAsChild,
@@ -39,6 +44,10 @@ describe("the package", () => {
 
     expect(PACKAGE).toBe(name);
     expect(COMMAND).toBe(name.split("/").at(-1));
+  });
+
+  it("names the setup command as npx with the scoped package", () => {
+    expect(SETUP_COMMAND).toBe("npx @pedromondek/better-claude-code-telegram");
   });
 });
 

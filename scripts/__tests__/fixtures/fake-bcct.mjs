@@ -1,16 +1,13 @@
 import {
   chmodSync,
   existsSync,
-  lstatSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 
 const EXECUTABLE = 0o755;
-const EPOCH_MS = /\b\d{13}\b/g;
 
 export function sandboxPath(binDir) {
   return `${binDir}:${dirname(process.execPath)}:/usr/bin:/bin`;
@@ -46,17 +43,6 @@ export function writeFakeBcct(
   );
 }
 
-export function writeFakeTool(file, logDir, { exit = 0 } = {}) {
-  writeExecutable(
-    file,
-    [
-      `{ printf '%s' "$0|$$"; for arg in "$@"; do printf '|%s' "$arg"; done; printf '\\n'; } >> "${logDir}/tool-calls"`,
-      `cat >> "${logDir}/tool-stdin"`,
-      `exit ${exit}`,
-    ].join("\n"),
-  );
-}
-
 export function readLog(logDir, name) {
   const file = join(logDir, name);
 
@@ -72,33 +58,4 @@ export function readCalls(logDir, name = "calls") {
 
       return { program, pid: Number(pid), args };
     });
-}
-
-export function maskTime(text) {
-  return text.replaceAll(EPOCH_MS, "<time>");
-}
-
-export function treeSnapshot(root) {
-  if (!existsSync(root)) return {};
-
-  const snapshot = {};
-  const walk = (folder) => {
-    for (const name of readdirSync(folder).toSorted()) {
-      const path = join(folder, name);
-      const stats = lstatSync(path);
-      const mode = (stats.mode & 0o777).toString(8);
-      const key = maskTime(relative(root, path));
-
-      if (stats.isDirectory()) {
-        snapshot[key] = { mode };
-        walk(path);
-      } else {
-        snapshot[key] = { mode, text: maskTime(readFileSync(path, "utf8")) };
-      }
-    }
-  };
-
-  walk(root);
-
-  return snapshot;
 }
