@@ -594,6 +594,48 @@ describe("failure notices", () => {
     expect(sent[0].parseMode).toBe("HTML");
   });
 
+  it("sends the card with its fields in one block quote", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🪫 **Cota esgotada** · o Claude parou · [telegram]\n> 📋 **Motivo:** o limite de uso do seu plano foi atingido\n> 🕙 **Volta:** 25/11 às 10:00 (America/Sao_Paulo)\n> 👉 **Depois:** não continua sozinho, retome no terminal",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🪫 <b>Cota esgotada</b> · o Claude parou · [telegram]\n<blockquote>📋 <b>Motivo:</b> o limite de uso do seu plano foi atingido\n🕙 <b>Volta:</b> 25/11 às 10:00 (America/Sao_Paulo)\n👉 <b>Depois:</b> não continua sozinho, retome no terminal</blockquote>",
+    ]);
+    expect(sent[0].parseMode).toBe("HTML");
+  });
+
+  it("sends a detail line in code raw inside the quote", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🛑 **Claude parou**\n> 📋 **Motivo:** a API recusou o pedido\n> `API Error: 400 bad **campo**`",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🛑 <b>Claude parou</b>\n<blockquote>📋 <b>Motivo:</b> a API recusou o pedido\n<code>API Error: 400 bad **campo**</code></blockquote>",
+    ]);
+  });
+
+  it("sends the API error detail the Rust notice escaped as literal text, with no bold or code from it", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🛑 **Claude stopped**\n\nReason: the API rejected the request (bad \\*\\*field\\*\\* \\`x\\` in C:\\\\tmp \\\\_)\nNext: review the request and try again in the terminal",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🛑 <b>Claude stopped</b>\n\nReason: the API rejected the request (bad **field** `x` in C:\\tmp \\_)\nNext: review the request and try again in the terminal",
+    ]);
+    expect(sent[0].parseMode).toBe("HTML");
+    expect(sent[0].text.match(/<\/?(b|code)>/g)).toEqual(["<b>", "</b>"]);
+  });
+
   it("sends the title of the card in bold without an instance label", async (): Promise<void> => {
     writeFailure("s1", {
       text: "🛑 **O Claude parou**\n\nMotivo: sua conta está suspensa\nDepois: confira a situação da conta e retome no terminal",
