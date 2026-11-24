@@ -116,6 +116,7 @@ jobs:
     permissions:
       contents: read
       actions: read # lists the jobs of the run, since the caller of a task can report success over a cancelled job inside it
+      checks: read # reads the annotations of a cancelled job with no steps, to tell a job that got no runner from a real cancellation
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3

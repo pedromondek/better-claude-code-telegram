@@ -198,9 +198,13 @@ describe("ci.yml orchestrates the CI: it only calls the tasks and closes with on
       expect(passed.if).toBe("${{ always() }}");
     });
 
-    it("runs on ubuntu with a timeout, reading the contents and the jobs of the run", () => {
+    it("runs on ubuntu with a timeout, reading the contents, the jobs of the run and their annotations", () => {
       expect(passed["runs-on"]).toMatch(/^ubuntu-/);
-      expect(passed.permissions).toEqual({ contents: "read", actions: "read" });
+      expect(passed.permissions).toEqual({
+        contents: "read",
+        actions: "read",
+        checks: "read",
+      });
       expect(passed["timeout-minutes"]).toBeGreaterThan(0);
     });
 
