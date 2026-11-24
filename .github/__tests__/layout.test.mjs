@@ -27,6 +27,7 @@ const EXTRA_PERMISSIONS = {
     contents: "read",
     "pull-requests": "read",
   },
+  "ci.yml > ci-passed": { contents: "read", actions: "read" },
   "ci.yml > pull-request": { contents: "read", "pull-requests": "read" },
   "ci.yml > workflow-audit": READ_ISSUES,
   "ci.yml > workflow-audit-issue": WRITE_ISSUES,

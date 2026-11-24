@@ -198,24 +198,42 @@ describe("ci.yml orchestrates the CI: it only calls the tasks and closes with on
       expect(passed.if).toBe("${{ always() }}");
     });
 
-    it("runs on ubuntu with a timeout, reading nothing but contents", () => {
+    it("runs on ubuntu with a timeout, reading the contents and the jobs of the run", () => {
       expect(passed["runs-on"]).toMatch(/^ubuntu-/);
-      expect(passed.permissions).toEqual({ contents: "read" });
+      expect(passed.permissions).toEqual({ contents: "read", actions: "read" });
       expect(passed["timeout-minutes"]).toBeGreaterThan(0);
     });
 
-    it("hardens the runner and checks out nothing", () => {
+    it("hardens the runner, then checks out and sets up Node from the .nvmrc for the script", () => {
       expect(passed.steps[0].uses).toMatch(/^step-security\/harden-runner@/);
-      expect(stepUsing(passed, "actions/checkout")).toBeUndefined();
+      expect(stepUsing(passed, "actions/checkout").with).toEqual({
+        "persist-credentials": false,
+      });
+      expect(
+        stepUsing(passed, "actions/setup-node").with["node-version-file"],
+      ).toBe(".nvmrc");
     });
 
-    it("fails when a task failed or was cancelled, and passes when every task passed or was skipped", () => {
-      const verdict = passed.steps.at(-1);
+    it("fails first when a task failed or was cancelled, and passes when every task passed or was skipped", () => {
+      const verdict = passed.steps[1];
 
+      expect(verdict.name).toBe("A task failed or was cancelled");
       expect(verdict.if).toBe(
         "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')",
       );
       expect(verdict.run).toBe("exit 1");
+    });
+
+    it("ends by failing on any finished job of the run that failed, was cancelled or timed out, even inside a task its caller reported as passing", () => {
+      const jobs = passed.steps.at(-1);
+
+      expect(jobs.name).toBe("Every finished job of the run passed");
+      expect(jobs.env).toEqual({
+        GH_TOKEN: "${{ github.token }}",
+        GH_REPO: "${{ github.repository }}",
+        RUN_ID: "${{ github.run_id }}",
+      });
+      expect(jobs.run).toBe("npm run --silent ci:passed");
     });
   });
 });
