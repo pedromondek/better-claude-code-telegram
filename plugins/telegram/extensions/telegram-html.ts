@@ -245,11 +245,16 @@ function renderBlock(block: Block): string {
   return block.kind === "quote" ? `<blockquote>${html}</blockquote>` : html;
 }
 
+function renderedLineLength(kind: Block["kind"], line: string): number {
+  return (kind === "pre" ? escapeHtml(line) : inlineMarkdown(line)).length;
+}
+
 function splitBlockToLimit(block: Block, limit: number): Block[] {
   const pieces: string[][] = [];
   const maxLineLength = Math.floor(limit / 5);
+  const wrapperLength = renderBlock({ kind: block.kind, lines: [] }).length;
   const lines = block.lines.flatMap((line) => {
-    if (renderBlock({ kind: block.kind, lines: [line] }).length <= limit) {
+    if (wrapperLength + renderedLineLength(block.kind, line) <= limit) {
       return [line];
     }
 
@@ -264,16 +269,18 @@ function splitBlockToLimit(block: Block, limit: number): Block[] {
     );
   });
 
+  let pieceLength = 0;
+
   for (const line of lines) {
     const last = pieces.at(-1);
+    const lineLength = renderedLineLength(block.kind, line);
 
-    if (
-      last !== undefined &&
-      renderBlock({ kind: block.kind, lines: [...last, line] }).length <= limit
-    ) {
+    if (last !== undefined && pieceLength + 1 + lineLength <= limit) {
       last.push(line);
+      pieceLength += 1 + lineLength;
     } else {
       pieces.push([line]);
+      pieceLength = wrapperLength + lineLength;
     }
   }
 

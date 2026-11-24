@@ -177,6 +177,69 @@ describe("toTelegramHtmlChunks", () => {
     expect(chunks.join("\n").split("linha ").length - 1).toBe(600);
   });
 
+  it("packs quote lines up to the limit with the blockquote tags counted once", (): void => {
+    const quote = Array.from(
+      { length: 6 },
+      (_, index) => `> ${"q".repeat(10)}${index}`,
+    ).join("\n");
+
+    expect(toTelegramHtmlChunks(quote, 60)).toEqual([
+      "<blockquote>qqqqqqqqqq0\nqqqqqqqqqq1\nqqqqqqqqqq2</blockquote>",
+      "<blockquote>qqqqqqqqqq3\nqqqqqqqqqq4\nqqqqqqqqqq5</blockquote>",
+    ]);
+  });
+
+  it("packs code lines up to the limit with the escaped text and the pre tags counted", (): void => {
+    const code = [
+      "```",
+      ...Array.from({ length: 6 }, (_, index) => `${"c".repeat(10)}${index} <`),
+      "```",
+    ].join("\n");
+
+    expect(toTelegramHtmlChunks(code, 60)).toEqual([
+      "<pre>cccccccccc0 &lt;\ncccccccccc1 &lt;</pre>",
+      "<pre>cccccccccc2 &lt;\ncccccccccc3 &lt;</pre>",
+      "<pre>cccccccccc4 &lt;\ncccccccccc5 &lt;</pre>",
+    ]);
+  });
+
+  it("packs text lines by their rendered length when the markup grows", (): void => {
+    const bold = Array.from(
+      { length: 6 },
+      (_, index) => `**${"b".repeat(8)}${index}**`,
+    ).join("\n");
+
+    expect(toTelegramHtmlChunks(bold, 40)).toEqual([
+      "<b>bbbbbbbb0</b>\n<b>bbbbbbbb1</b>",
+      "<b>bbbbbbbb2</b>\n<b>bbbbbbbb3</b>",
+      "<b>bbbbbbbb4</b>\n<b>bbbbbbbb5</b>",
+    ]);
+  });
+
+  it("packs text lines by the markup they render, not by their raw length", (): void => {
+    expect(toTelegramHtmlChunks("**b**\n**b**\n**b**", 20)).toEqual([
+      "<b>b</b>\n<b>b</b>",
+      "<b>b</b>",
+    ]);
+  });
+
+  it("packs code lines by their escaped text, without the markup of plain text", (): void => {
+    expect(toTelegramHtmlChunks("```\n**b**\n**b**\n**b**\n```", 22)).toEqual([
+      "<pre>**b**\n**b**</pre>",
+      "<pre>**b**</pre>",
+    ]);
+  });
+
+  it("packs 2,000 short lines into one message in well under a second", (): void => {
+    const markdown = Array.from({ length: 2000 }, () => "a").join("\n");
+    const startedAt = performance.now();
+    const chunks = toTelegramHtmlChunks(markdown);
+    const elapsed = performance.now() - startedAt;
+
+    expect(chunks).toEqual([markdown]);
+    expect(elapsed).toBeLessThan(250);
+  });
+
   it("splits a single line longer than the limit", (): void => {
     const chunks = toTelegramHtmlChunks("x".repeat(5000), 1000);
 
