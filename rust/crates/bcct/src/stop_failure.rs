@@ -594,7 +594,7 @@ mod tests {
                 variables.insert((*name).to_owned(), OsString::from(value));
             }
 
-            let mut ctx = Context::resolve(
+            let mut ctx = Context::resolve_absolute(
                 &|name| variables.get(name).cloned(),
                 &folder.path().join("home"),
             );

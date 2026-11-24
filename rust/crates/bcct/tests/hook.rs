@@ -197,10 +197,44 @@ fn environment(env: &Value, root: &Path) -> HashMap<String, OsString> {
         .collect()
 }
 
-fn context(env: &Value, root: &Path) -> Context {
-    let variables = environment(env, root);
+fn resolve_absolute(variables: &HashMap<String, OsString>, home: &Path) -> Context {
+    let context = Context::resolve(&|name| variables.get(name).cloned(), home);
 
-    Context::resolve(&|name| variables.get(name).cloned(), &root.join("home"))
+    for (name, folder) in [("app", &context.app_dir), ("state", &context.state_dir)] {
+        assert!(
+            folder.is_absolute(),
+            "the {name} folder is relative ({}): the test would write inside the repository",
+            folder.display()
+        );
+    }
+
+    context
+}
+
+fn context(env: &Value, root: &Path) -> Context {
+    resolve_absolute(&environment(env, root), &root.join("home"))
+}
+
+#[test]
+#[should_panic(expected = "the app folder is relative")]
+fn refuses_a_relative_app_folder() {
+    let variables = HashMap::from([(
+        "BETTER_CC_TELEGRAM_DIR".to_owned(),
+        OsString::from("relative/app"),
+    )]);
+
+    resolve_absolute(&variables, Path::new("/home/u"));
+}
+
+#[test]
+#[should_panic(expected = "the state folder is relative")]
+fn refuses_a_relative_state_folder() {
+    let variables = HashMap::from([(
+        "TELEGRAM_STATE_DIR".to_owned(),
+        OsString::from("relative/state"),
+    )]);
+
+    resolve_absolute(&variables, Path::new("/home/u"));
 }
 
 struct Handled {

@@ -26,6 +26,7 @@ const JOB_NOTICES: [&str; 3] = ["\r\n[1]+", "\r\n[1]  + ", "\r\nzsh: "];
 const LINE_END: &str = "\r\n";
 const DELAY_PRESETS: [f64; 6] = [1.0, 3.0, 4.0, 5.0, 10.0, 15.0];
 const RECOMMENDED_DELAY: f64 = 4.0;
+const SLOW_DRAW: Duration = Duration::from_millis(600);
 
 fn fixture() -> Value {
     parse_json(FIXTURE).unwrap()
@@ -118,6 +119,27 @@ fn ask_delay(
 
     ask_choice(question, messages, ask)
         .map(|minutes| parse_json(&bcct::js::format_number(minutes)).unwrap())
+}
+
+fn terminal_width() -> Option<u16> {
+    rustix::termios::tcgetwinsize(io::stdout())
+        .ok()
+        .map(|size| size.ws_col)
+}
+
+fn draw_slowly_after_a_key() -> Value {
+    let mut typed = String::new();
+
+    io::stdin().read_line(&mut typed).unwrap();
+    thread::sleep(SLOW_DRAW);
+
+    let width = terminal_width().unwrap();
+    let mut stdout = io::stdout();
+
+    write!(stdout, "width={width}").unwrap();
+    stdout.flush().unwrap();
+
+    json!(width)
 }
 
 fn terminal_modes() -> Result<Value, PromptError> {
@@ -221,6 +243,7 @@ fn pty_driver() {
             .map(Value::from),
         "yesno" => ask_yes_no(prompt, messages, true, &mut *prompter).map(Value::from),
         "termios" => terminal_modes(),
+        "slowdraw" => Ok(draw_slowly_after_a_key()),
         "selectline" => {
             let index = usize::try_from(spec["index"].as_u64().unwrap()).unwrap();
 
@@ -413,6 +436,58 @@ fn a_key_release_reported_by_the_terminal_types_nothing() {
 
     assert_eq!(flow, "\u{1b}[1G\u{1b}[0JQ? \u{1b}[4Gb\r\r\n");
     assert_eq!(outcome, json!({ "value": "b" }));
+}
+
+#[test]
+fn resizes_only_after_the_program_drew_the_previous_key() {
+    let spec = json!({ "kind": "slowdraw", "text": "", "locale": "en-us" });
+    let steps = [Step::Key(b"a\r".to_vec()), Step::Resize(60)];
+    let (flow, outcome) = drive(&spec, 40, &steps, false);
+
+    assert_eq!(flow, "width=40");
+    assert_eq!(outcome, json!({ "value": 40 }));
+}
+
+#[test]
+fn records_only_what_the_program_prints_without_the_start_newline() {
+    let argv: Vec<String> = ["sh", "-c", "printf '<<<hello>>>'"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    let output = record(&Run {
+        argv: &argv,
+        env: &[],
+        columns: 40,
+        rows: ROWS,
+        steps: &[],
+        redirect: None,
+    })
+    .unwrap();
+
+    assert_eq!(String::from_utf8_lossy(&output), "<<<hello>>>");
+}
+
+#[test]
+fn turns_the_terminal_echo_off_before_the_program_starts() {
+    let argv: Vec<String> = [
+        "sh",
+        "-c",
+        "case \"$(stty -a)\" in *' -echo '*) printf '<<<off>>>';; *) printf '<<<on>>>';; esac",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    let output = record(&Run {
+        argv: &argv,
+        env: &[],
+        columns: 40,
+        rows: ROWS,
+        steps: &[],
+        redirect: None,
+    })
+    .unwrap();
+
+    assert_eq!(String::from_utf8_lossy(&output), "<<<off>>>");
 }
 
 fn without_job_notice(flow: &str) -> String {

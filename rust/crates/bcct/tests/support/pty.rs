@@ -279,6 +279,28 @@ fn wait_for(session: &mut PtySession, out: &mut Vec<u8>, needle: &[u8]) -> io::R
     Ok(())
 }
 
+fn wait_for_output_after(
+    session: &mut PtySession,
+    out: &mut Vec<u8>,
+    length: usize,
+) -> io::Result<()> {
+    let started = Instant::now();
+
+    while out.len() <= length {
+        if pump(session, out)?.is_none() {
+            return Err(fail("the program in the terminal ended before the redraw"));
+        }
+
+        if started.elapsed() > LIMIT {
+            return Err(fail("the terminal never redrew after the resize"));
+        }
+
+        thread::sleep(POLL);
+    }
+
+    Ok(())
+}
+
 fn command_of(run: &Run<'_>) -> io::Result<Command> {
     let size = format!("read -r _ && stty cols {} rows {}", run.columns, run.rows);
     let script = match run.redirect {
@@ -316,6 +338,7 @@ pub(crate) fn record(run: &Run<'_>) -> io::Result<Vec<u8>> {
     let mut out = Vec::new();
     let blind = run.redirect.is_some();
     let ready = if blind { &[][..] } else { START };
+    let mut drawn_from: Option<usize> = None;
 
     for step in run.steps {
         if let Step::When(needle, bytes) = step {
@@ -334,10 +357,15 @@ pub(crate) fn record(run: &Run<'_>) -> io::Result<Vec<u8>> {
         match step {
             Step::When(..) => {}
             Step::Key(bytes) => {
+                drawn_from = Some(out.len());
                 session.write_all(bytes)?;
                 session.flush()?;
             }
             Step::Resize(columns) => {
+                if let Some(length) = drawn_from.take().filter(|_| !blind) {
+                    wait_for_output_after(&mut session, &mut out, length)?;
+                }
+
                 session
                     .get_process_mut()
                     .set_window_size(*columns, run.rows)
