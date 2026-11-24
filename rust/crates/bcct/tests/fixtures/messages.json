@@ -1246,12 +1246,6 @@
         "out": "add the rule that keeps Claude from reading the token to alpha 1"
       }
     ],
-    "fix.statusline": [
-      {
-        "args": ["alpha 1"],
-        "out": "replace the old command (from the clone) with the current one in alpha 1"
-      }
-    ],
     "fix.appDir": [
       { "args": ["alpha 1"], "out": "give write permission to alpha 1" }
     ],
@@ -2513,12 +2507,6 @@
       {
         "args": ["alpha 1"],
         "out": "adicionar a regra que impede o Claude de ler o token em alpha 1"
-      }
-    ],
-    "fix.statusline": [
-      {
-        "args": ["alpha 1"],
-        "out": "trocar o comando antigo (do clone) pelo atual em alpha 1"
       }
     ],
     "fix.appDir": [

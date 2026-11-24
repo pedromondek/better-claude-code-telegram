@@ -12,10 +12,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { shortIdFor, type AskQuestion } from "../ask-format.ts";
+import {
+  renderQuestionText,
+  shortIdFor,
+  type AskQuestion,
+} from "../ask-format.ts";
 import { createAskMirror, type CallbackContext } from "../ask-mirror.ts";
 import { CONFIG_FILE } from "../config.ts";
 import { MESSAGES, type Messages } from "../i18n.ts";
+import { toTelegramHtmlChunks } from "../telegram-html.ts";
 
 const CHAT = "42";
 const ASK_ID = "s1-1000";
@@ -45,6 +50,7 @@ interface ForceReply {
 interface SendOptions {
   reply_markup?: Markup | ForceReply;
   parse_mode?: "HTML";
+  reply_parameters?: { message_id: number };
 }
 
 interface SentMessage {
@@ -53,6 +59,7 @@ interface SentMessage {
   parseMode: string | undefined;
   keyboard: Markup["inline_keyboard"] | undefined;
   forceReply: boolean;
+  replyTo: number | undefined;
   messageId: number;
 }
 
@@ -60,6 +67,14 @@ interface EditedMarkup {
   chatId: string;
   messageId: number;
   keyboard: Markup["inline_keyboard"];
+}
+
+interface EditedText {
+  chatId: string;
+  messageId: number;
+  text: string;
+  parseMode: string | undefined;
+  keyboard: Markup["inline_keyboard"] | undefined;
 }
 
 interface AskOptions {
@@ -73,7 +88,9 @@ interface SetupOptions {
   messages?: () => Messages;
   rejectSend?: (text: string, chatId: string) => boolean;
   failEdit?: boolean;
+  failTextEdit?: boolean;
   failDelete?: boolean;
+  holdEdits?: Promise<void>;
 }
 
 interface DeletedMessage {
@@ -195,13 +212,25 @@ function readAnswers(): unknown {
 function fakeApi({
   rejectSend = (): boolean => false,
   failEdit = false,
+  failTextEdit = false,
   failDelete = false,
-}: Pick<SetupOptions, "rejectSend" | "failEdit" | "failDelete">): {
+  holdEdits = Promise.resolve(),
+}: Pick<
+  SetupOptions,
+  "rejectSend" | "failEdit" | "failTextEdit" | "failDelete" | "holdEdits"
+>): {
   sent: SentMessage[];
   edits: EditedMarkup[];
+  textEdits: EditedText[];
   deleted: DeletedMessage[];
   api: {
     deleteMessage: (chatId: string, messageId: number) => Promise<unknown>;
+    editMessageText: (
+      chatId: string,
+      messageId: number,
+      text: string,
+      options?: { parse_mode?: "HTML"; reply_markup?: Markup },
+    ) => Promise<unknown>;
     sendMessage: (
       chatId: string,
       text: string,
@@ -216,14 +245,29 @@ function fakeApi({
 } {
   const sent: SentMessage[] = [];
   const edits: EditedMarkup[] = [];
+  const textEdits: EditedText[] = [];
   const deleted: DeletedMessage[] = [];
   let nextMessageId = 100;
 
   return {
     sent,
     edits,
+    textEdits,
     deleted,
     api: {
+      editMessageText: (chatId, messageId, text, options): Promise<unknown> => {
+        if (failTextEdit) return Promise.reject(new Error("boom"));
+
+        textEdits.push({
+          chatId,
+          messageId,
+          text,
+          parseMode: options?.parse_mode,
+          keyboard: options?.reply_markup?.inline_keyboard,
+        });
+
+        return Promise.resolve();
+      },
       deleteMessage: (chatId, messageId): Promise<unknown> => {
         if (failDelete) return Promise.reject(new Error("boom"));
 
@@ -249,25 +293,26 @@ function fakeApi({
             markup !== undefined &&
             "force_reply" in markup &&
             markup.force_reply,
+          replyTo: options?.reply_parameters?.message_id,
           messageId: nextMessageId,
         });
 
         return Promise.resolve({ message_id: nextMessageId });
       },
-      editMessageReplyMarkup: (
+      editMessageReplyMarkup: async (
         chatId,
         messageId,
         options,
-      ): Promise<unknown> => {
-        if (failEdit) return Promise.reject(new Error("boom"));
+      ): Promise<void> => {
+        await holdEdits;
+
+        if (failEdit) throw new Error("boom");
 
         edits.push({
           chatId,
           messageId,
           keyboard: options.reply_markup.inline_keyboard,
         });
-
-        return Promise.resolve();
       },
     },
   };
@@ -324,6 +369,23 @@ function callback(
 
         return Promise.resolve();
       },
+    },
+  };
+}
+
+function onMessage(
+  data: string,
+  messageId: number | undefined,
+): CallbackContext {
+  const { ctx } = callback(data);
+
+  return {
+    ...ctx,
+    callbackQuery: {
+      data,
+      ...(messageId === undefined
+        ? {}
+        : { message: { message_id: messageId } }),
     },
   };
 }
@@ -812,9 +874,12 @@ describe("answer through Telegram", () => {
     expect(existsSync(answerFile())).toBe(false);
 
     await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
-    expect(telegram.edits.at(-1)?.keyboard[1][0].text).toBe("☑️ 2. Frontend");
+    expect(telegram.textEdits.at(-1)?.keyboard?.[1][0].text).toBe(
+      "☑️ 2. Frontend",
+    );
 
     await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+    expect(telegram.edits.at(-1)?.keyboard[0][0].text).toBe("☑️ 1. Backend");
     await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
 
     expect(readAnswers()).toEqual({ "Quais camadas?": "Backend, Frontend" });
@@ -850,6 +915,31 @@ describe("answer through Telegram", () => {
 
     expect(second.answers).toEqual(["Essa pergunta já foi respondida."]);
     expect(existsSync(answerFile())).toBe(false);
+  });
+
+  it("records the answer before the buttons are swapped, so a tap in between finds it answered", async (): Promise<void> => {
+    let release: () => void = () => undefined;
+    const { mirror } = setup({
+      holdEdits: new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+
+    const first = mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
+
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const second = callback(`ask:${SHORT}:0:1`);
+
+    await mirror.handleCallback(second.ctx);
+
+    expect(second.answers).toEqual(["Essa pergunta já foi respondida."]);
+
+    release();
+    await first;
   });
 });
 
@@ -1708,6 +1798,10 @@ const VALID_SENT_STATE = {
   awaitingOther: [],
   otherPrompts: [],
   completed: false,
+  touchedAt: {},
+  movedOn: false,
+  reminderSent: false,
+  leftLine: [],
 };
 
 const MALFORMED_SENT_STATES: { name: string; content: unknown }[] = [
@@ -1911,7 +2005,7 @@ describe("buttons of each question", () => {
   it("an answer in the terminal swaps only the buttons of the questions still open", async (): Promise<void> => {
     const { telegram, mirror } = setup();
 
-    writeAsk([SINGLE, MULTI]);
+    writeAsk([SINGLE, SECOND_SINGLE]);
     await mirror.tick();
     await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
     writeFileSync(join(asksDir(), `${ASK_ID}.closed`), "");
@@ -2611,5 +2705,1579 @@ describe("Other requests left without a reply", () => {
         closedAt: Date.now(),
       },
     ]);
+  });
+});
+
+const MINUTE = 60_000;
+const SECOND_SINGLE: AskQuestion = {
+  question: "Qual cache?",
+  options: [{ label: "Redis" }, { label: "Memcached" }],
+};
+const SECOND_MULTI: AskQuestion = {
+  question: "Quais testes?",
+  header: "Testes",
+  multiSelect: true,
+  options: [{ label: "Unit" }, { label: "E2E" }],
+};
+
+function writeConfig(config: Record<string, unknown>): void {
+  writeFileSync(join(appDir, CONFIG_FILE), JSON.stringify(config));
+}
+
+function reminders(telegram: ReturnType<typeof fakeApi>): SentMessage[] {
+  return telegram.sent.filter((message) => message.text.startsWith("☝️"));
+}
+
+async function pressButton(
+  mirror: ReturnType<typeof createAskMirror>,
+  data: string,
+): Promise<void> {
+  await mirror.handleCallback(callback(`ask:${SHORT}:${data}`).ctx);
+}
+
+function readSentState(): Record<string, unknown> {
+  return JSON.parse(readFileSync(sentStateFile(), "utf8")) as Record<
+    string,
+    unknown
+  >;
+}
+
+function removeReminderFields(): void {
+  const state = readSentState();
+
+  delete state.touchedAt;
+  delete state.movedOn;
+  delete state.reminderSent;
+  delete state.leftLine;
+  writeFileSync(sentStateFile(), JSON.stringify(state));
+}
+
+async function answerFirstAndSelectLast(
+  mirror: ReturnType<typeof createAskMirror>,
+  lastQuestionIndex = 1,
+): Promise<void> {
+  await pressButton(mirror, "0:0");
+  await pressButton(mirror, `${lastQuestionIndex}:0`);
+}
+
+describe("reminder of a multiple choice question left without Conclude", () => {
+  beforeEach(() => {
+    vi.stubEnv("BETTER_CC_TELEGRAM_DELAY_MS", "");
+    writeConfig({ delays: { reminder: 1 } });
+  });
+
+  it("sends one reminder to the chat once the delay passes since the last interaction", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE - 1);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(Date.now() + 1);
+    await mirror.tick();
+
+    expect(
+      reminders(telegram).map(
+        ({ chatId, text, parseMode, keyboard, replyTo }) => ({
+          chatId,
+          text,
+          parseMode,
+          keyboard,
+          replyTo,
+        }),
+      ),
+    ).toEqual([
+      {
+        chatId: CHAT,
+        text: "☝️ <b>Falta só concluir esta</b>: toque em ✅ Concluir",
+        parseMode: "HTML",
+        keyboard: undefined,
+        replyTo: telegram.sent[1].messageId,
+      },
+    ]);
+  });
+
+  it("never sends a second reminder for the same ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+    vi.setSystemTime(Date.now() + 60 * MINUTE);
+    await mirror.tick();
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+    expect(readSentState().reminderSent).toBe(true);
+  });
+
+  it("counts the idle time from the last toggle and not from the first", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    vi.setSystemTime(Date.now() + 40_000);
+    await pressButton(mirror, "1:1");
+    vi.setSystemTime(Date.now() + 40_000);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(Date.now() + 20_000);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("sends nothing while he keeps toggling inside the idle time", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+
+    for (const option of ["0", "1", "0", "1", "0"]) {
+      await pressButton(mirror, `1:${option}`);
+      vi.setSystemTime(Date.now() + MINUTE - 1000);
+      await mirror.tick();
+    }
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("uses the delay of the reminder kind and not the other kinds", async (): Promise<void> => {
+    writeConfig({
+      delays: { reminder: 5, questions: 1, waiting: 1, permissions: 1 },
+    });
+
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + 4 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("falls back to the default delay when the config has none", async (): Promise<void> => {
+    rmSync(join(appDir, CONFIG_FILE));
+
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + 3 * MINUTE - 1);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(Date.now() + 1);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("waits through quiet hours and sends once in the first cycle after them", async (): Promise<void> => {
+    writeConfig({
+      delays: { reminder: 1 },
+      quietHours: { start: "14:00", end: "16:00" },
+    });
+
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI], { released: true });
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(new Date(2026, 9, 17, 15, 30));
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(new Date(2026, 9, 17, 15, 59));
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(new Date(2026, 9, 17, 16, 0));
+    await mirror.tick();
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("sends nothing while a single choice question is still open", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, SECOND_SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "2:0");
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("reminds a lone multiple choice that has a selection and nothing else answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).map(({ text }) => text)).toEqual([
+      "☝️ <b>Falta só concluir esta</b>: toque em ✅ Concluir",
+    ]);
+    expect(reminders(telegram).map(({ replyTo }) => replyTo)).toEqual([
+      telegram.sent[0].messageId,
+    ]);
+  });
+
+  it("counts typed text without any selection as awaiting Done", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:o");
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("sends nothing for a multiple choice with nothing selected and nothing typed", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("sends nothing when the selection was cleared again", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "0:0");
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("restarts the delay when an option is toggled", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    vi.setSystemTime(Date.now() + MINUTE - 1);
+    await pressButton(mirror, "0:1");
+    vi.setSystemTime(Date.now() + MINUTE - 1);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(Date.now() + 1);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("sends nothing after the ask is completed", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:d");
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("sends nothing after the ask is closed in the terminal", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    writeFileSync(join(asksDir(), `${ASK_ID}.closed`), "");
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+    expect(readdirSync(asksDir())).toEqual([]);
+  });
+
+  it("replies once to each question awaiting Done, to its own message", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:0");
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+    await mirror.tick();
+
+    expect(
+      reminders(telegram).map(({ text, replyTo }) => ({ text, replyTo })),
+    ).toEqual([
+      {
+        text: "☝️ <b>Falta só concluir esta</b>: toque em ✅ Concluir",
+        replyTo: telegram.sent[1].messageId,
+      },
+      {
+        text: "☝️ <b>Falta só concluir esta</b>: toque em ✅ Concluir",
+        replyTo: telegram.sent[2].messageId,
+      },
+    ]);
+  });
+
+  it("replies to the last part of a long question, the one that has the buttons", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const longMulti: AskQuestion = {
+      question: "Longa?",
+      multiSelect: true,
+      options: [{ label: "A", preview: "linha da prévia\n".repeat(600) }],
+    };
+
+    writeAsk([longMulti]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).map(({ replyTo }) => replyTo)).toEqual([
+      telegram.sent.findLast((message) => message.keyboard)?.messageId,
+    ]);
+  });
+
+  it("sends nothing while another open multiple choice has nothing selected", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("writes the reminder in the language of the config", async (): Promise<void> => {
+    writeConfig({ delays: { reminder: 1 }, language: "en-us" });
+
+    const { telegram, mirror } = setupFollowingConfig();
+
+    writeAsk([SINGLE, SECOND_MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).map(({ text }) => text)).toEqual([
+      "☝️ <b>Only this one is left to conclude</b>: tap ✅ Done",
+    ]);
+  });
+
+  it("does not send the reminder again after a send that failed", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({
+      rejectSend: (text) => text.startsWith("☝️"),
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+    expect(logs).toContain(PT_TEXTS.logConfirmFailed);
+    expect(readSentState().reminderSent).toBe(true);
+  });
+
+  it("logs a reply that fails because the question message is gone and sends no loose message", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({
+      rejectSend: (text) => text.startsWith("☝️"),
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE);
+    await expect(mirror.tick()).resolves.toBeUndefined();
+
+    expect(logs.filter((log) => log === PT_TEXTS.logConfirmFailed)).toEqual([
+      PT_TEXTS.logConfirmFailed,
+    ]);
+    expect(telegram.sent.filter((m) => m.text.startsWith("☝️"))).toEqual([]);
+  });
+
+  it("sends the reminder to every chat that holds the pending question", async (): Promise<void> => {
+    const otherChat = "222";
+    const telegram = fakeApi({});
+    const mirror = createAskMirror({
+      api: telegram.api,
+      appDir,
+      allowedChats: () => [otherChat, CHAT],
+      log: () => undefined,
+      messages: () => PT,
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+    await mirror.tick();
+
+    const pendingInChat = (chatId: string): number | undefined =>
+      telegram.sent.findLast(
+        (message) => message.chatId === chatId && message.keyboard,
+      )?.messageId;
+
+    expect(
+      reminders(telegram).map(({ chatId, replyTo }) => ({ chatId, replyTo })),
+    ).toEqual([
+      { chatId: otherChat, replyTo: pendingInChat(otherChat) },
+      { chatId: CHAT, replyTo: pendingInChat(CHAT) },
+    ]);
+  });
+
+  it("reads a sent state written without the reminder fields and sends nothing for it", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    removeReminderFields();
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("starts counting from the first interaction after an old state without the fields", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, SECOND_SINGLE, MULTI]);
+    await mirror.tick();
+    removeReminderFields();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:0");
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("ignores reminder fields of the wrong type in the sent state", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+
+    const state = readSentState();
+
+    writeFileSync(
+      sentStateFile(),
+      JSON.stringify({
+        ...state,
+        touchedAt: { 1: "yesterday" },
+        movedOn: "yes",
+        reminderSent: "yes",
+        leftLine: 3,
+      }),
+    );
+    vi.setSystemTime(Date.now() + 10 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("restarts the delay when Other is tapped, so no reminder goes out while the prompt is open", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE - 1000);
+    await pressButton(mirror, "1:o");
+    vi.setSystemTime(Date.now() + 1000);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 2));
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+    expect(readSentState().reminderSent).toBe(true);
+  });
+
+  it("sends the reminder one delay after an Other tap that was never answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE - 1000);
+    await pressButton(mirror, "1:o");
+    vi.setSystemTime(Date.now() + MINUTE - 1);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(Date.now() + 1);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("ignores a time of the last toggle stored as text", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    writeFileSync(
+      sentStateFile(),
+      JSON.stringify({
+        ...readSentState(),
+        touchedAt: { 1: String(Date.now() - 10 * MINUTE) },
+      }),
+    );
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("replies with every part of a reminder that does not fit one message", async (): Promise<void> => {
+    const { telegram, mirror } = setup({
+      messages: () => ({
+        ...PT,
+        concludeReminder: `☝️ ${"linha longa\n".repeat(600)}`,
+      }),
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    const replies = telegram.sent.filter(
+      (message) => message.replyTo !== undefined,
+    );
+
+    expect(replies.length).toBeGreaterThan(1);
+    expect(
+      replies.every(
+        (message) =>
+          message.replyTo === telegram.sent[1].messageId &&
+          message.parseMode === "HTML",
+      ),
+    ).toBe(true);
+    expect(
+      replies.reduce(
+        (total, { text }) => total + (text.match(/linha longa/g) ?? []).length,
+        0,
+      ),
+    ).toBe(600);
+  });
+});
+
+describe("line after the server restarts with a state written by an older build", () => {
+  const LIVE_SINGLE: AskQuestion = {
+    question: "Teste 1/2",
+    options: [{ label: "A" }, { label: "B" }],
+  };
+  const LIVE_MULTI: AskQuestion = {
+    question: "Teste 2/2",
+    multiSelect: true,
+    options: [{ label: "A" }, { label: "B" }, { label: "C" }],
+  };
+
+  async function sendWithOlderBuild(): Promise<
+    ReturnType<typeof setup> & { questionTexts: string[] }
+  > {
+    const first = setup();
+
+    writeAsk([LIVE_SINGLE, LIVE_MULTI]);
+    await first.mirror.tick();
+    removeReminderFields();
+
+    return {
+      ...setup(),
+      questionTexts: first.telegram.sent.map(({ text }) => text),
+    };
+  }
+
+  it("adds the line when the single question is answered before the selection", async (): Promise<void> => {
+    const { telegram, mirror, logs, questionTexts } =
+      await sendWithOlderBuild();
+
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:1");
+
+    expect(logs).toEqual([]);
+    expect(telegram.textEdits.map(({ text }) => text)).toEqual([
+      `${questionTexts[1]}\n\n✅ Só falta esta: toque em ✅ Concluir`,
+    ]);
+  });
+
+  it("adds the line when the selection comes before the single question is answered", async (): Promise<void> => {
+    const { telegram, mirror, logs, questionTexts } =
+      await sendWithOlderBuild();
+
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:1");
+    await pressButton(mirror, "0:0");
+
+    expect(logs).toEqual([]);
+    expect(telegram.textEdits.map(({ text }) => text)).toEqual([
+      `${questionTexts[1]}\n\n✅ Só falta esta: toque em ✅ Concluir`,
+    ]);
+  });
+
+  it("keeps the line and sends one reminder when a cycle runs between every tap", async (): Promise<void> => {
+    writeConfig({ delays: { reminder: 0 } });
+
+    const { telegram, mirror } = await sendWithOlderBuild();
+
+    for (const data of ["1:0", "1:1", "0:0"]) {
+      await pressButton(mirror, data);
+      await mirror.tick();
+    }
+
+    await mirror.tick();
+
+    expect(
+      telegram.textEdits.map(({ text }) => text.includes("Só falta esta")),
+    ).toEqual([true]);
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("never lets a save made while a cycle sent the reminder undo the record that it was sent", async (): Promise<void> => {
+    writeConfig({ delays: { reminder: 1 } });
+
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await answerFirstAndSelectLast(mirror);
+    vi.setSystemTime(Date.now() + MINUTE - 1000);
+
+    const slowTap = callback(`ask:${SHORT}:1:1`);
+    const tapping = mirror.handleCallback({
+      ...slowTap.ctx,
+      answerCallbackQuery: async (): Promise<void> => {
+        await held;
+      },
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+    vi.setSystemTime(Date.now() + MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+
+    release();
+    await tapping;
+
+    expect(readSentState().reminderSent).toBe(true);
+  });
+});
+
+describe("reminder when he moves on from a multiple choice awaiting Done", () => {
+  beforeEach(() => {
+    vi.stubEnv("BETTER_CC_TELEGRAM_DELAY_MS", "");
+    writeConfig({ delays: { reminder: 3 } });
+  });
+
+  function reminderReplies(telegram: ReturnType<typeof fakeApi>): number[] {
+    return reminders(telegram).map(({ replyTo }) => replyTo ?? -1);
+  }
+
+  async function selectWithSingleOpen(
+    mirror: ReturnType<typeof createAskMirror>,
+  ): Promise<void> {
+    await pressButton(mirror, "1:0");
+  }
+
+  it("reminds on the next cycle when another question of the ask is answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await selectWithSingleOpen(mirror);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    await pressButton(mirror, "0:0");
+    await mirror.tick();
+
+    expect(reminderReplies(telegram)).toEqual([telegram.sent[1].messageId]);
+  });
+
+  it("does not remind when the answer leaves the multiple choice empty", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+    expect(readSentState().movedOn).toBe(false);
+  });
+
+  it("reminds when a question of another ask is answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const other = "s2-2000";
+
+    writeAsk([SINGLE, MULTI]);
+    writeAskWithId(other, Date.now() + 1);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    await mirror.handleCallback(callback(`ask:${shortIdFor(other)}:0:0`).ctx);
+    await mirror.tick();
+
+    expect(reminderReplies(telegram)).toEqual([
+      telegram.sent.find((message) => message.text.includes(MULTI.question))
+        ?.messageId,
+    ]);
+  });
+
+  it("reminds when a tap lands on another bot message", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.handleCallback(callback("perm:allow:abcde").ctx);
+    await mirror.tick();
+
+    expect(reminderReplies(telegram)).toEqual([telegram.sent[1].messageId]);
+  });
+
+  it("reminds when a tap lands on the answered button of another ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const other = "s2-2000";
+
+    writeAsk([SINGLE, MULTI]);
+    writeAskWithId(other, Date.now() + 1);
+    await mirror.tick();
+    await mirror.handleCallback(callback(`ask:${shortIdFor(other)}:0:0`).ctx);
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    const otherAnswered = telegram.sent.find((message) =>
+      message.keyboard?.[0]?.[0]?.callback_data.startsWith(
+        `ask:${shortIdFor(other)}`,
+      ),
+    );
+
+    await mirror.handleCallback(
+      onMessage("ask:answered", otherAnswered?.messageId),
+    );
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("does not remind when the tap lands on the answered button of the same ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.handleCallback(
+      onMessage("ask:answered", telegram.sent[0].messageId),
+    );
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+    expect(readSentState().movedOn).toBe(false);
+  });
+
+  it("reminds when the answered button tapped belongs to a message the mirror does not know", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.handleCallback(onMessage("ask:answered", 99999));
+    await mirror.handleCallback(callback("ask:answered").ctx);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("matches the answered button message in the chat of the tap and not in another chat", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    const ctx = onMessage("ask:answered", telegram.sent[0].messageId);
+
+    await mirror.handleCallback({ ...ctx, chat: { id: 7 } });
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("reminds without throwing when the answered button tap carries no chat", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    const { chat: _chat, ...withoutChat } = onMessage(
+      "ask:answered",
+      telegram.sent[0].messageId,
+    );
+
+    await expect(mirror.handleCallback(withoutChat)).resolves.toBe(true);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("does not count the answered button of someone outside the allowlist", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.handleCallback({
+      ...onMessage("ask:answered", 99999),
+      from: { id: 999 },
+    });
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("reminds when a tap lands on a question of another ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const other = "s2-2000";
+
+    writeAsk([SINGLE, MULTI]);
+    writeAskWithId(other, Date.now() + 1);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.handleCallback(callback(`ask:${shortIdFor(other)}:0:o`).ctx);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("does not remind for a tap on the buttons of the question itself", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:o");
+    await pressButton(mirror, "1:1");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("does not count a tap from someone outside the allowlist", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.handleCallback(callback("perm:allow:abcde", 999).ctx);
+    await mirror.handleCallback(callback("ask:answered", 999).ctx);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("reminds when a text from the chat is not the answer to the question", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    expect(await mirror.consumeText(CHAT, "oi, outra coisa")).toBe(false);
+    await mirror.tick();
+
+    expect(reminderReplies(telegram)).toEqual([telegram.sent[1].messageId]);
+  });
+
+  it("does not count a text from another chat", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText("999", "oi");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("does not remind for the text that answers the question through Other", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:o");
+
+    expect(
+      await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 2)),
+    ).toBe(true);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("reminds only once even when he keeps moving on", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText(CHAT, "um");
+    await mirror.tick();
+    await mirror.consumeText(CHAT, "dois");
+    await mirror.handleCallback(callback("perm:allow:abcde").ctx);
+    await mirror.tick();
+    vi.setSystemTime(Date.now() + 30 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("holds the reminder through quiet hours and sends it after them", async (): Promise<void> => {
+    writeConfig({
+      delays: { reminder: 3 },
+      quietHours: { start: "14:00", end: "16:00" },
+    });
+
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI], { released: true });
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText(CHAT, "oi");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    vi.setSystemTime(new Date(2026, 9, 17, 16, 0));
+    await mirror.tick();
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("forgets that he moved on when the selection is cleared", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText(CHAT, "oi");
+    await pressButton(mirror, "1:0");
+
+    expect(readSentState().movedOn).toBe(false);
+
+    await mirror.tick();
+    await pressButton(mirror, "1:0");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("never reminds for a multiple choice with nothing selected, however he moves on", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await mirror.consumeText(CHAT, "oi");
+    await mirror.handleCallback(callback("perm:allow:abcde").ctx);
+    await pressButton(mirror, "0:0");
+    vi.setSystemTime(Date.now() + 30 * MINUTE);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("does not remind a completed ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:d");
+    await mirror.consumeText(CHAT, "oi");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("keeps that he moved on while the selection changes and the question still awaits Done", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText(CHAT, "oi");
+    await pressButton(mirror, "1:1");
+
+    expect(readSentState().movedOn).toBe(true);
+
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(1);
+  });
+
+  it("does not remind when he toggles another question of the same ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:0");
+    await pressButton(mirror, "1:1");
+    await pressButton(mirror, "2:1");
+    await pressButton(mirror, "2:o");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+    expect(readSentState().movedOn).toBe(false);
+  });
+
+  it("does not remind when he types in another question of the same ask", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:o");
+
+    expect(
+      await mirror.consumeText(CHAT, "Unit", otherPromptId(telegram, 3)),
+    ).toBe(true);
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+  });
+
+  it("reminds both questions when the single choice of the ask is answered after two selections", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:0");
+    await mirror.tick();
+
+    expect(reminders(telegram)).toEqual([]);
+
+    await pressButton(mirror, "0:0");
+    await mirror.tick();
+
+    expect(reminders(telegram).length).toBe(2);
+  });
+
+  it("marks the ask when the text comes from one of the chats that hold the question", async (): Promise<void> => {
+    const otherChat = "222";
+    const telegram = fakeApi({});
+    const mirror = createAskMirror({
+      api: telegram.api,
+      appDir,
+      allowedChats: () => [otherChat, CHAT],
+      log: () => undefined,
+      messages: () => PT,
+    });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText(CHAT, "oi");
+
+    expect(readSentState().movedOn).toBe(true);
+  });
+
+  it("marks the other asks only when a question of theirs awaits Done in the chat", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await mirror.consumeText("999", "oi");
+
+    expect(readSentState().movedOn).toBe(false);
+
+    await mirror.consumeText(CHAT, "oi");
+
+    expect(readSentState().movedOn).toBe(true);
+  });
+});
+
+describe("line on the multiple choice question left without Conclude", () => {
+  const LINE = "✅ Só falta esta: toque em ✅ Concluir";
+
+  function lastChunk(
+    question: AskQuestion,
+    index: number,
+    total: number,
+  ): string {
+    return (
+      toTelegramHtmlChunks(
+        renderQuestionText(question, index, total, PT, null),
+      ).at(-1) ?? ""
+    );
+  }
+
+  it("adds the line when the pending question gets a selection after the others were answered", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+
+    const pendingMessage = telegram.sent[1];
+
+    await pressButton(mirror, "0:0");
+
+    expect(telegram.textEdits).toEqual([]);
+
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits).toEqual([
+      {
+        chatId: CHAT,
+        messageId: pendingMessage.messageId,
+        text: `${lastChunk(MULTI, 1, 2)}\n\n${LINE}`,
+        parseMode: "HTML",
+        keyboard: [
+          [{ text: "☑️ 1. Backend", callback_data: `ask:${SHORT}:1:0` }],
+          [{ text: "2. Frontend", callback_data: `ask:${SHORT}:1:1` }],
+          [{ text: PT.otherButton, callback_data: `ask:${SHORT}:1:o` }],
+          [{ text: PT.doneButton, callback_data: `ask:${SHORT}:1:d` }],
+        ],
+      },
+    ]);
+    expect(telegram.edits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[0].messageId,
+    ]);
+  });
+
+  it("adds the line when the last other question is answered after the selection", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits).toEqual([]);
+
+    await pressButton(mirror, "0:0");
+
+    expect(telegram.textEdits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[1].messageId,
+    ]);
+  });
+
+  it("adds the line to a lone question as soon as it has a selection", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+
+    expect(telegram.textEdits.map(({ text }) => text)).toEqual([
+      `${lastChunk(MULTI, 0, 1)}\n\n${LINE}`,
+    ]);
+    expect(telegram.edits).toEqual([]);
+  });
+
+  it("adds the line when only text was typed, without any selection", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:o");
+    await mirror.consumeText(CHAT, "Mobile", otherPromptId(telegram, 1));
+
+    expect(telegram.textEdits.length).toBe(1);
+    expect(telegram.textEdits[0].text.endsWith(`\n\n${LINE}`)).toBe(true);
+    expect(telegram.textEdits[0].keyboard?.[2][0].text).toBe("☑️ ✍️ Mobile");
+    expect(telegram.edits).toEqual([]);
+  });
+
+  it("adds no line to a multiple choice with nothing selected and nothing typed", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:o");
+    await mirror.consumeText(CHAT, "   ", otherPromptId(telegram, 2));
+
+    expect(telegram.textEdits).toEqual([]);
+  });
+
+  it("takes the line off when the selection is cleared and puts it back when selected again", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits.length).toBe(2);
+    expect(telegram.textEdits[1]).toEqual({
+      chatId: CHAT,
+      messageId: telegram.sent[1].messageId,
+      text: lastChunk(MULTI, 1, 2),
+      parseMode: "HTML",
+      keyboard: telegram.sent[1].keyboard,
+    });
+
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits.length).toBe(3);
+    expect(telegram.textEdits[2].text.endsWith(`\n\n${LINE}`)).toBe(true);
+  });
+
+  it("takes the line off every question when another one is cleared", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:0");
+
+    expect(telegram.textEdits.length).toBe(2);
+
+    await pressButton(mirror, "2:0");
+
+    expect(
+      telegram.textEdits.slice(2).map(({ messageId }) => messageId),
+    ).toEqual([telegram.sent[1].messageId, telegram.sent[2].messageId]);
+    expect(
+      telegram.textEdits
+        .slice(2)
+        .every(({ text }) => !text.includes("Só falta esta")),
+    ).toBe(true);
+  });
+
+  it("keeps the marks of the options the pending question already had in the keyboard", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "1:1");
+    await pressButton(mirror, "0:0");
+
+    expect(telegram.textEdits.at(-1)?.keyboard?.[1][0].text).toBe(
+      "☑️ 2. Frontend",
+    );
+  });
+
+  it("writes the line in the language of the messages", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ messages: () => EN });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    expect(
+      telegram.textEdits
+        .at(-1)
+        ?.text.endsWith("\n\n✅ Only this one is left: tap ✅ Done"),
+    ).toBe(true);
+  });
+
+  it("adds the line to every question awaiting Done once all have a selection", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits).toEqual([]);
+
+    await pressButton(mirror, "2:0");
+
+    expect(telegram.textEdits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[1].messageId,
+      telegram.sent[2].messageId,
+    ]);
+  });
+
+  it("adds the line to the last part of a long question only", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+    const longMulti: AskQuestion = {
+      question: "Longa?",
+      multiSelect: true,
+      options: [{ label: "A", preview: "linha da prévia\n".repeat(600) }],
+    };
+
+    writeAsk([SINGLE, longMulti]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits.length).toBe(1);
+    expect(telegram.textEdits[0].messageId).toBe(
+      telegram.sent.at(-1)?.messageId,
+    );
+    expect(telegram.textEdits[0].text.endsWith(`\n\n${LINE}`)).toBe(true);
+    expect(telegram.textEdits[0].text.length).toBeLessThan(4096);
+  });
+
+  it("adds no line while a single choice question is still open", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, SECOND_SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "2:0");
+    await pressButton(mirror, "0:0");
+
+    expect(telegram.textEdits).toEqual([]);
+
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.textEdits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[2].messageId,
+    ]);
+  });
+
+  it("adds the line only once and keeps it while options are toggled", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:1");
+
+    expect(telegram.textEdits.length).toBe(1);
+    expect(telegram.edits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[0].messageId,
+      telegram.sent[1].messageId,
+    ]);
+  });
+
+  it("keeps the instance in the title of the question when the line is added", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI], { instance: "back-s3" });
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    expect(telegram.sent[1].text).toContain("de [back-s3]");
+    expect(telegram.textEdits.map(({ text }) => text)).toEqual([
+      `${telegram.sent[1].text}\n\n${LINE}`,
+    ]);
+  });
+
+  it("records which questions carry the line in the sent state", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+
+    expect(readSentState().leftLine).toEqual([]);
+
+    await pressButton(mirror, "2:0");
+
+    expect(readSentState().leftLine).toEqual([1, 2]);
+
+    await pressButton(mirror, "2:0");
+
+    expect(readSentState().leftLine).toEqual([]);
+  });
+
+  it("takes the line off only the concluded question when two carry it", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI, SECOND_MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "2:0");
+
+    expect(telegram.textEdits.length).toBe(2);
+
+    await pressButton(mirror, "1:d");
+
+    expect(telegram.textEdits.slice(2)).toEqual([
+      {
+        chatId: CHAT,
+        messageId: telegram.sent[1].messageId,
+        text: lastChunk(MULTI, 1, 3),
+        parseMode: "HTML",
+        keyboard: [[{ text: "✅ Backend", callback_data: "ask:answered" }]],
+      },
+    ]);
+    expect(readSentState().leftLine).toEqual([2]);
+    expect(telegram.edits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[0].messageId,
+      telegram.sent[1].messageId,
+    ]);
+  });
+
+  it("takes the line off when the pending question is concluded", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    await pressButton(mirror, "1:d");
+
+    expect(telegram.textEdits.at(-1)).toEqual({
+      chatId: CHAT,
+      messageId: telegram.sent[1].messageId,
+      text: lastChunk(MULTI, 1, 2),
+      parseMode: "HTML",
+      keyboard: [[{ text: "✅ Backend", callback_data: "ask:answered" }]],
+    });
+  });
+
+  it("takes the line off when the ask is answered in the terminal", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "1:0");
+    writeFileSync(join(asksDir(), `${ASK_ID}.closed`), "");
+    await mirror.tick();
+
+    expect(telegram.textEdits.at(-1)).toEqual({
+      chatId: CHAT,
+      messageId: telegram.sent[1].messageId,
+      text: lastChunk(MULTI, 1, 2),
+      parseMode: "HTML",
+      keyboard: [
+        [{ text: "✅ Respondida no terminal", callback_data: "ask:answered" }],
+      ],
+    });
+  });
+
+  it("only edits the buttons of a question that never got the line", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+
+    expect(telegram.edits.map(({ messageId }) => messageId)).toEqual([
+      telegram.sent[0].messageId,
+    ]);
+  });
+
+  it("logs a failed edit of the text and goes on without throwing", async (): Promise<void> => {
+    const { telegram, mirror, logs } = setup({ failTextEdit: true });
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+
+    await pressButton(mirror, "0:0");
+    await expect(pressButton(mirror, "1:0")).resolves.toBeUndefined();
+
+    expect(logs).toContain(PT_TEXTS.logEditFailed);
+    expect(telegram.textEdits).toEqual([]);
+
+    await pressButton(mirror, "1:d");
+
+    expect(readAnswers()).toEqual({
+      "Qual banco?": "Postgres",
+      "Quais camadas?": "Backend",
+    });
   });
 });

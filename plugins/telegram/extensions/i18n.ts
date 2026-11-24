@@ -28,6 +28,9 @@ function heldList(parts: (string | null)[]): string {
   return parts.filter((part) => part !== null).join(", ");
 }
 
+const DONE_BUTTON_EN = "✅ Done";
+const DONE_BUTTON_PT = "✅ Concluir";
+
 const enUs = {
   whisperLanguage: "en",
   languageName: "English",
@@ -41,7 +44,7 @@ const enUs = {
   otherHint:
     "✍️ Other answer: tap the button and reply quoting the request it opens.",
   otherButton: "✍️ Other answer (type it)",
-  doneButton: "✅ Done",
+  doneButton: DONE_BUTTON_EN,
   answeredInTerminal: "Answered in the terminal",
   notAuthorized: "Not authorized.",
   questionClosed: "This question is already closed.",
@@ -71,6 +74,8 @@ const enUs = {
     "✅ Answers delivered: the terminal question was answered with them.",
   askEditFailed: (error: string): string =>
     `ask: failed to edit the buttons: ${error}`,
+  concludeReminder: `☝️ **Only this one is left to conclude**: tap ${DONE_BUTTON_EN}`,
+  concludeLeftLine: `✅ Only this one is left: tap ${DONE_BUTTON_EN}`,
   askSent: (askId: string, instance: string): string =>
     `ask: question ${askId} from [${instance}] sent to Telegram`,
   askAnsweredInTerminal: (askId: string): string =>
@@ -153,7 +158,7 @@ const ptBr: Messages = {
   otherHint:
     "✍️ Outra resposta: toque no botão e responda citando o pedido que ele abre.",
   otherButton: "✍️ Outra resposta (escrever)",
-  doneButton: "✅ Concluir",
+  doneButton: DONE_BUTTON_PT,
   answeredInTerminal: "Respondida no terminal",
   notAuthorized: "Não autorizado.",
   questionClosed: "Essa pergunta já foi encerrada.",
@@ -171,6 +176,8 @@ const ptBr: Messages = {
   answersDelivered:
     "✅ Respostas entregues: a pergunta do terminal foi respondida com elas.",
   askEditFailed: (error) => `ask: falha ao editar botões: ${error}`,
+  concludeReminder: `☝️ **Falta só concluir esta**: toque em ${DONE_BUTTON_PT}`,
+  concludeLeftLine: `✅ Só falta esta: toque em ${DONE_BUTTON_PT}`,
   askSent: (askId, instance) =>
     `ask: pergunta ${askId} de [${instance}] enviada ao Telegram`,
   askAnsweredInTerminal: (askId) =>

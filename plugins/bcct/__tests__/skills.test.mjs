@@ -293,7 +293,7 @@ describe("bcct skills", () => {
     const delay = skills().find(({ name }) => name === "delay");
 
     expect(delay?.frontmatter).toContain(
-      'argument-hint: "[minutes | per kind]"',
+      'argument-hint: "[minutes | per kind | reminder [minutes]]"',
     );
     expect(delay?.text).toContain(
       'one of them "Per kind…", with the kinds in its description',
@@ -302,6 +302,37 @@ describe("bcct skills", () => {
       '`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set delays <questions>/<permissions>/<waiting>`',
     );
     expect(delay?.text).toContain("0 means right away");
+  });
+
+  it("saves the reminder of a multi-select question through --set reminder, with 3 minutes by default", () => {
+    const delay = skills().find(({ name }) => name === "delay");
+
+    expect(delay?.text).toContain(
+      '`"${CLAUDE_PLUGIN_ROOT}/scripts/bcct" setup --set reminder <minutes>`',
+    );
+    expect(delay?.text).toContain('3 minutes marked "(Recommended)"');
+    expect(delay?.text).toContain(
+      "Changing the delay, single or per kind, keeps the reminder.",
+    );
+  });
+
+  it("routes a reminder argument to the reminder step before reading its minutes as the delay", () => {
+    const delay = skills().find(({ name }) => name === "delay");
+    const firstStep = delay?.text
+      .split("\n")
+      .find((line) => line.startsWith("1. "));
+
+    expect(firstStep).toMatch(
+      /^1\. If the arguments say `reminder` or `lembrete`, with or without minutes, go to step 5\. Otherwise, if the arguments carry a number of minutes/,
+    );
+  });
+
+  it("offers four reminder options whatever the saved reminder is", () => {
+    const delay = skills().find(({ name }) => name === "delay");
+
+    expect(delay?.text).toContain(
+      'header "Reminder", with four options: "Right away (0)", 3 minutes marked "(Recommended)", the current value (`reminder`) marked as current, and the nearest others from 1, 5 and 10 minutes to fill the four',
+    );
   });
 
   it("asks the illustrations and the review, saying they cost tokens, and saves both through --set", () => {

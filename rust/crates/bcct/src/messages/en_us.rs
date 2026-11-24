@@ -58,6 +58,7 @@ pub(super) const MESSAGES: Messages = Messages {
         token: "Bot token",
         pairing: "Pairing",
         delay: "Wait time",
+        reminder: "Reminder",
         quiet_hours: "Quiet hours",
         transcription: "Audio transcription",
         inbox: "Received files",
@@ -153,6 +154,7 @@ pub(super) const MESSAGES: Messages = Messages {
         language: "en-us or pt-br",
         delay: "the minutes, 0 or more (for example 3, or 0 for right away)",
         delays: "questions/permissions/waiting notice in minutes, 0 or more (for example 0/4/4), or off",
+        reminder: "the minutes, 0 or more (for example 3, or 0 for right away)",
         quiet_hours: "HH:MM-HH:MM (for example 22:00-08:00) or off",
         transcription: "base, small, medium or off",
         inbox: "the days, greater than 0, or off",
@@ -200,6 +202,7 @@ pub(super) const MESSAGES: Messages = Messages {
     ),
     language_kept: |locale| format!("Language kept:\n  • {locale}"),
     delay_kept: |minutes| format!("Wait time kept:\n  • {}", format_delay(minutes)),
+    reminder_kept: |minutes| format!("Reminder time kept:\n  • {}", format_delay(minutes)),
     quiet_kept: |value| format!("Quiet hours kept:\n  • {value}"),
     transcription_model_kept: |model| {
         format!("Local transcription kept with the {model} model, already installed.")
@@ -570,6 +573,10 @@ pub(super) const MESSAGES: Messages = Messages {
     delays_cleared: "Delay per kind turned off: the single delay applies to everything.",
     delays_already_off: "Delay per kind kept: off, the single delay applies to everything.",
     delay_saved: |minutes, file| format!("Delay of {} saved in {file}.", format_delay(minutes)),
+    reminder_question: "Minutes a multi-select question waits on Telegram before the reminder to conclude it",
+    reminder_saved: |minutes, file| {
+        format!("Reminder after {} saved in {file}.", format_delay(minutes))
+    },
     quiet_question: "Quiet hours, when nothing goes to Telegram",
     quiet_off_label: "Off",
     quiet_presets: QuietPresets {
@@ -958,9 +965,6 @@ pub(super) const MESSAGES: Messages = Messages {
         shell: |rc| format!("rewrite shell.sh and the line in {rc}"),
         protection: |settings| {
             format!("add the rule that keeps Claude from reading the token to {settings}")
-        },
-        statusline: |settings| {
-            format!("replace the old command (from the clone) with the current one in {settings}")
         },
         app_dir: |folder| format!("give write permission to {folder}"),
         update: concat!("run '", crate::update_command!(), "'"),

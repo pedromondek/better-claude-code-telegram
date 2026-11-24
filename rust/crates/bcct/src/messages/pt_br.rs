@@ -42,6 +42,7 @@ pub(super) const MESSAGES: Messages = Messages {
         token: "Token do bot",
         pairing: "Pareamento",
         delay: "Tempo de espera",
+        reminder: "Lembrete",
         quiet_hours: "Silêncio",
         transcription: "Transcrição de áudio",
         inbox: "Arquivos recebidos",
@@ -137,6 +138,7 @@ pub(super) const MESSAGES: Messages = Messages {
         language: "en-us ou pt-br",
         delay: "os minutos, 0 ou mais (por exemplo 3, ou 0 para na hora)",
         delays: "perguntas/permissões/aviso de espera em minutos, 0 ou mais (por exemplo 0/4/4), ou off",
+        reminder: "os minutos, 0 ou mais (por exemplo 3, ou 0 para na hora)",
         quiet_hours: "HH:MM-HH:MM (por exemplo 22:00-08:00) ou off",
         transcription: "base, small, medium ou off",
         inbox: "os dias, maiores que 0, ou off",
@@ -186,6 +188,7 @@ pub(super) const MESSAGES: Messages = Messages {
     ),
     language_kept: |locale| format!("Idioma mantido:\n  • {locale}"),
     delay_kept: |minutes| format!("Tempo de espera mantido:\n  • {}", format_delay(minutes)),
+    reminder_kept: |minutes| format!("Tempo do lembrete mantido:\n  • {}", format_delay(minutes)),
     quiet_kept: |value| format!("Silêncio mantido:\n  • {value}"),
     transcription_model_kept: |model| {
         format!("Transcrição local mantida com o modelo {model}, já instalado.")
@@ -572,6 +575,10 @@ pub(super) const MESSAGES: Messages = Messages {
     delays_cleared: "Atraso por tipo desligado: o atraso único vale para tudo.",
     delays_already_off: "Atraso por tipo mantido: desligado, o atraso único vale para tudo.",
     delay_saved: |minutes, file| format!("Espera de {} salva em {file}.", format_delay(minutes)),
+    reminder_question: "Minutos que uma pergunta de múltipla escolha espera no Telegram antes do lembrete para concluir",
+    reminder_saved: |minutes, file| {
+        format!("Lembrete após {} salvo em {file}.", format_delay(minutes))
+    },
     quiet_question: "Horário de silêncio, sem mensagens no Telegram",
     quiet_off_label: "Desligado",
     quiet_presets: QuietPresets {
@@ -951,9 +958,6 @@ pub(super) const MESSAGES: Messages = Messages {
         shell: |rc| format!("regravar o shell.sh e a linha do {rc}"),
         protection: |settings| {
             format!("adicionar a regra que impede o Claude de ler o token em {settings}")
-        },
-        statusline: |settings| {
-            format!("trocar o comando antigo (do clone) pelo atual em {settings}")
         },
         app_dir: |folder| format!("dar permissão de escrita em {folder}"),
         update: concat!("rodar '", crate::update_command!(), "'"),

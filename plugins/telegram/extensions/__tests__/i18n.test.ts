@@ -214,6 +214,37 @@ describe("typed answer notices", () => {
   });
 });
 
+describe("conclude reminder", () => {
+  it("points at the question it replies to and names the button, in each language", (): void => {
+    expect(MESSAGES["en-us"].concludeReminder).toBe(
+      "☝️ **Only this one is left to conclude**: tap ✅ Done",
+    );
+    expect(MESSAGES["pt-br"].concludeReminder).toBe(
+      "☝️ **Falta só concluir esta**: toque em ✅ Concluir",
+    );
+  });
+
+  it("names the same button the keyboard shows", (): void => {
+    for (const locale of LOCALES) {
+      expect(MESSAGES[locale].concludeReminder).toContain(
+        MESSAGES[locale].doneButton,
+      );
+      expect(MESSAGES[locale].concludeLeftLine).toContain(
+        MESSAGES[locale].doneButton,
+      );
+    }
+  });
+
+  it("gives the line added to the pending question, in each language", (): void => {
+    expect(MESSAGES["en-us"].concludeLeftLine).toBe(
+      "✅ Only this one is left: tap ✅ Done",
+    );
+    expect(MESSAGES["pt-br"].concludeLeftLine).toBe(
+      "✅ Só falta esta: toque em ✅ Concluir",
+    );
+  });
+});
+
 describe("catalog parity between en-us and pt-br", () => {
   it("has the same keys", (): void => {
     expect(Object.keys(MESSAGES["pt-br"]).toSorted()).toEqual(

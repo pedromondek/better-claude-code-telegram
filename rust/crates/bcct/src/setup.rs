@@ -58,8 +58,6 @@ const PERMISSION_MODE_FLAG: &str = "--permission-mode";
 const BYPASS_MODE: &str = "bypassPermissions";
 const BOT_SERVER: &str = "server.ts";
 const STATUSLINE_SUBCOMMAND: &str = " statusline";
-const CLONE_STATUSLINE_SCRIPT: &str = "/plugins/telegram-hooks/statusline.mjs";
-const CLONE_STATUSLINE_PREFIX: &str = "node \"";
 const AFTER_PREVIOUS_FLAG: &str = " --after-previous";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -291,17 +289,6 @@ pub fn statusline_after_command(app_dir: &Path) -> String {
     format!("{}{AFTER_PREVIOUS_FLAG}", statusline_command(app_dir))
 }
 
-fn is_clone_statusline(command: &str) -> bool {
-    command
-        .strip_prefix(CLONE_STATUSLINE_PREFIX)
-        .and_then(|rest| rest.strip_suffix('"'))
-        .is_some_and(|script| {
-            script.len() > CLONE_STATUSLINE_SCRIPT.len()
-                && !script.contains('"')
-                && script.replace('\\', "/").ends_with(CLONE_STATUSLINE_SCRIPT)
-        })
-}
-
 fn statusline_command_of(status_line: Option<&Value>) -> Option<&str> {
     status_line
         .filter(|value| js_truthy(value))
@@ -319,24 +306,13 @@ pub fn statusline_kind(status_line: Option<&Value>, app_dir: &Path) -> Statuslin
         return StatuslineKind::Other;
     };
 
-    if command == statusline_command(app_dir) || is_clone_statusline(command) {
+    if command == statusline_command(app_dir) {
         StatuslineKind::Ours
-    } else if command == statusline_after_command(app_dir)
-        || command
-            .strip_suffix(AFTER_PREVIOUS_FLAG)
-            .is_some_and(is_clone_statusline)
-    {
+    } else if command == statusline_after_command(app_dir) {
         StatuslineKind::OursAfter
     } else {
         StatuslineKind::Other
     }
-}
-
-#[must_use]
-pub fn statusline_is_current(status_line: Option<&Value>, app_dir: &Path) -> bool {
-    statusline_command_of(status_line).is_some_and(|command| {
-        command == statusline_command(app_dir) || command == statusline_after_command(app_dir)
-    })
 }
 
 pub fn statusline_prompt(
@@ -614,19 +590,7 @@ mod tests {
     }
 
     #[test]
-    fn the_statusline_of_the_clone_still_counts_as_ours() {
-        assert_eq!(
-            kind_of("node \"/r/plugins/telegram-hooks/statusline.mjs\""),
-            StatuslineKind::Ours
-        );
-        assert_eq!(
-            kind_of("node \"C:\\r\\plugins\\telegram-hooks\\statusline.mjs\""),
-            StatuslineKind::Ours
-        );
-        assert_eq!(
-            kind_of("node \"/r/plugins/telegram-hooks/statusline.mjs\" --after-previous"),
-            StatuslineKind::OursAfter
-        );
+    fn classifies_the_statusline_by_the_launcher_of_the_app_folder() {
         assert_eq!(
             kind_of(&launcher_command("statusline")),
             StatuslineKind::Ours
@@ -635,44 +599,18 @@ mod tests {
             kind_of(&launcher_command("statusline --after-previous")),
             StatuslineKind::OursAfter
         );
-    }
 
-    #[test]
-    fn only_the_exact_statusline_of_the_clone_counts_as_ours() {
         for command in [
-            "node \"/r/plugins/other/statusline.mjs\"",
-            "node \"/r/plugins/telegram-hooks/statusline.mjs\" --other",
-            "node \"/r/plugins/telegram-hooks/statusline.mjs",
-            "node /r/plugins/telegram-hooks/statusline.mjs",
-            "bun \"/r/plugins/telegram-hooks/statusline.mjs\"",
-            "node \"plugins/telegram-hooks/statusline.mjs\"",
-            "node \"/plugins/telegram-hooks/statusline.mjs\"",
-            "node \"/a/long/folder/of/someone/plugins/other-hooks/statusline.mjs\"",
-            "node \"/x\" \"/r/plugins/telegram-hooks/statusline.mjs\"",
+            "node \"/r/plugins/telegram-hooks/statusline.mjs\"",
+            "node \"/r/plugins/telegram-hooks/statusline.mjs\" --after-previous",
+            "mine.sh",
             "\"/b/bin/bcct\" statusline",
             "",
         ] {
             assert_eq!(kind_of(command), StatuslineKind::Other, "{command}");
         }
-    }
 
-    #[test]
-    fn the_current_statusline_is_only_the_one_of_this_app_folder() {
-        let app_dir = Path::new("/a");
-        let current = |command: &str| {
-            statusline_is_current(
-                Some(&serde_json::json!({"type": "command", "command": command})),
-                app_dir,
-            )
-        };
-
-        assert!(current(&launcher_command("statusline")));
-        assert!(current(&launcher_command("statusline --after-previous")));
-        assert!(!current(
-            "node \"/r/plugins/telegram-hooks/statusline.mjs\""
-        ));
-        assert!(!current("mine.sh"));
-        assert!(!statusline_is_current(None, app_dir));
+        assert_eq!(statusline_kind(None, Path::new("/a")), StatuslineKind::None);
     }
 
     #[test]
