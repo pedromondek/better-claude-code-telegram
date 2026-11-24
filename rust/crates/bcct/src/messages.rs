@@ -541,23 +541,31 @@ pub struct Messages {
     pub update: UpdateTexts,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FailureCopy {
+    pub head: &'static str,
+    pub reason: &'static str,
+    pub next: &'static str,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct StopFailureTexts {
-    pub who: fn(Option<&str>) -> String,
-    pub usage_limit: fn(&str) -> String,
-    pub throttle: fn(&str) -> String,
-    pub billing: fn(&str) -> String,
-    pub account_on_hold: fn(&str) -> String,
-    pub authentication: fn(&str) -> String,
-    pub oauth_org_not_allowed: fn(&str) -> String,
-    pub cloud_credential: fn(&str) -> String,
-    pub server_error: fn(&str) -> String,
-    pub invalid_request: fn(&str, Option<&str>) -> String,
-    pub unknown: fn(&str, Option<&str>) -> String,
-    pub continues_by_itself: fn(u32, &str) -> String,
-    pub back_will_not_continue: fn(u32, &str) -> String,
-    pub back_on_will_not_continue: fn(&str) -> String,
-    pub back_weekday_will_not_continue: fn(&str) -> String,
+    pub title: fn(&str, Option<&str>) -> String,
+    pub reason_label: &'static str,
+    pub back_label: &'static str,
+    pub next_label: &'static str,
+    pub usage_limit: FailureCopy,
+    pub throttle: FailureCopy,
+    pub billing: FailureCopy,
+    pub account_on_hold: FailureCopy,
+    pub authentication: FailureCopy,
+    pub oauth_org_not_allowed: FailureCopy,
+    pub cloud_credential: FailureCopy,
+    pub server_error: FailureCopy,
+    pub invalid_request: FailureCopy,
+    pub unknown: FailureCopy,
+    pub next_continues_by_itself: fn(u32, &str) -> String,
+    pub back_today: fn(u32, &str) -> String,
     pub clock: fn(u32, u32) -> String,
     pub date_clock: fn(u32, u32, u32, u32) -> String,
     pub weekday_clock: fn(u32, u32, u32) -> String,

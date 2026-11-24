@@ -4,11 +4,11 @@ use crate::setup_run::SET_FLAG;
 use crate::update::UPDATE_COMMAND;
 
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
-    HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed, QuietPresets,
-    SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices, StatuslineDetail,
-    StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts,
-    TranscriptionModels, UpdateTexts, format_delay,
+    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FailureCopy, FixTexts, HealthDetail,
+    HealthGroupTitles, HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed,
+    QuietPresets, SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices,
+    StatuslineDetail, StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles,
+    StopFailureTexts, TranscriptionModels, UpdateTexts, format_delay,
 };
 
 const WEEKDAYS: [&str; 7] = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
@@ -818,49 +818,80 @@ pub(super) const MESSAGES: Messages = Messages {
         input: "entrada inesperada do Claude Code",
     },
     stop_failure: StopFailureTexts {
-        who: |instance| match instance {
-            Some(name) => format!("A instância [{name}] do Claude"),
-            None => "O Claude".to_owned(),
+        title: |head, instance| match instance {
+            Some(name) => format!("{head} · o Claude parou · [{name}]"),
+            None => format!("{head} · o Claude parou"),
         },
-        usage_limit: |who| format!("⚠️ {who} parou: o limite de uso do seu plano foi atingido"),
-        throttle: |who| {
+        reason_label: "Motivo",
+        back_label: "Volta",
+        next_label: "Depois",
+        usage_limit: FailureCopy {
+            head: "🪫 **Cota esgotada**",
+            reason: "o limite de uso do seu plano foi atingido",
+            next: "não continua sozinho, retome no terminal",
+        },
+        throttle: FailureCopy {
+            head: "🐢 **API lenta**",
+            reason: "a API está limitando as requisições (não é o limite de uso do seu plano)",
+            next: "tente de novo no terminal",
+        },
+        billing: FailureCopy {
+            head: "💲 **Cobrança**",
+            reason: "há um problema de cobrança na sua conta",
+            next: "confira a cobrança do seu plano e retome no terminal",
+        },
+        account_on_hold: FailureCopy {
+            head: "🚫 **Conta suspensa**",
+            reason: "sua conta está suspensa",
+            next: "confira a situação da conta e retome no terminal",
+        },
+        authentication: FailureCopy {
+            head: "🔑 **Login**",
+            reason: "a autenticação falhou",
+            next: "entre de novo no terminal",
+        },
+        oauth_org_not_allowed: FailureCopy {
+            head: "🏢 **Organização sem acesso**",
+            reason: "sua organização não pode usar este login",
+            next: "entre com outra conta no terminal",
+        },
+        cloud_credential: FailureCopy {
+            head: "🔧 **Credenciais da nuvem**",
+            reason: "não foi possível carregar as credenciais do provedor de nuvem",
+            next: "confira as credenciais da nuvem e retome no terminal",
+        },
+        server_error: FailureCopy {
+            head: "🌩️ **API instável**",
+            reason: "a API continua falhando (erro de servidor)",
+            next: "tente de novo no terminal",
+        },
+        invalid_request: FailureCopy {
+            head: "⛔ **Requisição recusada**",
+            reason: "a API recusou a requisição",
+            next: "revise o pedido e tente de novo no terminal",
+        },
+        unknown: FailureCopy {
+            head: "💥 **Erro inesperado**",
+            reason: "erro inesperado da API",
+            next: "tente de novo no terminal",
+        },
+        next_continues_by_itself: |hour, when| {
+            format!("continua sozinho {} {when}", portuguese_at(hour))
+        },
+        back_today: |hour, when| format!("{} {when}", portuguese_at(hour)),
+        clock: |hour, minute| format!("{hour:02}:{minute:02}"),
+        date_clock: |month, day, hour, minute| {
             format!(
-                "⚠️ {who} parou: a API está limitando as requisições (não é o limite de uso do seu plano)"
-            )
-        },
-        billing: |who| format!("⚠️ {who} parou: há um problema de cobrança na sua conta"),
-        account_on_hold: |who| format!("⚠️ {who} parou: sua conta está suspensa"),
-        authentication: |who| format!("⚠️ {who} parou: a autenticação falhou, entre de novo"),
-        oauth_org_not_allowed: |who| {
-            format!("⚠️ {who} parou: sua organização não pode usar este login")
-        },
-        cloud_credential: |who| {
-            format!("⚠️ {who} parou: não foi possível carregar as credenciais do provedor de nuvem")
-        },
-        server_error: |who| format!("⚠️ {who} parou: a API continua falhando (erro de servidor)"),
-        invalid_request: |who, detail| match detail {
-            Some(line) => format!("⚠️ {who} parou: a API recusou a requisição ({line})"),
-            None => format!("⚠️ {who} parou: a API recusou a requisição"),
-        },
-        unknown: |who, detail| match detail {
-            Some(line) => format!("⚠️ {who} parou por um erro: {line}"),
-            None => format!("⚠️ {who} parou por um erro desconhecido"),
-        },
-        continues_by_itself: |hour, when| {
-            format!(" · continua sozinho {} {when}", portuguese_at(hour))
-        },
-        back_will_not_continue: |hour, when| {
-            format!(
-                " · volta {} {when} · não continua sozinho",
+                "{day:02}/{month:02} {} {hour:02}:{minute:02}",
                 portuguese_at(hour)
             )
         },
-        back_on_will_not_continue: |when| format!(" · volta em {when} · não continua sozinho"),
-        back_weekday_will_not_continue: |when| format!(" · volta {when} · não continua sozinho"),
-        clock: |hour, minute| format!("{hour:02}:{minute:02}"),
-        date_clock: |month, day, hour, minute| format!("{day:02}/{month:02} {hour:02}:{minute:02}"),
         weekday_clock: |weekday, hour, minute| {
-            format!("{} {hour:02}:{minute:02}", portuguese_weekday(weekday))
+            format!(
+                "{} {} {hour:02}:{minute:02}",
+                portuguese_weekday(weekday),
+                portuguese_at(hour)
+            )
         },
         failure_released: |instance, text| format!("Aviso de erro de [{instance}] solto: {text}"),
         waiting_released: |instance| format!("Aviso de espera de [{instance}] solto"),

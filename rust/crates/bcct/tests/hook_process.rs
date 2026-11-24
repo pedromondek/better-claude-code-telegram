@@ -646,7 +646,7 @@ fn leaves_a_notice_due_right_away_on_stop_failure_and_prints_nothing() {
 
     assert_eq!(
         notice["text"],
-        "⚠️ Claude stopped: there is a billing problem with your account"
+        "💲 **Billing** · Claude stopped\n> 📋 **Reason:** there is a billing problem with your account\n> 👉 **Next:** check the billing of your plan, then resume in the terminal"
     );
     assert_eq!(notice["dueAt"], notice["createdAt"]);
     assert_eq!(notice["kind"], "failure");

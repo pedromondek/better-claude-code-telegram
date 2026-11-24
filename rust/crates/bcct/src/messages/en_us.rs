@@ -4,11 +4,11 @@ use crate::setup_run::SET_FLAG;
 use crate::update::UPDATE_COMMAND;
 
 use super::{
-    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FixTexts, HealthDetail, HealthGroupTitles,
-    HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed, QuietPresets,
-    SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices, StatuslineDetail,
-    StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles, StopFailureTexts,
-    TranscriptionModels, UpdateTexts, format_delay,
+    BcctChoices, BcctHints, ChangeKinds, ChannelNames, FailureCopy, FixTexts, HealthDetail,
+    HealthGroupTitles, HealthLabels, HookReasons, Messages, PairingChoices, PythonEnvFailed,
+    QuietPresets, SettingHints, SettingsKeys, StatuslineChoiceHints, StatuslineChoices,
+    StatuslineDetail, StatuslineOursChoices, StatuslineOursHints, StepLabels, StepTitles,
+    StopFailureTexts, TranscriptionModels, UpdateTexts, format_delay,
 };
 
 const MONTHS: [&str; 12] = [
@@ -818,42 +818,65 @@ pub(super) const MESSAGES: Messages = Messages {
         input: "unexpected input from Claude Code",
     },
     stop_failure: StopFailureTexts {
-        who: |instance| match instance {
-            Some(name) => format!("The Claude instance [{name}]"),
-            None => "Claude".to_owned(),
+        title: |head, instance| match instance {
+            Some(name) => format!("{head} · Claude stopped · [{name}]"),
+            None => format!("{head} · Claude stopped"),
         },
-        usage_limit: |who| format!("⚠️ {who} stopped: the usage limit of your plan was reached"),
-        throttle: |who| {
-            format!("⚠️ {who} stopped: the API is limiting requests (not your plan's usage limit)")
+        reason_label: "Reason",
+        back_label: "Back",
+        next_label: "Next",
+        usage_limit: FailureCopy {
+            head: "🪫 **Quota used up**",
+            reason: "the usage limit of your plan was reached",
+            next: "does not continue by itself; resume it in the terminal",
         },
-        billing: |who| format!("⚠️ {who} stopped: there is a billing problem with your account"),
-        account_on_hold: |who| format!("⚠️ {who} stopped: your account is on hold"),
-        authentication: |who| format!("⚠️ {who} stopped: authentication failed, log in again"),
-        oauth_org_not_allowed: |who| {
-            format!("⚠️ {who} stopped: your organization is not allowed to use this login")
+        throttle: FailureCopy {
+            head: "🐢 **API slowed down**",
+            reason: "the API is limiting requests (not your plan's usage limit)",
+            next: "try again in the terminal",
         },
-        cloud_credential: |who| {
-            format!("⚠️ {who} stopped: the cloud provider credentials could not be loaded")
+        billing: FailureCopy {
+            head: "💲 **Billing**",
+            reason: "there is a billing problem with your account",
+            next: "check the billing of your plan, then resume in the terminal",
         },
-        server_error: |who| format!("⚠️ {who} stopped: the API keeps failing (server error)"),
-        invalid_request: |who, detail| match detail {
-            Some(line) => format!("⚠️ {who} stopped: the API rejected the request ({line})"),
-            None => format!("⚠️ {who} stopped: the API rejected the request"),
+        account_on_hold: FailureCopy {
+            head: "🚫 **Account on hold**",
+            reason: "your account is on hold",
+            next: "check the status of your account, then resume in the terminal",
         },
-        unknown: |who, detail| match detail {
-            Some(line) => format!("⚠️ {who} stopped on an error: {line}"),
-            None => format!("⚠️ {who} stopped on an unknown error"),
+        authentication: FailureCopy {
+            head: "🔑 **Login**",
+            reason: "authentication failed",
+            next: "log in again in the terminal",
         },
-        continues_by_itself: |_hour, when| format!(" · it continues by itself at {when}"),
-        back_will_not_continue: |_hour, when| {
-            format!(" · back at {when} · it will not continue by itself")
+        oauth_org_not_allowed: FailureCopy {
+            head: "🏢 **Organization without access**",
+            reason: "your organization is not allowed to use this login",
+            next: "log in with another account in the terminal",
         },
-        back_on_will_not_continue: |when| {
-            format!(" · back on {when} · it will not continue by itself")
+        cloud_credential: FailureCopy {
+            head: "🔧 **Cloud credentials**",
+            reason: "the cloud provider credentials could not be loaded",
+            next: "check the cloud provider credentials, then resume in the terminal",
         },
-        back_weekday_will_not_continue: |when| {
-            format!(" · back {when} · it will not continue by itself")
+        server_error: FailureCopy {
+            head: "🌩️ **API unstable**",
+            reason: "the API keeps failing (server error)",
+            next: "try again in the terminal",
         },
+        invalid_request: FailureCopy {
+            head: "⛔ **Request rejected**",
+            reason: "the API rejected the request",
+            next: "review the request and try again in the terminal",
+        },
+        unknown: FailureCopy {
+            head: "💥 **Unexpected error**",
+            reason: "unexpected API error",
+            next: "try again in the terminal",
+        },
+        next_continues_by_itself: |_hour, when| format!("continues by itself at {when}"),
+        back_today: |_hour, when| format!("at {when}"),
         clock: english_clock,
         date_clock: |month, day, hour, minute| {
             format!(

@@ -9,7 +9,7 @@ use crate::config::{read_config, read_locale};
 use crate::files::{create_private_dir, read_json, write_private};
 use crate::hook::{Abort, Context, millis};
 use crate::js::{join_path, js_trim, stringify};
-use crate::messages::{StopFailureTexts, messages_for};
+use crate::messages::{FailureCopy, StopFailureTexts, messages_for};
 use crate::paths::PINGS_FOLDER;
 use crate::settings::SETTINGS_FILE;
 use crate::usage_reset::{Moment, Reset, parse};
@@ -30,6 +30,12 @@ const MANAGED_FILE: &str = "managed-settings.json";
 const DROP_IN_FOLDER: &str = "managed-settings.d";
 const JSON_SUFFIX: &str = ".json";
 const DETAIL_MAX_CHARS: usize = 200;
+const CODE_FENCE: char = '`';
+const MARKDOWN_MARKUP: [char; 3] = ['\\', '*', CODE_FENCE];
+const QUOTE_PREFIX: &str = "> ";
+const REASON_EMOJI: &str = "📋";
+const BACK_EMOJI: &str = "🕙";
+const NEXT_EMOJI: &str = "👉";
 const NOT_YOUR_LIMIT: &str = "not your usage limit";
 const MODEL_LIMIT_WORDS: [&str; 2] = ["opus", "sonnet"];
 
@@ -44,7 +50,13 @@ pub const MANAGED_SETTINGS_DIR: &str = "/etc/claude-code";
 enum Policy {
     Always,
     Guarded,
-    Never,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Handling {
+    policy: Policy,
+    copy: FailureCopy,
+    shows_detail: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,18 +93,26 @@ impl Kind {
         }
     }
 
-    fn policy(self) -> Policy {
-        match self {
-            Self::UsageLimit
-            | Self::Billing
-            | Self::AccountOnHold
-            | Self::Authentication
-            | Self::OauthOrgNotAllowed
-            | Self::InvalidRequest
-            | Self::CloudCredential => Policy::Always,
-            Self::Throttle | Self::ServerError | Self::Unknown => Policy::Guarded,
-            Self::ModelNotFound | Self::MaxOutputTokens => Policy::Never,
-        }
+    fn handling(self, texts: &StopFailureTexts) -> Option<Handling> {
+        let (policy, copy, shows_detail) = match self {
+            Self::UsageLimit => (Policy::Always, texts.usage_limit, false),
+            Self::Billing => (Policy::Always, texts.billing, false),
+            Self::AccountOnHold => (Policy::Always, texts.account_on_hold, false),
+            Self::Authentication => (Policy::Always, texts.authentication, false),
+            Self::OauthOrgNotAllowed => (Policy::Always, texts.oauth_org_not_allowed, false),
+            Self::CloudCredential => (Policy::Always, texts.cloud_credential, false),
+            Self::InvalidRequest => (Policy::Always, texts.invalid_request, true),
+            Self::Throttle => (Policy::Guarded, texts.throttle, false),
+            Self::ServerError => (Policy::Guarded, texts.server_error, false),
+            Self::Unknown => (Policy::Guarded, texts.unknown, true),
+            Self::ModelNotFound | Self::MaxOutputTokens => return None,
+        };
+
+        Some(Handling {
+            policy,
+            copy,
+            shows_detail,
+        })
     }
 
     fn key(self) -> &'static str {
@@ -233,6 +253,27 @@ fn first_line(text: &str) -> Option<String> {
         .map(|line| line.chars().take(DETAIL_MAX_CHARS).collect())
 }
 
+fn detail_line(detail: &str) -> String {
+    if detail.contains(CODE_FENCE) {
+        literal_markdown(detail)
+    } else {
+        format!("{CODE_FENCE}{detail}{CODE_FENCE}")
+    }
+}
+
+fn literal_markdown(text: &str) -> String {
+    let mut escaped = String::new();
+
+    for character in text.chars() {
+        if MARKDOWN_MARKUP.contains(&character) {
+            escaped.push('\\');
+        }
+        escaped.push(character);
+    }
+
+    escaped
+}
+
 fn read_flag(file: &Path) -> Option<bool> {
     read_json(file)?.get(AUTO_CONTINUE_KEY)?.as_bool()
 }
@@ -277,54 +318,84 @@ fn with_zone(when: String, zone: Option<&str>) -> String {
     }
 }
 
-fn usage_tail(texts: &StopFailureTexts, text: &str, continues: bool) -> String {
+struct Outlook {
+    back: Option<String>,
+    next: String,
+}
+
+fn usage_outlook(texts: &StopFailureTexts, text: &str, continues: bool) -> Outlook {
+    let will_not_continue = texts.usage_limit.next.to_owned();
     let Some(Reset { moment, zone }) = parse(text) else {
-        return String::new();
+        return Outlook {
+            back: None,
+            next: will_not_continue,
+        };
     };
     let zone = zone.as_deref();
 
     match moment {
         Moment::Today(clock) => {
-            let when = with_zone((texts.clock)(clock.hour, clock.minute), zone);
-
-            if continues && !mentions_a_model_limit(text) {
-                (texts.continues_by_itself)(clock.hour, &when)
+            let time = (texts.clock)(clock.hour, clock.minute);
+            let back = (texts.back_today)(clock.hour, &with_zone(time.clone(), zone));
+            let next = if continues && !mentions_a_model_limit(text) {
+                (texts.next_continues_by_itself)(clock.hour, &time)
             } else {
-                (texts.back_will_not_continue)(clock.hour, &when)
+                will_not_continue
+            };
+
+            Outlook {
+                back: Some(back),
+                next,
             }
         }
-        Moment::Dated { month, day, clock } => (texts.back_on_will_not_continue)(&with_zone(
-            (texts.date_clock)(month, day, clock.hour, clock.minute),
-            zone,
-        )),
-        Moment::Weekday { weekday, clock } => (texts.back_weekday_will_not_continue)(&with_zone(
-            (texts.weekday_clock)(weekday, clock.hour, clock.minute),
-            zone,
-        )),
+        Moment::Dated { month, day, clock } => Outlook {
+            back: Some(with_zone(
+                (texts.date_clock)(month, day, clock.hour, clock.minute),
+                zone,
+            )),
+            next: will_not_continue,
+        },
+        Moment::Weekday { weekday, clock } => Outlook {
+            back: Some(with_zone(
+                (texts.weekday_clock)(weekday, clock.hour, clock.minute),
+                zone,
+            )),
+            next: will_not_continue,
+        },
     }
+}
+
+fn field(emoji: &str, label: &str, value: &str) -> String {
+    format!("{QUOTE_PREFIX}{emoji} **{label}:** {value}")
 }
 
 fn notice_text(
     texts: &StopFailureTexts,
-    kind: Kind,
-    who: &str,
+    handling: &Handling,
+    instance: Option<&str>,
     detail: Option<&str>,
-    tail: &str,
+    outlook: &Outlook,
 ) -> String {
-    let head = match kind {
-        Kind::UsageLimit => (texts.usage_limit)(who),
-        Kind::Throttle => (texts.throttle)(who),
-        Kind::Billing => (texts.billing)(who),
-        Kind::AccountOnHold => (texts.account_on_hold)(who),
-        Kind::Authentication => (texts.authentication)(who),
-        Kind::OauthOrgNotAllowed => (texts.oauth_org_not_allowed)(who),
-        Kind::InvalidRequest => (texts.invalid_request)(who, detail),
-        Kind::CloudCredential => (texts.cloud_credential)(who),
-        Kind::ServerError => (texts.server_error)(who),
-        Kind::Unknown | Kind::ModelNotFound | Kind::MaxOutputTokens => (texts.unknown)(who, detail),
-    };
+    let copy = handling.copy;
+    let label = instance.map(literal_markdown);
+    let mut lines = vec![
+        (texts.title)(copy.head, label.as_deref()),
+        field(REASON_EMOJI, texts.reason_label, copy.reason),
+    ];
 
-    format!("{head}{tail}")
+    if handling.shows_detail
+        && let Some(line) = detail
+    {
+        lines.push(format!("{QUOTE_PREFIX}{}", detail_line(line)));
+    }
+
+    if let Some(moment) = &outlook.back {
+        lines.push(field(BACK_EMOJI, texts.back_label, moment));
+    }
+
+    lines.push(field(NEXT_EMOJI, texts.next_label, &outlook.next));
+
+    lines.join("\n")
 }
 
 fn due(streak: &mut Streak, now: u64) -> bool {
@@ -355,15 +426,16 @@ pub(crate) fn record(
     let combined = format!("{message}\n{details}");
     let kind = Kind::of(text_field(input, "error"), &combined);
 
-    if kind.policy() == Policy::Never {
+    let texts = &messages_for(read_locale(&read_config(&ctx.app_dir))).stop_failure;
+    let Some(handling) = kind.handling(texts) else {
         return Ok(());
-    }
+    };
 
     let pings_dir = ctx.app_dir.join(PINGS_FOLDER);
     let mut mark = Mark::load(&mark_file(&pings_dir, key));
     let before = mark.to_value();
 
-    let notify = match kind.policy() {
+    let notify = match handling.policy {
         Policy::Guarded => {
             let streak = mark.streaks.entry(kind.key().to_owned()).or_insert(Streak {
                 count: 0,
@@ -372,7 +444,7 @@ pub(crate) fn record(
 
             due(streak, now)
         }
-        Policy::Always | Policy::Never => true,
+        Policy::Always => true,
     };
 
     if kind == Kind::UsageLimit {
@@ -380,17 +452,19 @@ pub(crate) fn record(
     }
 
     if notify {
-        let texts = &messages_for(read_locale(&read_config(&ctx.app_dir))).stop_failure;
-        let who = (texts.who)(instance.as_ref().and_then(Value::as_str));
+        let label = instance.as_ref().and_then(Value::as_str);
         let detail = first_line(message).or_else(|| first_line(details));
-        let tail = if kind == Kind::UsageLimit {
+        let outlook = if kind == Kind::UsageLimit {
             let continues = auto_continue_enabled(ctx) && mark.limit_hits <= AUTOMATIC_CONTINUES;
 
-            usage_tail(texts, &combined, continues)
+            usage_outlook(texts, &combined, continues)
         } else {
-            String::new()
+            Outlook {
+                back: None,
+                next: handling.copy.next.to_owned(),
+            }
         };
-        let text = notice_text(texts, kind, &who, detail.as_deref(), &tail);
+        let text = notice_text(texts, &handling, label, detail.as_deref(), &outlook);
         let created = millis(now);
         let record = json!({
             "sessionId": session,
@@ -423,10 +497,70 @@ mod tests {
 
     const NOW: u64 = 1_795_003_200_000;
     const SESSION_LIMIT: &str = "You've hit your session limit · resets 2:20pm (America/Sao_Paulo)";
-    const USAGE_HEAD: &str = "⚠️ Claude stopped: the usage limit of your plan was reached";
-    const CONTINUES: &str = "it continues by itself at 2:20 PM (America/Sao_Paulo)";
-    const BACK_TODAY: &str = "back at 2:20 PM (America/Sao_Paulo)";
-    const WILL_NOT: &str = "will not continue by itself";
+    const TITLE: &str = "🪫 **Quota used up** · Claude stopped";
+    const TITLE_PT: &str = "🪫 **Cota esgotada** · o Claude parou";
+    const THROTTLE: &str = "🐢 **API slowed down** · Claude stopped";
+    const SERVER: &str = "🌩️ **API unstable** · Claude stopped";
+    const BILLING: &str = "💲 **Billing** · Claude stopped";
+    const ON_HOLD: &str = "🚫 **Account on hold** · Claude stopped";
+    const CLOUD: &str = "🔧 **Cloud credentials** · Claude stopped";
+    const LOGIN: &str = "🔑 **Login** · Claude stopped";
+    const ORGANIZATION: &str = "🏢 **Organization without access** · Claude stopped";
+    const INVALID: &str = "⛔ **Request rejected** · Claude stopped";
+    const UNEXPECTED: &str = "💥 **Unexpected error** · Claude stopped";
+    const SERVER_PT: &str = "🌩️ **API instável** · o Claude parou";
+    const BILLING_PT: &str = "💲 **Cobrança** · o Claude parou";
+    const ON_HOLD_PT: &str = "🚫 **Conta suspensa** · o Claude parou";
+    const CLOUD_PT: &str = "🔧 **Credenciais da nuvem** · o Claude parou";
+    const LOGIN_PT: &str = "🔑 **Login** · o Claude parou";
+    const ORGANIZATION_PT: &str = "🏢 **Organização sem acesso** · o Claude parou";
+    const INVALID_PT: &str = "⛔ **Requisição recusada** · o Claude parou";
+    const UNEXPECTED_PT: &str = "💥 **Erro inesperado** · o Claude parou";
+    const USAGE_REASON: &str = "Reason: the usage limit of your plan was reached";
+    const USAGE_REASON_PT: &str = "Motivo: o limite de uso do seu plano foi atingido";
+    const CONTINUES: &str = "Next: continues by itself at 2:20 PM";
+    const BACK_TODAY: &str = "Back: at 2:20 PM (America/Sao_Paulo)";
+    const WILL_NOT: &str = "Next: does not continue by itself; resume it in the terminal";
+    const WILL_NOT_PT: &str = "Depois: não continua sozinho, retome no terminal";
+
+    fn field(line: &str) -> String {
+        for (label, emoji) in [
+            ("Reason", "📋"),
+            ("Back", "🕙"),
+            ("Next", "👉"),
+            ("Motivo", "📋"),
+            ("Volta", "🕙"),
+            ("Depois", "👉"),
+        ] {
+            if let Some(rest) = line.strip_prefix(&format!("{label}: ")) {
+                return format!("> {emoji} **{label}:** {rest}");
+            }
+        }
+
+        format!("> {line}")
+    }
+
+    fn card(title: &str, lines: &[&str]) -> String {
+        let fields: Vec<String> = lines.iter().map(|line| field(line)).collect();
+
+        format!("{title}\n{}", fields.join("\n"))
+    }
+
+    fn usage_card(back: Option<&str>, next: &str) -> String {
+        let mut lines = vec![USAGE_REASON];
+        lines.extend(back);
+        lines.push(next);
+
+        card(TITLE, &lines)
+    }
+
+    fn usage_card_pt(back: Option<&str>, next: &str) -> String {
+        let mut lines = vec![USAGE_REASON_PT];
+        lines.extend(back);
+        lines.push(next);
+
+        card(TITLE_PT, &lines)
+    }
 
     struct World {
         folder: tempfile::TempDir,
@@ -562,76 +696,36 @@ mod tests {
     }
 
     #[test]
-    fn writes_every_portuguese_line() {
+    fn writes_the_portuguese_labels_titles_and_moments() {
         let texts = &messages_for(Locale::PtBr).stop_failure;
         let lines = [
             (
-                (texts.usage_limit)("X"),
-                "⚠️ X parou: o limite de uso do seu plano foi atingido",
+                (texts.title)("🪫 **Cota esgotada**", Some("api")),
+                "🪫 **Cota esgotada** · o Claude parou · [api]",
             ),
             (
-                (texts.throttle)("X"),
-                "⚠️ X parou: a API está limitando as requisições (não é o limite de uso do seu plano)",
+                (texts.title)("🪫 **Cota esgotada**", None),
+                "🪫 **Cota esgotada** · o Claude parou",
+            ),
+            (texts.reason_label.to_owned(), "Motivo"),
+            (texts.back_label.to_owned(), "Volta"),
+            (texts.next_label.to_owned(), "Depois"),
+            (
+                (texts.next_continues_by_itself)(1, "13:05"),
+                "continua sozinho à 13:05",
             ),
             (
-                (texts.billing)("X"),
-                "⚠️ X parou: há um problema de cobrança na sua conta",
+                (texts.next_continues_by_itself)(2, "14:05"),
+                "continua sozinho às 14:05",
             ),
-            (
-                (texts.account_on_hold)("X"),
-                "⚠️ X parou: sua conta está suspensa",
-            ),
-            (
-                (texts.authentication)("X"),
-                "⚠️ X parou: a autenticação falhou, entre de novo",
-            ),
-            (
-                (texts.oauth_org_not_allowed)("X"),
-                "⚠️ X parou: sua organização não pode usar este login",
-            ),
-            (
-                (texts.cloud_credential)("X"),
-                "⚠️ X parou: não foi possível carregar as credenciais do provedor de nuvem",
-            ),
-            (
-                (texts.server_error)("X"),
-                "⚠️ X parou: a API continua falhando (erro de servidor)",
-            ),
-            (
-                (texts.invalid_request)("X", Some("y")),
-                "⚠️ X parou: a API recusou a requisição (y)",
-            ),
-            (
-                (texts.invalid_request)("X", None),
-                "⚠️ X parou: a API recusou a requisição",
-            ),
-            ((texts.unknown)("X", Some("y")), "⚠️ X parou por um erro: y"),
-            (
-                (texts.unknown)("X", None),
-                "⚠️ X parou por um erro desconhecido",
-            ),
-            ((texts.who)(Some("api")), "A instância [api] do Claude"),
-            ((texts.who)(None), "O Claude"),
-            (
-                (texts.continues_by_itself)(1, "13:05"),
-                " · continua sozinho à 13:05",
-            ),
-            (
-                (texts.back_will_not_continue)(2, "14:05"),
-                " · volta às 14:05 · não continua sozinho",
-            ),
-            (
-                (texts.back_on_will_not_continue)("20/11 09:00"),
-                " · volta em 20/11 09:00 · não continua sozinho",
-            ),
-            (
-                (texts.back_weekday_will_not_continue)("sex 09:00"),
-                " · volta sex 09:00 · não continua sozinho",
-            ),
+            ((texts.back_today)(1, "01:05"), "à 01:05"),
+            ((texts.back_today)(2, "14:05"), "às 14:05"),
             ((texts.clock)(9, 5), "09:05"),
-            ((texts.date_clock)(11, 20, 9, 5), "20/11 09:05"),
-            ((texts.weekday_clock)(4, 9, 5), "sex 09:05"),
-            ((texts.weekday_clock)(9, 9, 5), "9 09:05"),
+            ((texts.date_clock)(11, 20, 9, 5), "20/11 às 09:05"),
+            ((texts.date_clock)(11, 20, 1, 5), "20/11 à 01:05"),
+            ((texts.weekday_clock)(4, 9, 5), "sex às 09:05"),
+            ((texts.weekday_clock)(4, 1, 5), "sex à 01:05"),
+            ((texts.weekday_clock)(9, 9, 5), "9 às 09:05"),
             (
                 (texts.failure_released)("api", "y"),
                 "Aviso de erro de [api] solto: y",
@@ -648,10 +742,25 @@ mod tests {
     }
 
     #[test]
-    fn writes_the_english_instance_and_the_hours_around_midnight_and_noon() {
+    fn writes_the_english_labels_titles_and_the_hours_around_midnight_and_noon() {
         let texts = &messages_for(Locale::EnUs).stop_failure;
 
-        assert_eq!((texts.who)(Some("api")), "The Claude instance [api]");
+        assert_eq!(
+            (texts.title)("🪫 **Quota used up**", Some("api")),
+            "🪫 **Quota used up** · Claude stopped · [api]"
+        );
+        assert_eq!(
+            (texts.title)("🪫 **Quota used up**", None),
+            "🪫 **Quota used up** · Claude stopped"
+        );
+        assert_eq!(texts.reason_label, "Reason");
+        assert_eq!(texts.back_label, "Back");
+        assert_eq!(texts.next_label, "Next");
+        assert_eq!(
+            (texts.next_continues_by_itself)(14, "2:05 PM"),
+            "continues by itself at 2:05 PM"
+        );
+        assert_eq!((texts.back_today)(14, "2:05 PM"), "at 2:05 PM");
         assert_eq!((texts.clock)(0, 5), "12:05 AM");
         assert_eq!((texts.clock)(12, 5), "12:05 PM");
         assert_eq!((texts.clock)(23, 59), "11:59 PM");
@@ -661,43 +770,358 @@ mod tests {
         assert_eq!((texts.weekday_clock)(9, 9, 5), "9 9:05 AM");
     }
 
+    fn render(
+        texts: &StopFailureTexts,
+        kind: Kind,
+        instance: Option<&str>,
+        detail: Option<&str>,
+    ) -> String {
+        let handling = kind.handling(texts).unwrap();
+        let outlook = Outlook {
+            back: None,
+            next: handling.copy.next.to_owned(),
+        };
+
+        notice_text(texts, &handling, instance, detail, &outlook)
+    }
+
     #[test]
-    fn sends_the_line_of_each_error_that_always_notifies() {
-        for (error, expected) in [
+    fn handles_only_the_kinds_that_notify() {
+        for locale in [Locale::PtBr, Locale::EnUs] {
+            let texts = &messages_for(locale).stop_failure;
+            let policies = [
+                (Kind::UsageLimit, Some(Policy::Always)),
+                (Kind::Throttle, Some(Policy::Guarded)),
+                (Kind::Billing, Some(Policy::Always)),
+                (Kind::AccountOnHold, Some(Policy::Always)),
+                (Kind::Authentication, Some(Policy::Always)),
+                (Kind::OauthOrgNotAllowed, Some(Policy::Always)),
+                (Kind::InvalidRequest, Some(Policy::Always)),
+                (Kind::CloudCredential, Some(Policy::Always)),
+                (Kind::ServerError, Some(Policy::Guarded)),
+                (Kind::Unknown, Some(Policy::Guarded)),
+                (Kind::ModelNotFound, None),
+                (Kind::MaxOutputTokens, None),
+            ];
+
+            for (kind, policy) in policies {
+                assert_eq!(
+                    kind.handling(texts).map(|handling| handling.policy),
+                    policy,
+                    "{kind:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn shows_the_detail_only_for_an_invalid_request_and_an_unexpected_error() {
+        let texts = &messages_for(Locale::EnUs).stop_failure;
+        let shown = [Kind::InvalidRequest, Kind::Unknown];
+        let hidden = [
+            Kind::UsageLimit,
+            Kind::Throttle,
+            Kind::Billing,
+            Kind::AccountOnHold,
+            Kind::Authentication,
+            Kind::OauthOrgNotAllowed,
+            Kind::CloudCredential,
+            Kind::ServerError,
+        ];
+
+        for kind in shown {
+            assert!(render(texts, kind, None, Some("d")).contains("\n> `d`\n"));
+        }
+
+        for kind in hidden {
+            assert!(!render(texts, kind, None, Some("d")).contains("`d`"));
+        }
+    }
+
+    #[test]
+    fn writes_the_full_card_of_each_kind_in_portuguese() {
+        let texts = &messages_for(Locale::PtBr).stop_failure;
+        let cards = [
+            (
+                Kind::Throttle,
+                None,
+                "🐢 **API lenta** · o Claude parou · [p]\n> 📋 **Motivo:** a API está limitando as requisições (não é o limite de uso do seu plano)\n> 👉 **Depois:** tente de novo no terminal",
+            ),
+            (
+                Kind::ServerError,
+                None,
+                "🌩️ **API instável** · o Claude parou · [p]\n> 📋 **Motivo:** a API continua falhando (erro de servidor)\n> 👉 **Depois:** tente de novo no terminal",
+            ),
+            (
+                Kind::Billing,
+                None,
+                "💲 **Cobrança** · o Claude parou · [p]\n> 📋 **Motivo:** há um problema de cobrança na sua conta\n> 👉 **Depois:** confira a cobrança do seu plano e retome no terminal",
+            ),
+            (
+                Kind::AccountOnHold,
+                None,
+                "🚫 **Conta suspensa** · o Claude parou · [p]\n> 📋 **Motivo:** sua conta está suspensa\n> 👉 **Depois:** confira a situação da conta e retome no terminal",
+            ),
+            (
+                Kind::CloudCredential,
+                None,
+                "🔧 **Credenciais da nuvem** · o Claude parou · [p]\n> 📋 **Motivo:** não foi possível carregar as credenciais do provedor de nuvem\n> 👉 **Depois:** confira as credenciais da nuvem e retome no terminal",
+            ),
+            (
+                Kind::Authentication,
+                None,
+                "🔑 **Login** · o Claude parou · [p]\n> 📋 **Motivo:** a autenticação falhou\n> 👉 **Depois:** entre de novo no terminal",
+            ),
+            (
+                Kind::OauthOrgNotAllowed,
+                None,
+                "🏢 **Organização sem acesso** · o Claude parou · [p]\n> 📋 **Motivo:** sua organização não pode usar este login\n> 👉 **Depois:** entre com outra conta no terminal",
+            ),
+            (
+                Kind::InvalidRequest,
+                Some("too long"),
+                "⛔ **Requisição recusada** · o Claude parou · [p]\n> 📋 **Motivo:** a API recusou a requisição\n> `too long`\n> 👉 **Depois:** revise o pedido e tente de novo no terminal",
+            ),
+            (
+                Kind::Unknown,
+                Some("odd"),
+                "💥 **Erro inesperado** · o Claude parou · [p]\n> 📋 **Motivo:** erro inesperado da API\n> `odd`\n> 👉 **Depois:** tente de novo no terminal",
+            ),
+        ];
+
+        for (kind, detail, expected) in cards {
+            assert_eq!(render(texts, kind, Some("p"), detail), expected, "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn writes_the_full_card_of_each_kind_in_english() {
+        let texts = &messages_for(Locale::EnUs).stop_failure;
+        let cards = [
+            (
+                Kind::Throttle,
+                None,
+                "🐢 **API slowed down** · Claude stopped\n> 📋 **Reason:** the API is limiting requests (not your plan's usage limit)\n> 👉 **Next:** try again in the terminal",
+            ),
+            (
+                Kind::ServerError,
+                None,
+                "🌩️ **API unstable** · Claude stopped\n> 📋 **Reason:** the API keeps failing (server error)\n> 👉 **Next:** try again in the terminal",
+            ),
+            (
+                Kind::Billing,
+                None,
+                "💲 **Billing** · Claude stopped\n> 📋 **Reason:** there is a billing problem with your account\n> 👉 **Next:** check the billing of your plan, then resume in the terminal",
+            ),
+            (
+                Kind::AccountOnHold,
+                None,
+                "🚫 **Account on hold** · Claude stopped\n> 📋 **Reason:** your account is on hold\n> 👉 **Next:** check the status of your account, then resume in the terminal",
+            ),
+            (
+                Kind::CloudCredential,
+                None,
+                "🔧 **Cloud credentials** · Claude stopped\n> 📋 **Reason:** the cloud provider credentials could not be loaded\n> 👉 **Next:** check the cloud provider credentials, then resume in the terminal",
+            ),
+            (
+                Kind::Authentication,
+                None,
+                "🔑 **Login** · Claude stopped\n> 📋 **Reason:** authentication failed\n> 👉 **Next:** log in again in the terminal",
+            ),
+            (
+                Kind::OauthOrgNotAllowed,
+                None,
+                "🏢 **Organization without access** · Claude stopped\n> 📋 **Reason:** your organization is not allowed to use this login\n> 👉 **Next:** log in with another account in the terminal",
+            ),
+            (
+                Kind::InvalidRequest,
+                Some("too long"),
+                "⛔ **Request rejected** · Claude stopped\n> 📋 **Reason:** the API rejected the request\n> `too long`\n> 👉 **Next:** review the request and try again in the terminal",
+            ),
+            (
+                Kind::Unknown,
+                Some("odd"),
+                "💥 **Unexpected error** · Claude stopped\n> 📋 **Reason:** unexpected API error\n> `odd`\n> 👉 **Next:** try again in the terminal",
+            ),
+        ];
+
+        for (kind, detail, expected) in cards {
+            assert_eq!(render(texts, kind, None, detail), expected, "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn writes_the_full_usage_limit_card_in_both_languages() {
+        let pt = &messages_for(Locale::PtBr).stop_failure;
+        let en = &messages_for(Locale::EnUs).stop_failure;
+        let outlook = |back: &str, next: &str| Outlook {
+            back: Some(back.to_owned()),
+            next: next.to_owned(),
+        };
+
+        assert_eq!(
+            notice_text(
+                pt,
+                &Kind::UsageLimit.handling(pt).unwrap(),
+                Some("tmp#bcct"),
+                Some("ignored"),
+                &outlook("25/11 às 10:00 (America/Sao_Paulo)", pt.usage_limit.next)
+            ),
+            "🪫 **Cota esgotada** · o Claude parou · [tmp#bcct]\n> 📋 **Motivo:** o limite de uso do seu plano foi atingido\n> 🕙 **Volta:** 25/11 às 10:00 (America/Sao_Paulo)\n> 👉 **Depois:** não continua sozinho, retome no terminal"
+        );
+        assert_eq!(
+            notice_text(
+                en,
+                &Kind::UsageLimit.handling(en).unwrap(),
+                None,
+                None,
+                &outlook("Nov 25, 10:00 AM", en.usage_limit.next)
+            ),
+            "🪫 **Quota used up** · Claude stopped\n> 📋 **Reason:** the usage limit of your plan was reached\n> 🕙 **Back:** Nov 25, 10:00 AM\n> 👉 **Next:** does not continue by itself; resume it in the terminal"
+        );
+    }
+
+    #[test]
+    fn escapes_the_markup_of_the_instance_label_in_the_card_title() {
+        for locale in [Locale::PtBr, Locale::EnUs] {
+            let texts = &messages_for(locale).stop_failure;
+            let card = render(
+                texts,
+                Kind::Billing,
+                Some("fix `parser` \\ **draft**"),
+                None,
+            );
+            let title = card.lines().next().unwrap();
+
+            assert!(
+                title.ends_with("[fix \\`parser\\` \\\\ \\*\\*draft\\*\\*]"),
+                "{locale:?}: {title}"
+            );
+        }
+    }
+
+    #[test]
+    fn sends_the_card_of_each_error_that_always_notifies() {
+        for (error, head, reason, next) in [
             (
                 "billing_error",
-                "⚠️ Claude stopped: there is a billing problem with your account",
+                BILLING,
+                "there is a billing problem with your account",
+                "check the billing of your plan, then resume in the terminal",
             ),
             (
                 "account_on_hold",
-                "⚠️ Claude stopped: your account is on hold",
+                ON_HOLD,
+                "your account is on hold",
+                "check the status of your account, then resume in the terminal",
             ),
             (
                 "authentication_failed",
-                "⚠️ Claude stopped: authentication failed, log in again",
+                LOGIN,
+                "authentication failed",
+                "log in again in the terminal",
             ),
             (
                 "oauth_org_not_allowed",
-                "⚠️ Claude stopped: your organization is not allowed to use this login",
+                ORGANIZATION,
+                "your organization is not allowed to use this login",
+                "log in with another account in the terminal",
             ),
             (
                 "cloud_credential_error",
-                "⚠️ Claude stopped: the cloud provider credentials could not be loaded",
+                CLOUD,
+                "the cloud provider credentials could not be loaded",
+                "check the cloud provider credentials, then resume in the terminal",
             ),
             (
                 "invalid_request",
-                "⚠️ Claude stopped: the API rejected the request (prompt too long)",
+                INVALID,
+                "the API rejected the request",
+                "review the request and try again in the terminal",
             ),
         ] {
             let world = World::new();
+            let detail = if error == "invalid_request" {
+                "`prompt too long`"
+            } else {
+                ""
+            };
+            let reason = format!("Reason: {reason}");
+            let next = format!("Next: {next}");
+            let mut lines = vec![reason.as_str()];
+            lines.extend(Some(detail).filter(|line| !line.is_empty()));
+            lines.push(&next);
+            let expected = card(head, &lines);
 
             for round in ["first", "second"] {
                 assert_eq!(
                     world.fail(error, "prompt too long").as_deref(),
-                    Some(expected),
+                    Some(expected.as_str()),
                     "{error} {round}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn sends_the_portuguese_card_of_each_error_that_always_notifies() {
+        for (error, head, reason, next) in [
+            (
+                "billing_error",
+                BILLING_PT,
+                "há um problema de cobrança na sua conta",
+                "confira a cobrança do seu plano e retome no terminal",
+            ),
+            (
+                "account_on_hold",
+                ON_HOLD_PT,
+                "sua conta está suspensa",
+                "confira a situação da conta e retome no terminal",
+            ),
+            (
+                "authentication_failed",
+                LOGIN_PT,
+                "a autenticação falhou",
+                "entre de novo no terminal",
+            ),
+            (
+                "oauth_org_not_allowed",
+                ORGANIZATION_PT,
+                "sua organização não pode usar este login",
+                "entre com outra conta no terminal",
+            ),
+            (
+                "cloud_credential_error",
+                CLOUD_PT,
+                "não foi possível carregar as credenciais do provedor de nuvem",
+                "confira as credenciais da nuvem e retome no terminal",
+            ),
+            (
+                "invalid_request",
+                INVALID_PT,
+                "a API recusou a requisição",
+                "revise o pedido e tente de novo no terminal",
+            ),
+        ] {
+            let detail = if error == "invalid_request" {
+                "`prompt too long`"
+            } else {
+                ""
+            };
+            let reason = format!("Motivo: {reason}");
+            let next = format!("Depois: {next}");
+            let mut lines = vec![reason.as_str()];
+            lines.extend(Some(detail).filter(|line| !line.is_empty()));
+            lines.push(&next);
+            let expected = card(head, &lines);
+
+            assert_eq!(
+                World::portuguese()
+                    .fail(error, "prompt too long")
+                    .as_deref(),
+                Some(expected.as_str()),
+                "{error}"
+            );
         }
     }
 
@@ -721,7 +1145,37 @@ mod tests {
         assert_eq!(world.fail("server_error", "API Error: 529"), None);
         assert_eq!(
             world.fail("server_error", "API Error: 529").as_deref(),
-            Some("⚠️ Claude stopped: the API keeps failing (server error)")
+            Some(
+                card(
+                    SERVER,
+                    &[
+                        "Reason: the API keeps failing (server error)",
+                        "Next: try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
+        );
+    }
+
+    #[test]
+    fn sends_the_portuguese_card_of_a_server_error() {
+        let world = World::portuguese();
+
+        world.fail("server_error", "API Error: 529");
+
+        assert_eq!(
+            world.fail("server_error", "API Error: 529").as_deref(),
+            Some(
+                card(
+                    SERVER_PT,
+                    &[
+                        "Motivo: a API continua falhando (erro de servidor)",
+                        "Depois: tente de novo no terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
     }
 
@@ -854,7 +1308,16 @@ mod tests {
         assert_eq!(world.fail("rate_limit", text), None);
         assert_eq!(
             world.fail("rate_limit", text).as_deref(),
-            Some("⚠️ Claude stopped: the API is limiting requests (not your plan's usage limit)")
+            Some(
+                card(
+                    THROTTLE,
+                    &[
+                        "Reason: the API is limiting requests (not your plan's usage limit)",
+                        "Next: try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
         assert_eq!(world.mark("s1").unwrap()["limitHits"], json!(0));
     }
@@ -867,14 +1330,34 @@ mod tests {
             world
                 .fail("invalid_request", "\n  First line  \nsecond line")
                 .as_deref(),
-            Some("⚠️ Claude stopped: the API rejected the request (First line)")
+            Some(
+                card(
+                    INVALID,
+                    &[
+                        "Reason: the API rejected the request",
+                        "`First line`",
+                        "Next: review the request and try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
 
         world.fail("unknown", "Odd failure\nmore");
 
         assert_eq!(
             world.fail("unknown", "Odd failure\nmore").as_deref(),
-            Some("⚠️ Claude stopped on an error: Odd failure")
+            Some(
+                card(
+                    UNEXPECTED,
+                    &[
+                        "Reason: unexpected API error",
+                        "`Odd failure`",
+                        "Next: try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
     }
 
@@ -885,11 +1368,68 @@ mod tests {
 
         assert_eq!(
             world.fail("invalid_request", &long),
-            Some(format!(
-                "⚠️ Claude stopped: the API rejected the request ({})",
-                "x".repeat(DETAIL_MAX_CHARS)
+            Some(card(
+                INVALID,
+                &[
+                    "Reason: the API rejected the request",
+                    &format!("`{}`", "x".repeat(DETAIL_MAX_CHARS)),
+                    "Next: review the request and try again in the terminal"
+                ]
             ))
         );
+    }
+
+    #[test]
+    fn keeps_the_markup_of_the_detail_raw_inside_the_code_span() {
+        let world = World::new();
+
+        assert_eq!(
+            world.fail("invalid_request", r"bad **field** in C:\tmp \_ <b>"),
+            Some(card(
+                INVALID,
+                &[
+                    "Reason: the API rejected the request",
+                    r"`bad **field** in C:\tmp \_ <b>`",
+                    "Next: review the request and try again in the terminal"
+                ]
+            ))
+        );
+    }
+
+    #[test]
+    fn escapes_the_detail_as_plain_text_when_it_holds_a_backtick() {
+        for (text, escaped) in [
+            (
+                r"bad **field** `x` in C:\tmp \_",
+                r"bad \*\*field\*\* \`x\` in C:\\tmp \\_",
+            ),
+            ("`", r"\`"),
+        ] {
+            assert_eq!(
+                World::new().fail("invalid_request", text),
+                Some(card(
+                    INVALID,
+                    &[
+                        "Reason: the API rejected the request",
+                        escaped,
+                        "Next: review the request and try again in the terminal"
+                    ]
+                )),
+                "{text}"
+            );
+            assert_eq!(
+                World::portuguese().fail("invalid_request", text),
+                Some(card(
+                    INVALID_PT,
+                    &[
+                        "Motivo: a API recusou a requisição",
+                        escaped,
+                        "Depois: revise o pedido e tente de novo no terminal"
+                    ]
+                )),
+                "{text}"
+            );
+        }
     }
 
     #[test]
@@ -905,18 +1445,99 @@ mod tests {
 
         assert_eq!(
             world.take("s1").as_deref(),
-            Some("⚠️ Claude stopped: the API rejected the request (400 bad things)")
+            Some(
+                card(
+                    INVALID,
+                    &[
+                        "Reason: the API rejected the request",
+                        "`400 bad things`",
+                        "Next: review the request and try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
         assert_eq!(
             world.fail("invalid_request", "").as_deref(),
-            Some("⚠️ Claude stopped: the API rejected the request")
+            Some(
+                card(
+                    INVALID,
+                    &[
+                        "Reason: the API rejected the request",
+                        "Next: review the request and try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
 
         world.fail("unknown", "  \n ");
 
         assert_eq!(
             world.fail("unknown", "  \n ").as_deref(),
-            Some("⚠️ Claude stopped on an unknown error")
+            Some(
+                card(
+                    UNEXPECTED,
+                    &[
+                        "Reason: unexpected API error",
+                        "Next: try again in the terminal"
+                    ]
+                )
+                .as_str()
+            )
+        );
+    }
+
+    #[test]
+    fn writes_the_portuguese_reason_of_an_error_with_and_without_detail() {
+        let world = World::portuguese();
+
+        world.fail("brand_new_error", "Odd");
+
+        assert_eq!(
+            world.fail("brand_new_error", "Odd").as_deref(),
+            Some(
+                card(
+                    UNEXPECTED_PT,
+                    &[
+                        "Motivo: erro inesperado da API",
+                        "`Odd`",
+                        "Depois: tente de novo no terminal"
+                    ]
+                )
+                .as_str()
+            )
+        );
+
+        let blank = World::portuguese();
+
+        blank.fail("brand_new_error", "");
+
+        assert_eq!(
+            blank.fail("brand_new_error", "").as_deref(),
+            Some(
+                card(
+                    UNEXPECTED_PT,
+                    &[
+                        "Motivo: erro inesperado da API",
+                        "Depois: tente de novo no terminal"
+                    ]
+                )
+                .as_str()
+            )
+        );
+        assert_eq!(
+            World::portuguese().fail("invalid_request", "").as_deref(),
+            Some(
+                card(
+                    INVALID_PT,
+                    &[
+                        "Motivo: a API recusou a requisição",
+                        "Depois: revise o pedido e tente de novo no terminal"
+                    ]
+                )
+                .as_str()
+            )
         );
     }
 
@@ -926,9 +1547,18 @@ mod tests {
 
         world.fail("brand_new_error", "Odd");
 
+        let expected = card(
+            UNEXPECTED,
+            &[
+                "Reason: unexpected API error",
+                "`Odd`",
+                "Next: try again in the terminal",
+            ],
+        );
+
         assert_eq!(
             world.fail("brand_new_error", "Odd").as_deref(),
-            Some("⚠️ Claude stopped on an error: Odd")
+            Some(expected.as_str())
         );
 
         let input = json!({"session_id": "s2", "last_assistant_message": "Odd"});
@@ -937,10 +1567,7 @@ mod tests {
         assert_eq!(world.take("s2"), None);
 
         world.send(Mode::StopFailure, &input).unwrap();
-        assert_eq!(
-            world.take("s2").as_deref(),
-            Some("⚠️ Claude stopped on an error: Odd")
-        );
+        assert_eq!(world.take("s2").as_deref(), Some(expected.as_str()));
     }
 
     #[test]
@@ -949,7 +1576,7 @@ mod tests {
 
         assert_eq!(
             world.fail("rate_limit", SESSION_LIMIT),
-            Some(format!("{USAGE_HEAD} · {CONTINUES}"))
+            Some(usage_card(Some(BACK_TODAY), CONTINUES))
         );
     }
 
@@ -958,19 +1585,21 @@ mod tests {
         let world = World::portuguese();
 
         assert_eq!(
-            world.fail("rate_limit", SESSION_LIMIT).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · continua sozinho às 14:20 (America/Sao_Paulo)"
-            )
+            world.fail("rate_limit", SESSION_LIMIT),
+            Some(usage_card_pt(
+                Some("Volta: às 14:20 (America/Sao_Paulo)"),
+                "Depois: continua sozinho às 14:20"
+            ))
         );
 
         world.user_setting(r#"{"autoContinueAtUsageLimit":false}"#);
 
         assert_eq!(
-            world.fail("rate_limit", SESSION_LIMIT).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · volta às 14:20 (America/Sao_Paulo) · não continua sozinho"
-            )
+            world.fail("rate_limit", SESSION_LIMIT),
+            Some(usage_card_pt(
+                Some("Volta: às 14:20 (America/Sao_Paulo)"),
+                WILL_NOT_PT
+            ))
         );
     }
 
@@ -981,7 +1610,7 @@ mod tests {
 
         assert_eq!(
             world.fail("rate_limit", SESSION_LIMIT),
-            Some(format!("{USAGE_HEAD} · {BACK_TODAY} · it {WILL_NOT}"))
+            Some(usage_card(Some(BACK_TODAY), WILL_NOT))
         );
     }
 
@@ -1005,7 +1634,7 @@ mod tests {
                 world
                     .fail("rate_limit", SESSION_LIMIT)
                     .unwrap()
-                    .ends_with(CONTINUES),
+                    .ends_with(&field(CONTINUES)),
                 "{settings:?}"
             );
         }
@@ -1024,7 +1653,7 @@ mod tests {
             world
                 .fail("rate_limit", SESSION_LIMIT)
                 .unwrap()
-                .ends_with(WILL_NOT)
+                .ends_with(&field(WILL_NOT))
         );
 
         world.write(
@@ -1038,7 +1667,7 @@ mod tests {
             world
                 .fail("rate_limit", SESSION_LIMIT)
                 .unwrap()
-                .ends_with(CONTINUES)
+                .ends_with(&field(CONTINUES))
         );
     }
 
@@ -1057,7 +1686,7 @@ mod tests {
             world
                 .fail("rate_limit", SESSION_LIMIT)
                 .unwrap()
-                .ends_with(CONTINUES)
+                .ends_with(&field(CONTINUES))
         );
 
         world.write("managed/managed-settings.d/25-d.json", off);
@@ -1067,7 +1696,7 @@ mod tests {
             world
                 .fail("rate_limit", SESSION_LIMIT)
                 .unwrap()
-                .ends_with(WILL_NOT)
+                .ends_with(&field(WILL_NOT))
         );
     }
 
@@ -1080,7 +1709,7 @@ mod tests {
                 world
                     .fail("rate_limit", SESSION_LIMIT)
                     .unwrap()
-                    .ends_with(CONTINUES),
+                    .ends_with(&field(CONTINUES)),
                 "hit {hit}"
             );
         }
@@ -1090,7 +1719,7 @@ mod tests {
                 world
                     .fail("rate_limit", SESSION_LIMIT)
                     .unwrap()
-                    .ends_with(&format!("{BACK_TODAY} · it {WILL_NOT}")),
+                    .ends_with(&format!("{}\n{}", field(BACK_TODAY), field(WILL_NOT))),
                 "hit {hit}"
             );
         }
@@ -1114,7 +1743,7 @@ mod tests {
                     world
                         .fail("rate_limit", SESSION_LIMIT)
                         .unwrap()
-                        .ends_with(CONTINUES),
+                        .ends_with(&field(CONTINUES)),
                     "hit {hit}"
                 );
                 continue_task();
@@ -1126,7 +1755,7 @@ mod tests {
                     world
                         .fail("rate_limit", SESSION_LIMIT)
                         .unwrap()
-                        .ends_with(&format!("{BACK_TODAY} · it {WILL_NOT}")),
+                        .ends_with(&format!("{}\n{}", field(BACK_TODAY), field(WILL_NOT))),
                     "hit {hit}"
                 );
                 continue_task();
@@ -1148,7 +1777,7 @@ mod tests {
             world
                 .fail("rate_limit", SESSION_LIMIT)
                 .unwrap()
-                .ends_with(WILL_NOT)
+                .ends_with(&field(WILL_NOT))
         );
 
         world.prompt("s1");
@@ -1158,7 +1787,7 @@ mod tests {
             world
                 .fail("rate_limit", SESSION_LIMIT)
                 .unwrap()
-                .ends_with(CONTINUES)
+                .ends_with(&field(CONTINUES))
         );
     }
 
@@ -1185,11 +1814,14 @@ mod tests {
             "You've hit your limit · resets 2:60pm",
             "You've hit your limit · resets 13pm",
         ] {
-            let world = World::new();
-
             assert_eq!(
-                world.fail("rate_limit", text).as_deref(),
-                Some(USAGE_HEAD),
+                World::new().fail("rate_limit", text),
+                Some(usage_card(None, WILL_NOT)),
+                "{text:?}"
+            );
+            assert_eq!(
+                World::portuguese().fail("rate_limit", text),
+                Some(usage_card_pt(None, WILL_NOT_PT)),
                 "{text:?}"
             );
         }
@@ -1201,15 +1833,17 @@ mod tests {
 
         assert_eq!(
             World::new().fail("rate_limit", text),
-            Some(format!(
-                "{USAGE_HEAD} · back on Nov 24, 9:00 AM (America/Sao_Paulo) · it {WILL_NOT}"
+            Some(usage_card(
+                Some("Back: Nov 24, 9:00 AM (America/Sao_Paulo)"),
+                WILL_NOT
             ))
         );
         assert_eq!(
-            World::portuguese().fail("rate_limit", text).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · volta em 24/11 09:00 (America/Sao_Paulo) · não continua sozinho"
-            )
+            World::portuguese().fail("rate_limit", text),
+            Some(usage_card_pt(
+                Some("Volta: 24/11 às 09:00 (America/Sao_Paulo)"),
+                WILL_NOT_PT
+            ))
         );
     }
 
@@ -1219,15 +1853,11 @@ mod tests {
 
         assert_eq!(
             World::new().fail("rate_limit", text),
-            Some(format!(
-                "{USAGE_HEAD} · back on Nov 24, 9:00 AM · it {WILL_NOT}"
-            ))
+            Some(usage_card(Some("Back: Nov 24, 9:00 AM"), WILL_NOT))
         );
         assert_eq!(
-            World::portuguese().fail("rate_limit", text).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · volta em 24/11 09:00 · não continua sozinho"
-            )
+            World::portuguese().fail("rate_limit", text),
+            Some(usage_card_pt(Some("Volta: 24/11 às 09:00"), WILL_NOT_PT))
         );
     }
 
@@ -1238,8 +1868,9 @@ mod tests {
 
             assert_eq!(
                 World::new().fail("rate_limit", &text),
-                Some(format!(
-                    "{USAGE_HEAD} · back on Nov {day}, 9:00 AM (UTC) · it {WILL_NOT}"
+                Some(usage_card(
+                    Some(&format!("Back: Nov {day}, 9:00 AM (UTC)")),
+                    WILL_NOT
                 )),
                 "{day}"
             );
@@ -1253,27 +1884,25 @@ mod tests {
 
         assert_eq!(
             World::new().fail("rate_limit", with_zone),
-            Some(format!(
-                "{USAGE_HEAD} · back Mon 9:00 AM (America/Sao_Paulo) · it {WILL_NOT}"
+            Some(usage_card(
+                Some("Back: Mon 9:00 AM (America/Sao_Paulo)"),
+                WILL_NOT
             ))
         );
         assert_eq!(
             World::new().fail("rate_limit", without_zone),
-            Some(format!("{USAGE_HEAD} · back Sun 9:30 PM · it {WILL_NOT}"))
+            Some(usage_card(Some("Back: Sun 9:30 PM"), WILL_NOT))
         );
         assert_eq!(
-            World::portuguese().fail("rate_limit", with_zone).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · volta seg 09:00 (America/Sao_Paulo) · não continua sozinho"
-            )
+            World::portuguese().fail("rate_limit", with_zone),
+            Some(usage_card_pt(
+                Some("Volta: seg às 09:00 (America/Sao_Paulo)"),
+                WILL_NOT_PT
+            ))
         );
         assert_eq!(
-            World::portuguese()
-                .fail("rate_limit", without_zone)
-                .as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · volta dom 21:30 · não continua sozinho"
-            )
+            World::portuguese().fail("rate_limit", without_zone),
+            Some(usage_card_pt(Some("Volta: dom às 21:30"), WILL_NOT_PT))
         );
     }
 
@@ -1283,13 +1912,14 @@ mod tests {
 
         assert_eq!(
             World::new().fail("rate_limit", text),
-            Some(format!("{USAGE_HEAD} · it continues by itself at 2:20 PM"))
+            Some(usage_card(Some("Back: at 2:20 PM"), CONTINUES))
         );
         assert_eq!(
-            World::portuguese().fail("rate_limit", text).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · continua sozinho às 14:20"
-            )
+            World::portuguese().fail("rate_limit", text),
+            Some(usage_card_pt(
+                Some("Volta: às 14:20"),
+                "Depois: continua sozinho às 14:20"
+            ))
         );
 
         let world = World::new();
@@ -1297,22 +1927,25 @@ mod tests {
 
         assert_eq!(
             world.fail("rate_limit", text),
-            Some(format!("{USAGE_HEAD} · back at 2:20 PM · it {WILL_NOT}"))
+            Some(usage_card(Some("Back: at 2:20 PM"), WILL_NOT))
         );
     }
 
     #[test]
     fn shows_the_time_of_an_opus_or_sonnet_limit_without_a_promise() {
         for (text, back) in [
-            ("You've hit your Opus limit · resets 3pm", "back at 3:00 PM"),
+            (
+                "You've hit your Opus limit · resets 3pm",
+                "Back: at 3:00 PM",
+            ),
             (
                 "You've hit your Sonnet limit · resets 3pm (America/Sao_Paulo)",
-                "back at 3:00 PM (America/Sao_Paulo)",
+                "Back: at 3:00 PM (America/Sao_Paulo)",
             ),
         ] {
             assert_eq!(
                 World::new().fail("rate_limit", text),
-                Some(format!("{USAGE_HEAD} · {back} · it {WILL_NOT}")),
+                Some(usage_card(Some(back), WILL_NOT)),
                 "{text}"
             );
         }
@@ -1324,39 +1957,41 @@ mod tests {
         let world = World::portuguese();
 
         assert_eq!(
-            world.fail("rate_limit", text).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · continua sozinho à 01:00 (America/Sao_Paulo)"
-            )
+            world.fail("rate_limit", text),
+            Some(usage_card_pt(
+                Some("Volta: à 01:00 (America/Sao_Paulo)"),
+                "Depois: continua sozinho à 01:00"
+            ))
         );
 
         world.user_setting(r#"{"autoContinueAtUsageLimit":false}"#);
 
         assert_eq!(
-            world.fail("rate_limit", text).as_deref(),
-            Some(
-                "⚠️ O Claude parou: o limite de uso do seu plano foi atingido · volta à 01:00 (America/Sao_Paulo) · não continua sozinho"
-            )
+            world.fail("rate_limit", text),
+            Some(usage_card_pt(
+                Some("Volta: à 01:00 (America/Sao_Paulo)"),
+                WILL_NOT_PT
+            ))
         );
         assert_eq!(
             world
                 .fail("rate_limit", "resets 1:45pm")
                 .as_deref()
-                .map(|line| line.contains("volta às 13:45")),
+                .map(|line| line.contains("**Volta:** às 13:45")),
             Some(true)
         );
         assert_eq!(
             world
                 .fail("rate_limit", "resets 12:00am")
                 .as_deref()
-                .map(|line| line.contains("volta às 00:00")),
+                .map(|line| line.contains("**Volta:** às 00:00")),
             Some(true)
         );
         assert_eq!(
             world
                 .fail("rate_limit", "resets 2am")
                 .as_deref()
-                .map(|line| line.contains("volta às 02:00")),
+                .map(|line| line.contains("**Volta:** às 02:00")),
             Some(true)
         );
     }
@@ -1367,8 +2002,9 @@ mod tests {
 
         assert_eq!(
             World::new().fail("rate_limit", text),
-            Some(format!(
-                "{USAGE_HEAD} · it continues by itself at 1:00 AM (UTC)"
+            Some(usage_card(
+                Some("Back: at 1:00 AM (UTC)"),
+                "Next: continues by itself at 1:00 AM"
             ))
         );
     }
@@ -1389,7 +2025,7 @@ mod tests {
             world
                 .take("s1")
                 .unwrap()
-                .ends_with("it continues by itself at 3:45 PM")
+                .ends_with("> 👉 **Next:** continues by itself at 3:45 PM")
         );
     }
 
@@ -1413,7 +2049,13 @@ mod tests {
         assert_eq!(record["kind"], json!("failure"));
         assert_eq!(
             record["text"],
-            json!("⚠️ Claude stopped: there is a billing problem with your account")
+            json!(card(
+                BILLING,
+                &[
+                    "Reason: there is a billing problem with your account",
+                    "Next: check the billing of your plan, then resume in the terminal"
+                ]
+            ))
         );
     }
 
@@ -1439,7 +2081,13 @@ mod tests {
         assert_eq!(record["instance"], json!("proj#abcd"));
         assert_eq!(
             record["text"],
-            json!("⚠️ The Claude instance [proj#abcd] stopped: your account is on hold")
+            json!(card(
+                "🚫 **Account on hold** · Claude stopped · [proj#abcd]",
+                &[
+                    "Reason: your account is on hold",
+                    "Next: check the status of your account, then resume in the terminal"
+                ]
+            ))
         );
     }
 
