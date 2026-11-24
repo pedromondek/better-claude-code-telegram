@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CONFIG_FILE,
   DEFAULT_INBOX_RETENTION_DAYS,
+  DEFAULT_REMINDER_MINUTES,
   DELAY_KINDS,
   defaultAppDir,
   formatDelay,
@@ -172,8 +173,35 @@ describe("readLocale", () => {
 });
 
 describe("readDelayMinutes › per kind, the contract shared with the bcct binary", () => {
-  it("names the three kinds the binary and the channel read", (): void => {
-    expect(DELAY_KINDS).toEqual(["questions", "permissions", "waiting"]);
+  it("names the four kinds the binary and the channel read", (): void => {
+    expect(DELAY_KINDS).toEqual([
+      "questions",
+      "permissions",
+      "waiting",
+      "reminder",
+    ]);
+  });
+
+  it("waits 3 minutes for the reminder when it has no minutes of its own", (): void => {
+    expect(DEFAULT_REMINDER_MINUTES).toBe(3);
+
+    writeConfig({ delayMinutes: 10 });
+
+    expect(readDelayMinutes(appDir, {}, "reminder")).toBe(
+      DEFAULT_REMINDER_MINUTES,
+    );
+  });
+
+  it("lets the delay of the environment replace the reminder too", (): void => {
+    writeConfig({ delays: { reminder: 7 } });
+
+    expect(
+      readDelayMinutes(
+        appDir,
+        { BETTER_CC_TELEGRAM_DELAY_MS: "30000" },
+        "reminder",
+      ),
+    ).toBe(0.5);
   });
 
   it.each(DELAY_CASES)("$name", ({ config, env, expected }): void => {

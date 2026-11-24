@@ -37,7 +37,7 @@ fn stdin_of(spec: &Value) -> Vec<u8> {
 }
 
 #[test]
-fn the_time_limits_are_the_same_as_the_javascript_ones() {
+fn matches_the_fixture_in_the_time_limits() {
     let fixture = parse(FIXTURE);
 
     assert_eq!(
@@ -51,7 +51,7 @@ fn the_time_limits_are_the_same_as_the_javascript_ones() {
 }
 
 #[test]
-fn every_scenario_prints_byte_for_byte_what_statusline_mjs_prints() {
+fn prints_byte_for_byte_what_the_fixture_recorded_in_every_scenario() {
     let fixture = parse(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let scenarios = list(&fixture, "scenarios");

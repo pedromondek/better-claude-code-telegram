@@ -17,8 +17,8 @@ use crate::settings::{
     with_status_line, without_env_denied, without_our_statusline, write_json_atomic,
 };
 use crate::setup::{
-    ENV_FILE, STATUSLINE_REQUEST_FILE, StatuslineKind, env_deny_rule, read_settings,
-    statusline_after_command, statusline_command, statusline_is_current, statusline_kind,
+    ENV_FILE, STATUSLINE_REQUEST_FILE, env_deny_rule, read_settings, statusline_after_command,
+    statusline_command,
 };
 use crate::ui::{skipped, success, warn};
 
@@ -465,24 +465,8 @@ pub fn apply_statusline(
         return Ok(());
     }
 
-    if statusline_is_current(current, files.app_dir) {
-        printer.skipped(messages.statusline_already);
-        return Ok(());
-    }
-
     if is_our_statusline(current, files.app_dir) {
-        let after = statusline_kind(current, files.app_dir) == StatuslineKind::OursAfter;
-        let (updated, text) = if after {
-            (
-                statusline_after_command(files.app_dir),
-                messages.statusline_chained,
-            )
-        } else {
-            (command, messages.statusline_installed)
-        };
-
-        files.save_settings(&with_status_line(&settings, &updated), journal)?;
-        printer.success(&text(&name));
+        printer.skipped(messages.statusline_already);
         return Ok(());
     }
 

@@ -11,13 +11,10 @@ use crate::setup_files::{ConfigError, Printer};
 pub const SHELL_MARKER: &str = "# Added by better-claude-code-telegram setup";
 
 const REMOVED_FROM: [&str; 3] = [".bashrc", ".zshrc", ".bash_profile"];
-const CLONE_SHELL_SCRIPT: &str = "/scripts/shell.sh";
-const CLONE_LINE_START: &str = "[ -f \"";
-const CLONE_LINE_MIDDLE: &str = "\" ] && . \"";
 
 #[must_use]
 pub fn source_line(shell_file: &str) -> String {
-    format!("{CLONE_LINE_START}{shell_file}{CLONE_LINE_MIDDLE}{shell_file}\"")
+    format!("[ -f \"{shell_file}\" ] && . \"{shell_file}\"")
 }
 
 #[must_use]
@@ -36,53 +33,13 @@ fn block(line: &str) -> String {
     format!("{SHELL_MARKER}\n{line}\n")
 }
 
-fn is_clone_line(line: &str) -> bool {
-    line.strip_prefix(CLONE_LINE_START)
-        .and_then(|rest| rest.split_once(CLONE_LINE_MIDDLE))
-        .is_some_and(|(tested, loaded)| {
-            loaded.strip_suffix('"') == Some(tested)
-                && tested.len() > CLONE_SHELL_SCRIPT.len()
-                && !tested.contains('"')
-                && tested.ends_with(CLONE_SHELL_SCRIPT)
-        })
-}
-
-fn clone_line(rc_text: &str) -> Option<&str> {
-    rc_text.split('\n').find(|line| is_clone_line(line))
-}
-
 #[must_use]
 pub fn with_shell_block(rc_text: &str, shell_file: &str) -> Option<String> {
     if rc_line_active(rc_text, shell_file) {
         return None;
     }
 
-    let line = source_line(shell_file);
-
-    if clone_line(rc_text).is_some() {
-        let mut kept: Vec<&str> = Vec::new();
-        let mut replaced = false;
-
-        for old in rc_text.split('\n') {
-            if !is_clone_line(old) {
-                kept.push(old);
-            } else if replaced {
-                if kept.last() == Some(&SHELL_MARKER) {
-                    kept.pop();
-                    if kept.last() == Some(&"") {
-                        kept.pop();
-                    }
-                }
-            } else {
-                replaced = true;
-                kept.push(&line);
-            }
-        }
-
-        return Some(kept.join("\n"));
-    }
-
-    let block = block(&line);
+    let block = block(&source_line(shell_file));
 
     if rc_text.is_empty() {
         return Some(block);
@@ -103,21 +60,14 @@ fn without_block(rc_text: &str, line: &str) -> String {
 
 #[must_use]
 pub fn without_shell_block(rc_text: &str, shell_file: &str) -> Option<String> {
-    let clone = clone_line(rc_text);
-
-    if !rc_loads(rc_text, shell_file) && clone.is_none() {
+    if !rc_loads(rc_text, shell_file) {
         return None;
     }
 
-    let mut text = without_block(rc_text, &source_line(shell_file));
-
-    if let Some(line) = clone {
-        text = without_block(&text, line);
-    }
-
     Some(
-        text.split('\n')
-            .filter(|line| !line.contains(shell_file) && !is_clone_line(line))
+        without_block(rc_text, &source_line(shell_file))
+            .split('\n')
+            .filter(|line| !line.contains(shell_file))
             .collect::<Vec<_>>()
             .join("\n"),
     )
@@ -214,41 +164,27 @@ mod tests {
     use super::*;
 
     const NEW: &str = "/h/.claude/better-claude-code-telegram/shell.sh";
-    const CLONE: &str = "[ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\"";
-
     fn new_line() -> String {
         source_line(NEW)
     }
 
     #[test]
-    fn the_setup_swaps_the_line_of_the_clone_for_the_new_one_in_place() {
-        let rc = format!("a\n\n{SHELL_MARKER}\n{CLONE}\nb\n");
-
+    fn loads_the_shell_file_only_when_it_exists() {
         assert_eq!(
-            with_shell_block(&rc, NEW),
-            Some(format!("a\n\n{SHELL_MARKER}\n{}\nb\n", new_line()))
-        );
-        assert_eq!(
-            with_shell_block(&format!("{CLONE}\n{CLONE}"), NEW),
-            Some(new_line())
+            new_line(),
+            "[ -f \"/h/.claude/better-claude-code-telegram/shell.sh\" ] && . \"/h/.claude/better-claude-code-telegram/shell.sh\""
         );
     }
 
     #[test]
-    fn the_setup_keeps_one_line_when_the_rc_has_the_line_of_two_clones() {
-        let other = "[ -f \"/s/scripts/shell.sh\" ] && . \"/s/scripts/shell.sh\"";
-        let rc = format!("a\n\n{SHELL_MARKER}\n{CLONE}\nb\n\n{SHELL_MARKER}\n{other}\n");
-
+    fn appends_the_block_to_an_empty_rc_and_after_a_last_line_without_newline() {
         assert_eq!(
-            with_shell_block(&rc, NEW),
-            Some(format!("a\n\n{SHELL_MARKER}\n{}\nb\n", new_line()))
+            with_shell_block("", NEW),
+            Some(format!("{SHELL_MARKER}\n{}\n", new_line()))
         );
         assert_eq!(
-            with_shell_block(
-                &format!("{SHELL_MARKER}\n{CLONE}\n{SHELL_MARKER}\n{other}"),
-                NEW
-            ),
-            Some(format!("{SHELL_MARKER}\n{}", new_line()))
+            with_shell_block("export A=1", NEW),
+            Some(format!("export A=1\n\n{SHELL_MARKER}\n{}\n", new_line()))
         );
     }
 
@@ -279,43 +215,19 @@ mod tests {
     }
 
     #[test]
-    fn the_uninstall_removes_the_block_of_the_clone() {
+    fn the_uninstall_removes_the_block_and_every_line_that_loads_the_shell_file() {
         assert_eq!(
-            without_shell_block(&format!("a\n\n{SHELL_MARKER}\n{CLONE}\nb\n"), NEW),
+            without_shell_block(&format!("a\n\n{SHELL_MARKER}\n{}\nb\n", new_line()), NEW),
             Some("a\nb\n".to_owned())
         );
         assert_eq!(
-            without_shell_block(&format!("{SHELL_MARKER}\n{CLONE}\nb"), NEW),
+            without_shell_block(&format!("{SHELL_MARKER}\n{}\nb", new_line()), NEW),
             Some("b".to_owned())
         );
         assert_eq!(
-            without_shell_block(&format!("a\n{CLONE}\nb"), NEW),
+            without_shell_block(&format!("a\n# {NEW}\nb"), NEW),
             Some("a\nb".to_owned())
         );
-        assert_eq!(
-            without_shell_block(
-                &format!("a\n\n{SHELL_MARKER}\n{}\n{CLONE}\n", new_line()),
-                NEW
-            ),
-            Some("a\n".to_owned())
-        );
-    }
-
-    #[test]
-    fn only_the_exact_line_of_the_clone_is_taken_as_ours() {
-        for line in [
-            "[ -f \"/r/scripts/shell.sh\" ] && . \"/s/scripts/shell.sh\"",
-            "[ -f \"/r/scripts/other.sh\" ] && . \"/r/scripts/other.sh\"",
-            "[ -f \"/scripts/shell.sh\" ] && . \"/scripts/shell.sh\"",
-            "[ -f \"/r\"/scripts/shell.sh\" ] && . \"/r\"/scripts/shell.sh\"",
-            "[ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\" x",
-            " [ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\"",
-            "[ -f \"/r/scripts/shell.sh\" ] || . \"/r/scripts/shell.sh\"",
-        ] {
-            assert!(!is_clone_line(line), "{line}");
-            assert_eq!(without_shell_block(line, NEW), None, "{line}");
-        }
-
-        assert!(is_clone_line(CLONE));
+        assert_eq!(without_shell_block("a\nb", NEW), None);
     }
 }

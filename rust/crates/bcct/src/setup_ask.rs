@@ -1,4 +1,7 @@
-use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, VisualMode, Visuals, kind_minutes};
+use crate::config::{
+    DEFAULT_DELAY_MINUTES, DEFAULT_REMINDER_MINUTES, DelayKind, VisualMode, Visuals,
+    has_per_kind_delays, kind_minutes,
+};
 use crate::install::{
     BASE_MODEL, CommandsChoice, DISABLE_ANSWERS, Parsed, SMALL_MODEL, TRANSCRIPTION_MODELS,
     TranscriptionChoice, VisualsPick,
@@ -250,7 +253,61 @@ pub fn saved_kinds(
     config
         .get("delays")
         .filter(|delays| delays.is_object())
-        .map(|_| DelayKind::ALL.map(|kind| kind_minutes(config, kind).unwrap_or(base)))
+        .filter(|_| has_per_kind_delays(config))
+        .map(|_| DelayKind::PER_KIND.map(|kind| kind_minutes(config, kind).unwrap_or(base)))
+}
+
+fn minute_options(current: f64, messages: &Messages) -> Vec<ChoiceItem<f64>> {
+    number_choices(&DELAY_PRESETS, Some(current), &|minutes| {
+        if minutes == 0.0 {
+            messages.delay_right_away_label.to_owned()
+        } else {
+            (messages.delay_label)(minutes)
+        }
+    })
+}
+
+pub fn ask_reminder(
+    current: f64,
+    saved: bool,
+    messages: &'static Messages,
+    ask: &mut dyn Prompter,
+) -> Answer<f64> {
+    let options = minute_options(current, messages);
+    let index = index_of_value(&options, &current);
+    let recommended = |choice: &ChoiceItem<f64>| {
+        if choice.value() == Some(&DEFAULT_REMINDER_MINUTES) {
+            vec![messages.recommended.to_owned()]
+        } else {
+            Vec::new()
+        }
+    };
+    let mut typed = |terminal: &mut dyn Prompter| {
+        ask_validated(
+            messages.delay_custom_prompt,
+            &parse_delay_minutes,
+            messages.delay_custom_hint,
+            messages,
+            terminal,
+        )
+    };
+
+    ask_choice(
+        ChoiceQuestion {
+            title: messages.reminder_question.to_owned(),
+            choices: marked(options, index, saved, &recommended, messages),
+            index,
+            other: Some(Other {
+                label: messages.custom.to_owned(),
+                answer: OTHER_ANSWER.to_owned(),
+                parse: &parse_delay_minutes,
+                ask_on_terminal: &mut typed,
+            }),
+            default_hint: None,
+        },
+        messages,
+        ask,
+    )
 }
 
 pub fn ask_delay(
@@ -260,14 +317,7 @@ pub fn ask_delay(
     messages: &'static Messages,
     ask: &mut dyn Prompter,
 ) -> Answer<DelayPick> {
-    let mut options: Vec<ChoiceItem<DelayPick>> =
-        number_choices(&DELAY_PRESETS, Some(current), &|minutes| {
-            if minutes == 0.0 {
-                messages.delay_right_away_label.to_owned()
-            } else {
-                (messages.delay_label)(minutes)
-            }
-        })
+    let mut options: Vec<ChoiceItem<DelayPick>> = minute_options(current, messages)
         .into_iter()
         .map(|choice| choice.map_value(DelayPick::Minutes))
         .collect();
@@ -913,6 +963,63 @@ mod delay_tests {
     }
 
     #[test]
+    fn recommends_the_default_reminder_and_marks_the_saved_one_as_current() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+
+        let picked = ask_reminder(5.0, true, &EN_US, &mut ask).unwrap();
+        let (choices, index) = ask.calls()[0].select().unwrap();
+        let recommended: Vec<_> = choices
+            .iter()
+            .filter(|choice| choice.label.contains(EN_US.recommended))
+            .collect();
+
+        assert_eq!(picked, 5.0);
+        assert_eq!(recommended.len(), 1);
+        assert!(
+            recommended[0]
+                .label
+                .starts_with(&format_delay(DEFAULT_REMINDER_MINUTES))
+        );
+        assert!(choices[index].previous);
+        assert!(choices[index].label.starts_with(&format_delay(5.0)));
+    }
+
+    #[test]
+    fn lists_a_reminder_of_its_own_beside_the_presets_and_keeps_it_as_current() {
+        let mut ask = FakePrompter::new(true).with_replies([Reply::Default]);
+
+        let picked = ask_reminder(2.5, true, &EN_US, &mut ask).unwrap();
+        let (choices, index) = ask.calls()[0].select().unwrap();
+
+        assert_eq!(picked, 2.5);
+        assert_eq!(choices.len(), DELAY_PRESETS.len() + 2);
+        assert!(choices[index].label.starts_with(&format_delay(2.5)));
+    }
+
+    #[test]
+    fn asks_the_minutes_of_a_custom_reminder_again_until_they_are_valid() {
+        let mut ask = FakePrompter::new(true).with_replies([
+            Reply::Last,
+            Reply::Text("-1".to_owned()),
+            Reply::Text("1,5".to_owned()),
+        ]);
+
+        assert_eq!(ask_reminder(3.0, false, &EN_US, &mut ask).unwrap(), 1.5);
+        assert!(ask.calls().len() >= 3);
+    }
+
+    #[test]
+    fn takes_a_reminder_of_right_away_chosen_or_typed_and_refuses_a_negative_one() {
+        let mut chosen = FakePrompter::new(true).with_replies([Reply::Choose(0)]);
+        let mut typed = FakePrompter::new(false)
+            .with_replies([Reply::Text("-1".to_owned()), Reply::Text("0".to_owned())]);
+
+        assert_eq!(ask_reminder(3.0, false, &PT_BR, &mut chosen).unwrap(), 0.0);
+        assert_eq!(chosen.calls()[0].select().unwrap().0[0].label, "Na hora");
+        assert_eq!(ask_reminder(3.0, false, &PT_BR, &mut typed).unwrap(), 0.0);
+    }
+
+    #[test]
     fn offers_right_away_first_and_takes_a_typed_zero() {
         let mut ask = FakePrompter::new(true).with_replies([Reply::Choose(0)]);
         let mut typed = FakePrompter::new(false).with_replies([Reply::Text("0".to_owned())]);
@@ -1023,6 +1130,19 @@ mod delay_tests {
         assert_eq!(single_delay([4.0, 4.0, 5.0]), None);
         assert_eq!(single_delay([0.0, 4.0, 4.0]), None);
         assert_eq!(single_delay([4.0, 3.0, 4.0]), None);
+    }
+
+    #[test]
+    fn reads_the_saved_kinds_without_counting_a_reminder_saved_alone() {
+        let saved = |config: serde_json::Value| saved_kinds(config.as_object().unwrap(), 4.0);
+
+        assert_eq!(
+            saved(serde_json::json!({"delays": {"questions": 1, "reminder": 9}})),
+            Some([1.0, 4.0, 4.0])
+        );
+        assert_eq!(saved(serde_json::json!({"delays": {"reminder": 9}})), None);
+        assert_eq!(saved(serde_json::json!({"delays": [1, 2, 3]})), None);
+        assert_eq!(saved(serde_json::json!({})), None);
     }
 }
 

@@ -160,9 +160,13 @@ reviews:
         is a finding.
     - path: "rust/**/*.rs"
       instructions: |
-        The binary ports the Node.js scripts by contract: a
-        change in output, exit code or file written that the JS side did
-        not get, or that its test does not lock, is a finding. Code with no
+        The binary owns the hooks, the setup, the health check, the
+        launcher and the status line. A change in output, exit code or file
+        written that no test (a unit test in rust/crates/bcct/src/ or a test
+        or fixture in rust/crates/bcct/tests/) locks is
+        a finding, and so is a change to a file the TypeScript channel also
+        reads (access.json, the state, the config) without a test on both
+        sides. Code with no
         test that would fail if it broke is a finding: the gate is 100% of
         lines and zero surviving mutants.
     - path: "**/__tests__/**"

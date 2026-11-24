@@ -28,6 +28,9 @@ function heldList(parts: (string | null)[]): string {
   return parts.filter((part) => part !== null).join(", ");
 }
 
+const DONE_BUTTON_EN = "✅ Done";
+const DONE_BUTTON_PT = "✅ Concluir";
+
 const enUs = {
   whisperLanguage: "en",
   languageName: "English",
@@ -41,7 +44,7 @@ const enUs = {
   otherHint:
     "✍️ Other answer: tap the button and reply quoting the request it opens.",
   otherButton: "✍️ Other answer (type it)",
-  doneButton: "✅ Done",
+  doneButton: DONE_BUTTON_EN,
   answeredInTerminal: "Answered in the terminal",
   notAuthorized: "Not authorized.",
   questionClosed: "This question is already closed.",
@@ -71,6 +74,10 @@ const enUs = {
     "✅ Answers delivered: the terminal question was answered with them.",
   askEditFailed: (error: string): string =>
     `ask: failed to edit the buttons: ${error}`,
+  concludeReminder: `☝️ **Only this one is left to conclude**: tap ${DONE_BUTTON_EN}`,
+  concludeLeftLine: `✅ Only this one is left: tap ${DONE_BUTTON_EN}`,
+  typedAnswerSuffix:
+    " (answered on Telegram: if the answer asks something, reply on Telegram)",
   askSent: (askId: string, instance: string): string =>
     `ask: question ${askId} from [${instance}] sent to Telegram`,
   askAnsweredInTerminal: (askId: string): string =>
@@ -89,6 +96,8 @@ const enUs = {
     `ping: failed to notify the chat: ${error}`,
   pingSent: (instance: string): string =>
     `ping: notice from [${instance}] sent`,
+  pingRepeated: (instance: string): string =>
+    `ping: notice from [${instance}] same as the last one, not sent`,
   quietStarted: (end: string): string =>
     `🌙 Quiet hours until ${end}: waiting notices, questions and permission requests stay in the terminal until then.\nTo let a question through now: /bcct:release in the terminal.\nTo turn them off: /bcct:quiet-hours.`,
   quietEnded: ({ questions, notices, permissions }: HeldCounts): string =>
@@ -153,7 +162,7 @@ const ptBr: Messages = {
   otherHint:
     "✍️ Outra resposta: toque no botão e responda citando o pedido que ele abre.",
   otherButton: "✍️ Outra resposta (escrever)",
-  doneButton: "✅ Concluir",
+  doneButton: DONE_BUTTON_PT,
   answeredInTerminal: "Respondida no terminal",
   notAuthorized: "Não autorizado.",
   questionClosed: "Essa pergunta já foi encerrada.",
@@ -171,6 +180,10 @@ const ptBr: Messages = {
   answersDelivered:
     "✅ Respostas entregues: a pergunta do terminal foi respondida com elas.",
   askEditFailed: (error) => `ask: falha ao editar botões: ${error}`,
+  concludeReminder: `☝️ **Falta só concluir esta**: toque em ${DONE_BUTTON_PT}`,
+  concludeLeftLine: `✅ Só falta esta: toque em ${DONE_BUTTON_PT}`,
+  typedAnswerSuffix:
+    " (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)",
   askSent: (askId, instance) =>
     `ask: pergunta ${askId} de [${instance}] enviada ao Telegram`,
   askAnsweredInTerminal: (askId) =>
@@ -185,6 +198,8 @@ const ptBr: Messages = {
     `⏳ ${who} está esperando você no terminal há mais de ${delay}.\n\nÚltima mensagem dele:\n\n${text}`,
   pingFailed: (error) => `ping: falha ao avisar no chat: ${error}`,
   pingSent: (instance) => `ping: aviso de [${instance}] enviado`,
+  pingRepeated: (instance) =>
+    `ping: aviso de [${instance}] igual ao último, não enviado`,
   quietStarted: (end) =>
     `🌙 Silêncio até ${end}: avisos de espera, perguntas e pedidos de permissão ficam no terminal até lá.\nPara soltar uma pergunta agora: /bcct:release no terminal.\nPara desligar: /bcct:quiet-hours.`,
   quietEnded: ({ questions, notices, permissions }) =>

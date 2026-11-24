@@ -233,7 +233,7 @@ fn candidate_json(candidate: &Candidate) -> String {
 }
 
 #[test]
-fn answers_every_pure_case_like_setup_mjs() {
+fn answers_every_pure_case_like_the_fixture() {
     let fixture = parse(FIXTURE);
     let pure = &fixture["pure"];
 
@@ -617,7 +617,7 @@ fn written_files(outcome: &Value) -> Value {
 }
 
 #[test]
-fn runs_every_flow_like_setup_mjs() {
+fn runs_every_flow_like_the_fixture() {
     let fixture = parse(FIXTURE);
     let default_mode = default_file_mode();
 

@@ -17,6 +17,7 @@ use crate::ui::{green, info, note};
 pub const LANGUAGE_ICON: &str = "🌐";
 pub const PLUGIN_ICON: &str = "🧩";
 pub const DELAY_ICON: &str = "⏳";
+pub const REMINDER_ICON: &str = "🔔";
 pub const QUIET_HOURS_ICON: &str = "🌙";
 pub const TRANSCRIPTION_ICON: &str = "🎤";
 pub const INBOX_ICON: &str = "📥";

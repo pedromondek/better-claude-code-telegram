@@ -46,6 +46,22 @@ describe("renderTable", () => {
     ]);
   });
 
+  it("reads a row that has only the leading pipe", (): void => {
+    expect(renderTable(["| A | B", "|---|---", "| x | y"])).toEqual([
+      "A │ B",
+      "──┼──",
+      "x │ y",
+    ]);
+  });
+
+  it("reads a row that has only the trailing pipe", (): void => {
+    expect(renderTable(["A | B |", "--|--", "x | y |"])).toEqual([
+      "A │ B",
+      "──┼──",
+      "x │ y",
+    ]);
+  });
+
   it("reads rows without the outer pipes", (): void => {
     expect(renderTable(["A | B", "--|--", "x | y"])).toEqual([
       "A │ B",
@@ -278,5 +294,255 @@ describe("toTelegramHtmlChunks", () => {
   it("sends nothing for blank markdown", (): void => {
     expect(toTelegramHtmlChunks("")).toEqual([]);
     expect(toTelegramHtmlChunks(" \n  ")).toEqual([]);
+  });
+});
+
+describe("block quotes", () => {
+  const html = (markdown: string, limit?: number): string[] =>
+    toTelegramHtmlChunks(markdown, limit);
+
+  it("turns one quoted line into a blockquote", (): void => {
+    expect(html("> uma linha")).toEqual(["<blockquote>uma linha</blockquote>"]);
+  });
+
+  it("takes the optional space after the marker and keeps any other", (): void => {
+    expect(html(">sem espaço\n>  dois espaços\n   > indentada")).toEqual([
+      "<blockquote>sem espaço\n dois espaços\nindentada</blockquote>",
+    ]);
+  });
+
+  it("joins consecutive quoted lines in one blockquote", (): void => {
+    expect(html("> a\n> b\n> c")).toEqual(["<blockquote>a\nb\nc</blockquote>"]);
+  });
+
+  it("keeps a quote between normal lines on its own", (): void => {
+    expect(html("antes\n> citado\n> mais\ndepois")).toEqual([
+      "antes\n<blockquote>citado\nmais</blockquote>\ndepois",
+    ]);
+  });
+
+  it("splits two quotes separated by a blank line", (): void => {
+    expect(html("> a\n\n> b")).toEqual([
+      "<blockquote>a</blockquote>\n\n<blockquote>b</blockquote>",
+    ]);
+  });
+
+  it("converts bold, code, escapes and HTML inside the quote", (): void => {
+    expect(
+      html("> 📋 **Motivo:** use `x**y` \\*ok\\* <b> & fim\n> ## Título"),
+    ).toEqual([
+      "<blockquote>📋 <b>Motivo:</b> use <code>x**y</code> *ok* &lt;b&gt; &amp; fim\n<b>Título</b></blockquote>",
+    ]);
+  });
+
+  it("keeps an escaped greater-than at the start of a line as text", (): void => {
+    expect(html("\\> não é citação")).toEqual(["&gt; não é citação"]);
+    expect(parseBlocks("\\> texto")).toEqual([
+      { kind: "text", lines: ["\\> texto"] },
+    ]);
+  });
+
+  it("keeps a greater-than in the middle of a line as text", (): void => {
+    expect(html("a > b")).toEqual(["a &gt; b"]);
+  });
+
+  it("keeps an empty quoted line inside the quote", (): void => {
+    expect(html("> a\n>\n> b")).toEqual(["<blockquote>a\n\nb</blockquote>"]);
+  });
+
+  it("sends nothing for a quote that has only empty lines", (): void => {
+    expect(html(">")).toEqual([]);
+    expect(html("> \n>")).toEqual([]);
+    expect(html(">   \n> \t")).toEqual([]);
+    expect(html("antes\n>\ndepois")).toEqual(["antes\ndepois"]);
+  });
+
+  it("keeps a quote marker inside a fenced block literal", (): void => {
+    expect(html("```\n> não é citação\n```")).toEqual([
+      "<pre>&gt; não é citação</pre>",
+    ]);
+  });
+
+  it("reads the marker line with a carriage return", (): void => {
+    expect(html("> a\r\n> b")).toEqual(["<blockquote>a\r\nb</blockquote>"]);
+  });
+
+  it("splits a long quote across chunks, closing and reopening it", (): void => {
+    const lines = Array.from({ length: 6 }, (_, index) => `linha ${index}`);
+    const chunks = html(lines.map((line) => `> ${line}`).join("\n"), 60);
+
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(
+      chunks.every(
+        (chunk) =>
+          chunk.startsWith("<blockquote>") &&
+          chunk.endsWith("</blockquote>") &&
+          chunk.length <= 60,
+      ),
+    ).toBe(true);
+    expect(
+      chunks
+        .join("\n")
+        .replaceAll(/<\/?blockquote>/g, "")
+        .split("\n"),
+    ).toEqual(lines);
+  });
+
+  it("splits a quote line longer than the limit without leaving a tag open", (): void => {
+    const chunks = html(`> ${"x".repeat(200)}`, 60);
+
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(
+      chunks.every(
+        (chunk) =>
+          /^<blockquote>[x\n]+<\/blockquote>$/.test(chunk) &&
+          chunk.length <= 60,
+      ),
+    ).toBe(true);
+    expect(chunks.join("").replaceAll(/<\/?blockquote>|\n/g, "")).toBe(
+      "x".repeat(200),
+    );
+  });
+
+  it("starts a new chunk when the quote does not fit after the text", (): void => {
+    const text = "t".repeat(40);
+
+    expect(html(`${text}\n> ${"q".repeat(30)}`, 60)).toEqual([
+      text,
+      `<blockquote>${"q".repeat(30)}</blockquote>`,
+    ]);
+  });
+});
+
+describe("backslash escapes", () => {
+  const html = (markdown: string): string[] => toTelegramHtmlChunks(markdown);
+
+  it("turns every escaped ASCII punctuation character into the literal one, escaping the HTML ones", (): void => {
+    const punctuation = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+    const escaped = [...punctuation].map((char) => `\\${char}`).join("");
+
+    expect(escaped.length).toBe(64);
+    expect(html(escaped)).toEqual([
+      "!\"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\\]^_`{|}~",
+    ]);
+  });
+
+  it("keeps an escaped asterisk pair out of the bold", (): void => {
+    expect(html(String.raw`\*\*x\*\*`)).toEqual(["**x**"]);
+  });
+
+  it("keeps an escaped asterisk inside a bold as text", (): void => {
+    expect(html(String.raw`**a\*b**`)).toEqual(["<b>a*b</b>"]);
+  });
+
+  it("keeps escaped backticks out of a code span", (): void => {
+    expect(html("\\`x\\`")).toEqual(["`x`"]);
+    expect(html("\\`x`")).toEqual(["`x`"]);
+  });
+
+  it("gives one literal backslash for a double backslash", (): void => {
+    expect(html(String.raw`\\`)).toEqual(["\\"]);
+  });
+
+  it("lets the character after an escaped backslash keep its meaning", (): void => {
+    expect(html(String.raw`\\**x**`)).toEqual(["\\<b>x</b>"]);
+    expect(html(String.raw`\\*emphasis*`)).toEqual(["\\*emphasis*"]);
+  });
+
+  it("keeps a backslash before a character that is not punctuation", (): void => {
+    expect(html(String.raw`C:\Users\x`)).toEqual([String.raw`C:\Users\x`]);
+    expect(html("a\\")).toEqual(["a\\"]);
+    expect(html("a\\é")).toEqual(["a\\é"]);
+  });
+
+  it("keeps an escape inside a code span literal", (): void => {
+    expect(html("run `a\\*b\\\\` now")).toEqual([
+      "run <code>a\\*b\\\\</code> now",
+    ]);
+    expect(html("run `a\\*b\\\\` now")).toHaveLength(1);
+  });
+
+  it("closes a code span on a backtick that follows a backslash", (): void => {
+    expect(html("`a\\`b`")).toEqual(["<code>a\\</code>b`"]);
+  });
+
+  it("keeps an escape inside a fenced block literal", (): void => {
+    expect(html("```\n\\*x\\* \\<b\\>\n```")).toEqual([
+      "<pre>\\*x\\* \\&lt;b\\&gt;</pre>",
+    ]);
+  });
+
+  it("does not take an escaped number sign at the start of a line as a heading", (): void => {
+    expect(html(String.raw`\# not a title`)).toEqual(["# not a title"]);
+    expect(html(String.raw`\## not a title`)).toEqual(["## not a title"]);
+  });
+
+  it("still takes a heading whose text has escapes", (): void => {
+    expect(html(String.raw`## \*x\*`)).toEqual(["<b>*x*</b>"]);
+  });
+
+  it("escapes an escaped angle bracket and ampersand as HTML", (): void => {
+    expect(html(String.raw`\<b\>`)).toEqual(["&lt;b&gt;"]);
+    expect(html(String.raw`\&amp;`)).toEqual(["&amp;amp;"]);
+  });
+
+  it("does not take an escaped fence as a code block", (): void => {
+    const fence = "\\`\\`\\`";
+
+    expect(parseBlocks(`${fence}\ncode`)).toEqual([
+      { kind: "text", lines: [fence, "code"] },
+    ]);
+    expect(html(`${fence}\ncode`)).toEqual(["```\ncode"]);
+  });
+
+  it("does not take a line that starts with an escaped pipe as a table row", (): void => {
+    expect(parseBlocks(["\\| a | b |", "|---|---|"].join("\n"))).toEqual([
+      { kind: "text", lines: ["\\| a | b |", "|---|---|"] },
+    ]);
+  });
+
+  it("keeps an escaped pipe inside a table cell", (): void => {
+    expect(renderTable(["| a \\| b | c |", "|---|---|", "| 1 | 2 |"])).toEqual([
+      "a | b │ c",
+      "──────┼──",
+      "1     │ 2",
+    ]);
+  });
+
+  it("unescapes a pipe inside a code span of a table cell, like GFM", (): void => {
+    expect(
+      renderTable([
+        "| `ps aux \\| grep bun` | lists |",
+        "|---|---|",
+        "| x | b \\| c |",
+      ]),
+    ).toEqual([
+      "ps aux | grep bun │ lists",
+      "──────────────────┼──────",
+      "x                 │ b | c",
+    ]);
+  });
+
+  it("puts the unescaped pipe of a code span cell in the monospaced block", (): void => {
+    expect(
+      toTelegramHtmlChunks(
+        ["| Comando | Faz |", "|---|---|", "| `ls \\| wc` | conta |"].join(
+          "\n",
+        ),
+      ),
+    ).toEqual(["<pre>Comando │ Faz\n────────┼──────\nls | wc │ conta</pre>"]);
+  });
+
+  it("keeps an escaped asterisk and backtick as text in a table cell", (): void => {
+    expect(
+      renderTable(["| \\*\\*x\\*\\* | **y** | `z` |", "|---|---|---|"]),
+    ).toEqual(["**x** │ y │ z", "──────┼───┼──"]);
+  });
+
+  it("does not drop the closing pipe of a row that ends in an escaped pipe", (): void => {
+    expect(renderTable(["| a | b \\|", "|---|---|"])).toEqual([
+      "a │ b |",
+      "──┼────",
+    ]);
   });
 });

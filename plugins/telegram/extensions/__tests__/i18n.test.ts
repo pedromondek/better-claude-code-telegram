@@ -31,6 +31,7 @@ const FUNCTION_CALLS: Record<string, unknown[]> = {
   waitingPing: ["who-sample", "3 min", "text-sample"],
   pingFailed: ["err-sample"],
   pingSent: ["inst-sample"],
+  pingRepeated: ["inst-sample"],
   permissionSentNow: ["req-sample"],
   permissionResolvedInTerminal: ["req-sample"],
   permissionSent: ["req-sample"],
@@ -210,6 +211,48 @@ describe("typed answer notices", () => {
     );
     expect(MESSAGES["pt-br"].otherAlreadyAnswered(3, null, "Sim")).toBe(
       "⚠️ A pergunta 3 já foi respondida com Sim; este texto não foi usado.",
+    );
+  });
+});
+
+describe("conclude reminder", () => {
+  it("points at the question it replies to and names the button, in each language", (): void => {
+    expect(MESSAGES["en-us"].concludeReminder).toBe(
+      "☝️ **Only this one is left to conclude**: tap ✅ Done",
+    );
+    expect(MESSAGES["pt-br"].concludeReminder).toBe(
+      "☝️ **Falta só concluir esta**: toque em ✅ Concluir",
+    );
+  });
+
+  it("names the same button the keyboard shows", (): void => {
+    for (const locale of LOCALES) {
+      expect(MESSAGES[locale].concludeReminder).toContain(
+        MESSAGES[locale].doneButton,
+      );
+      expect(MESSAGES[locale].concludeLeftLine).toContain(
+        MESSAGES[locale].doneButton,
+      );
+    }
+  });
+
+  it("gives the line added to the pending question, in each language", (): void => {
+    expect(MESSAGES["en-us"].concludeLeftLine).toBe(
+      "✅ Only this one is left: tap ✅ Done",
+    );
+    expect(MESSAGES["pt-br"].concludeLeftLine).toBe(
+      "✅ Só falta esta: toque em ✅ Concluir",
+    );
+  });
+});
+
+describe("typed answer suffix", () => {
+  it("tells Claude the answer came from Telegram, in each language", (): void => {
+    expect(MESSAGES["en-us"].typedAnswerSuffix).toBe(
+      " (answered on Telegram: if the answer asks something, reply on Telegram)",
+    );
+    expect(MESSAGES["pt-br"].typedAnswerSuffix).toBe(
+      " (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)",
     );
   });
 });

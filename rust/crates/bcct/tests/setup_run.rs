@@ -892,36 +892,6 @@ fn runs_the_status_line_step_as_the_fixture_recorded() {
 }
 
 #[test]
-fn keeping_the_statusline_of_the_clone_moves_it_to_the_launcher_of_the_app() {
-    let name = "ours kept with Enter, nothing to restore";
-    let scenario_of = |fixture: &Value| {
-        list(&fixture["processes"], "statusline")
-            .iter()
-            .find(|scenario| text(scenario, "name") == name)
-            .unwrap()
-            .clone()
-    };
-    let fixture = fixture();
-    let en = messages_for(Locale::EnUs);
-    let mut scenario = scenario_of(&fixture);
-    let kept = format!("○ {}", en.statusline_ours_kept);
-    let moved = format!(
-        "✔ {}",
-        (en.statusline_installed)("{root}/home/.claude/settings.json")
-    );
-    let stdout = text(&scenario["results"][0], "stdout").replace(&kept, &moved);
-
-    assert_ne!(stdout, text(&scenario["results"][0], "stdout"));
-    scenario["files"] = json!({
-        "home/.claude/settings.json":
-            "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"node \\\"{repo}/plugins/telegram-hooks/statusline.mjs\\\"\"\n  }\n}\n"
-    });
-    scenario["results"][0]["stdout"] = Value::String(stdout);
-
-    replay_scenario(&scenario, text(&fixture, "fakeClaude"));
-}
-
-#[test]
 fn applies_the_command_line_flags_as_the_fixture_recorded() {
     replay_group("set");
 }
@@ -2333,9 +2303,9 @@ fn ends_by_the_signal_like_node_and_shows_the_cursor_again() {
         let shown = String::from_utf8_lossy(&output).into_owned();
         let flow = &shown[..shown.find("[signal=").unwrap()];
 
-        assert_eq!(entry["received"], entry["signal"], "{name}: the JS");
-        assert_eq!(entry["code"], json!("null"), "{name}: the JS");
-        assert_eq!(entry["cooked"], json!(true), "{name}: the JS");
+        assert_eq!(entry["received"], entry["signal"], "{name}: the fixture");
+        assert_eq!(entry["code"], json!("null"), "{name}: the fixture");
+        assert_eq!(entry["cooked"], json!(true), "{name}: the fixture");
         assert!(
             shown.contains(&format!("[signal=Some({number})][code=None]")),
             "{name}: {shown}"

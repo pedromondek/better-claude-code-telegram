@@ -119,6 +119,7 @@ function build(
     api: {
       sendMessage: () => Promise.resolve({ message_id: 1 }),
       editMessageReplyMarkup: () => Promise.resolve(),
+      editMessageText: () => Promise.resolve(),
       deleteMessage: () => Promise.resolve(true),
       getFile: () => Promise.resolve({}),
       sendChatAction: () => Promise.resolve(),

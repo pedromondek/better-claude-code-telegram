@@ -98,6 +98,15 @@ describe("channel guide skill › conversation and secretary", () => {
     expect(text).toContain("never by the number alone");
   });
 
+  it("answers on Telegram, with the reply tool, an AskUserQuestion answer that came from Telegram and asks something", (): void => {
+    const text = reference("conversation.md");
+
+    expect(text).toContain("## Answers that came from Telegram");
+    expect(text).toContain(
+      "An AskUserQuestion answer that came from Telegram (it ends with a note saying it was answered on Telegram) and asks something is answered on Telegram, with the reply tool, never only in the terminal.",
+    );
+  });
+
   it("relays and routes for the other sessions without editing the repository or the background workers", (): void => {
     const text = reference("secretary.md");
 

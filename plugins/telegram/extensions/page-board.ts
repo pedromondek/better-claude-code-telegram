@@ -38,11 +38,9 @@ export function escapeHtml(text: string): string {
 }
 
 function colorOf(index: number): string {
-  const proposals = SECTION_COLORS.length - 1;
+  const [today, ...proposals] = SECTION_COLORS;
 
-  return index === 0
-    ? SECTION_COLORS[0]
-    : SECTION_COLORS[1 + ((index - 1) % proposals)];
+  return index === 0 ? today : proposals[(index - 1) % proposals.length];
 }
 
 function cardHtml(card: BoardCard, images: Map<string, string[]>): string {

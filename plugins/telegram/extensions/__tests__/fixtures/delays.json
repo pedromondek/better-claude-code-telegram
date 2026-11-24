@@ -1,29 +1,36 @@
 [
   {
-    "name": "no config uses the default delay for every kind",
+    "name": "no config uses the default delay for every kind and 3 minutes for the reminder",
     "config": {},
     "env": null,
     "expected": {
       "questions": 240000,
       "permissions": 240000,
-      "waiting": 240000
+      "waiting": 240000,
+      "reminder": 180000
     }
   },
   {
-    "name": "the delay of the setup applies to every kind without delays",
+    "name": "the delay of the setup applies to every kind without delays but not to the reminder",
     "config": { "delayMinutes": 5 },
     "env": null,
     "expected": {
       "questions": 300000,
       "permissions": 300000,
-      "waiting": 300000
+      "waiting": 300000,
+      "reminder": 180000
     }
   },
   {
-    "name": "a single delay of 0 sends every kind right away",
+    "name": "a single delay of 0 sends every kind right away but keeps the reminder at 3 minutes",
     "config": { "delayMinutes": 0 },
     "env": null,
-    "expected": { "questions": 0, "permissions": 0, "waiting": 0 }
+    "expected": {
+      "questions": 0,
+      "permissions": 0,
+      "waiting": 0,
+      "reminder": 180000
+    }
   },
   {
     "name": "a single delay that is null, empty or false keeps the default instead of going right away",
@@ -32,29 +39,50 @@
     "expected": {
       "questions": 240000,
       "permissions": 240000,
-      "waiting": 240000
+      "waiting": 240000,
+      "reminder": 180000
     }
   },
   {
     "name": "a single delay written as the text 0 also goes right away",
     "config": { "delayMinutes": "0" },
     "env": null,
-    "expected": { "questions": 0, "permissions": 0, "waiting": 0 }
+    "expected": {
+      "questions": 0,
+      "permissions": 0,
+      "waiting": 0,
+      "reminder": 180000
+    }
   },
   {
     "name": "a kind set to 0 goes right away and the others keep the delay",
     "config": { "delayMinutes": 5, "delays": { "questions": 0 } },
     "env": null,
-    "expected": { "questions": 0, "permissions": 300000, "waiting": 300000 }
+    "expected": {
+      "questions": 0,
+      "permissions": 300000,
+      "waiting": 300000,
+      "reminder": 180000
+    }
   },
   {
     "name": "each kind takes its own minutes, fractions included",
     "config": {
       "delayMinutes": 5,
-      "delays": { "questions": 1, "permissions": 2, "waiting": 0.5 }
+      "delays": {
+        "questions": 1,
+        "permissions": 2,
+        "waiting": 0.5,
+        "reminder": 1.5
+      }
     },
     "env": null,
-    "expected": { "questions": 60000, "permissions": 120000, "waiting": 30000 }
+    "expected": {
+      "questions": 60000,
+      "permissions": 120000,
+      "waiting": 30000,
+      "reminder": 90000
+    }
   },
   {
     "name": "a kind that is negative, text or null falls back to the delay of the setup",
@@ -66,7 +94,8 @@
     "expected": {
       "questions": 120000,
       "permissions": 120000,
-      "waiting": 120000
+      "waiting": 120000,
+      "reminder": 180000
     }
   },
   {
@@ -76,13 +105,65 @@
     "expected": {
       "questions": 120000,
       "permissions": 120000,
-      "waiting": 120000
+      "waiting": 120000,
+      "reminder": 180000
     }
   },
   {
     "name": "the delay in ms of the environment wins over every kind",
-    "config": { "delays": { "questions": 3, "permissions": 0 } },
+    "config": {
+      "delays": { "questions": 3, "permissions": 0, "reminder": 7 }
+    },
     "env": "1500",
-    "expected": { "questions": 1500, "permissions": 1500, "waiting": 1500 }
+    "expected": {
+      "questions": 1500,
+      "permissions": 1500,
+      "waiting": 1500,
+      "reminder": 1500
+    }
+  },
+  {
+    "name": "a reminder of 0 comes right away and the other kinds keep the delay",
+    "config": { "delayMinutes": 5, "delays": { "reminder": 0 } },
+    "env": null,
+    "expected": {
+      "questions": 300000,
+      "permissions": 300000,
+      "waiting": 300000,
+      "reminder": 0
+    }
+  },
+  {
+    "name": "a reminder that is negative keeps 3 minutes instead of the delay of the setup",
+    "config": { "delayMinutes": 5, "delays": { "reminder": -1 } },
+    "env": null,
+    "expected": {
+      "questions": 300000,
+      "permissions": 300000,
+      "waiting": 300000,
+      "reminder": 180000
+    }
+  },
+  {
+    "name": "a reminder written as text keeps 3 minutes instead of the delay of the setup",
+    "config": { "delayMinutes": 5, "delays": { "reminder": "10" } },
+    "env": null,
+    "expected": {
+      "questions": 300000,
+      "permissions": 300000,
+      "waiting": 300000,
+      "reminder": 180000
+    }
+  },
+  {
+    "name": "a reminder that is null keeps 3 minutes instead of the delay of the setup",
+    "config": { "delayMinutes": 5, "delays": { "reminder": null } },
+    "env": null,
+    "expected": {
+      "questions": 300000,
+      "permissions": 300000,
+      "waiting": 300000,
+      "reminder": 180000
+    }
   }
 ]

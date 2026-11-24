@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -18,6 +19,7 @@ import {
   createWaitingPing,
   formatWaitingPing,
   isWaitingPing,
+  readPingText,
   readPingTimestamp,
   type WaitingPingChannel,
 } from "../waiting-ping.ts";
@@ -44,6 +46,8 @@ interface SetupOptions {
   now?: number;
   messages?: () => Messages;
   fail?: boolean;
+  failSend?: (chatId: string, sendNumber: number) => boolean;
+  chats?: string[];
   onSend?: (ping: WaitingPingChannel) => void;
 }
 
@@ -84,6 +88,8 @@ function setup({
   now = NOW,
   messages,
   fail = false,
+  failSend = (): boolean => false,
+  chats = [CHAT],
   onSend,
 }: SetupOptions = {}): {
   sent: SentPing[];
@@ -92,6 +98,7 @@ function setup({
 } {
   const sent: SentPing[] = [];
   const logs: string[] = [];
+  let sendNumber = 0;
   const ping = createWaitingPing({
     api: {
       sendMessage(
@@ -99,7 +106,11 @@ function setup({
         text: string,
         options?: { parse_mode?: "HTML" },
       ): Promise<unknown> {
-        if (fail) return Promise.reject(new Error("boom"));
+        sendNumber += 1;
+
+        if (fail || failSend(chatId, sendNumber)) {
+          return Promise.reject(new Error("boom"));
+        }
 
         onSend?.(ping);
         sent.push({ chatId, text, parseMode: options?.parse_mode });
@@ -108,7 +119,7 @@ function setup({
       },
     },
     appDir,
-    allowedChats: () => [CHAT],
+    allowedChats: () => chats,
     log: (message) => logs.push(message),
     now: () => now,
     ...(messages ? { messages } : {}),
@@ -255,6 +266,23 @@ describe("readPingTimestamp", () => {
     writeFileSync(join(pingsDir(), "last-prompt"), "not a stamp");
 
     expect(readPingTimestamp(appDir, "last-prompt")).toBeNull();
+  });
+});
+
+describe("readPingText", () => {
+  it("reads the text stored in the pings folder as it is", (): void => {
+    mkdirSync(pingsDir(), { recursive: true });
+    writeFileSync(join(pingsDir(), "s1.sent"), "Nada aberto.\n");
+
+    expect(readPingText(appDir, "s1.sent")).toBe("Nada aberto.\n");
+  });
+
+  it("returns null when the file is missing or cannot be read", (): void => {
+    expect(readPingText(appDir, "s1.sent")).toBeNull();
+
+    mkdirSync(join(pingsDir(), "s1.sent"), { recursive: true });
+
+    expect(readPingText(appDir, "s1.sent")).toBeNull();
   });
 });
 
@@ -471,6 +499,7 @@ describe("createWaitingPing", () => {
     expect(readdirSync(pingsDir()).toSorted()).toEqual([
       "last-inbound",
       "last-prompt",
+      "s1.sent",
     ]);
   });
 
@@ -494,7 +523,10 @@ describe("createWaitingPing", () => {
     await ping.tick();
 
     expect(sent.length).toBe(1);
-    expect(readdirSync(pingsDir())).toEqual(["last-inbound"]);
+    expect(readdirSync(pingsDir()).toSorted()).toEqual([
+      "last-inbound",
+      "s1.sent",
+    ]);
   });
 });
 
@@ -503,7 +535,12 @@ describe("failure notices", () => {
 
   function writeFailure(
     sessionId: string,
-    { dueAt = NOW, instance = null, released }: PingOptions = {},
+    {
+      dueAt = NOW,
+      instance = null,
+      released,
+      text = FAILURE_TEXT,
+    }: PingOptions = {},
   ): void {
     mkdirSync(pingsDir(), { recursive: true });
     writeFileSync(
@@ -512,7 +549,7 @@ describe("failure notices", () => {
         sessionId,
         createdAt: dueAt,
         dueAt,
-        text: FAILURE_TEXT,
+        text,
         instance,
         kind: "failure",
         ...(released === undefined ? {} : { released }),
@@ -540,6 +577,76 @@ describe("failure notices", () => {
         EN,
       ),
     ).toBe(FAILURE_TEXT);
+  });
+
+  it("sends the title of the card in bold and escapes the rest of it", async (): Promise<void> => {
+    writeFailure("s1", {
+      instance: "proj#abcd",
+      text: "🛑 **Claude stopped** · [proj#abcd]\n\nReason: the API rejected the request (<b>x</b> & y)\nBack: Nov 24, 9:00 AM (America/Sao_Paulo)\nNext: review the request and try again in the terminal",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🛑 <b>Claude stopped</b> · [proj#abcd]\n\nReason: the API rejected the request (&lt;b&gt;x&lt;/b&gt; &amp; y)\nBack: Nov 24, 9:00 AM (America/Sao_Paulo)\nNext: review the request and try again in the terminal",
+    ]);
+    expect(sent[0].parseMode).toBe("HTML");
+  });
+
+  it("sends the card with its fields in one block quote", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🪫 **Cota esgotada** · o Claude parou · [telegram]\n> 📋 **Motivo:** o limite de uso do seu plano foi atingido\n> 🕙 **Volta:** 25/11 às 10:00 (America/Sao_Paulo)\n> 👉 **Depois:** não continua sozinho, retome no terminal",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🪫 <b>Cota esgotada</b> · o Claude parou · [telegram]\n<blockquote>📋 <b>Motivo:</b> o limite de uso do seu plano foi atingido\n🕙 <b>Volta:</b> 25/11 às 10:00 (America/Sao_Paulo)\n👉 <b>Depois:</b> não continua sozinho, retome no terminal</blockquote>",
+    ]);
+    expect(sent[0].parseMode).toBe("HTML");
+  });
+
+  it("sends a detail line in code raw inside the quote", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🛑 **Claude parou**\n> 📋 **Motivo:** a API recusou o pedido\n> `API Error: 400 bad **campo**`",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🛑 <b>Claude parou</b>\n<blockquote>📋 <b>Motivo:</b> a API recusou o pedido\n<code>API Error: 400 bad **campo**</code></blockquote>",
+    ]);
+  });
+
+  it("sends the API error detail the Rust notice escaped as literal text, with no bold or code from it", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🛑 **Claude stopped**\n\nReason: the API rejected the request (bad \\*\\*field\\*\\* \\`x\\` in C:\\\\tmp \\\\_)\nNext: review the request and try again in the terminal",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🛑 <b>Claude stopped</b>\n\nReason: the API rejected the request (bad **field** `x` in C:\\tmp \\_)\nNext: review the request and try again in the terminal",
+    ]);
+    expect(sent[0].parseMode).toBe("HTML");
+    expect(sent[0].text.match(/<\/?(b|code)>/g)).toEqual(["<b>", "</b>"]);
+  });
+
+  it("sends the title of the card in bold without an instance label", async (): Promise<void> => {
+    writeFailure("s1", {
+      text: "🛑 **O Claude parou**\n\nMotivo: sua conta está suspensa\nDepois: confira a situação da conta e retome no terminal",
+    });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.map((message) => message.text)).toEqual([
+      "🛑 <b>O Claude parou</b>\n\nMotivo: sua conta está suspensa\nDepois: confira a situação da conta e retome no terminal",
+    ]);
   });
 
   it("accepts the failure kind and rejects any other kind", (): void => {
@@ -719,5 +826,192 @@ describe("waiting notices held", () => {
 
   it("holds nothing without a pings folder", (): void => {
     expect(setup().ping.held()).toBe(0);
+  });
+
+  it("leaves out a notice equal to the last one sent for its session", (): void => {
+    const { ping } = setup();
+
+    writePing("same", { dueAt: NOW - 1, text: "Nada aberto." });
+    writeFileSync(join(pingsDir(), "same.sent"), "Nada aberto.");
+    writePing("other", { dueAt: NOW - 1, text: "Posso seguir?" });
+    writeFileSync(join(pingsDir(), "other.sent"), "Nada aberto.");
+
+    expect(ping.held()).toBe(1);
+  });
+});
+
+describe("repeated waiting notices", () => {
+  it("does not send again the text last sent for the same session and logs why", async (): Promise<void> => {
+    writePing("s1", { text: "Nenhuma pergunta aberta no Telegram." });
+    await setup().ping.tick();
+    writePing("s1", { text: "Nenhuma pergunta aberta no Telegram." });
+    const { sent, logs, ping } = setup({ messages: () => PT });
+
+    await ping.tick();
+
+    expect(sent).toEqual([]);
+    expect(logs).toEqual([
+      "ping: aviso de [telegram] igual ao último, não enviado",
+    ]);
+    expect(existsSync(join(pingsDir(), "s1.json"))).toBe(false);
+  });
+
+  it("names the instance of the repeated notice in en-us", async (): Promise<void> => {
+    writePing("s1", { text: "Same.", instance: "api" });
+    await setup().ping.tick();
+    writePing("s1", { text: "Same.", instance: "api" });
+    const { logs, ping } = setup({ messages: () => EN });
+
+    await ping.tick();
+
+    expect(logs).toEqual([
+      "ping: notice from [api] same as the last one, not sent",
+    ]);
+  });
+
+  describe("when a notice is split in chunks", () => {
+    const LONG_TEXT = `${"l".repeat(99)}\n`.repeat(50).trim();
+
+    it("does not remember a notice whose later chunk failed, so the same notice goes out again", async (): Promise<void> => {
+      writePing("s1", { text: LONG_TEXT });
+
+      const { sent, ping } = setup({
+        failSend: (_chatId, sendNumber) => sendNumber === 2,
+      });
+
+      await ping.tick();
+
+      expect(sent.length).toBe(1);
+      expect(existsSync(join(pingsDir(), "s1.sent"))).toBe(false);
+
+      writePing("s1", { text: LONG_TEXT });
+      await ping.tick();
+
+      expect(sent.length).toBe(1 + 2);
+    });
+
+    it("remembers a notice when one chat got every chunk even if another chat failed partway", async (): Promise<void> => {
+      writePing("s1", { text: LONG_TEXT });
+
+      const { sent, logs, ping } = setup({
+        chats: ["111", CHAT],
+        failSend: (chatId, sendNumber) => chatId === "111" && sendNumber === 2,
+      });
+
+      await ping.tick();
+
+      expect(sent.filter((message) => message.chatId === CHAT).length).toBe(2);
+      expect(readFileSync(join(pingsDir(), "s1.sent"), "utf8")).toBe(LONG_TEXT);
+
+      writePing("s1", { text: LONG_TEXT });
+      await ping.tick();
+
+      expect(sent.length).toBe(1 + 2);
+      expect(logs.at(-1)).toBe(EN.pingRepeated("telegram"));
+    });
+
+    it("remembers a notice only when a chat received every chunk of it", async (): Promise<void> => {
+      writePing("s1", { text: LONG_TEXT });
+
+      const { ping } = setup({ failSend: () => true });
+
+      await ping.tick();
+
+      expect(existsSync(join(pingsDir(), "s1.sent"))).toBe(false);
+    });
+  });
+
+  it("sends a text that differs from the last one sent and remembers the new one", async (): Promise<void> => {
+    writePing("s1", { text: "Primeira." });
+    await setup().ping.tick();
+    writePing("s1", { text: "Segunda." });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.length).toBe(1);
+    expect(sent[0].text.endsWith("Segunda.")).toBe(true);
+    expect(readFileSync(join(pingsDir(), "s1.sent"), "utf8")).toBe("Segunda.");
+  });
+
+  it("sends the same text for another session", async (): Promise<void> => {
+    writePing("s1", { text: "Igual." });
+    await setup().ping.tick();
+    writePing("s2", { text: "Igual." });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.length).toBe(1);
+  });
+
+  it("sends the same text again once the mark of the session is gone", async (): Promise<void> => {
+    writePing("s1", { text: "Igual." });
+    await setup().ping.tick();
+    rmSync(join(pingsDir(), "s1.sent"));
+    writePing("s1", { text: "Igual." });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.length).toBe(1);
+  });
+
+  it("keeps the mark of the last text readable only by the owner", async (): Promise<void> => {
+    writePing("s1");
+    await setup().ping.tick();
+
+    expect(statSync(join(pingsDir(), "s1.sent")).mode & 0o777).toBe(0o600);
+  });
+
+  it("leaves no mark when no chat got the notice, so the same text goes out next time", async (): Promise<void> => {
+    writePing("s1", { text: "Igual." });
+    await setup({ fail: true }).ping.tick();
+
+    expect(existsSync(join(pingsDir(), "s1.sent"))).toBe(false);
+
+    writePing("s1", { text: "Igual." });
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.length).toBe(1);
+  });
+
+  it("still sends the notice when the mark cannot be written", async (): Promise<void> => {
+    writePing("s1", { text: "Igual." });
+    mkdirSync(join(pingsDir(), "s1.sent"));
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.length).toBe(1);
+  });
+
+  it("sends a failure notice every time, without a mark", async (): Promise<void> => {
+    const failure = (): void => {
+      mkdirSync(pingsDir(), { recursive: true });
+      writeFileSync(
+        join(pingsDir(), "s1.notice.json"),
+        JSON.stringify({
+          sessionId: "s1",
+          createdAt: NOW,
+          dueAt: NOW,
+          text: "⚠️ Claude stopped",
+          instance: null,
+          kind: "failure",
+        }),
+      );
+    };
+
+    failure();
+    await setup().ping.tick();
+    failure();
+    const { sent, ping } = setup();
+
+    await ping.tick();
+
+    expect(sent.length).toBe(1);
+    expect(existsSync(join(pingsDir(), "s1.notice.sent"))).toBe(false);
   });
 });

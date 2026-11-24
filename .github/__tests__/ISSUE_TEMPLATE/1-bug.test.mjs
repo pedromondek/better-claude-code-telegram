@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { SETUP_COMMAND } from "../../../npm/shim/shim.constants.mjs";
 import { binaryCommand } from "../../../npm/shim/shim.mjs";
-import { SETUP_COMMAND } from "../../../plugins/telegram-hooks/lib/package.constants.mjs";
 import { describeIssueForm, issueForm } from "../support/issue-form.mjs";
 
 const HEALTH = "npx @pedromondek/better-claude-code-telegram health";

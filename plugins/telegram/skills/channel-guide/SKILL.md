@@ -10,7 +10,7 @@ Read only the reference of what you are about to do.
 
 | Doing                                                          | Reference                                                    |
 | -------------------------------------------------------------- | ------------------------------------------------------------ |
-| Asking for a decision, or reporting the end of a stage         | [reference/conversation.md](reference/conversation.md)       |
+| Asking for a decision, reading its answer, or ending a stage   | [reference/conversation.md](reference/conversation.md)       |
 | Sending a table                                                | [reference/tables.md](reference/tables.md)                   |
 | Sending an image or a video                                    | [reference/images.md](reference/images.md)                   |
 | Showing a visual idea, a before and after or a transition      | [reference/illustrations.md](reference/illustrations.md)     |

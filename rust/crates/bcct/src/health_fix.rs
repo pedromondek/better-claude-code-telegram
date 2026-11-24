@@ -17,14 +17,11 @@ use crate::journal::Journal;
 use crate::js::stringify_pretty;
 use crate::messages::Messages;
 use crate::prompt::Prompter;
-use crate::settings::{DENY, PERMISSIONS, STATUS_LINE};
+use crate::settings::{DENY, PERMISSIONS};
 use crate::setup::{
-    SetupPaths, StatuslineKind, command_on_path, read_settings, shell_file, shell_rc_files,
-    shell_script, statusline_is_current, statusline_kind,
+    SetupPaths, command_on_path, read_settings, shell_file, shell_rc_files, shell_script,
 };
-use crate::setup_files::{
-    Printer, SetupFiles, StatuslineChoice, apply_statusline, ensure_env_denied,
-};
+use crate::setup_files::{Printer, SetupFiles, ensure_env_denied};
 use crate::shell_rc::install_shell_function;
 use crate::ui::{fail, success};
 
@@ -36,26 +33,18 @@ const OWNER_WRITE: u32 = 0o700;
 pub enum FixId {
     Shell,
     Protection,
-    Statusline,
     AppDir,
     Update,
 }
 
 impl FixId {
-    pub const ALL: [Self; 5] = [
-        Self::Shell,
-        Self::Protection,
-        Self::Statusline,
-        Self::AppDir,
-        Self::Update,
-    ];
+    pub const ALL: [Self; 4] = [Self::Shell, Self::Protection, Self::AppDir, Self::Update];
 
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Shell => "shell",
             Self::Protection => "protection",
-            Self::Statusline => "statusline",
             Self::AppDir => "app",
             Self::Update => "update",
         }
@@ -71,7 +60,6 @@ impl FixId {
         match self {
             Self::Shell => Check::Shell,
             Self::Protection => Check::Protection,
-            Self::Statusline => Check::Statusline,
             Self::AppDir => Check::AppDir,
             Self::Update => Check::Version,
         }
@@ -93,7 +81,6 @@ impl Fix {
         match self.id {
             FixId::Shell => (texts.shell)(&target),
             FixId::Protection => (texts.protection)(&target),
-            FixId::Statusline => (texts.statusline)(&target),
             FixId::AppDir => (texts.app_dir)(&target),
             FixId::Update => texts.update.to_owned(),
         }
@@ -170,10 +157,6 @@ fn failed(results: &[Entry], check: Check) -> bool {
         .any(|entry| entry.check == check && entry.status == Status::Fail)
 }
 
-fn shown(results: &[Entry], check: Check) -> bool {
-    results.iter().any(|entry| entry.check == check)
-}
-
 fn text_var(machine: &Machine<'_>, name: &str) -> Option<String> {
     (machine.var)(name).map(|value| value.to_string_lossy().into_owned())
 }
@@ -190,17 +173,6 @@ fn deny_is_usable(paths: &SetupPaths) -> bool {
         deny,
         Some(Value::Bool(_) | Value::Number(_) | Value::String(_) | Value::Object(_))
     )
-}
-
-fn statusline_is_old(paths: &SetupPaths, messages: &Messages) -> bool {
-    let Ok(settings) = read_settings(&paths.settings_file, messages) else {
-        return false;
-    };
-    let current = settings.get(STATUS_LINE);
-    let kind = statusline_kind(current, &paths.app_dir);
-
-    (kind == StatuslineKind::Ours || kind == StatuslineKind::OursAfter)
-        && !statusline_is_current(current, &paths.app_dir)
 }
 
 #[must_use]
@@ -245,13 +217,6 @@ pub fn plan(
     {
         fixes.push(Fix {
             id: FixId::Protection,
-            target: paths.settings_file.clone(),
-        });
-    }
-
-    if shown(results, Check::Statusline) && statusline_is_old(paths, messages) {
-        fixes.push(Fix {
-            id: FixId::Statusline,
             target: paths.settings_file.clone(),
         });
     }
@@ -342,14 +307,6 @@ pub fn apply(
             .map_err(refused)
         }
         FixId::Protection => ensure_env_denied(&files, &mut journal, &mut printer).map_err(refused),
-        FixId::Statusline => apply_statusline(
-            &files,
-            StatuslineChoice::On,
-            machine.now,
-            &mut journal,
-            &mut printer,
-        )
-        .map_err(refused),
         FixId::AppDir => {
             give_write_permission(&fix.target).map_err(io_reason(&fix.target, messages))?;
             clear_reason(&paths.app_dir, Reason::NoPermission);
@@ -609,12 +566,12 @@ mod tests {
     }
 
     #[test]
-    fn every_fix_id_reads_back_and_points_to_its_check() {
+    fn reads_back_every_fix_id_and_points_it_to_its_check() {
         let checks = [
             Check::Shell,
             Check::Protection,
-            Check::Statusline,
             Check::AppDir,
+            Check::Version,
         ];
 
         for (fix, check) in FixId::ALL.into_iter().zip(checks) {
@@ -636,7 +593,10 @@ mod tests {
         assert_eq!(parse_only(&[], &EN_US), Ok(vec![]));
         assert_eq!(
             parse_only(&ids(&["x", "shell", "y"]), &PT_BR),
-            Err("Consertos desconhecidos: x, y. Os possíveis são: shell, protection, statusline, app, update.".to_owned())
+            Err(
+                "Consertos desconhecidos: x, y. Os possíveis são: shell, protection, app, update."
+                    .to_owned()
+            )
         );
     }
 

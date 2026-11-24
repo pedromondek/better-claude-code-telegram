@@ -273,19 +273,8 @@ fn the_shell_is_fixed_only_for_a_shell_with_a_known_rc() {
 }
 
 #[test]
-fn a_fix_is_planned_only_for_a_check_that_ran() {
-    let old = r#"{"statusLine":{"type":"command","command":"node \"/old/plugins/telegram-hooks/statusline.mjs\""}}"#;
-
+fn plans_a_fix_only_for_a_check_that_ran() {
     assert_eq!(planned(&[], "/bin/bash", None, None), vec![]);
-    assert_eq!(
-        planned(
-            &[entry(Check::Shell, Status::Ok)],
-            "/bin/bash",
-            None,
-            Some(old)
-        ),
-        vec![]
-    );
     assert_eq!(
         planned(
             &[entry(Check::AppDir, Status::Fail)],
@@ -298,7 +287,7 @@ fn a_fix_is_planned_only_for_a_check_that_ran() {
 }
 
 #[test]
-fn the_status_line_is_left_alone_unless_it_is_an_old_command_of_ours() {
+fn plans_no_fix_for_the_status_line_whatever_the_command() {
     let shown = [entry(Check::Statusline, Status::Ok)];
     let with = |command: &str| {
         format!(
@@ -307,28 +296,11 @@ fn the_status_line_is_left_alone_unless_it_is_an_old_command_of_ours() {
         )
     };
 
-    assert_eq!(
-        planned(
-            &shown,
-            "/bin/bash",
-            None,
-            Some(&with("node \"/old/plugins/telegram-hooks/statusline.mjs\""))
-        ),
-        vec![FixId::Statusline]
-    );
-    assert_eq!(
-        planned(
-            &shown,
-            "/bin/bash",
-            None,
-            Some(&with(
-                "node \"/old/plugins/telegram-hooks/statusline.mjs\" --after-previous"
-            ))
-        ),
-        vec![FixId::Statusline]
-    );
-
     for settings in [
+        Some(with("node \"/old/plugins/telegram-hooks/statusline.mjs\"")),
+        Some(with(
+            "node \"/old/plugins/telegram-hooks/statusline.mjs\" --after-previous",
+        )),
         Some(with("my-own-line")),
         Some("not json".to_owned()),
         Some("{}".to_owned()),
@@ -340,4 +312,6 @@ fn the_status_line_is_left_alone_unless_it_is_an_old_command_of_ours() {
             "{settings:?}"
         );
     }
+
+    assert_eq!(FixId::parse("statusline"), None);
 }

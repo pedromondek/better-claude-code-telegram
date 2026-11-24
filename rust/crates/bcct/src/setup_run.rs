@@ -13,9 +13,13 @@ use serde_json::{Map, Number, Value, json};
 use crate::browser::{Platform, playwright_chromium, read_dir_names};
 use crate::changes::{
     ChangeContext, DELAY_ICON, INBOX_ICON, LANGUAGE_ICON, PLUGIN_ICON, QUIET_HOURS_ICON,
-    STATUSLINE_ICON, TRANSCRIPTION_ICON, VISUALS_ICON, describe_changes, quiet_hours_text,
+    REMINDER_ICON, STATUSLINE_ICON, TRANSCRIPTION_ICON, VISUALS_ICON, describe_changes,
+    quiet_hours_text,
 };
-use crate::config::{DEFAULT_DELAY_MINUTES, DelayKind, Visuals, read_config, read_visuals};
+use crate::config::{
+    DEFAULT_DELAY_MINUTES, DEFAULT_REMINDER_MINUTES, DelayKind, Visuals, has_per_kind_delays,
+    kind_minutes, read_config, read_visuals,
+};
 use crate::files::{FileFailure, create_private_dir, read_json, write_private};
 use crate::health::{self, Screen};
 use crate::hook::now_ms;
@@ -38,12 +42,11 @@ use crate::setup::{
     ACCESS_FILE, ALLOW_FROM_KEY, COMMAND_ON_PATH_KEY, ENV_FILE, SETUP_COMMAND, SetupPaths,
     StatuslineState, check_setup, command_on_path, env_deny_rule, git_version_from, launcher_dir,
     mark_launch, parse_env_token, read_settings, read_text, setup_locale, shell_file, shell_script,
-    statusline_is_current, statusline_prompt, statusline_state, telegram_instance_running,
-    whisper_python_works,
+    statusline_prompt, statusline_state, telegram_instance_running, whisper_python_works,
 };
 use crate::setup_ask::{
     DelayPick, QuietRange, ask_delay, ask_inbox, ask_installed_commands, ask_language,
-    ask_our_statusline, ask_pairing_choice, ask_quiet_hours, ask_remove_models,
+    ask_our_statusline, ask_pairing_choice, ask_quiet_hours, ask_reminder, ask_remove_models,
     ask_statusline_choice, ask_transcription, ask_visuals, kinds_summary, parse_delay_minutes,
     parse_kinds, parse_locale, parse_quiet_hours, parse_visual_mode, parse_visual_review,
     quiet_answer, saved_kinds, single_delay, statusline_example,
@@ -75,10 +78,11 @@ const PAIRING_ICON: &str = "🔗";
 const PATH_ICON: &str = "💻";
 const DELAYS_KEY: &str = "delays";
 pub const SET_FLAG: &str = "--set";
-const SETTABLE_STEPS: [&str; 9] = [
+const SETTABLE_STEPS: [&str; 10] = [
     "language",
     "delay",
     "delays",
+    "reminder",
     "quiet-hours",
     "transcription",
     "inbox",
@@ -103,6 +107,7 @@ pub enum Section {
     Token,
     Pairing,
     Delay,
+    Reminder,
     QuietHours,
     Transcription,
     Inbox,
@@ -112,12 +117,13 @@ pub enum Section {
     Health,
 }
 
-pub const SETUP_SECTIONS: [Section; 11] = [
+pub const SETUP_SECTIONS: [Section; 12] = [
     Section::Language,
     Section::Plugin,
     Section::Token,
     Section::Pairing,
     Section::Delay,
+    Section::Reminder,
     Section::QuietHours,
     Section::Transcription,
     Section::Inbox,
@@ -135,6 +141,7 @@ impl Section {
             Self::Token => "token",
             Self::Pairing => "pairing",
             Self::Delay => "delay",
+            Self::Reminder => "reminder",
             Self::QuietHours => "quiet-hours",
             Self::Transcription => "transcription",
             Self::Inbox => "inbox",
@@ -154,6 +161,7 @@ impl Section {
             Self::Token => (TOKEN_ICON, titles.token),
             Self::Pairing => (PAIRING_ICON, titles.pairing),
             Self::Delay => (DELAY_ICON, titles.delay),
+            Self::Reminder => (REMINDER_ICON, titles.reminder),
             Self::QuietHours => (QUIET_HOURS_ICON, titles.quiet_hours),
             Self::Transcription => (TRANSCRIPTION_ICON, titles.transcription),
             Self::Inbox => (INBOX_ICON, titles.inbox),
@@ -452,6 +460,18 @@ fn number(value: f64) -> Value {
     Number::from_f64(value).map_or(Value::Null, Value::Number)
 }
 
+fn saved_delays(config: &Map<String, Value>) -> Map<String, Value> {
+    config
+        .get(DELAYS_KEY)
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn saved_reminder(config: &Map<String, Value>) -> Option<Value> {
+    saved_delays(config).remove(DelayKind::Reminder.key())
+}
+
 fn quiet_value(range: Option<&QuietRange>) -> Value {
     range.map_or(
         Value::Null,
@@ -711,7 +731,7 @@ impl<'a> Setup<'a> {
             .map(js_string)
             .unwrap_or_default();
         let single = parse_delay_minutes(&typed).unwrap_or(DEFAULT_DELAY_MINUTES);
-        let saved = config.contains_key("delayMinutes") || config.contains_key(DELAYS_KEY);
+        let saved = config.contains_key("delayMinutes") || has_per_kind_delays(&config);
         let saved_kinds = saved_kinds(&config, single);
         let current = saved_kinds.and_then(single_delay).unwrap_or(single);
         let kinds = saved_kinds.filter(|kinds| single_delay(*kinds).is_none());
@@ -722,6 +742,47 @@ impl<'a> Setup<'a> {
             DelayPick::Minutes(minutes) => self.save_delay(minutes, messages),
             DelayPick::Kinds(kinds) => self.save_kinds(kinds, messages),
         }
+    }
+
+    fn ensure_reminder(
+        &mut self,
+        messages: &'static Messages,
+        ask: &mut dyn Prompter,
+    ) -> Result<(), Stop> {
+        let config = read_config(&self.paths.app_dir);
+        let saved = kind_minutes(&config, DelayKind::Reminder);
+
+        self.ready()?;
+
+        let minutes = ask_reminder(
+            saved.unwrap_or(DEFAULT_REMINDER_MINUTES),
+            saved.is_some(),
+            messages,
+            ask,
+        )?;
+
+        self.save_reminder(minutes, messages)
+    }
+
+    fn save_reminder(&mut self, minutes: f64, messages: &Messages) -> Result<(), Stop> {
+        if self.kept_setting(Kept::Reminder(minutes), messages) {
+            return Ok(());
+        }
+
+        let mut delays = saved_delays(&read_config(&self.paths.app_dir));
+
+        delays.insert(DelayKind::Reminder.key().to_owned(), number(minutes));
+
+        let config_file = self.save_setting(DELAYS_KEY, Value::Object(delays), messages)?;
+
+        self.output
+            .printer(messages)
+            .success(&(messages.reminder_saved)(
+                minutes,
+                &config_file.to_string_lossy(),
+            ));
+
+        Ok(())
     }
 
     fn save_delay(&mut self, minutes: f64, messages: &Messages) -> Result<(), Stop> {
@@ -744,12 +805,25 @@ impl<'a> Setup<'a> {
     }
 
     fn clear_kinds(&mut self, messages: &Messages) -> Result<(), Stop> {
-        if !read_config(&self.paths.app_dir).contains_key(DELAYS_KEY) {
+        let config = read_config(&self.paths.app_dir);
+
+        if !has_per_kind_delays(&config) {
             return Ok(());
         }
 
-        remove_config_key(&self.paths.app_dir, DELAYS_KEY, &mut self.journal)
-            .map_err(|failure| Stop::Failed(failure.message(messages)))?;
+        match saved_reminder(&config) {
+            Some(reminder) => {
+                let only_reminder =
+                    Map::from_iter([(DelayKind::Reminder.key().to_owned(), reminder)]);
+
+                self.save_setting(DELAYS_KEY, Value::Object(only_reminder), messages)?;
+            }
+            None => {
+                remove_config_key(&self.paths.app_dir, DELAYS_KEY, &mut self.journal)
+                    .map_err(|failure| Stop::Failed(failure.message(messages)))?;
+            }
+        }
+
         self.output
             .printer(messages)
             .success(messages.delays_cleared);
@@ -774,11 +848,16 @@ impl<'a> Setup<'a> {
             return Ok(());
         }
 
-        let delays: Map<String, Value> = DelayKind::ALL
+        let mut delays: Map<String, Value> = DelayKind::PER_KIND
             .iter()
             .zip(kinds)
             .map(|(kind, minutes)| (kind.key().to_owned(), number(minutes)))
             .collect();
+
+        if let Some(reminder) = saved_reminder(&read_config(&self.paths.app_dir)) {
+            delays.insert(DelayKind::Reminder.key().to_owned(), reminder);
+        }
+
         let config_file = self.save_setting(DELAYS_KEY, Value::Object(delays), messages)?;
 
         self.output
@@ -860,10 +939,6 @@ impl<'a> Setup<'a> {
 
             if ask_our_statusline(restores, messages, ask)? == CommandsChoice::Remove {
                 return self.apply_statusline(StatuslineChoice::Off, messages);
-            }
-
-            if !statusline_is_current(current, &self.paths.app_dir) {
-                return self.apply_statusline(StatuslineChoice::On, messages);
             }
 
             self.output
@@ -1038,6 +1113,10 @@ impl<'a> Setup<'a> {
 
         if self.begin(Section::Delay, &steps, messages) {
             self.ensure_delay(messages, ask)?;
+        }
+
+        if self.begin(Section::Reminder, &steps, messages) {
+            self.ensure_reminder(messages, ask)?;
         }
 
         if self.begin(Section::QuietHours, &steps, messages) {
@@ -1261,7 +1340,7 @@ impl<'a> Setup<'a> {
             }
             "delays" => {
                 if DISABLE_ANSWERS.contains(&js_trim(value).to_lowercase().as_str()) {
-                    if !read_config(&self.paths.app_dir).contains_key(DELAYS_KEY) {
+                    if !has_per_kind_delays(&read_config(&self.paths.app_dir)) {
                         self.output
                             .printer(messages)
                             .skipped(messages.delays_already_off);
@@ -1275,6 +1354,11 @@ impl<'a> Setup<'a> {
                 let kinds = parse_kinds(value).ok_or_else(|| invalid(hints.delays))?;
 
                 self.save_kinds(kinds, messages)
+            }
+            "reminder" => {
+                let minutes = parse_delay_minutes(value).ok_or_else(|| invalid(hints.reminder))?;
+
+                self.save_reminder(minutes, messages)
             }
             "quiet-hours" => {
                 let quiet = quiet_answer(value).ok_or_else(|| invalid(hints.quiet_hours))?;
@@ -1706,13 +1790,14 @@ pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>)
     let delay_minutes = parse_delay_minutes(&delay).unwrap_or(DEFAULT_DELAY_MINUTES);
     let delays = saved_kinds(&config, delay_minutes).map_or(Value::Null, |kinds| {
         Value::Object(
-            DelayKind::ALL
+            DelayKind::PER_KIND
                 .iter()
                 .zip(kinds)
                 .map(|(kind, minutes)| (kind.key().to_owned(), number(minutes)))
                 .collect(),
         )
     });
+    let reminder = kind_minutes(&config, DelayKind::Reminder).unwrap_or(DEFAULT_REMINDER_MINUTES);
 
     let visuals = read_visuals(&config);
 
@@ -1720,6 +1805,7 @@ pub fn current_state(paths: &SetupPaths, var: &dyn Fn(&str) -> Option<OsString>)
         "language": setup_locale(&paths.app_dir, var).as_str(),
         "delayMinutes": number(delay_minutes),
         "delays": delays,
+        "reminder": number(reminder),
         "quietHours": config
             .get("quietHours")
             .cloned()
@@ -1797,7 +1883,7 @@ pub fn run_uninstall_process(stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prompt::FakePrompter;
+    use crate::prompt::{FakePrompter, Reply};
     use crate::user_path::fake::FakeUserPath;
 
     const PLUGIN: &str = "telegram@better-claude-code-telegram";
@@ -2133,6 +2219,323 @@ mod tests {
             "✔ Delay per kind turned off: the single delay applies to everything.\n"
         );
         assert!(!config.unwrap().contains("delays"));
+    }
+
+    fn set_setting(
+        step: &str,
+        value: &str,
+        config: Option<&str>,
+        locale: Locale,
+    ) -> (Result<(), Stop>, String, Value) {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(locale);
+        let (result, config_file) = {
+            let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+            let config_file = setup.paths.app_dir.join(crate::paths::CONFIG_FILE);
+
+            if let Some(text) = config {
+                std::fs::create_dir_all(&setup.paths.app_dir).unwrap();
+                std::fs::write(&config_file, text).unwrap();
+            }
+
+            (
+                setup.apply_setting(step, value, messages, &mut FakePrompter::new(false)),
+                config_file,
+            )
+        };
+        let saved = std::fs::read_to_string(config_file)
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or(Value::Null);
+
+        (result, String::from_utf8(out).unwrap(), saved)
+    }
+
+    #[test]
+    fn saves_the_reminder_beside_the_delay_per_kind_already_saved() {
+        let (result, out, config) = set_setting(
+            "reminder",
+            "2,5",
+            Some(r#"{"delayMinutes":4,"delays":{"questions":1,"permissions":2,"waiting":3}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert!(
+            out.starts_with("✔ Reminder after 2 min 30 s saved in "),
+            "{out}"
+        );
+        assert_eq!(
+            config["delays"],
+            json!({"questions": 1, "permissions": 2, "waiting": 3, "reminder": 2.5})
+        );
+        assert_eq!(config["delayMinutes"], json!(4));
+    }
+
+    #[test]
+    fn saves_the_reminder_alone_in_both_languages_without_a_delay_per_kind() {
+        let (result, out, config) = set_setting("reminder", "0", None, Locale::PtBr);
+
+        assert!(result.is_ok());
+        assert!(out.starts_with("✔ Lembrete após 0 s salvo em "), "{out}");
+        assert_eq!(config, json!({"delays": {"reminder": 0}}));
+    }
+
+    #[test]
+    fn replaces_a_delays_value_that_is_not_an_object_when_the_reminder_is_saved() {
+        let (result, _, config) =
+            set_setting("reminder", "4", Some(r#"{"delays":[1,2,3]}"#), Locale::EnUs);
+
+        assert!(result.is_ok());
+        assert_eq!(config, json!({"delays": {"reminder": 4}}));
+    }
+
+    #[test]
+    fn keeps_the_reminder_when_it_is_already_saved_with_the_same_minutes() {
+        let text = r#"{"delays":{"reminder":3}}"#;
+        let (result, out, config) = set_setting("reminder", "3", Some(text), Locale::EnUs);
+
+        assert!(result.is_ok());
+        assert_eq!(out, "○ Reminder time kept:\n  • 3 min\n");
+        assert_eq!(config, json!({"delays": {"reminder": 3}}));
+    }
+
+    #[test]
+    fn refuses_a_reminder_that_is_not_a_number_of_minutes_and_changes_nothing() {
+        for value in ["soon", "-1", ""] {
+            let (result, _, config) = set_setting(
+                "reminder",
+                value,
+                Some(r#"{"delays":{"reminder":3}}"#),
+                Locale::EnUs,
+            );
+
+            assert!(
+                matches!(&result, Err(Stop::Failed(text)) if text.contains("--set reminder")
+                    && text.contains("the minutes, 0 or more")),
+                "{value}: {result:?}"
+            );
+            assert_eq!(config, json!({"delays": {"reminder": 3}}), "{value}");
+        }
+    }
+
+    #[test]
+    fn lists_the_reminder_among_the_steps_that_can_be_set() {
+        let (result, _, _) = set_setting("reminders", "3", None, Locale::EnUs);
+
+        assert!(
+            matches!(&result, Err(Stop::Failed(text)) if text.contains("delays, reminder, quiet-hours"))
+        );
+    }
+
+    #[test]
+    fn keeps_the_reminder_when_the_delay_per_kind_is_saved_again() {
+        let (result, _, config) = set_setting(
+            "delays",
+            "0/1/2",
+            Some(r#"{"delays":{"questions":4,"permissions":4,"waiting":4,"reminder":5}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            config["delays"],
+            json!({"questions": 0, "permissions": 1, "waiting": 2, "reminder": 5})
+        );
+    }
+
+    #[test]
+    fn keeps_the_reminder_when_a_single_delay_clears_the_delay_per_kind() {
+        let (result, out, config) = set_setting(
+            "delay",
+            "7",
+            Some(r#"{"delays":{"questions":4,"permissions":1,"waiting":4,"reminder":5}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert!(out.contains("Delay per kind turned off"), "{out}");
+        assert_eq!(
+            config,
+            json!({"delayMinutes": 7, "delays": {"reminder": 5}})
+        );
+    }
+
+    #[test]
+    fn saves_a_single_delay_without_touching_a_reminder_saved_alone() {
+        let (result, out, config) = set_setting(
+            "delay",
+            "7",
+            Some(r#"{"delays":{"reminder":5}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert!(!out.contains("turned off"), "{out}");
+        assert_eq!(
+            config,
+            json!({"delayMinutes": 7, "delays": {"reminder": 5}})
+        );
+    }
+
+    #[test]
+    fn drops_the_delays_key_when_a_single_delay_clears_the_last_kinds_without_a_reminder() {
+        let (result, _, config) = set_setting(
+            "delay",
+            "7",
+            Some(r#"{"delays":{"questions":4,"permissions":1,"waiting":4}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(config, json!({"delayMinutes": 7}));
+    }
+
+    #[test]
+    fn keeps_the_reminder_when_the_delay_per_kind_is_turned_off() {
+        let (result, out, config) = set_setting(
+            "delays",
+            "off",
+            Some(r#"{"delays":{"questions":4,"permissions":1,"waiting":4,"reminder":5}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert!(out.contains("Delay per kind turned off"), "{out}");
+        assert_eq!(config, json!({"delays": {"reminder": 5}}));
+    }
+
+    #[test]
+    fn says_the_delay_per_kind_stays_off_when_only_the_reminder_is_saved() {
+        let (result, out, config) = set_setting(
+            "delays",
+            "off",
+            Some(r#"{"delays":{"reminder":5}}"#),
+            Locale::EnUs,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            out,
+            "○ Delay per kind kept: off, the single delay applies to everything.\n"
+        );
+        assert_eq!(config, json!({"delays": {"reminder": 5}}));
+    }
+
+    fn answer_the_reminder_step(
+        config: Option<&str>,
+        replies: Vec<Reply>,
+    ) -> (Value, FakePrompter) {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(Locale::EnUs);
+        let mut ask = FakePrompter::new(true).with_replies(replies);
+        let config_file = {
+            let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+            let config_file = setup.paths.app_dir.join(crate::paths::CONFIG_FILE);
+
+            if let Some(text) = config {
+                std::fs::create_dir_all(&setup.paths.app_dir).unwrap();
+                std::fs::write(&config_file, text).unwrap();
+            }
+
+            setup.ensure_reminder(messages, &mut ask).unwrap();
+            config_file
+        };
+        let saved = serde_json::from_str(&std::fs::read_to_string(config_file).unwrap()).unwrap();
+
+        (saved, ask)
+    }
+
+    #[test]
+    fn asks_the_reminder_alone_and_saves_the_chosen_minutes() {
+        let (config, ask) = answer_the_reminder_step(None, vec![Reply::Choose(0)]);
+
+        assert_eq!(config, json!({"delays": {"reminder": 0}}));
+        assert_eq!(ask.calls().len(), 1);
+    }
+
+    #[test]
+    fn saves_the_default_reminder_on_enter_and_marks_the_saved_one_as_current() {
+        let (config, _) = answer_the_reminder_step(None, vec![Reply::Default]);
+        let (kept, ask) = answer_the_reminder_step(
+            Some(r#"{"delayMinutes":9,"delays":{"reminder":10}}"#),
+            vec![Reply::Default],
+        );
+        let (choices, index) = ask.calls()[0].select().unwrap();
+
+        assert_eq!(config, json!({"delays": {"reminder": 3}}));
+        assert_eq!(kept, json!({"delayMinutes": 9, "delays": {"reminder": 10}}));
+        assert!(choices[index].label.starts_with("10 min"));
+        assert!(choices[index].previous);
+    }
+
+    #[test]
+    fn stops_the_reminder_step_without_saving_when_the_question_ends() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let messages = messages_for(Locale::EnUs);
+        let mut ask = FakePrompter::new(true).with_replies([Reply::End]);
+        let mut setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let config_file = setup.paths.app_dir.join(crate::paths::CONFIG_FILE);
+
+        assert!(matches!(
+            setup.ensure_reminder(messages, &mut ask),
+            Err(Stop::Prompt(PromptError::Ended(_)))
+        ));
+        assert!(!config_file.exists());
+    }
+
+    #[test]
+    fn runs_the_reminder_step_after_the_delay_and_names_it() {
+        let names: Vec<&str> = SETUP_SECTIONS
+            .iter()
+            .map(|section| section.as_str())
+            .collect();
+        let delay = names.iter().position(|name| *name == "delay").unwrap();
+
+        assert_eq!(names[delay + 1], "reminder");
+        assert_eq!(
+            parse_setup_sections(
+                &["reminder".to_owned(), "DELAY".to_owned()],
+                messages_for(Locale::EnUs)
+            ),
+            Ok(vec![Section::Delay, Section::Reminder])
+        );
+        assert_eq!(
+            Section::Reminder.heading(messages_for(Locale::EnUs)).1,
+            "Reminder"
+        );
+        assert_eq!(
+            Section::Reminder.heading(messages_for(Locale::PtBr)).1,
+            "Lembrete"
+        );
+    }
+
+    #[test]
+    fn reports_the_saved_reminder_or_the_default_in_the_state() {
+        let folder = tempfile::tempdir().unwrap();
+        let var = |_: &str| None::<OsString>;
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let setup = sandboxed(&var, folder.path(), &mut out, &mut err);
+        let config_file = setup.paths.app_dir.join(crate::paths::CONFIG_FILE);
+
+        assert_eq!(
+            current_state(&setup.paths, &var)["reminder"],
+            json!(DEFAULT_REMINDER_MINUTES)
+        );
+
+        std::fs::create_dir_all(&setup.paths.app_dir).unwrap();
+        std::fs::write(&config_file, r#"{"delays":{"reminder":1.5}}"#).unwrap();
+
+        let state = current_state(&setup.paths, &var);
+
+        assert_eq!(state["reminder"], json!(1.5));
+        assert_eq!(state["delays"], Value::Null);
     }
 
     struct Refusing;

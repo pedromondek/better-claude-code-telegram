@@ -8,6 +8,7 @@ use crate::locale::Locale;
 use crate::paths::CONFIG_FILE;
 
 pub const DEFAULT_DELAY_MINUTES: f64 = 4.0;
+pub const DEFAULT_REMINDER_MINUTES: f64 = 3.0;
 pub const DEFAULT_INBOX_RETENTION_DAYS: u64 = 7;
 pub const DELAY_ENV: &str = "BETTER_CC_TELEGRAM_DELAY_MS";
 
@@ -61,10 +62,17 @@ pub enum DelayKind {
     Questions,
     Permissions,
     Waiting,
+    Reminder,
 }
 
 impl DelayKind {
-    pub const ALL: [Self; 3] = [Self::Questions, Self::Permissions, Self::Waiting];
+    pub const ALL: [Self; 4] = [
+        Self::Questions,
+        Self::Permissions,
+        Self::Waiting,
+        Self::Reminder,
+    ];
+    pub const PER_KIND: [Self; 3] = [Self::Questions, Self::Permissions, Self::Waiting];
 
     #[must_use]
     pub const fn key(self) -> &'static str {
@@ -72,6 +80,7 @@ impl DelayKind {
             Self::Questions => "questions",
             Self::Permissions => "permissions",
             Self::Waiting => "waiting",
+            Self::Reminder => "reminder",
         }
     }
 }
@@ -87,10 +96,30 @@ pub fn kind_minutes(config: &Map<String, Value>, kind: DelayKind) -> Option<f64>
 }
 
 #[must_use]
+pub fn has_per_kind_delays(config: &Map<String, Value>) -> bool {
+    config
+        .get("delays")
+        .is_some_and(|delays| match delays.as_object() {
+            Some(saved) => {
+                saved.is_empty() || saved.keys().any(|key| key != DelayKind::Reminder.key())
+            }
+            None => true,
+        })
+}
+
+#[must_use]
 pub fn delay_ms_for(config: &Map<String, Value>, env_delay: Option<&str>, kind: DelayKind) -> f64 {
     env_delay_ms(env_delay).unwrap_or_else(|| {
-        kind_minutes(config, kind)
-            .map_or_else(|| delay_ms(config, None), |minutes| minutes * MS_PER_MINUTE)
+        kind_minutes(config, kind).map_or_else(
+            || {
+                if kind == DelayKind::Reminder {
+                    DEFAULT_REMINDER_MINUTES * MS_PER_MINUTE
+                } else {
+                    delay_ms(config, None)
+                }
+            },
+            |minutes| minutes * MS_PER_MINUTE,
+        )
     })
 }
 
@@ -216,9 +245,9 @@ mod tests {
 
         assert_eq!(
             DelayKind::ALL.map(DelayKind::key),
-            ["questions", "permissions", "waiting"]
+            ["questions", "permissions", "waiting", "reminder"]
         );
-        assert_eq!(cases.len(), 10);
+        assert_eq!(cases.len(), 14);
 
         for case in &cases {
             let config = config(case["config"].clone());
@@ -234,6 +263,38 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn waits_the_reminder_minutes_of_the_channel_when_the_reminder_has_none() {
+        let channel = include_str!("../../../../plugins/telegram/extensions/config.ts");
+
+        assert_eq!(DEFAULT_REMINDER_MINUTES, 3.0);
+        assert!(channel.contains(&format!(
+            "export const DEFAULT_REMINDER_MINUTES = {DEFAULT_REMINDER_MINUTES};"
+        )));
+        assert_eq!(
+            delay_ms_for(
+                &config(json!({"delayMinutes": 9})),
+                None,
+                DelayKind::Reminder
+            ),
+            180_000.0
+        );
+    }
+
+    #[test]
+    fn tells_the_delay_per_kind_from_a_reminder_saved_alone() {
+        let saved = |value: Value| has_per_kind_delays(&config(json!({ "delays": value })));
+
+        assert!(saved(json!({"questions": 1})));
+        assert!(saved(json!({"reminder": 2, "waiting": 1})));
+        assert!(saved(json!({})));
+        assert!(saved(json!([1, 2, 3])));
+        assert!(saved(json!(4)));
+        assert!(!saved(json!({"reminder": 2})));
+        assert!(!has_per_kind_delays(&config(json!({"delayMinutes": 4}))));
+        assert!(!has_per_kind_delays(&Map::new()));
     }
 
     #[test]

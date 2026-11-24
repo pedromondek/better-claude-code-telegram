@@ -646,7 +646,7 @@ fn leaves_a_notice_due_right_away_on_stop_failure_and_prints_nothing() {
 
     assert_eq!(
         notice["text"],
-        "⚠️ Claude stopped: there is a billing problem with your account"
+        "💲 **Billing** · Claude stopped\n> 📋 **Reason:** there is a billing problem with your account\n> 👉 **Next:** check the billing of your plan, then resume in the terminal"
     );
     assert_eq!(notice["dueAt"], notice["createdAt"]);
     assert_eq!(notice["kind"], "failure");
@@ -800,6 +800,39 @@ fn keeps_the_limit_hits_and_drops_the_notice_and_the_ping_on_an_automatic_contin
     }
 
     assert!(!sandbox.pings().join("last-prompt").exists());
+}
+
+#[test]
+fn drops_the_mark_of_the_last_waiting_notice_only_on_a_typed_prompt() {
+    let sandbox = Sandbox::new();
+    let mark = sandbox.pings().join("s1.sent");
+    let other = sandbox.pings().join("s2.sent");
+    let run = |input: String| {
+        sandbox
+            .command("prompt", true)
+            .write_stdin(input)
+            .assert()
+            .success()
+            .stdout("")
+            .stderr("");
+    };
+
+    fs::create_dir_all(sandbox.pings()).unwrap();
+    fs::write(&mark, "Nenhuma pergunta aberta.").unwrap();
+    fs::write(&other, "Igual.").unwrap();
+
+    run(
+        json!({"session_id": "s1", "prompt": "<channel source=\"plugin:telegram:telegram\">hi"})
+            .to_string(),
+    );
+    run(json!({"session_id": "s1", "prompt": LIMIT_RESET_PROMPT}).to_string());
+
+    assert!(mark.exists());
+
+    run(json!({"session_id": "s1", "prompt": "go"}).to_string());
+
+    assert!(!mark.exists());
+    assert!(other.exists());
 }
 
 #[test]

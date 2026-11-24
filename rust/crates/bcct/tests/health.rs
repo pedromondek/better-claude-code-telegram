@@ -281,13 +281,13 @@ fn observe(scenario: &Value, now: u64) -> Observed {
 }
 
 #[test]
-fn every_scenario_prints_what_the_fixture_recorded() {
+fn prints_what_the_fixture_recorded_for_every_scenario() {
     let fixture = frozen(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let default_mode = default_file_mode();
     let scenarios = list(&fixture, "scenarios");
 
-    assert!(scenarios.len() > 300);
+    assert!(scenarios.len() > 285);
 
     for scenario in scenarios {
         let name = text(scenario, "name");
@@ -339,7 +339,7 @@ fn status_of(output: &Value, check: &str) -> Value {
 }
 
 #[test]
-fn every_scenario_of_the_binary_matches_the_fixture() {
+fn matches_the_fixture_in_every_scenario_of_the_binary() {
     let fixture = frozen(FIXTURE);
     let default_mode = default_file_mode();
     let scenarios: Vec<&Value> = list(&fixture, "scenarios")
@@ -347,7 +347,7 @@ fn every_scenario_of_the_binary_matches_the_fixture() {
         .filter(|scenario| scenario["process"] == json!(true))
         .collect();
 
-    assert!(scenarios.len() > 290);
+    assert!(scenarios.len() > 275);
 
     for scenario in scenarios {
         let name = text(scenario, "name");
@@ -622,6 +622,44 @@ fn checks_no_node_in_the_install_group_since_only_npx_needs_it() {
         "{results}"
     );
     assert_eq!(err, Vec::<u8>::new());
+}
+
+#[test]
+fn keeps_every_node_input_out_of_the_health_fixture() {
+    let fixture = frozen(FIXTURE);
+    let mut offenders: Vec<String> = Vec::new();
+
+    if fixture.get("nodeVersion").is_some() {
+        offenders.push("nodeVersion at the top".to_owned());
+    }
+
+    for group in ["scenarios", "tty"] {
+        for scenario in list(&fixture, group) {
+            let name = text(scenario, "name");
+
+            for field in ["nodeVersion", "nodeWarning"] {
+                if scenario.get(field).is_some() {
+                    offenders.push(format!("{name}: {field}"));
+                }
+            }
+
+            if name.starts_with("node ") {
+                offenders.push(format!("{name}: scenario"));
+            }
+
+            for tree in ["files", "after"] {
+                if scenario
+                    .get(tree)
+                    .and_then(Value::as_object)
+                    .is_some_and(|files| files.contains_key("bin/node"))
+                {
+                    offenders.push(format!("{name}: bin/node in {tree}"));
+                }
+            }
+        }
+    }
+
+    assert_eq!(offenders, Vec::<String>::new());
 }
 
 struct Failing {
@@ -1528,7 +1566,7 @@ fn yes_fixes_everything_in_the_plan_and_only_picks_by_id() {
     for args in [
         &["install", "--fix", "--yes"][..],
         &["install", "--fix", "--only", "shell"][..],
-        &["install", "--fix", "--only=shell,statusline"][..],
+        &["install", "--fix", "--only=shell,protection"][..],
     ] {
         let fixed = fixing(
             &healthy(),
@@ -1562,7 +1600,7 @@ fn yes_fixes_everything_in_the_plan_and_only_picks_by_id() {
 }
 
 #[test]
-fn an_unknown_fix_id_stops_before_any_check() {
+fn stops_before_any_check_when_a_fix_id_is_unknown() {
     let fixed = fixing(
         &healthy(),
         &["--fix", "--only", "nope,shell,other"],
@@ -1575,12 +1613,12 @@ fn an_unknown_fix_id_stops_before_any_check() {
     assert_eq!(fixed.out, "");
     assert_eq!(
         fixed.err,
-        "✘ Unknown fixes: nope, other. The possible ones are: shell, protection, statusline, app, update.\n"
+        "✘ Unknown fixes: nope, other. The possible ones are: shell, protection, app, update.\n"
     );
 }
 
 #[test]
-fn the_missing_token_rule_and_the_old_clone_statusline_are_fixed_in_the_settings() {
+fn fixes_the_missing_token_rule_and_leaves_the_clone_statusline_in_the_settings() {
     let mut scenario = healthy();
     scenario["files"]["claude/settings.json"] = json!(
         r#"{"statusLine":{"type":"command","command":"node \"{repo}/plugins/telegram-hooks/statusline.mjs\""},"permissions":{}}"#
@@ -1597,9 +1635,12 @@ fn the_missing_token_rule_and_the_old_clone_statusline_are_fixed_in_the_settings
             )
             .unwrap();
 
-            assert_eq!(
-                saved["statusLine"]["command"],
-                json!(format!("\"{}/app/bin/bcct\" statusline", root.display()))
+            assert!(
+                saved["statusLine"]["command"]
+                    .as_str()
+                    .unwrap()
+                    .ends_with("/plugins/telegram-hooks/statusline.mjs\""),
+                "{saved}"
             );
             assert_eq!(
                 saved["permissions"]["deny"],
@@ -1611,7 +1652,7 @@ fn the_missing_token_rule_and_the_old_clone_statusline_are_fixed_in_the_settings
     assert_eq!(fixed.status, 0);
     assert!(
         fixed.out.contains(&format!(
-            "  1. Token protection: add the rule that keeps Claude from reading the token to {settings}\n  2. Status line: replace the old command (from the clone) with the current one in {settings}\n"
+            "  1. Token protection: add the rule that keeps Claude from reading the token to {settings}\n"
         )),
         "{}",
         fixed.out
@@ -1848,7 +1889,7 @@ fn the_plan_follows_the_language_of_the_config() {
 }
 
 #[test]
-fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
+fn lists_the_fixes_and_what_yes_applied_or_skipped_in_the_json_plan() {
     let planned = fixing(
         &healthy(),
         &["install", "--json", "--fix"],
@@ -1871,7 +1912,7 @@ fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
 
     let applied = fixing(
         &healthy(),
-        &["install", "--json", "--fix", "--only", "shell,statusline"],
+        &["install", "--json", "--fix", "--only", "shell,protection"],
         None,
         &without_shell_script,
         &the_script_is_current,
@@ -1882,7 +1923,7 @@ fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
     assert_eq!(output["fixes"]["applied"], json!(["shell"]));
     assert_eq!(
         output["fixes"]["skipped"],
-        json!([{"id": "statusline", "reason": "not needed"}])
+        json!([{"id": "protection", "reason": "not needed"}])
     );
     assert_eq!(status_of(&output, "shell"), json!("ok"));
 }

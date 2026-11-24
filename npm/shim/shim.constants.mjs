@@ -1,5 +1,6 @@
 export const PACKAGE = "@pedromondek/better-claude-code-telegram";
 export const COMMAND = "better-claude-code-telegram";
+export const SETUP_COMMAND = `npx ${PACKAGE}`;
 export const REPOSITORY = "pedromondek/better-claude-code-telegram";
 export const APP_FOLDER = "better-claude-code-telegram";
 export const CONFIG_FILE = "better-cc-telegram.json";

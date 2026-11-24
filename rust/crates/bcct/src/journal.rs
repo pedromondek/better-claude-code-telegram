@@ -388,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn a_file_that_cannot_be_read_fails_once_and_records_nothing_like_the_js() {
+    fn fails_once_and_records_nothing_when_a_file_cannot_be_read() {
         let folder = tempfile::tempdir().unwrap();
         let mut journal = Journal::new();
 

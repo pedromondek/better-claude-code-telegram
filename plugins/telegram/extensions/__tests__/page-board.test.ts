@@ -53,33 +53,37 @@ describe("SECTION_COLORS", () => {
 });
 
 describe("boardHtml", () => {
-  const html = boardHtml(BOARD, IMAGES);
-
   it("opens with the escaped title and the context", (): void => {
+    const html = boardHtml(BOARD, IMAGES);
+
     expect(html).toContain(
       '<h1>Menu &lt;do&gt; topo</h1><p class="context">Hoje o menu esconde a busca.</p>',
     );
   });
 
   it("gives each section its color, its heading and the sentence of its effect", (): void => {
+    const html = boardHtml(BOARD, IMAGES);
+
     expect(html).toContain(
       '<section style="--color: #64748b"><h2>Hoje</h2><div class="cards">',
     );
     expect(html).toContain(
-      '<section style="--color: #2563eb"><h2>(a) Busca fixa</h2><p class="effect">A busca fica sempre à vista.</p><div class="cards">',
+      '</section><section style="--color: #2563eb"><h2>(a) Busca fixa</h2><p class="effect">A busca fica sempre à vista.</p><div class="cards">',
     );
   });
 
   it("shows each card with its label, every part of its shot by file URL and its caption", (): void => {
+    const html = boardHtml(BOARD, IMAGES);
+
     expect(html).toContain(
-      '<figure><p class="label">Fechado</p><img src="file:///out/a%20closed.png"><figcaption>De perto, 2x</figcaption></figure>',
-    );
-    expect(html).toContain(
-      '<figure><p class="label">Aberto</p><img src="file:///out/a-open-1.png"><img src="file:///out/a-open-2.png"></figure>',
+      '<div class="cards"><figure><p class="label">Fechado</p><img src="file:///out/a%20closed.png"><figcaption>De perto, 2x</figcaption></figure>' +
+        '<figure><p class="label">Aberto</p><img src="file:///out/a-open-1.png"><img src="file:///out/a-open-2.png"></figure></div></section>',
     );
   });
 
   it("is a full UTF-8 page with its own styles", (): void => {
+    const html = boardHtml(BOARD, IMAGES);
+
     expect(
       html.startsWith(
         '<!doctype html><html><head><meta charset="utf-8"><style>',

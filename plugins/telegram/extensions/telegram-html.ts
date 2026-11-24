@@ -1,12 +1,26 @@
 export type Block =
-  { kind: "text"; lines: string[] } | { kind: "pre"; lines: string[] };
+  | { kind: "text"; lines: string[] }
+  | { kind: "pre"; lines: string[] }
+  | { kind: "quote"; lines: string[] };
 
 const TELEGRAM_LIMIT = 4000;
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 const FENCE = /^\s*```/;
-const CODE_SPAN = /`([^`]+)`/g;
+const QUOTE_LINE = /^ {0,3}> ?(.*)/s;
+const CODE_SPAN = /`([^`]+)`/y;
 const CODE_PLACEHOLDER = /\u{E000}(\d+)\u{E001}/gu;
+const ESCAPABLE = /^[!-/:-@[-`{-~]$/;
+
+interface Literal {
+  text: string;
+  isCode: boolean;
+}
+
+interface ScannedInline {
+  marked: string;
+  literals: Literal[];
+}
 
 export function escapeHtml(text: string): string {
   return text
@@ -15,39 +29,119 @@ export function escapeHtml(text: string): string {
     .replaceAll(">", "&gt;");
 }
 
+function scanInline(line: string): ScannedInline {
+  const literals: Literal[] = [];
+  let marked = "";
+  let index = 0;
+
+  const hold = (literal: Literal): void => {
+    literals.push(literal);
+    marked += `\u{E000}${literals.length - 1}\u{E001}`;
+  };
+
+  while (index < line.length) {
+    const char = line[index];
+    const next = line.charAt(index + 1);
+
+    if (char === "\\" && ESCAPABLE.test(next)) {
+      hold({ text: next, isCode: false });
+      index += 2;
+      continue;
+    }
+
+    CODE_SPAN.lastIndex = index;
+
+    const codeSpan = CODE_SPAN.exec(line);
+
+    if (codeSpan) {
+      hold({ text: codeSpan[1], isCode: true });
+      index += codeSpan[0].length;
+      continue;
+    }
+
+    marked += char;
+    index += 1;
+  }
+
+  return { marked, literals };
+}
+
+function restoreLiterals(
+  marked: string,
+  literals: Literal[],
+  render: (literal: Literal) => string,
+): string {
+  return marked.replaceAll(
+    CODE_PLACEHOLDER,
+    (match: string, index: string): string => {
+      const literal = literals.at(Number(index));
+
+      return literal === undefined ? match : render(literal);
+    },
+  );
+}
+
 function inlineMarkdown(line: string): string {
   const heading = /^#{1,6}\s+(.*)/s.exec(line);
 
   if (heading) return `<b>${inlineMarkdown(heading[1])}</b>`;
 
-  const codeSpans: string[] = [];
+  const { marked, literals } = scanInline(line);
 
-  return escapeHtml(line)
-    .replaceAll(CODE_SPAN, (_match: string, code: string): string => {
-      codeSpans.push(code);
+  return restoreLiterals(
+    escapeHtml(marked).replaceAll(/\*\*([^*]+)\*\*/g, "<b>$1</b>"),
+    literals,
+    ({ text, isCode }) =>
+      isCode ? `<code>${escapeHtml(text)}</code>` : escapeHtml(text),
+  );
+}
 
-      return `\u{E000}${codeSpans.length - 1}\u{E001}`;
-    })
-    .replaceAll(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    .replaceAll(CODE_PLACEHOLDER, (match: string, index: string): string => {
-      const code = codeSpans.at(Number(index));
+function splitCells(row: string): string[] {
+  const cells: string[] = [];
+  let current = "";
+  let index = 0;
 
-      return code === undefined ? match : `<code>${code}</code>`;
-    });
+  while (index < row.length) {
+    const char = row[index];
+
+    if (char === "\\" && ESCAPABLE.test(row.charAt(index + 1))) {
+      current += row[index + 1] === "|" ? "|" : `${char}${row[index + 1]}`;
+      index += 2;
+      continue;
+    }
+
+    if (char === "|") {
+      cells.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+
+    index += 1;
+  }
+
+  cells.push(current);
+
+  return cells;
 }
 
 function tableCells(row: string): string[] {
-  return row
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) =>
-      cell
-        .trim()
-        .replaceAll(/\*\*([^*]+)\*\*/g, "$1")
-        .replaceAll(/`([^`]+)`/g, "$1"),
+  const trimmed = row.trim();
+  const cells = splitCells(trimmed);
+
+  if (trimmed.startsWith("|")) cells.shift();
+
+  if (cells.at(-1) === "") cells.pop();
+
+  return cells.map((cell) => {
+    const { marked, literals } = scanInline(cell.trim());
+
+    return restoreLiterals(
+      marked.replaceAll(/\*\*([^*]+)\*\*/g, "$1"),
+      literals,
+      ({ text }) => text,
     );
+  });
 }
 
 export function renderTable(rows: string[]): string[] {
@@ -87,11 +181,11 @@ export function parseBlocks(markdown: string): Block[] {
   const lines = markdown.split("\n");
   let index = 0;
 
-  const pushText = (line: string): void => {
+  const pushLine = (kind: "text" | "quote", line: string): void => {
     const last = blocks.at(-1);
 
-    if (last?.kind === "text") last.lines.push(line);
-    else blocks.push({ kind: "text", lines: [line] });
+    if (last?.kind === kind) last.lines.push(line);
+    else blocks.push({ kind, lines: [line] });
   };
 
   while (index < lines.length) {
@@ -127,17 +221,28 @@ export function parseBlocks(markdown: string): Block[] {
       continue;
     }
 
-    pushText(line);
+    const quoted = QUOTE_LINE.exec(line);
+
+    if (quoted) pushLine("quote", quoted[1]);
+    else pushLine("text", line);
+
     index += 1;
   }
 
-  return blocks;
+  return blocks.filter(
+    (block) =>
+      block.kind !== "quote" || block.lines.some((line) => line.trim() !== ""),
+  );
 }
 
 function renderBlock(block: Block): string {
-  return block.kind === "pre"
-    ? `<pre>${escapeHtml(block.lines.join("\n"))}</pre>`
-    : block.lines.map(inlineMarkdown).join("\n");
+  if (block.kind === "pre") {
+    return `<pre>${escapeHtml(block.lines.join("\n"))}</pre>`;
+  }
+
+  const html = block.lines.map(inlineMarkdown).join("\n");
+
+  return block.kind === "quote" ? `<blockquote>${html}</blockquote>` : html;
 }
 
 function splitBlockToLimit(block: Block, limit: number): Block[] {

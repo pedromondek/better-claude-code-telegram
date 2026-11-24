@@ -141,7 +141,7 @@ describe("touchesWorkflowLint", () => {
   });
 
   it.each([
-    "scripts/release.mjs",
+    "scripts/release-pr.mjs",
     ".github/workflows/nested/ci.yml",
     ".github/workflows/ci.txt",
     ".github/actions/setup/README.md",

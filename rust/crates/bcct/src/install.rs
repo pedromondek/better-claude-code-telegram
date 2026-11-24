@@ -767,6 +767,7 @@ pub enum Kept<'v> {
     Language(&'v str),
     Delay(f64),
     Delays { kinds: [f64; 3], summary: &'v str },
+    Reminder(f64),
     QuietHours(Option<(&'v str, &'v str)>),
     Inbox(Option<f64>),
     Transcription(Option<&'v str>),
@@ -833,12 +834,17 @@ pub fn kept_message(
             .get("delays")
             .and_then(Value::as_object)
             .is_some_and(|delays| {
-                DelayKind::ALL
+                DelayKind::PER_KIND
                     .into_iter()
                     .zip(kinds)
                     .all(|(kind, minutes)| same_number(delays.get(kind.key()), minutes))
             })
             .then(|| (messages.delays_kept)(summary)),
+        Kept::Reminder(minutes) => config
+            .get("delays")
+            .and_then(Value::as_object)
+            .is_some_and(|delays| same_number(delays.get(DelayKind::Reminder.key()), minutes))
+            .then(|| (messages.reminder_kept)(minutes)),
         Kept::QuietHours(range) => {
             let chosen = chosen_quiet_hours(range);
 
@@ -3667,7 +3673,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_the_tool_names_of_the_js_setup() {
+    fn parses_the_tool_names_of_the_setup() {
         assert_eq!(Tool::REQUIRED, [Tool::Claude, Tool::Bun]);
         assert_eq!(Tool::parse("uv"), Some(Tool::Uv));
         assert_eq!(Tool::parse("node"), None);
@@ -3705,5 +3711,36 @@ mod tests {
         );
         assert_eq!(kept(json!({ "delays": 4 }), [4.0, 4.0, 4.0]), None);
         assert_eq!(kept(json!({ "delayMinutes": 4 }), [4.0, 4.0, 4.0]), None);
+        assert_eq!(
+            kept(
+                json!({ "delays": { "questions": 0, "permissions": 0, "waiting": 4, "reminder": 9 } }),
+                [0.0, 0.0, 4.0]
+            ),
+            Some("Delay per kind kept:\n  • s".to_owned())
+        );
+    }
+
+    #[test]
+    fn keeps_the_reminder_only_when_it_is_saved_with_the_same_minutes() {
+        use serde_json::json;
+
+        let kept = |config: Value, minutes: f64| {
+            kept_message(
+                Kept::Reminder(minutes),
+                config.as_object().unwrap(),
+                Path::new("/app"),
+                Path::new("/hub"),
+                &EN_US,
+            )
+        };
+
+        assert_eq!(
+            kept(json!({ "delays": { "reminder": 2.5 } }), 2.5),
+            Some("Reminder time kept:\n  • 2 min 30 s".to_owned())
+        );
+        assert_eq!(kept(json!({ "delays": { "reminder": 2.5 } }), 3.0), None);
+        assert_eq!(kept(json!({ "delays": { "questions": 3 } }), 3.0), None);
+        assert_eq!(kept(json!({ "delays": 3 }), 3.0), None);
+        assert_eq!(kept(json!({ "delayMinutes": 3 }), 3.0), None);
     }
 }

@@ -28,6 +28,7 @@ const TRANSCRIPT_TAIL_BYTES: usize = 4_194_304;
 const LAST_PROMPT_FILE: &str = "last-prompt";
 const DEFAULT_SESSION: &str = "session";
 const JSON_SUFFIX: &str = ".json";
+const SENT_SUFFIX: &str = ".sent";
 const LABEL_SESSION_UNITS: usize = 4;
 const DEFAULT_FOLDER_LABEL: &str = "claude";
 const LOWEST_REAL_PID: f64 = 1.0;
@@ -123,6 +124,21 @@ impl Context {
             telegram_instance: var(TELEGRAM_FLAG).is_some_and(|flag| flag == "1"),
             delay_env: var(DELAY_ENV).map(|raw| raw.to_string_lossy().into_owned()),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn resolve_absolute(var: &dyn Fn(&str) -> Option<OsString>, home: &Path) -> Self {
+        let context = Self::resolve(var, home);
+
+        for (name, folder) in [("app", &context.app_dir), ("state", &context.state_dir)] {
+            assert!(
+                folder.is_absolute(),
+                "the {name} folder is relative ({}): the test would write inside the repository",
+                folder.display()
+            );
+        }
+
+        context
     }
 }
 
@@ -528,6 +544,7 @@ fn prompt(ctx: &Context, now: u64, ping_file: &Path, key: &str) -> Result<(), Ab
     create_private_dir(&pings_dir).map_err(Abort::at(&pings_dir))?;
     clear_after_prompt(&pings_dir, key)?;
     remove_ping(ping_file)?;
+    remove_ping(&join_path(&pings_dir, &format!("{key}{SENT_SUFFIX}")))?;
 
     if ctx.telegram_instance {
         write_private(&last_prompt_file, now.to_string().as_bytes())
@@ -817,7 +834,58 @@ mod tests {
             variables.insert((*name).to_owned(), OsString::from(value));
         }
 
-        Context::resolve(&|name| variables.get(name).cloned(), &folder.join("home"))
+        Context::resolve_absolute(&|name| variables.get(name).cloned(), &folder.join("home"))
+    }
+
+    #[test]
+    #[should_panic(expected = "the app folder is relative")]
+    fn refuses_a_relative_app_folder() {
+        Context::resolve_absolute(
+            &|name| (name == "BETTER_CC_TELEGRAM_DIR").then(|| OsString::from("relative/app")),
+            Path::new("/home/u"),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "the state folder is relative")]
+    fn refuses_a_relative_state_folder() {
+        let home = tempfile::tempdir().unwrap();
+
+        Context::resolve_absolute(
+            &|name| (name == "TELEGRAM_STATE_DIR").then(|| OsString::from("relative/state")),
+            home.path(),
+        );
+    }
+
+    #[test]
+    fn resolves_absolute_app_and_state_folders() {
+        let folder = tempfile::tempdir().unwrap();
+        let context = context_in(folder.path(), &[]);
+
+        assert_eq!(context.app_dir, normalize_path(&folder.path().join("app")));
+        assert_eq!(
+            context.state_dir,
+            normalize_path(&folder.path().join("state"))
+        );
+    }
+
+    #[test]
+    fn fails_when_the_mark_of_the_waiting_notice_cannot_be_removed_at_the_prompt() {
+        let folder = tempfile::tempdir().unwrap();
+        let ctx = context_in(folder.path(), &[("BETTER_CC_TELEGRAM", "1")]);
+        fs::create_dir_all(ctx.app_dir.join("pings/s1.sent/inner")).unwrap();
+
+        assert!(matches!(
+            handle_event(
+                Mode::Prompt,
+                &json!({"session_id": "s1", "prompt": "go"}),
+                &ctx,
+                0,
+                &|_| false
+            ),
+            Err(Abort::Io { .. })
+        ));
+        assert!(!ctx.app_dir.join("pings/last-prompt").exists());
     }
 
     fn input(value: &Value) -> Vec<u8> {
@@ -943,8 +1011,8 @@ mod tests {
 
     #[test]
     fn reads_the_flag_the_delay_and_the_normalized_folders_into_the_context() {
-        let folder = Path::new("/base");
-        let flagged = |value: &str| context_in(folder, &[("BETTER_CC_TELEGRAM", value)]);
+        let folder = tempfile::tempdir().unwrap();
+        let flagged = |value: &str| context_in(folder.path(), &[("BETTER_CC_TELEGRAM", value)]);
 
         assert!(flagged("1").telegram_instance);
 

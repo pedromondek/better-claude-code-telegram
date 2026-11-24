@@ -372,6 +372,45 @@ describe("answersByQuestion", () => {
     });
   });
 
+  it("adds the suffix once to each question answered with typed text", (): void => {
+    const progress = answerQuestion(
+      answerQuestion(typeSelection(emptyProgress(), 1, "Infra"), 0, "Postgres"),
+      1,
+      "Backend, Infra",
+    );
+
+    expect(
+      answersByQuestion([SINGLE, MULTI], progress, " (via Telegram)"),
+    ).toEqual({
+      "Qual banco usar?": "Postgres",
+      "Quais camadas?": "Backend, Infra (via Telegram)",
+    });
+  });
+
+  it("leaves the suffix out of an answer without typed text and of a typed text of nothing", (): void => {
+    const progress = answerQuestion(
+      answerQuestion(typeSelection(emptyProgress(), 0, ""), 0, "Postgres"),
+      1,
+      "Backend",
+    );
+
+    expect(
+      answersByQuestion([SINGLE, MULTI], progress, " (via Telegram)"),
+    ).toEqual({ "Qual banco usar?": "Postgres", "Quais camadas?": "Backend" });
+  });
+
+  it("adds nothing when no suffix is given", (): void => {
+    const progress = answerQuestion(
+      typeSelection(emptyProgress(), 0, "MySQL"),
+      0,
+      "MySQL",
+    );
+
+    expect(answersByQuestion([SINGLE], progress)).toEqual({
+      "Qual banco usar?": "MySQL",
+    });
+  });
+
   it("gives an empty answer to a question left unanswered", (): void => {
     expect(
       answersByQuestion(

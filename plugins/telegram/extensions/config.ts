@@ -47,7 +47,14 @@ export function readConfig(appDir: string): Record<string, unknown> {
   }
 }
 
-export const DELAY_KINDS = ["questions", "permissions", "waiting"] as const;
+export const DEFAULT_REMINDER_MINUTES = 3;
+
+export const DELAY_KINDS = [
+  "questions",
+  "permissions",
+  "waiting",
+  "reminder",
+] as const;
 
 export type DelayKind = (typeof DELAY_KINDS)[number];
 
@@ -81,6 +88,8 @@ export function readDelayMinutes(
   const ownMinutes = kindMinutes(config, kind);
 
   if (ownMinutes !== null) return ownMinutes;
+
+  if (kind === "reminder") return DEFAULT_REMINDER_MINUTES;
 
   const raw = config.delayMinutes;
   const minutes = Number(raw);

@@ -33,7 +33,13 @@ import {
   type AskRecord,
   type KeyboardButton,
 } from "./ask-format.ts";
-import { isQuietTime, readLocale, readQuietHours } from "./config.ts";
+import { isReminderDue, questionsAwaitingConclude } from "./ask-reminder.ts";
+import {
+  isQuietTime,
+  readDelayMinutes,
+  readLocale,
+  readQuietHours,
+} from "./config.ts";
 import { describeError, messagesFor, type Messages } from "./i18n.ts";
 import type { Log } from "./log.ts";
 import { toTelegramHtmlChunks } from "./telegram-html.ts";
@@ -65,6 +71,23 @@ interface SentState {
   awaitingOther: number[];
   otherPrompts: SentMessage[];
   completed: boolean;
+  touchedAt: Record<number, number>;
+  movedOn: boolean;
+  reminderSent: boolean;
+  leftLine: number[];
+}
+
+type LaterSentFields =
+  | "awaitingOther"
+  | "otherPrompts"
+  | "touchedAt"
+  | "movedOn"
+  | "reminderSent"
+  | "leftLine";
+
+interface MovedOnScope {
+  chatId?: string;
+  exceptShortId?: string;
 }
 
 interface OpenAsk {
@@ -87,6 +110,7 @@ interface BotApi {
     options?: {
       reply_markup?: ReplyMarkup | ForceReplyMarkup;
       parse_mode?: "HTML";
+      reply_parameters?: { message_id: number };
     },
   ): Promise<{ message_id: number }>;
   editMessageReplyMarkup(
@@ -94,11 +118,17 @@ interface BotApi {
     messageId: number,
     options: { reply_markup: ReplyMarkup },
   ): Promise<unknown>;
+  editMessageText(
+    chatId: string,
+    messageId: number,
+    text: string,
+    options: { parse_mode: "HTML"; reply_markup: ReplyMarkup },
+  ): Promise<unknown>;
   deleteMessage(chatId: string, messageId: number): Promise<unknown>;
 }
 
 export interface CallbackContext {
-  callbackQuery?: { data?: string };
+  callbackQuery?: { data?: string; message?: { message_id: number } };
   from?: { id: number; username?: string };
   chat?: { id: number };
   answerCallbackQuery(options?: { text?: string }): Promise<unknown>;
@@ -163,8 +193,8 @@ function readJson(file: string): unknown {
 
 function isSentState(
   value: unknown,
-): value is Omit<SentState, "awaitingOther" | "otherPrompts"> &
-  Partial<Record<"awaitingOther" | "otherPrompts", unknown>> {
+): value is Omit<SentState, LaterSentFields> &
+  Partial<Record<LaterSentFields, unknown>> {
   if (!(value instanceof Object)) return false;
 
   const sent = value as Partial<SentState>;
@@ -177,12 +207,33 @@ function isSentState(
   );
 }
 
+function messagesOfQuestion(
+  sent: SentState,
+  questionIndex: number,
+): SentMessage[] {
+  return sent.messages.filter(
+    (message) => message.questionIndex === questionIndex,
+  );
+}
+
 function stopWaiting(awaiting: number[], questionIndex: number): number[] {
   return awaiting.filter((waiting) => waiting !== questionIndex);
 }
 
 function listOf<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function timesOf(value: unknown): Record<number, number> {
+  const times: Record<number, number> = {};
+
+  if (!(value instanceof Object)) return times;
+
+  for (const [key, time] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof time === "number") times[Number(key)] = time;
+  }
+
+  return times;
 }
 
 export function createAskMirror({
@@ -227,11 +278,20 @@ export function createAskMirror({
       ...value,
       awaitingOther: listOf<number>(value.awaitingOther),
       otherPrompts: listOf<SentMessage>(value.otherPrompts),
+      touchedAt: timesOf(value.touchedAt),
+      movedOn: value.movedOn === true,
+      reminderSent: value.reminderSent === true,
+      leftLine: listOf<number>(value.leftLine),
     };
   }
 
   function saveSent(id: string, sent: SentState): void {
-    writeFileSync(sentFile(id), JSON.stringify(sent), { mode: 0o600 });
+    const reminderSent =
+      sent.reminderSent || (readSent(id)?.reminderSent ?? false);
+
+    writeFileSync(sentFile(id), JSON.stringify({ ...sent, reminderSent }), {
+      mode: 0o600,
+    });
   }
 
   function removeAsk(id: string): void {
@@ -333,12 +393,9 @@ export function createAskMirror({
     rows: KeyboardButton[][],
   ): Promise<void> {
     const text = messages();
-    const sentMessages = sent.messages.filter(
-      (message) => message.questionIndex === questionIndex,
-    );
 
     await Promise.all(
-      sentMessages.map((message) =>
+      messagesOfQuestion(sent, questionIndex).map((message) =>
         api
           .editMessageReplyMarkup(message.chatId, message.messageId, {
             reply_markup: toReplyMarkup(rows),
@@ -350,60 +407,288 @@ export function createAskMirror({
     );
   }
 
-  async function sendAsk(record: AskRecord): Promise<void> {
+  async function editQuestionText(
+    record: AskRecord,
+    sent: SentState,
+    questionIndex: number,
+    withLine: boolean,
+    rows: KeyboardButton[][],
+  ): Promise<void> {
     const text = messages();
-    const shortId = shortIdFor(record.id);
-    const total = record.questions.length;
-    const sentMessages: SentMessage[] = [];
-    const delivered: DeliveredMessage[] = [];
-    let reachedEveryQuestion = false;
+    const chunks = toTelegramHtmlChunks(
+      renderQuestionText(
+        record.questions[questionIndex],
+        questionIndex,
+        record.questions.length,
+        text,
+        record.instance ?? null,
+      ),
+    );
+    const lastChunk = chunks[chunks.length - 1];
+    const body = withLine
+      ? `${lastChunk}\n\n${text.concludeLeftLine}`
+      : lastChunk;
 
-    for (const chatId of allowedChats()) {
-      try {
-        if (record.context) {
-          await sendHtml(
-            chatId,
-            renderContextText(record.context, text),
-            delivered,
-          );
-        }
+    await Promise.all(
+      messagesOfQuestion(sent, questionIndex).map((message) =>
+        api
+          .editMessageText(message.chatId, message.messageId, body, {
+            parse_mode: "HTML",
+            reply_markup: toReplyMarkup(rows),
+          })
+          .catch((error: unknown) =>
+            log(text.askEditFailed(describeError(error))),
+          ),
+      ),
+    );
+  }
 
-        for (const [questionIndex, question] of record.questions.entries()) {
-          const messageId = await sendHtml(
-            chatId,
-            renderQuestionText(
-              question,
-              questionIndex,
-              total,
-              text,
-              record.instance ?? null,
-            ),
-            delivered,
-            buildKeyboard(question, shortId, questionIndex, text),
-          );
-
-          sentMessages.push({ chatId, questionIndex, messageId });
-        }
-
-        reachedEveryQuestion = true;
-      } catch (error) {
-        log(text.askCycleFailed(describeError(error)));
-      }
-    }
-
-    if (!reachedEveryQuestion) {
-      await Promise.all(
-        delivered.map((message) =>
-          api
-            .deleteMessage(message.chatId, message.messageId)
-            .catch((error: unknown) =>
-              log(text.askDeleteFailed(describeError(error))),
-            ),
-        ),
-      );
+  async function settleQuestion(
+    record: AskRecord,
+    sent: SentState,
+    questionIndex: number,
+    rows: KeyboardButton[][],
+  ): Promise<void> {
+    if (sent.leftLine.includes(questionIndex)) {
+      await editQuestionText(record, sent, questionIndex, false, rows);
 
       return;
     }
+
+    await editQuestionMarkup(sent, questionIndex, rows);
+  }
+
+  async function syncConcludeLine(
+    record: AskRecord,
+    sent: SentState,
+  ): Promise<number[]> {
+    const awaiting = questionsAwaitingConclude(record.questions, sent.progress);
+    const adding = awaiting.filter(
+      (questionIndex) => !sent.leftLine.includes(questionIndex),
+    );
+    const removing = sent.leftLine.filter(
+      (questionIndex) => !awaiting.includes(questionIndex),
+    );
+    const changed = [...adding, ...removing];
+    const synced = {
+      ...sent,
+      leftLine: awaiting,
+      movedOn: sent.movedOn && awaiting.length > 0,
+    };
+
+    saveSent(record.id, synced);
+    await Promise.all(
+      changed.map((questionIndex) =>
+        editQuestionText(
+          record,
+          synced,
+          questionIndex,
+          adding.includes(questionIndex),
+          progressKeyboard(
+            record.questions[questionIndex],
+            synced.shortId,
+            questionIndex,
+            messages(),
+            synced.progress,
+          ),
+        ),
+      ),
+    );
+
+    return changed;
+  }
+
+  async function updateSelection(
+    record: AskRecord,
+    sent: SentState,
+    questionIndex: number,
+  ): Promise<void> {
+    const touched = {
+      ...sent,
+      touchedAt: { ...sent.touchedAt, [questionIndex]: Date.now() },
+    };
+    const changed = await syncConcludeLine(record, touched);
+
+    if (changed.includes(questionIndex)) return;
+
+    await editQuestionMarkup(
+      touched,
+      questionIndex,
+      progressKeyboard(
+        record.questions[questionIndex],
+        touched.shortId,
+        questionIndex,
+        messages(),
+        touched.progress,
+      ),
+    );
+  }
+
+  function markMovedOn({ chatId, exceptShortId }: MovedOnScope = {}): void {
+    for (const id of listAskIds()) {
+      const record = readRecord(id);
+      const sent = readSent(id);
+
+      if (
+        record === null ||
+        sent === null ||
+        sent.completed ||
+        sent.movedOn ||
+        sent.shortId === exceptShortId
+      ) {
+        continue;
+      }
+
+      const awaiting = questionsAwaitingConclude(
+        record.questions,
+        sent.progress,
+      ).filter(
+        (questionIndex) =>
+          chatId === undefined ||
+          messagesOfQuestion(sent, questionIndex).some(
+            (message) => message.chatId === chatId,
+          ),
+      );
+
+      if (awaiting.length > 0) saveSent(id, { ...sent, movedOn: true });
+    }
+  }
+
+  function allowedSender(ctx: CallbackContext): boolean {
+    const senderId = ctx.from?.id;
+
+    return senderId !== undefined && allowedChats().includes(String(senderId));
+  }
+
+  function noteTap(ctx: CallbackContext): void {
+    if (allowedSender(ctx)) markMovedOn();
+  }
+
+  function shortIdOfMessage(
+    chatId: string,
+    messageId: number | undefined,
+  ): string | undefined {
+    return quotedQuestion(openAsks(), chatId, messageId, "messages")?.ask.sent
+      .shortId;
+  }
+
+  function noteAnsweredTap(
+    ctx: CallbackContext,
+    messageId: number | undefined,
+  ): void {
+    if (!allowedSender(ctx)) return;
+
+    markMovedOn({
+      exceptShortId: shortIdOfMessage(String(ctx.chat?.id), messageId),
+    });
+  }
+
+  async function remindConcludeLeft(
+    record: AskRecord,
+    sent: SentState,
+    now: number,
+    quiet: boolean,
+  ): Promise<void> {
+    const due = isReminderDue({
+      questions: record.questions,
+      progress: sent.progress,
+      touchedAt: sent.touchedAt,
+      movedOn: sent.movedOn,
+      reminderSent: sent.reminderSent,
+      completed: sent.completed,
+      now,
+      idleMs: readDelayMinutes(appDir, process.env, "reminder") * 60_000,
+      quiet,
+    });
+
+    if (!due) return;
+
+    const pending = questionsAwaitingConclude(record.questions, sent.progress);
+    const reminder = messages().concludeReminder;
+
+    saveSent(record.id, { ...sent, reminderSent: true });
+
+    await Promise.all(
+      sent.messages
+        .filter((message) => pending.includes(message.questionIndex))
+        .map((message) =>
+          sendReply(message.chatId, reminder, message.messageId),
+        ),
+    );
+  }
+
+  async function deleteDelivered(delivered: DeliveredMessage[]): Promise<void> {
+    await Promise.all(
+      delivered.map((message) =>
+        api
+          .deleteMessage(message.chatId, message.messageId)
+          .catch((error: unknown) =>
+            log(messages().askDeleteFailed(describeError(error))),
+          ),
+      ),
+    );
+  }
+
+  async function sendAskToChat(
+    record: AskRecord,
+    shortId: string,
+    chatId: string,
+  ): Promise<SentMessage[] | null> {
+    const text = messages();
+    const total = record.questions.length;
+    const sentMessages: SentMessage[] = [];
+    const delivered: DeliveredMessage[] = [];
+
+    try {
+      if (record.context) {
+        await sendHtml(
+          chatId,
+          renderContextText(record.context, text),
+          delivered,
+        );
+      }
+
+      for (const [questionIndex, question] of record.questions.entries()) {
+        const messageId = await sendHtml(
+          chatId,
+          renderQuestionText(
+            question,
+            questionIndex,
+            total,
+            text,
+            record.instance ?? null,
+          ),
+          delivered,
+          buildKeyboard(question, shortId, questionIndex, text),
+        );
+
+        sentMessages.push({ chatId, questionIndex, messageId });
+      }
+    } catch (error) {
+      log(text.askCycleFailed(describeError(error)));
+      await deleteDelivered(delivered);
+
+      return null;
+    }
+
+    return sentMessages;
+  }
+
+  async function sendAsk(record: AskRecord): Promise<void> {
+    const shortId = shortIdFor(record.id);
+    const sentMessages: SentMessage[] = [];
+    let reachedEveryQuestion = false;
+
+    for (const chatId of allowedChats()) {
+      const chatMessages = await sendAskToChat(record, shortId, chatId);
+
+      if (chatMessages === null) continue;
+
+      sentMessages.push(...chatMessages);
+      reachedEveryQuestion = true;
+    }
+
+    if (!reachedEveryQuestion) return;
 
     saveSent(record.id, {
       shortId,
@@ -412,8 +697,12 @@ export function createAskMirror({
       awaitingOther: [],
       otherPrompts: [],
       completed: false,
+      touchedAt: {},
+      movedOn: false,
+      reminderSent: false,
+      leftLine: [],
     });
-    log(text.askSent(record.id, record.instance ?? "telegram"));
+    log(messages().askSent(record.id, record.instance ?? "telegram"));
   }
 
   async function closeInTerminal(
@@ -427,7 +716,8 @@ export function createAskMirror({
 
     await Promise.all(
       openQuestions.map((questionIndex) =>
-        editQuestionMarkup(
+        settleQuestion(
+          record,
           sent,
           questionIndex,
           finalKeyboard(answeredInTerminal),
@@ -479,6 +769,8 @@ export function createAskMirror({
         if (!sent && (record.released === true || due)) {
           await sendAsk(record);
         }
+
+        if (sent) await remindConcludeLeft(record, sent, now, quiet);
       }
     } catch (error) {
       log(messages().askCycleFailed(describeError(error)));
@@ -514,7 +806,11 @@ export function createAskMirror({
     writeFileSync(
       answerFile(record.id),
       JSON.stringify({
-        answers: answersByQuestion(record.questions, sent.progress),
+        answers: answersByQuestion(
+          record.questions,
+          sent.progress,
+          text.typedAnswerSuffix,
+        ),
       }),
       { mode: 0o600 },
     );
@@ -541,38 +837,59 @@ export function createAskMirror({
       },
       (request) => request.questionIndex === questionIndex,
     );
+    const settled = {
+      ...updated,
+      leftLine: updated.leftLine.filter(
+        (markedIndex) => markedIndex !== questionIndex,
+      ),
+    };
 
-    saveSent(record.id, updated);
-    await editQuestionMarkup(updated, questionIndex, finalKeyboard(answer));
+    saveSent(record.id, settled);
+    await settleQuestion(record, updated, questionIndex, finalKeyboard(answer));
 
-    if (isComplete(updated.progress, record.questions.length)) {
-      await complete(record, updated, chatId);
+    if (isComplete(settled.progress, record.questions.length)) {
+      await complete(record, settled, chatId);
+    } else {
+      await syncConcludeLine(record, settled);
     }
+
+    markMovedOn();
+  }
+
+  async function handledAnsweredTap(ctx: CallbackContext): Promise<boolean> {
+    const query = ctx.callbackQuery;
+
+    if (query?.data !== ANSWERED_CALLBACK) return false;
+
+    noteAnsweredTap(ctx, query.message?.message_id);
+    await ctx.answerCallbackQuery().catch(() => undefined);
+
+    return true;
   }
 
   async function handleCallback(ctx: CallbackContext): Promise<boolean> {
-    const data = ctx.callbackQuery?.data;
+    if (await handledAnsweredTap(ctx)) return true;
 
-    if (data === ANSWERED_CALLBACK) {
-      await ctx.answerCallbackQuery().catch(() => undefined);
+    const parsed = parseAskCallback(String(ctx.callbackQuery?.data));
 
-      return true;
+    if (!parsed) {
+      noteTap(ctx);
+
+      return false;
     }
-
-    const parsed = parseAskCallback(String(data));
-
-    if (!parsed) return false;
 
     const text = messages();
     const senderId = ctx.from?.id;
 
-    if (senderId === undefined || !allowedChats().includes(String(senderId))) {
+    if (!allowedSender(ctx)) {
       await ctx
         .answerCallbackQuery({ text: text.notAuthorized })
         .catch(() => undefined);
 
       return true;
     }
+
+    markMovedOn({ exceptShortId: parsed.shortId });
 
     const found = findByShortId(parsed.shortId);
     const question = found?.record.questions[parsed.questionIndex];
@@ -620,6 +937,10 @@ export function createAskMirror({
 
       saveSent(record.id, {
         ...released,
+        touchedAt: {
+          ...released.touchedAt,
+          [parsed.questionIndex]: Date.now(),
+        },
         awaitingOther: [
           ...stopWaiting(sent.awaitingOther, parsed.questionIndex),
           parsed.questionIndex,
@@ -654,26 +975,17 @@ export function createAskMirror({
     if (parsed.optionIndex >= question.options.length) return true;
 
     if (question.multiSelect) {
-      const updated = {
-        ...sent,
-        progress: toggleSelection(
-          sent.progress,
-          parsed.questionIndex,
-          parsed.optionIndex,
-        ),
-      };
-
-      saveSent(record.id, updated);
-      await editQuestionMarkup(
-        updated,
+      await updateSelection(
+        record,
+        {
+          ...sent,
+          progress: toggleSelection(
+            sent.progress,
+            parsed.questionIndex,
+            parsed.optionIndex,
+          ),
+        },
         parsed.questionIndex,
-        progressKeyboard(
-          question,
-          sent.shortId,
-          parsed.questionIndex,
-          text,
-          updated.progress,
-        ),
       );
 
       return true;
@@ -705,7 +1017,7 @@ export function createAskMirror({
   function quotedQuestion(
     asks: OpenAsk[],
     chatId: string,
-    messageId: number,
+    messageId: number | undefined,
     list: "messages" | "otherPrompts",
   ): { ask: OpenAsk; questionIndex: number } | null {
     for (const ask of asks) {
@@ -742,25 +1054,21 @@ export function createAskMirror({
         (request) => request.questionIndex === questionIndex,
       );
 
-      saveSent(record.id, updated);
-      await editQuestionMarkup(
-        updated,
-        questionIndex,
-        progressKeyboard(
-          question,
-          sent.shortId,
-          questionIndex,
-          messages(),
-          updated.progress,
-        ),
-      );
+      await updateSelection(record, updated, questionIndex);
 
       return;
     }
 
     await finalize(
       record,
-      sent,
+      {
+        ...sent,
+        progress: typeSelection(
+          sent.progress,
+          questionIndex,
+          otherAnswer(text),
+        ),
+      },
       questionIndex,
       typedAnswer(
         question,
@@ -772,6 +1080,18 @@ export function createAskMirror({
   }
 
   async function consumeText(
+    chatId: string,
+    text: string,
+    repliedMessageId?: number,
+  ): Promise<boolean> {
+    const consumed = await takeText(chatId, text, repliedMessageId);
+
+    if (!consumed) markMovedOn({ chatId });
+
+    return consumed;
+  }
+
+  async function takeText(
     chatId: string,
     text: string,
     repliedMessageId?: number,
@@ -902,6 +1222,23 @@ export function createAskMirror({
       .catch((error: unknown) =>
         log(messages().askConfirmFailed(describeError(error))),
       );
+  }
+
+  async function sendReply(
+    chatId: string,
+    markdown: string,
+    replyToMessageId: number,
+  ): Promise<void> {
+    for (const chunk of toTelegramHtmlChunks(markdown)) {
+      await api
+        .sendMessage(chatId, chunk, {
+          parse_mode: "HTML",
+          reply_parameters: { message_id: replyToMessageId },
+        })
+        .catch((error: unknown) =>
+          log(messages().askConfirmFailed(describeError(error))),
+        );
+    }
   }
 
   async function noticeNeedsPrompt(

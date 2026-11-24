@@ -144,7 +144,7 @@ fn caught(value: Result<Option<Map<String, Value>>, String>) -> Value {
 }
 
 #[test]
-fn the_shell_lines_match_the_js() {
+fn matches_the_fixture_in_the_shell_lines() {
     for entry in list(&fixture(), "shell") {
         let rc_text = repo_text(text(entry, "text"));
         let shell = repo_text(text(entry, "shellFile"));
@@ -174,7 +174,7 @@ fn the_shell_lines_match_the_js() {
 }
 
 #[test]
-fn writes_the_deny_rules_like_the_js() {
+fn writes_the_deny_rules_like_the_fixture() {
     for entry in list(&fixture(), "denyRules") {
         let flavor = if text(entry, "platform") == "win32" {
             PathFlavor::Win32
@@ -195,7 +195,7 @@ fn writes_the_deny_rules_like_the_js() {
 }
 
 #[test]
-fn adding_and_removing_the_deny_rule_match_the_js() {
+fn adds_and_removes_the_deny_rule_like_the_fixture() {
     let fixture = fixture();
     let rule = text(&fixture, "rule");
 
@@ -225,7 +225,7 @@ fn kind_text(kind: StatuslineKind) -> &'static str {
 }
 
 #[test]
-fn the_status_line_helpers_match_the_js() {
+fn classifies_and_writes_each_status_line_as_the_fixture_recorded() {
     let repo = repo_root();
     let app_dir = Path::new("/app");
 
@@ -248,14 +248,21 @@ fn the_status_line_helpers_match_the_js() {
             if let Some(preview) = entry["preview"].as_str().filter(|_| of_the_clone) {
                 assert_eq!(statusline_preview(status_line.as_ref()), preview, "{entry}");
             }
+            let ours = entry["ours"].as_bool().unwrap();
+            let (expected_ours, expected_kind) = if of_the_clone && ours {
+                (false, "other")
+            } else {
+                (ours, text(entry, "kind"))
+            };
+
             assert_eq!(
                 is_our_statusline(status_line.as_ref(), app_dir),
-                entry["ours"].as_bool().unwrap(),
+                expected_ours,
                 "{entry}"
             );
             assert_eq!(
                 kind_text(statusline_kind(status_line.as_ref(), app_dir)),
-                text(entry, "kind"),
+                expected_kind,
                 "{entry}"
             );
             assert_eq!(
@@ -268,7 +275,7 @@ fn the_status_line_helpers_match_the_js() {
 }
 
 #[test]
-fn the_setting_texts_match_the_js() {
+fn matches_the_fixture_in_the_setting_texts() {
     for entry in list(&fixture(), "settingTexts") {
         let value = optional(&entry["value"]);
         let key = text(entry, "key");
@@ -287,7 +294,7 @@ fn the_setting_texts_match_the_js() {
 }
 
 #[test]
-fn parses_the_json_text_like_the_js() {
+fn parses_the_json_text_like_the_fixture() {
     for entry in list(&fixture(), "parsed") {
         let parsed = Value::Object(parsed_json(entry["text"].as_str()));
         let expected = match &entry["out"] {
@@ -300,7 +307,7 @@ fn parses_the_json_text_like_the_js() {
 }
 
 #[test]
-fn the_rc_files_match_the_js() {
+fn matches_the_fixture_in_the_rc_files() {
     for entry in list(&fixture(), "rcFiles") {
         let root = sandbox();
         let home = root.path().join("home");
@@ -579,7 +586,7 @@ fn assert_result(run: &Run, expected: &Value, root: &Path, messages: &Messages, 
 }
 
 #[test]
-fn every_file_operation_matches_the_js_and_undoes_like_it() {
+fn matches_the_fixture_and_undoes_it_in_every_file_operation() {
     let default_mode = default_file_mode();
     let fixture = fixture();
     let operations = list(&fixture, "operations");
@@ -768,7 +775,7 @@ fn run_steps(entry: &Value, root: &Path, journal: &mut Journal, order: &Order) -
 }
 
 #[test]
-fn every_journal_script_matches_the_js() {
+fn matches_the_fixture_in_every_journal_script() {
     let default_mode = default_file_mode();
 
     for entry in list(&fixture(), "journals") {
@@ -974,7 +981,7 @@ fn warns_that_the_status_line_claude_customized_still_calls_the_indicator() {
     );
 }
 
-const CLONE_STATUSLINE: &str = "node \"/r/plugins/telegram-hooks/statusline.mjs\"";
+const OLD_CLONE_STATUSLINE: &str = "node \"/r/plugins/telegram-hooks/statusline.mjs\"";
 
 fn with_statusline_command(root: &Path, command: &str) -> PathBuf {
     let settings_file = root.join("settings.json");
@@ -1007,52 +1014,36 @@ fn statusline_applied(root: &Path, command: &str, choice: StatuslineChoice) -> (
 }
 
 #[test]
-fn the_setup_moves_the_statusline_of_the_clone_to_the_launcher_of_the_app() {
+fn skips_the_statusline_that_already_is_the_launcher_of_the_app() {
     let root = sandbox();
     let app_dir = root.path().join("app");
     let en = messages_for(Locale::EnUs);
-    let name = "{root}/settings.json";
 
-    for choice in [StatuslineChoice::On, StatuslineChoice::After] {
-        assert_eq!(
-            statusline_applied(root.path(), CLONE_STATUSLINE, choice),
-            (
-                json!({"type": "command", "command": bcct::setup::statusline_command(&app_dir)}),
-                format!("✔ {}\n", (en.statusline_installed)(name))
-            )
-        );
-        assert_eq!(
-            statusline_applied(
-                root.path(),
-                &format!("{CLONE_STATUSLINE} --after-previous"),
-                choice
-            ),
-            (
-                json!({"type": "command", "command": bcct::setup::statusline_after_command(&app_dir)}),
-                format!("✔ {}\n", (en.statusline_chained)(name))
-            )
-        );
+    for current in [
+        bcct::setup::statusline_command(&app_dir),
+        bcct::setup::statusline_after_command(&app_dir),
+    ] {
+        for choice in [StatuslineChoice::On, StatuslineChoice::After] {
+            assert_eq!(
+                statusline_applied(root.path(), &current, choice),
+                (
+                    json!({"type": "command", "command": current}),
+                    format!("○ {}\n", en.statusline_already)
+                )
+            );
+        }
     }
-
-    let current = bcct::setup::statusline_after_command(&app_dir);
-
-    assert_eq!(
-        statusline_applied(root.path(), &current, StatuslineChoice::On),
-        (
-            json!({"type": "command", "command": current}),
-            format!("○ {}\n", en.statusline_already)
-        )
-    );
 }
 
 #[test]
-fn a_statusline_of_the_clone_that_cannot_be_moved_stops_with_the_settings_untouched() {
+fn stops_with_the_settings_untouched_when_the_statusline_of_the_app_cannot_be_removed() {
     let root = sandbox();
     let folder = root.path().join("claude");
     fs::create_dir(&folder).unwrap();
-    let settings_file = with_statusline_command(&folder, CLONE_STATUSLINE);
-    let before = fs::read_to_string(&settings_file).unwrap();
     let app_dir = root.path().join("app");
+    let settings_file =
+        with_statusline_command(&folder, &bcct::setup::statusline_command(&app_dir));
+    let before = fs::read_to_string(&settings_file).unwrap();
     let state_dir = root.path().join("state");
     let files = SetupFiles {
         app_dir: &app_dir,
@@ -1065,7 +1056,7 @@ fn a_statusline_of_the_clone_that_cannot_be_moved_stops_with_the_settings_untouc
     let mut journal = Journal::new();
     set_mode(&folder, 0o555);
 
-    let result = apply_statusline(&files, StatuslineChoice::On, 1, &mut journal, &mut printer);
+    let result = apply_statusline(&files, StatuslineChoice::Off, 1, &mut journal, &mut printer);
 
     set_mode(&folder, 0o755);
     assert!(result.is_err(), "{result:?}");
@@ -1074,17 +1065,16 @@ fn a_statusline_of_the_clone_that_cannot_be_moved_stops_with_the_settings_untouc
 }
 
 #[test]
-fn the_setup_swaps_the_rc_line_of_the_clone_and_the_uninstall_removes_the_new_one() {
+fn installs_the_rc_block_and_the_uninstall_removes_it() {
     let root = sandbox();
     let home = root.path().join("home");
     let rc = home.join(".zshrc");
     let shell = root.path().join("app/shell.sh");
-    let clone = "[ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\"";
     let marker = bcct::shell_rc::SHELL_MARKER;
     let home_text = home.to_string_lossy().into_owned();
     let en = messages_for(Locale::EnUs);
     fs::create_dir_all(&home).unwrap();
-    fs::write(&rc, format!("a\n\n{marker}\n{clone}\n")).unwrap();
+    fs::write(&rc, "a\n").unwrap();
     let mut out = Vec::new();
     let mut journal = Journal::new();
 
@@ -1125,64 +1115,35 @@ fn the_setup_swaps_the_rc_line_of_the_clone_and_the_uninstall_removes_the_new_on
 }
 
 #[test]
-fn the_setup_leaves_one_line_when_the_rc_loads_two_clones() {
+fn removes_the_statusline_of_the_app_on_the_uninstall() {
     let root = sandbox();
-    let home = root.path().join("home");
-    let rc = home.join(".bashrc");
-    let shell = root.path().join("app/shell.sh");
-    let marker = bcct::shell_rc::SHELL_MARKER;
-    let first = "[ -f \"/r/scripts/shell.sh\" ] && . \"/r/scripts/shell.sh\"";
-    let second = "[ -f \"/dev/shm/scripts/shell.sh\" ] && . \"/dev/shm/scripts/shell.sh\"";
-    let home_text = home.to_string_lossy().into_owned();
+    let app_dir = root.path().join("app");
     let en = messages_for(Locale::EnUs);
-    fs::create_dir_all(&home).unwrap();
-    fs::write(
-        &rc,
-        format!("a\n\n{marker}\n{first}\n. \"$HOME/.cargo/env\"\n\n{marker}\n{second}\n"),
-    )
-    .unwrap();
-    fs::write(
-        home.join(".zshrc"),
-        format!("{marker}\n{first}\n{second}\n{marker}\n{second}"),
-    )
-    .unwrap();
-    let mut out = Vec::new();
-    let mut journal = Journal::new();
-    let mut printer = Printer::new(&mut out, false, en);
 
-    install_shell_function(
-        &home_text,
-        Some("/bin/bash"),
-        false,
-        &shell,
-        &mut journal,
-        &mut printer,
-    )
-    .unwrap();
-
-    assert_eq!(
-        fs::read_to_string(&rc).unwrap(),
-        format!(
-            "a\n\n{marker}\n{}\n. \"$HOME/.cargo/env\"\n",
-            source_line(&shell.to_string_lossy())
-        )
-    );
-    assert_eq!(
-        fs::read_to_string(home.join(".zshrc")).unwrap(),
-        format!("{marker}\n{}", source_line(&shell.to_string_lossy()))
-    );
+    for ours in [
+        bcct::setup::statusline_command(&app_dir),
+        bcct::setup::statusline_after_command(&app_dir),
+    ] {
+        assert_eq!(
+            statusline_applied(root.path(), &ours, StatuslineChoice::Off),
+            (
+                Value::Null,
+                format!("✔ {}\n", (en.statusline_removed)("{root}/settings.json"))
+            )
+        );
+    }
 }
 
 #[test]
-fn the_uninstall_removes_the_statusline_of_the_clone() {
+fn keeps_the_statusline_of_the_old_clone_on_the_uninstall() {
     let root = sandbox();
     let en = messages_for(Locale::EnUs);
 
     assert_eq!(
-        statusline_applied(root.path(), CLONE_STATUSLINE, StatuslineChoice::Off),
+        statusline_applied(root.path(), OLD_CLONE_STATUSLINE, StatuslineChoice::Off),
         (
-            Value::Null,
-            format!("✔ {}\n", (en.statusline_removed)("{root}/settings.json"))
+            json!({"type": "command", "command": OLD_CLONE_STATUSLINE}),
+            format!("{}\n", en.statusline_skipped)
         )
     );
 }
