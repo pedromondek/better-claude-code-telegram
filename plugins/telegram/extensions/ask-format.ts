@@ -309,12 +309,15 @@ export function isComplete(progress: AskProgress, total: number): boolean {
 export function answersByQuestion(
   questions: AskQuestion[],
   progress: AskProgress,
+  typedSuffix = "",
 ): Record<string, string> {
   return Object.fromEntries(
-    questions.map((question, index) => [
-      question.question,
-      progress.answers[index] ?? "",
-    ]),
+    questions.map((question, index) => {
+      const answer = progress.answers[index] ?? "";
+      const wasTyped = (progress.typed?.[index] ?? "") !== "";
+
+      return [question.question, wasTyped ? `${answer}${typedSuffix}` : answer];
+    }),
   );
 }
 

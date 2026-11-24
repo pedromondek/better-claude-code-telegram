@@ -678,46 +678,160 @@ describe("question sending", () => {
     ]);
   });
 
-  it("edits the keyboard of a chat that failed partway when another chat got every question", async (): Promise<void> => {
-    const partialChat = "222";
-    const telegram = fakeApi({
-      rejectSend: (text, chatId) =>
-        chatId === partialChat &&
-        text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+  describe("when another chat got every question", () => {
+    const PARTIAL_CHAT = "222";
+    const LONG_PREVIEW = "linha da prévia\n".repeat(600);
+    const LONG_QUESTION: AskQuestion = {
+      question: "Q longa?",
+      options: [{ label: "A", preview: LONG_PREVIEW }],
+    };
+
+    function twoChats(
+      options: Pick<SetupOptions, "rejectSend" | "failDelete">,
+    ): {
+      telegram: ReturnType<typeof fakeApi>;
+      mirror: ReturnType<typeof createAskMirror>;
+      logs: string[];
+    } {
+      const telegram = fakeApi(options);
+      const logs: string[] = [];
+      const mirror = createAskMirror({
+        api: telegram.api,
+        appDir,
+        allowedChats: () => [PARTIAL_CHAT, CHAT],
+        log: (message) => logs.push(message),
+        messages: () => PT,
+      });
+
+      return { telegram, mirror, logs };
+    }
+
+    function messagesOf(
+      telegram: ReturnType<typeof fakeApi>,
+      chatId: string,
+    ): DeletedMessage[] {
+      return telegram.sent
+        .filter((message) => message.chatId === chatId)
+        .map(({ messageId }) => ({ chatId, messageId }));
+    }
+
+    function savedMessages(): { chatId: string }[] {
+      const state = JSON.parse(
+        readFileSync(join(asksDir(), `${ASK_ID}.telegram.json`), "utf8"),
+      ) as { messages: { chatId: string }[] };
+
+      return state.messages;
+    }
+
+    it("deletes only what the chat that failed partway received and keeps the other chat", async (): Promise<void> => {
+      const { telegram, mirror, logs } = twoChats({
+        rejectSend: (text, chatId) =>
+          chatId === PARTIAL_CHAT &&
+          text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+      });
+
+      writeAsk([SINGLE, MULTI]);
+      await mirror.tick();
+      await mirror.tick();
+
+      expect(telegram.deleted).toEqual(messagesOf(telegram, PARTIAL_CHAT));
+      expect(telegram.deleted.length).toBe(1);
+      expect(savedMessages().map((message) => message.chatId)).toEqual([
+        CHAT,
+        CHAT,
+      ]);
+      expect(logs).toEqual([
+        PT_TEXTS.logCycleFailed,
+        PT.askSent(ASK_ID, "telegram"),
+      ]);
+
+      await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+
+      expect(telegram.edits.map((edit) => edit.chatId)).toEqual([CHAT]);
+      expect(telegram.sent.filter((m) => m.chatId === CHAT).length).toBe(2);
     });
-    const logs: string[] = [];
-    const mirror = createAskMirror({
-      api: telegram.api,
-      appDir,
-      allowedChats: () => [partialChat, CHAT],
-      log: (message) => logs.push(message),
-      messages: () => PT,
+
+    it("deletes the context parts of the chat that failed at the context", async (): Promise<void> => {
+      const { telegram, mirror } = twoChats({
+        rejectSend: (text, chatId) =>
+          chatId === PARTIAL_CHAT && text.includes("FIM-DO-CONTEXTO"),
+      });
+
+      writeAsk([SINGLE], {
+        context: `${LONG_PREVIEW}FIM-DO-CONTEXTO`,
+      });
+      await mirror.tick();
+
+      const partialMessages = messagesOf(telegram, PARTIAL_CHAT);
+
+      expect(partialMessages.length).toBeGreaterThan(0);
+      expect(telegram.deleted).toEqual(partialMessages);
+      expect(
+        telegram.sent.filter(
+          (message) => message.chatId === CHAT && message.keyboard,
+        ).length,
+      ).toBe(1);
+      expect(savedMessages().map((message) => message.chatId)).toEqual([CHAT]);
     });
 
-    writeAsk([SINGLE, MULTI]);
-    await mirror.tick();
-    await mirror.tick();
+    it("deletes the context and the questions already sent to the chat that failed in the middle of a long question", async (): Promise<void> => {
+      const { telegram, mirror } = twoChats({
+        rejectSend: (text, chatId) =>
+          chatId === PARTIAL_CHAT &&
+          text.includes(PT.otherHint) &&
+          !text.includes(SINGLE.question),
+      });
 
-    const partialMessageId = telegram.sent.find(
-      (message) => message.chatId === partialChat,
-    )?.messageId;
+      writeAsk([SINGLE, LONG_QUESTION], { context: "Comparei Postgres." });
+      await mirror.tick();
 
-    await mirror.handleCallback(callback(`ask:${SHORT}:0:1`).ctx);
+      const partialMessages = messagesOf(telegram, PARTIAL_CHAT);
 
-    expect(telegram.sent.map((message) => message.chatId)).toEqual([
-      partialChat,
-      CHAT,
-      CHAT,
-    ]);
-    expect(logs).toEqual([
-      PT_TEXTS.logCycleFailed,
-      PT.askSent(ASK_ID, "telegram"),
-    ]);
-    expect(
-      telegram.edits
-        .filter((edit) => edit.chatId === partialChat)
-        .map((edit) => edit.messageId),
-    ).toEqual([partialMessageId]);
+      expect(partialMessages.length).toBeGreaterThan(3);
+      expect(telegram.deleted).toEqual(partialMessages);
+      expect(
+        telegram.deleted.every(({ chatId }) => chatId === PARTIAL_CHAT),
+      ).toBe(true);
+      expect(savedMessages().map((message) => message.chatId)).toEqual([
+        CHAT,
+        CHAT,
+      ]);
+    });
+
+    it("deletes nothing from a chat that got nothing when the other chat got every question", async (): Promise<void> => {
+      const { telegram, mirror } = twoChats({
+        rejectSend: (_text, chatId) => chatId === PARTIAL_CHAT,
+      });
+
+      writeAsk([SINGLE]);
+      await mirror.tick();
+
+      expect(telegram.deleted).toEqual([]);
+      expect(savedMessages().map((message) => message.chatId)).toEqual([CHAT]);
+    });
+
+    it("logs a delete that fails and still keeps the other chat", async (): Promise<void> => {
+      const { telegram, mirror, logs } = twoChats({
+        failDelete: true,
+        rejectSend: (text, chatId) =>
+          chatId === PARTIAL_CHAT &&
+          text.startsWith("❓ Pergunta aberta no terminal (2/2)"),
+      });
+
+      writeAsk([SINGLE, MULTI]);
+      await mirror.tick();
+
+      expect(telegram.deleted).toEqual([]);
+      expect(logs).toEqual([
+        PT_TEXTS.logCycleFailed,
+        PT.askDeleteFailed("Error: boom"),
+        PT.askSent(ASK_ID, "telegram"),
+      ]);
+      expect(savedMessages().map((message) => message.chatId)).toEqual([
+        CHAT,
+        CHAT,
+      ]);
+    });
   });
 
   it("sends before the deadline when the last message came from Telegram", async (): Promise<void> => {
@@ -898,7 +1012,7 @@ describe("answer through Telegram", () => {
     expect(
       await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
     ).toBe(true);
-    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+    expect(readAnswers()).toEqual({ "Qual banco?": `MySQL${PT_TYPED_SUFFIX}` });
     expect(await mirror.consumeText(CHAT, "conversa normal")).toBe(false);
   });
 
@@ -1401,7 +1515,7 @@ describe("typed answer of a multiple choice question", () => {
     await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
 
     expect(readAnswers()).toEqual({
-      "Quais camadas?": "Backend, Frontend, Mobile",
+      "Quais camadas?": `Backend, Frontend, Mobile${PT_TYPED_SUFFIX}`,
     });
   });
 
@@ -1417,7 +1531,9 @@ describe("typed answer of a multiple choice question", () => {
     await mirror.handleCallback(callback(`ask:${SHORT}:0:0`).ctx);
     await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
 
-    expect(readAnswers()).toEqual({ "Quais camadas?": "Frontend, Mobile" });
+    expect(readAnswers()).toEqual({
+      "Quais camadas?": `Frontend, Mobile${PT_TYPED_SUFFIX}`,
+    });
   });
 
   it("replaces the typed text when the other answer is written again", async (): Promise<void> => {
@@ -1434,7 +1550,9 @@ describe("typed answer of a multiple choice question", () => {
 
     await mirror.handleCallback(callback(`ask:${SHORT}:0:d`).ctx);
 
-    expect(readAnswers()).toEqual({ "Quais camadas?": "Infra" });
+    expect(readAnswers()).toEqual({
+      "Quais camadas?": `Infra${PT_TYPED_SUFFIX}`,
+    });
   });
 
   it("shows the replaced typed text in the prompt when Other is tapped again", async (): Promise<void> => {
@@ -1474,7 +1592,7 @@ describe("typed answer of a multiple choice question", () => {
     await mirror.handleCallback(callback(`ask:${SHORT}:0:o`).ctx);
     await mirror.consumeText(CHAT, "  MySQL  ", otherPromptId(telegram, 1));
 
-    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+    expect(readAnswers()).toEqual({ "Qual banco?": `MySQL${PT_TYPED_SUFFIX}` });
   });
 });
 
@@ -1508,8 +1626,8 @@ describe("typed answer to the question it replies to", () => {
       await mirror.consumeText(CHAT, "gato", otherPromptId(telegram, 2)),
     ).toBe(true);
     expect(readAnswers()).toEqual({
-      "Qual estação?": "inverno",
-      "Qual animal?": "gato",
+      "Qual estação?": `inverno${PT_TYPED_SUFFIX}`,
+      "Qual animal?": `gato${PT_TYPED_SUFFIX}`,
     });
   });
 
@@ -1538,7 +1656,7 @@ describe("typed answer to the question it replies to", () => {
 
     expect(readAnswers()).toEqual({
       "Qual estação?": "Inverno",
-      "Qual animal?": "gato",
+      "Qual animal?": `gato${PT_TYPED_SUFFIX}`,
     });
   });
 
@@ -1641,7 +1759,9 @@ describe("typed answer to the question it replies to", () => {
     expect(
       await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
     ).toBe(true);
-    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${PT_TYPED_SUFFIX}`,
+    });
   });
 
   it("warns and keeps the text off the channel when the reply quotes a request Telegram kept for an answered question", async (): Promise<void> => {
@@ -1761,7 +1881,9 @@ describe("typed answer to the question it replies to", () => {
     expect(
       await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
     ).toBe(true);
-    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${PT_TYPED_SUFFIX}`,
+    });
   });
 
   it("lets a reply to an unrelated message reach the channel without a notice while a question waits", async (): Promise<void> => {
@@ -1777,7 +1899,9 @@ describe("typed answer to the question it replies to", () => {
     expect(
       await mirror.consumeText(CHAT, "MySQL", otherPromptId(telegram, 1)),
     ).toBe(true);
-    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${PT_TYPED_SUFFIX}`,
+    });
   });
 });
 
@@ -2227,7 +2351,7 @@ describe("typed answers the mirror takes", () => {
 
     expect(readAnswers()).toEqual({
       "Qual banco?": "Postgres",
-      "Quais camadas?": "Mobile",
+      "Quais camadas?": `Mobile${PT_TYPED_SUFFIX}`,
     });
   });
 
@@ -2408,7 +2532,9 @@ describe("Other requests left without a reply", () => {
       { chatId: CHAT, messageId: first },
       { chatId: CHAT, messageId: second },
     ]);
-    expect(readAnswers()).toEqual({ "Qual banco?": "MySQL" });
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${PT_TYPED_SUFFIX}`,
+    });
   });
 
   it("deletes the request replied to in a multiple choice as soon as the typed text is taken", async (): Promise<void> => {
@@ -2434,7 +2560,9 @@ describe("Other requests left without a reply", () => {
       { chatId: CHAT, messageId: replied },
       { chatId: CHAT, messageId: unanswered },
     ]);
-    expect(readAnswers()).toEqual({ "Quais camadas?": "Mobile" });
+    expect(readAnswers()).toEqual({
+      "Quais camadas?": `Mobile${PT_TYPED_SUFFIX}`,
+    });
   });
 
   it("keeps the requests of the other questions while one is answered", async (): Promise<void> => {
@@ -2719,6 +2847,10 @@ const SECOND_MULTI: AskQuestion = {
   multiSelect: true,
   options: [{ label: "Unit" }, { label: "E2E" }],
 };
+const PT_TYPED_SUFFIX =
+  " (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)";
+const EN_TYPED_SUFFIX =
+  " (answered on Telegram: if the answer asks something, reply on Telegram)";
 
 function writeConfig(config: Record<string, unknown>): void {
   writeFileSync(join(appDir, CONFIG_FILE), JSON.stringify(config));
@@ -4279,5 +4411,151 @@ describe("line on the multiple choice question left without Conclude", () => {
       "Qual banco?": "Postgres",
       "Quais camadas?": "Backend",
     });
+  });
+});
+
+describe("typed answer suffix", () => {
+  async function typeAnswer(
+    mirror: ReturnType<typeof createAskMirror>,
+    telegram: ReturnType<typeof fakeApi>,
+    questionIndex: number,
+    text: string,
+  ): Promise<void> {
+    await pressButton(mirror, `${questionIndex}:o`);
+    await mirror.consumeText(
+      CHAT,
+      text,
+      otherPromptId(telegram, questionIndex + 1),
+    );
+  }
+
+  it("adds the suffix to a single choice answer typed on Telegram", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await typeAnswer(mirror, telegram, 0, "  MySQL  ");
+
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${PT_TYPED_SUFFIX}`,
+    });
+  });
+
+  it("writes the suffix in English when the messages are in English", async (): Promise<void> => {
+    const { telegram, mirror } = setup({ messages: () => EN });
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await pressButton(mirror, "0:o");
+    await mirror.consumeText(
+      CHAT,
+      "MySQL",
+      telegram.sent.findLast((message) => message.forceReply)?.messageId,
+    );
+
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${EN_TYPED_SUFFIX}`,
+    });
+  });
+
+  it("follows the language of the config for the suffix", async (): Promise<void> => {
+    writeLanguage("en-us");
+
+    const { telegram, mirror } = setupFollowingConfig();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await pressButton(mirror, "0:o");
+    await mirror.consumeText(
+      CHAT,
+      "MySQL",
+      telegram.sent.findLast((message) => message.forceReply)?.messageId,
+    );
+
+    expect(readAnswers()).toEqual({
+      "Qual banco?": `MySQL${EN_TYPED_SUFFIX}`,
+    });
+  });
+
+  it("leaves the suffix out of an answer given by a button", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await pressButton(mirror, "0:1");
+
+    expect(readAnswers()).toEqual({ "Qual banco?": "Redis" });
+  });
+
+  it("adds the suffix once to a multiple choice with options and typed text", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "0:1");
+    await typeAnswer(mirror, telegram, 0, "Mobile");
+    await pressButton(mirror, "0:d");
+
+    expect(readAnswers()).toEqual({
+      "Quais camadas?": `Backend, Frontend, Mobile${PT_TYPED_SUFFIX}`,
+    });
+  });
+
+  it("leaves the suffix out of a multiple choice answered only with options", async (): Promise<void> => {
+    const { mirror } = setup();
+
+    writeAsk([MULTI]);
+    await mirror.tick();
+    await pressButton(mirror, "0:0");
+    await pressButton(mirror, "0:d");
+
+    expect(readAnswers()).toEqual({ "Quais camadas?": "Backend" });
+  });
+
+  it("adds the suffix only to the question that was typed when others use buttons", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, SECOND_SINGLE]);
+    await mirror.tick();
+    await pressButton(mirror, "0:1");
+    await typeAnswer(mirror, telegram, 1, "Valkey");
+
+    expect(readAnswers()).toEqual({
+      "Qual banco?": "Redis",
+      "Qual cache?": `Valkey${PT_TYPED_SUFFIX}`,
+    });
+  });
+
+  it("leaves the suffix out when the typed text is only spaces", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE]);
+    await mirror.tick();
+    await typeAnswer(mirror, telegram, 0, "   ");
+
+    expect(readAnswers()).toEqual({ "Qual banco?": "" });
+  });
+
+  it("shows the answer on Telegram without the suffix", async (): Promise<void> => {
+    const { telegram, mirror } = setup();
+
+    writeAsk([SINGLE, MULTI]);
+    await mirror.tick();
+    await typeAnswer(mirror, telegram, 0, "MySQL");
+    await pressButton(mirror, "1:0");
+    await typeAnswer(mirror, telegram, 1, "Mobile");
+    await pressButton(mirror, "1:d");
+
+    const shown = JSON.stringify([
+      telegram.edits.map(({ keyboard }) => keyboard),
+      telegram.textEdits.map(({ text, keyboard }) => ({ text, keyboard })),
+      telegram.sent.map(({ text }) => text),
+    ]);
+
+    expect(shown).toContain("✅ MySQL");
+    expect(shown).toContain("✅ Backend, Mobile");
+    expect(shown).not.toContain("respondido no Telegram");
+    expect(telegram.sent.at(-1)?.text).toBe(PT_TEXTS.delivered);
   });
 });

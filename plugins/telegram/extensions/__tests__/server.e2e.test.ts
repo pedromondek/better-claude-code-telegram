@@ -644,8 +644,10 @@ describe.skipIf(!canRun)(
       );
 
       expect(answers).toEqual({
-        "Which database?": "MySQL",
-        "Which cache?": "Memcached",
+        "Which database?":
+          "MySQL (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)",
+        "Which cache?":
+          "Memcached (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)",
       });
       expect(
         fork.mcpMessages.some((message) =>

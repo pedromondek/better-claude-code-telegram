@@ -76,6 +76,8 @@ const enUs = {
     `ask: failed to edit the buttons: ${error}`,
   concludeReminder: `☝️ **Only this one is left to conclude**: tap ${DONE_BUTTON_EN}`,
   concludeLeftLine: `✅ Only this one is left: tap ${DONE_BUTTON_EN}`,
+  typedAnswerSuffix:
+    " (answered on Telegram: if the answer asks something, reply on Telegram)",
   askSent: (askId: string, instance: string): string =>
     `ask: question ${askId} from [${instance}] sent to Telegram`,
   askAnsweredInTerminal: (askId: string): string =>
@@ -180,6 +182,8 @@ const ptBr: Messages = {
   askEditFailed: (error) => `ask: falha ao editar botões: ${error}`,
   concludeReminder: `☝️ **Falta só concluir esta**: toque em ${DONE_BUTTON_PT}`,
   concludeLeftLine: `✅ Só falta esta: toque em ${DONE_BUTTON_PT}`,
+  typedAnswerSuffix:
+    " (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)",
   askSent: (askId, instance) =>
     `ask: pergunta ${askId} de [${instance}] enviada ao Telegram`,
   askAnsweredInTerminal: (askId) =>

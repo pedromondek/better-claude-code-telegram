@@ -617,60 +617,78 @@ export function createAskMirror({
     );
   }
 
-  async function sendAsk(record: AskRecord): Promise<void> {
+  async function deleteDelivered(delivered: DeliveredMessage[]): Promise<void> {
+    await Promise.all(
+      delivered.map((message) =>
+        api
+          .deleteMessage(message.chatId, message.messageId)
+          .catch((error: unknown) =>
+            log(messages().askDeleteFailed(describeError(error))),
+          ),
+      ),
+    );
+  }
+
+  async function sendAskToChat(
+    record: AskRecord,
+    shortId: string,
+    chatId: string,
+  ): Promise<SentMessage[] | null> {
     const text = messages();
-    const shortId = shortIdFor(record.id);
     const total = record.questions.length;
     const sentMessages: SentMessage[] = [];
     const delivered: DeliveredMessage[] = [];
+
+    try {
+      if (record.context) {
+        await sendHtml(
+          chatId,
+          renderContextText(record.context, text),
+          delivered,
+        );
+      }
+
+      for (const [questionIndex, question] of record.questions.entries()) {
+        const messageId = await sendHtml(
+          chatId,
+          renderQuestionText(
+            question,
+            questionIndex,
+            total,
+            text,
+            record.instance ?? null,
+          ),
+          delivered,
+          buildKeyboard(question, shortId, questionIndex, text),
+        );
+
+        sentMessages.push({ chatId, questionIndex, messageId });
+      }
+    } catch (error) {
+      log(text.askCycleFailed(describeError(error)));
+      await deleteDelivered(delivered);
+
+      return null;
+    }
+
+    return sentMessages;
+  }
+
+  async function sendAsk(record: AskRecord): Promise<void> {
+    const shortId = shortIdFor(record.id);
+    const sentMessages: SentMessage[] = [];
     let reachedEveryQuestion = false;
 
     for (const chatId of allowedChats()) {
-      try {
-        if (record.context) {
-          await sendHtml(
-            chatId,
-            renderContextText(record.context, text),
-            delivered,
-          );
-        }
+      const chatMessages = await sendAskToChat(record, shortId, chatId);
 
-        for (const [questionIndex, question] of record.questions.entries()) {
-          const messageId = await sendHtml(
-            chatId,
-            renderQuestionText(
-              question,
-              questionIndex,
-              total,
-              text,
-              record.instance ?? null,
-            ),
-            delivered,
-            buildKeyboard(question, shortId, questionIndex, text),
-          );
+      if (chatMessages === null) continue;
 
-          sentMessages.push({ chatId, questionIndex, messageId });
-        }
-
-        reachedEveryQuestion = true;
-      } catch (error) {
-        log(text.askCycleFailed(describeError(error)));
-      }
+      sentMessages.push(...chatMessages);
+      reachedEveryQuestion = true;
     }
 
-    if (!reachedEveryQuestion) {
-      await Promise.all(
-        delivered.map((message) =>
-          api
-            .deleteMessage(message.chatId, message.messageId)
-            .catch((error: unknown) =>
-              log(text.askDeleteFailed(describeError(error))),
-            ),
-        ),
-      );
-
-      return;
-    }
+    if (!reachedEveryQuestion) return;
 
     saveSent(record.id, {
       shortId,
@@ -684,7 +702,7 @@ export function createAskMirror({
       reminderSent: false,
       leftLine: [],
     });
-    log(text.askSent(record.id, record.instance ?? "telegram"));
+    log(messages().askSent(record.id, record.instance ?? "telegram"));
   }
 
   async function closeInTerminal(
@@ -788,7 +806,11 @@ export function createAskMirror({
     writeFileSync(
       answerFile(record.id),
       JSON.stringify({
-        answers: answersByQuestion(record.questions, sent.progress),
+        answers: answersByQuestion(
+          record.questions,
+          sent.progress,
+          text.typedAnswerSuffix,
+        ),
       }),
       { mode: 0o600 },
     );
@@ -1039,7 +1061,14 @@ export function createAskMirror({
 
     await finalize(
       record,
-      sent,
+      {
+        ...sent,
+        progress: typeSelection(
+          sent.progress,
+          questionIndex,
+          otherAnswer(text),
+        ),
+      },
       questionIndex,
       typedAnswer(
         question,

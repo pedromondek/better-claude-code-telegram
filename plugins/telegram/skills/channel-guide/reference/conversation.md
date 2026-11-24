@@ -14,6 +14,10 @@ The user reads only the message: everything needed to decide goes inside it.
 - A decision shows its research: the path you took, what you measured and why each discarded option left.
 - One pending item per message, with the context before the question.
 
+## Answers that came from Telegram
+
+- An AskUserQuestion answer that came from Telegram (it ends with a note saying it was answered on Telegram) and asks something is answered on Telegram, with the reply tool, never only in the terminal.
+
 ## Reports
 
 - At the end of a long stage, a short summary: what finished, what you found and what comes next. A decision that follows goes in the same message, with its buttons.

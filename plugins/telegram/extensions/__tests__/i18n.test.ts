@@ -246,6 +246,17 @@ describe("conclude reminder", () => {
   });
 });
 
+describe("typed answer suffix", () => {
+  it("tells Claude the answer came from Telegram, in each language", (): void => {
+    expect(MESSAGES["en-us"].typedAnswerSuffix).toBe(
+      " (answered on Telegram: if the answer asks something, reply on Telegram)",
+    );
+    expect(MESSAGES["pt-br"].typedAnswerSuffix).toBe(
+      " (respondido no Telegram: se a resposta pergunta algo, responda no Telegram)",
+    );
+  });
+});
+
 describe("catalog parity between en-us and pt-br", () => {
   it("has the same keys", (): void => {
     expect(Object.keys(MESSAGES["pt-br"]).toSorted()).toEqual(
