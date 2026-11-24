@@ -121,7 +121,7 @@ fn check_outcome<T: Into<Value>>(name: &str, answer: Answer<T>, entry: &Value) {
 }
 
 #[test]
-fn renders_the_choices_like_the_js() {
+fn renders_the_choices_like_the_fixture() {
     let fixture = fixture();
 
     for entry in list(&fixture, "renders") {
@@ -391,7 +391,7 @@ fn steps_of(entry: &Value) -> (VecDeque<Step>, Vec<u8>) {
 }
 
 #[test]
-fn the_terminal_prompts_write_what_the_js_writes() {
+fn writes_in_the_terminal_prompts_what_the_fixture_recorded() {
     let fixture = fixture();
 
     for entry in list(&fixture, "sessions") {
@@ -569,7 +569,7 @@ fn check_calls(name: &str, fake: &FakePrompter, entry: &Value) {
 }
 
 #[test]
-fn asks_to_leave_when_a_question_is_cancelled_like_the_js() {
+fn asks_to_leave_when_a_question_is_cancelled_like_the_fixture() {
     let fixture = fixture();
     let choices = views(&json!([
         { "label": "off" },
@@ -707,7 +707,7 @@ fn blessing_rewrites_the_terminal_choices_from_the_binary() {
 }
 
 #[test]
-fn asks_and_validates_a_choice_like_the_js() {
+fn asks_and_validates_a_choice_like_the_fixture() {
     let fixture = fixture();
 
     for entry in list(&fixture, "choices") {
@@ -765,7 +765,7 @@ fn as_values(items: Vec<ChoiceItem<f64>>) -> Vec<ChoiceItem<Value>> {
 }
 
 #[test]
-fn builds_the_number_choices_and_marks_like_the_js() {
+fn builds_the_number_choices_and_marks_like_the_fixture() {
     let fixture = fixture();
 
     for entry in list(&fixture, "choices") {
@@ -932,7 +932,7 @@ fn finds_the_current_number_like_includes() {
 }
 
 #[test]
-fn answers_yes_or_no_like_the_js() {
+fn answers_yes_or_no_like_the_fixture() {
     let fixture = fixture();
 
     for entry in list(&fixture, "yesNos") {

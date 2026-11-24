@@ -281,7 +281,7 @@ fn observe(scenario: &Value, now: u64) -> Observed {
 }
 
 #[test]
-fn every_scenario_prints_what_the_fixture_recorded() {
+fn prints_what_the_fixture_recorded_for_every_scenario() {
     let fixture = frozen(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let default_mode = default_file_mode();
@@ -339,7 +339,7 @@ fn status_of(output: &Value, check: &str) -> Value {
 }
 
 #[test]
-fn every_scenario_of_the_binary_matches_the_fixture() {
+fn matches_the_fixture_in_every_scenario_of_the_binary() {
     let fixture = frozen(FIXTURE);
     let default_mode = default_file_mode();
     let scenarios: Vec<&Value> = list(&fixture, "scenarios")
@@ -1600,7 +1600,7 @@ fn yes_fixes_everything_in_the_plan_and_only_picks_by_id() {
 }
 
 #[test]
-fn an_unknown_fix_id_stops_before_any_check() {
+fn stops_before_any_check_when_a_fix_id_is_unknown() {
     let fixed = fixing(
         &healthy(),
         &["--fix", "--only", "nope,shell,other"],
@@ -1889,7 +1889,7 @@ fn the_plan_follows_the_language_of_the_config() {
 }
 
 #[test]
-fn the_json_plan_lists_the_fixes_and_what_yes_applied_or_skipped() {
+fn lists_the_fixes_and_what_yes_applied_or_skipped_in_the_json_plan() {
     let planned = fixing(
         &healthy(),
         &["install", "--json", "--fix"],

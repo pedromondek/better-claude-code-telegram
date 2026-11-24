@@ -520,7 +520,7 @@ fn locale_entries(fixture: &Value, locale: Locale) -> Option<&serde_json::Map<St
 }
 
 #[test]
-fn every_fixture_entry_renders_byte_identical_to_the_js_catalog() {
+fn renders_every_fixture_entry_byte_for_byte() {
     let fixture = fixture();
 
     for locale in Locale::ALL {

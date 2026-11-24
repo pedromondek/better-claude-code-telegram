@@ -393,7 +393,7 @@ fn blessing_rewrites_the_terminal_ptys_from_the_binary() {
 }
 
 #[test]
-fn writes_in_the_real_terminal_what_the_js_writes() {
+fn writes_in_the_real_terminal_what_the_fixture_recorded() {
     let fixture = fixture();
 
     for (entry, flow, outcome) in driven(&fixture["ptys"]) {

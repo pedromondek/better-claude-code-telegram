@@ -509,7 +509,7 @@ fn rewrites_only_the_not_found_line_of_a_bash_sh_in_the_dash_form() {
 }
 
 #[test]
-fn every_scenario_prints_asks_records_and_writes_like_setup_mjs() {
+fn prints_asks_records_and_writes_like_the_fixture_in_every_scenario() {
     let fixture = parse(FIXTURE);
     let sys = sys_dir();
     let default_mode = default_file_mode();
@@ -717,7 +717,7 @@ fn a_line_or_an_answer_that_fails_stops_the_step() {
 }
 
 #[test]
-fn the_constants_match_the_js() {
+fn matches_the_fixture_in_the_constants() {
     let fixture = parse(FIXTURE);
     let constants = &fixture["constants"];
 
@@ -760,7 +760,7 @@ fn the_git_version_is_the_third_word_and_a_missing_or_failing_git_has_none() {
 }
 
 #[test]
-fn picks_the_installer_of_each_tool_like_the_js() {
+fn picks_the_installer_of_each_tool_like_the_fixture() {
     for case in list(&parse(FIXTURE), "installerFor") {
         let found = Tool::parse(text(case, "tool"))
             .map(|tool| installer_for(tool, Path::new(text(case, "home"))))
@@ -939,7 +939,7 @@ fn parsed_json<T>(parsed: Parsed<T>, value: impl Fn(T) -> Value) -> Value {
 }
 
 #[test]
-fn answers_are_parsed_like_the_js() {
+fn parses_the_answers_like_the_fixture() {
     let fixture = parse(FIXTURE);
 
     for case in list(&fixture, "parseTranscriptionModel") {
@@ -963,7 +963,7 @@ fn answers_are_parsed_like_the_js() {
 }
 
 #[test]
-fn plans_the_plugins_like_the_js() {
+fn plans_the_plugins_like_the_fixture() {
     for case in list(&parse(FIXTURE), "pluginPlan") {
         let input = &case["input"];
         let rc_files: Vec<PathBuf> = strings(&input["rcFiles"])

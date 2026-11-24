@@ -3673,7 +3673,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_the_tool_names_of_the_js_setup() {
+    fn parses_the_tool_names_of_the_setup() {
         assert_eq!(Tool::REQUIRED, [Tool::Claude, Tool::Bun]);
         assert_eq!(Tool::parse("uv"), Some(Tool::Uv));
         assert_eq!(Tool::parse("node"), None);

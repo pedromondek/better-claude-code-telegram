@@ -357,7 +357,7 @@ fn blessing_rewrites_the_hook_fixture_from_the_binary() {
 }
 
 #[test]
-fn asks_about_the_same_pids_and_answers_like_the_js_gate() {
+fn asks_about_the_same_pids_and_answers_like_the_fixture() {
     let fixture = fixture();
     let alive = fixture["alivePid"].as_f64().unwrap();
 
@@ -417,7 +417,7 @@ fn computes_each_delay_the_fixture_recorded() {
 }
 
 #[test]
-fn reads_the_context_before_the_tool_like_the_js_for_every_transcript() {
+fn reads_the_context_before_the_tool_like_the_fixture_for_every_transcript() {
     let fixture = fixture();
     let texts = list(&fixture, "texts");
 
@@ -444,7 +444,7 @@ fn reads_the_context_before_the_tool_like_the_js_for_every_transcript() {
 }
 
 #[test]
-fn names_the_session_like_the_js_for_every_transcript() {
+fn names_the_session_like_the_fixture_for_every_transcript() {
     let fixture = fixture();
     let texts = list(&fixture, "texts");
 
@@ -463,7 +463,7 @@ fn names_the_session_like_the_js_for_every_transcript() {
 }
 
 #[test]
-fn labels_the_instance_like_the_js_for_every_transcript_and_input() {
+fn labels_the_instance_like_the_fixture_for_every_transcript_and_input() {
     let fixture = fixture();
     let texts = list(&fixture, "texts");
     let instances = list(&fixture, "instances");

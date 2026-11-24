@@ -144,7 +144,7 @@ fn caught(value: Result<Option<Map<String, Value>>, String>) -> Value {
 }
 
 #[test]
-fn the_shell_lines_match_the_js() {
+fn matches_the_fixture_in_the_shell_lines() {
     for entry in list(&fixture(), "shell") {
         let rc_text = repo_text(text(entry, "text"));
         let shell = repo_text(text(entry, "shellFile"));
@@ -174,7 +174,7 @@ fn the_shell_lines_match_the_js() {
 }
 
 #[test]
-fn writes_the_deny_rules_like_the_js() {
+fn writes_the_deny_rules_like_the_fixture() {
     for entry in list(&fixture(), "denyRules") {
         let flavor = if text(entry, "platform") == "win32" {
             PathFlavor::Win32
@@ -195,7 +195,7 @@ fn writes_the_deny_rules_like_the_js() {
 }
 
 #[test]
-fn adding_and_removing_the_deny_rule_match_the_js() {
+fn adds_and_removes_the_deny_rule_like_the_fixture() {
     let fixture = fixture();
     let rule = text(&fixture, "rule");
 
@@ -225,7 +225,7 @@ fn kind_text(kind: StatuslineKind) -> &'static str {
 }
 
 #[test]
-fn the_status_line_helpers_match_the_js() {
+fn classifies_and_writes_each_status_line_as_the_fixture_recorded() {
     let repo = repo_root();
     let app_dir = Path::new("/app");
 
@@ -275,7 +275,7 @@ fn the_status_line_helpers_match_the_js() {
 }
 
 #[test]
-fn the_setting_texts_match_the_js() {
+fn matches_the_fixture_in_the_setting_texts() {
     for entry in list(&fixture(), "settingTexts") {
         let value = optional(&entry["value"]);
         let key = text(entry, "key");
@@ -294,7 +294,7 @@ fn the_setting_texts_match_the_js() {
 }
 
 #[test]
-fn parses_the_json_text_like_the_js() {
+fn parses_the_json_text_like_the_fixture() {
     for entry in list(&fixture(), "parsed") {
         let parsed = Value::Object(parsed_json(entry["text"].as_str()));
         let expected = match &entry["out"] {
@@ -307,7 +307,7 @@ fn parses_the_json_text_like_the_js() {
 }
 
 #[test]
-fn the_rc_files_match_the_js() {
+fn matches_the_fixture_in_the_rc_files() {
     for entry in list(&fixture(), "rcFiles") {
         let root = sandbox();
         let home = root.path().join("home");
@@ -586,7 +586,7 @@ fn assert_result(run: &Run, expected: &Value, root: &Path, messages: &Messages, 
 }
 
 #[test]
-fn every_file_operation_matches_the_js_and_undoes_like_it() {
+fn matches_the_fixture_and_undoes_it_in_every_file_operation() {
     let default_mode = default_file_mode();
     let fixture = fixture();
     let operations = list(&fixture, "operations");
@@ -775,7 +775,7 @@ fn run_steps(entry: &Value, root: &Path, journal: &mut Journal, order: &Order) -
 }
 
 #[test]
-fn every_journal_script_matches_the_js() {
+fn matches_the_fixture_in_every_journal_script() {
     let default_mode = default_file_mode();
 
     for entry in list(&fixture(), "journals") {

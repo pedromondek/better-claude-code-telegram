@@ -566,7 +566,7 @@ mod tests {
     }
 
     #[test]
-    fn every_fix_id_reads_back_and_points_to_its_check() {
+    fn reads_back_every_fix_id_and_points_it_to_its_check() {
         let checks = [
             Check::Shell,
             Check::Protection,

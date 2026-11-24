@@ -21,7 +21,7 @@ use support::{
 const FIXTURE: &str = include_str!("fixtures/release.json");
 
 #[test]
-fn every_scenario_prints_and_leaves_the_same_files_as_release_mjs() {
+fn prints_and_leaves_the_files_the_fixture_recorded_in_every_scenario() {
     let fixture = parse(FIXTURE);
     let now = fixture["now"].as_u64().unwrap();
     let default_mode = default_file_mode();

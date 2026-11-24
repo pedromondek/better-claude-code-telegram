@@ -645,7 +645,7 @@ mod tests {
     }
 
     #[test]
-    fn a_file_in_the_format_the_js_writes_comes_out_as_the_js_writes_it() {
+    fn writes_a_file_in_the_pretty_format_the_way_the_fixture_does() {
         let cases = [
             (
                 json!({}),
@@ -799,7 +799,7 @@ mod tests {
     }
 
     #[test]
-    fn any_edit_of_a_file_in_the_js_format_comes_out_as_the_js_writes_it() {
+    fn writes_any_edit_of_a_pretty_file_the_way_the_fixture_does() {
         let mut dice = Dice(0x9e37_79b9_7f4a_7c15);
 
         for _ in 0..4000 {

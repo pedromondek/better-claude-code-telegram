@@ -2303,9 +2303,9 @@ fn ends_by_the_signal_like_node_and_shows_the_cursor_again() {
         let shown = String::from_utf8_lossy(&output).into_owned();
         let flow = &shown[..shown.find("[signal=").unwrap()];
 
-        assert_eq!(entry["received"], entry["signal"], "{name}: the JS");
-        assert_eq!(entry["code"], json!("null"), "{name}: the JS");
-        assert_eq!(entry["cooked"], json!(true), "{name}: the JS");
+        assert_eq!(entry["received"], entry["signal"], "{name}: the fixture");
+        assert_eq!(entry["code"], json!("null"), "{name}: the fixture");
+        assert_eq!(entry["cooked"], json!(true), "{name}: the fixture");
         assert!(
             shown.contains(&format!("[signal=Some({number})][code=None]")),
             "{name}: {shown}"
