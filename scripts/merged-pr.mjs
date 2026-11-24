@@ -9,6 +9,8 @@ export const MERGED_PR_CHOICES = [
   "Third to last merged PR",
 ];
 
+export const MERGE_LOG_FORMAT = "--format=%H%x1f%P%x1f%s%x1f%b%x1e";
+
 const MERGE_SUBJECT = /^Merge pull request #(\d+) from /;
 const LOG_DEPTH = "200";
 
@@ -84,7 +86,7 @@ function main(env) {
       "--first-parent",
       "--merges",
       `-${LOG_DEPTH}`,
-      "--format=%H%x1f%P%x1f%s%x1f%b%x1e",
+      MERGE_LOG_FORMAT,
       "HEAD",
     ]),
   );
