@@ -31,6 +31,7 @@ const PASSING = {
   "rust:lint": "exit 0",
   "rust:deny": "exit 0",
   "rust:cov": "exit 0",
+  "pr:unlock": "echo PR_UNLOCK_RAN",
   "check:commit": `sh ${CHECK_COMMIT}`,
   "fixup:fuse": ROOT_SCRIPTS["fixup:fuse"],
 };
@@ -139,6 +140,7 @@ describe("check:commit", { timeout: HOOK_TIMEOUT }, () => {
     expect(result.stdout).toContain("✓ rust dependencies OK");
     expect(result.stdout).toContain("✓ rust tests with coverage OK");
     expect(result.stdout).not.toContain("rust mutation");
+    expect(result.stdout).not.toContain("PR_UNLOCK_RAN");
     expect(result.stdout + result.stderr).not.toContain("outside the pattern");
   });
 
@@ -172,6 +174,18 @@ describe("check:commit", { timeout: HOOK_TIMEOUT }, () => {
     expect(result.stdout).toContain("own pre-push of GREEN");
     expect(result.stdout).not.toContain("pre-push of HEAD");
     expect(hookCopies()).toEqual([]);
+  });
+
+  it("hands the pre-push PREPUSH_SKIP_PR_UNLOCK=1, so a check never unlocks a pull request", () => {
+    commitFile(
+      ".husky/pre-push",
+      'echo "SKIP_PR_UNLOCK=$PREPUSH_SKIP_PR_UNLOCK"\n',
+    );
+
+    const result = checkCommit();
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("SKIP_PR_UNLOCK=1");
   });
 
   it("falls back to the current pre-push when the commit it checks has none", () => {

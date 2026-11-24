@@ -4,13 +4,15 @@ on:
   pull_request:
     types:
       - opened
+      - reopened
+      - synchronize
   workflow_dispatch:
 
 permissions: {}
 
 concurrency:
   group: lock-pull-requests-${{ github.event.pull_request.number || 'open' }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -21,10 +23,11 @@ jobs:
     name: Lock the conversation
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 25
     permissions:
       contents: read
-      pull-requests: write # gh pr lock limits the conversation of the pull request to who has write access
+      pull-requests: write # gh pr lock limits the conversation to who has write access once the CodeRabbit review of the head finished
+      checks: read # reads the CodeRabbit check to know when its review finished
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -39,9 +42,19 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Lock the conversation
+      - name: Wait for CodeRabbit and lock the conversation
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: npm run --silent pr:lock
+
+      - name: Lock the conversation after a cancelled or failed wait
+        if: (cancelled() || failure()) && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npm run --silent pr:lock -- --lock-only

@@ -38,6 +38,7 @@ const EXTRA_PERMISSIONS = {
   "lock-pull-requests.yml > lock": {
     contents: "read",
     "pull-requests": "write",
+    checks: "read",
   },
   "manage-ci-cache.yml > delete": { contents: "read", actions: "write" },
   "release.yml > build": ATTEST,

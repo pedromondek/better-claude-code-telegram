@@ -37,6 +37,7 @@
     "pr:lock": "node scripts/lock-pull-requests.mjs",
     "pr:patch-notes": "node scripts/patch-notes.mjs",
     "pr:patch-notes:record": "node scripts/record-patch-notes-renders.mjs",
+    "pr:unlock": "node scripts/unlock-pull-request.mjs",
     "upstream:watch": "node scripts/watch-upstream.mjs",
     "audit:plugin": "node scripts/audit-plugin.mjs",
     "audit:plugin:issue": "node scripts/audit-plugin.mjs --issue",

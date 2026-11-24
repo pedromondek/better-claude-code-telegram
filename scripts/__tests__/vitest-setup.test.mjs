@@ -60,6 +60,7 @@ describe("vitest.setup", () => {
     expect(PRE_PUSH_CONTROL_VARIABLES).toEqual([
       "PREPUSH_SKIP_MUTATION",
       "PREPUSH_SKIP_BRANCH_CHECK",
+      "PREPUSH_SKIP_PR_UNLOCK",
       "MUTATION_RANGE",
       "MUTATION_BEFORE",
       "MUTATION_FORCE",

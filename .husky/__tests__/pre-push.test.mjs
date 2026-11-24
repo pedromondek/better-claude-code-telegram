@@ -358,6 +358,121 @@ describe(".husky/pre-push", { timeout: HOOK_TIMEOUT }, () => {
     });
   });
 
+  describe("pull request unlock", () => {
+    const UNLOCK = "echo PR_UNLOCK_RAN";
+    const UNLOCKED = /^PR_UNLOCK_RAN 0001-feature$/mu;
+
+    it("unlocks the pull request of the pushed branch once every step and the mutation pass", () => {
+      useScripts({ "pr:unlock": UNLOCK });
+
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(UNLOCKED);
+      expect(result.stdout.indexOf("PR_UNLOCK_RAN")).toBeGreaterThan(
+        result.stdout.indexOf("✓ mutation OK"),
+      );
+      expect(npmBanners(result.stdout)).toEqual([]);
+    });
+
+    it("hands pr:unlock the name of the remote branch", () => {
+      useScripts({ "pr:unlock": UNLOCK });
+
+      const result = push({ input: pushLine(ZERO_OID, "0002-remote-name") });
+
+      expect(result.stdout).toMatch(/^PR_UNLOCK_RAN 0002-remote-name$/mu);
+    });
+
+    it("does not unlock when a cheap step fails", () => {
+      useScripts({ "pr:unlock": UNLOCK, lint: "exit 1" });
+
+      const result = push();
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).not.toContain("PR_UNLOCK_RAN");
+    });
+
+    it("does not unlock when the mutation fails", () => {
+      useScripts({ "pr:unlock": UNLOCK, "test:mutation:prepush": "exit 1" });
+
+      const result = push();
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).not.toContain("PR_UNLOCK_RAN");
+    });
+
+    it("unlocks after the cheap steps when PREPUSH_SKIP_MUTATION=1 skips the mutation", () => {
+      useScripts({
+        "pr:unlock": UNLOCK,
+        "test:mutation:prepush": "echo MUTATION_RAN_MARKER",
+      });
+
+      const result = push({ env: { PREPUSH_SKIP_MUTATION: "1" } });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(UNLOCKED);
+      expect(result.stdout).not.toContain("MUTATION_RAN_MARKER");
+      expect(result.stdout.indexOf("PR_UNLOCK_RAN")).toBeGreaterThan(
+        result.stdout.indexOf("✓ mutation skipped (PREPUSH_SKIP_MUTATION=1)"),
+      );
+    });
+
+    it("does not unlock with PREPUSH_SKIP_MUTATION=1 when a cheap step fails", () => {
+      useScripts({ "pr:unlock": UNLOCK, lint: "exit 1" });
+
+      const result = push({ env: { PREPUSH_SKIP_MUTATION: "1" } });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).not.toContain("PR_UNLOCK_RAN");
+    });
+
+    it.each([
+      { CI: "true", PREPUSH_SKIP_MUTATION: "1" },
+      { PREPUSH_SKIP_PR_UNLOCK: "1", PREPUSH_SKIP_MUTATION: "1" },
+      { CI: "true" },
+      { PREPUSH_SKIP_PR_UNLOCK: "1" },
+    ])(
+      "does not unlock with %o, as CI and check:commit run the pre-push",
+      (env) => {
+        useScripts({ "pr:unlock": UNLOCK });
+
+        const result = push({ env });
+
+        expect(result.status).toBe(0);
+        expect(result.stdout).not.toContain("PR_UNLOCK_RAN");
+      },
+    );
+
+    it("does not unlock on a push of a tag alone", () => {
+      useScripts({ "pr:unlock": UNLOCK });
+      git("tag", "-a", "v1", "-m", "v1");
+
+      const result = push({
+        input: `refs/tags/v1 ${git("rev-parse", "v1")} refs/tags/v1 ${ZERO_OID}\n`,
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain("PR_UNLOCK_RAN");
+    });
+
+    it("lets the push through when pr:unlock fails", () => {
+      useScripts({ "pr:unlock": "echo PR_UNLOCK_FAILED; exit 1" });
+
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/^PR_UNLOCK_FAILED$/mu);
+    });
+
+    it("lets the push through quietly when the pushed commit has no pr:unlock script", () => {
+      const result = push();
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain('"pr:unlock" does not exist');
+      expect(result.stderr).toBe("");
+    });
+  });
+
   describe("rust", () => {
     it("runs lint, dependencies and coverage after the unit tests, in that order", () => {
       const result = push();
