@@ -12,7 +12,10 @@ import { read } from "../support/workflow.mjs";
 const template = read(".github/pull_request_template.md");
 
 describe("pull_request_template.md", () => {
-  it("asks for the summary, the issue it closes and how it was verified, in English and in pt-br", () => {
+  it("asks for the summary, the issue it closes, how it was verified and the patch notes in both languages", () => {
+    const placeholder =
+      "<!-- Only what whoever installs the plugin notices, in the /release-notes format. / Só o que quem instala o plugin percebe, no formato do /release-notes. -->";
+
     expect(template).toBe(
       [
         "## Summary / Resumo",
@@ -24,6 +27,20 @@ describe("pull_request_template.md", () => {
         "## How it was verified / Como foi verificado",
         "",
         "<!-- The tests and checks that ran, and what was tried by hand. / Os testes e as checagens que rodaram, e o que foi testado à mão. -->",
+        "",
+        "## Patch notes / Notas da versão",
+        "",
+        "<details><summary>🇺🇸 English</summary>",
+        "",
+        placeholder,
+        "",
+        "</details>",
+        "",
+        "<details><summary>🇧🇷 Português</summary>",
+        "",
+        placeholder,
+        "",
+        "</details>",
         "",
       ].join("\n"),
     );

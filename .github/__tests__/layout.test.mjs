@@ -23,10 +23,15 @@ const EXTRA_PERMISSIONS = {
   "audit-plugin-dependencies.yml > audit": WRITE_ISSUES,
   "audit-workflows.yml > audit": READ_ISSUES,
   "build-binaries.yml > build": ATTEST,
+  "check-pull-request-notes.yml > patch-notes": {
+    contents: "read",
+    "pull-requests": "read",
+  },
   "check-pull-request.yml > pull-request": {
     contents: "read",
     "pull-requests": "read",
   },
+  "ci.yml > ci-passed": { contents: "read", actions: "read" },
   "ci.yml > pull-request": { contents: "read", "pull-requests": "read" },
   "ci.yml > workflow-audit": READ_ISSUES,
   "ci.yml > workflow-audit-issue": WRITE_ISSUES,

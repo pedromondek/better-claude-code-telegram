@@ -1,6 +1,6 @@
 ---
 name: release-notes
-description: Use when the user asks for the release notes of a version, before the version pull request. Turns the git-cliff draft and the commits since the last tag into the public notes of the GitHub Release, in en-us with a collapsed pt-br block, and gets each part approved.
+description: Use when the user asks for the release notes of a version, before the version pull request. Turns the patch notes of the pull requests merged since the last tag, the git-cliff draft and the commits into the public notes of the GitHub Release, in en-us with a collapsed pt-br block, and gets each part approved.
 argument-hint: "[<version>] [replace] [no omitted]"
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, AskUserQuestion
 ---
@@ -86,11 +86,13 @@ Use only the sections that apply:
 ## Process
 
 1. The range is the last tag to `HEAD`: `git describe --tags --abbrev=0` (no tag yet: the whole history), then `git log --oneline <tag>..HEAD` and `git diff --stat <tag>..HEAD`.
-2. Read the draft: `npm run --silent release:cliff -- --unreleased`. It lists the features, fixes, performance and security commits by kind, without the emoji and without maintenance; it is the starting point, not the notes.
-3. Read the commits and the diff behind each draft item, plus the maintenance commits the draft leaves out, in case one changes something the user notices (a new requirement, a step after updating).
-4. Classify each change by impact: high (the user notices and has to know), medium (a feature changes in a way the user notices), low (internal, repository work or trivial: omitted).
-5. Decide whether each item enters; what is in doubt becomes a question (section "Reader").
-6. Write the en-us notes, then the pt-br block from them, and get each part approved (summary, each section, the pt-br block) with `AskUserQuestion`, `Approve (Recommended)` first and the adjustment through "Other"; a changed part comes back in a new question for that part only.
+2. Start from the patch notes of the pull requests: `npm run --silent release:patch-notes` (`-- <tag>` for another starting tag). It lists the pull requests merged on `main` since the last tag, by the first-parent merge commits, and prints for each one its number, title and the `🇺🇸 English` and `🇧🇷 Português` blocks of its description, marks the ones from `dependabot/`, `release/v` and `revert/` as exempt, and ends naming the pull requests whose notes are missing, not shown by GitHub, empty, still the template placeholder or not readable as GitHub shows them. Each printed block renders as GitHub shows it in the description. The blocks were written for the public under the same rules as these notes; they are the starting point, not the notes.
+3. Read the draft: `npm run --silent release:cliff -- --unreleased`. It lists the features, fixes, performance and security commits by kind, without the emoji and without maintenance.
+4. Reconcile the patch notes with the draft and the commits: a draft item that no patch notes cover is checked in its commits, in case a pull request left out something the public notices; the same change in the notes of more than one pull request becomes one item; an item a later pull request undid or redid leaves the notes or takes the final shape.
+5. A pull request without patch notes, named at the end of the output, is read from its commits and the diff behind each draft item, plus the maintenance commits the draft leaves out, in case one changes something the user notices (a new requirement, a step after updating).
+6. Classify each change by impact: high (the user notices and has to know), medium (a feature changes in a way the user notices), low (internal, repository work or trivial: omitted).
+7. Decide whether each item enters; what is in doubt becomes a question (section "Reader").
+8. Write the en-us notes, then the pt-br block from them, and get each part approved (summary, each section, the pt-br block) with `AskUserQuestion`, `Approve (Recommended)` first and the adjustment through "Other"; a changed part comes back in a new question for that part only.
 
 ## Confidentiality
 
