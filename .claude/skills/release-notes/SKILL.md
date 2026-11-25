@@ -37,6 +37,8 @@ What goes between the markers is the body of the GitHub Release as it is, so it 
 
 <the sections that apply>
 
+📣 Follow the releases on Telegram: [@bcct_tips](https://t.me/bcct_tips) (stable) · [@bcct_tips_prereleases](https://t.me/bcct_tips_prereleases) (every version)
+
 <details><summary>🇧🇷 Português</summary>
 
 ### 📋 Resumo
@@ -46,8 +48,12 @@ What goes between the markers is the body of the GitHub Release as it is, so it 
 
 <as mesmas seções em pt-br>
 
+📣 Acompanhe as novidades no Telegram: [@bcct_tips_br](https://t.me/bcct_tips_br) (estáveis) · [@bcct_tips_prelancamentos](https://t.me/bcct_tips_prelancamentos) (todas as versões)
+
 </details>
 ```
+
+Every Release ends each language with the 📣 line that invites to follow the Telegram channels of that language, with the handles of `ANNOUNCE_CHANNELS` in `scripts/release.constants.mjs`; it is a plain line, outside every section, so the announcement does not take it as an item.
 
 The pt-br block is a faithful version of the en-us one, section by section and item by item, in correct Portuguese with every accent; it is written from the en-us text, never with fewer or more items.
 
@@ -57,6 +63,27 @@ The pt-br block is a faithful version of the en-us one, section by section and i
 - No horizontal rules (`---`) and no count of files or lines.
 - GitHub markdown: `###` for the sections, `**bold**`, `- bullets`; `<details>` only for the pt-br block.
 - A dependency update the user notices names the version before and after (`grammy 1.21 → 1.46`), checked in the lock of the last tag and of `HEAD`.
+- A ✨ item reads like a Telegram Tips post: `- ✨ **Title.** First sentence with **key words** in bold.` The bold title is the name of the feature, and the first sentence says what it does, with its key words in bold. An optional second paragraph says what the user gains: an indented text line (two or more spaces) under the item, after a blank line. More paragraphs follow the same way, each after a blank line. Each language writes its own paragraphs. On Telegram, the caption of the item is the title and the sentence, then each paragraph after a blank line, without the leading ✨, within the 1024 characters Telegram takes.
+- A ✨ item that a demo shows carries three attachments: a GIF for the Release, which autoplays and loops on GitHub, and one H.264 MP4 per language for the Telegram channels, each opening on a title card in its language for about 0.7 s, since Telegram uses the first frame of the video as its preview. `gh pr edit <n> --attach <file>` (gh 2.99 or later) uploads them into the description of the version pull request and rewrites a local path the body references, such as `![alt](./demo.gif)`, to the attachment URL. After the paragraphs of the en-us item come a blank line, the image line `  ![<short alt>](<gif url>)` indented two spaces, so GitHub renders the GIF as its own paragraph inside the item instead of inline in its text, and the comment line `  <!-- telegram: <en-us mp4 url> -->`, indented the same way. The pt-br item carries only its own comment line, `  <!-- telegram: <pt-br mp4 url> -->`. GitHub hides the comments, so the Release shows only the GIF. The block of one item in each language:
+
+  ```
+  - ✨ **Buttons for questions.** Claude's questions arrive on Telegram with **one button per option**.
+
+    Answer from your phone with one tap, without typing the option back.
+
+    ![Buttons on Telegram](https://github.com/user-attachments/assets/<gif id>)
+    <!-- telegram: https://github.com/user-attachments/assets/<en-us mp4 id> -->
+  ```
+
+  ```
+  - ✨ **Botões nas perguntas.** As perguntas do Claude chegam no Telegram com **um botão por opção**.
+
+    Responda pelo celular com um toque, sem digitar a opção de volta.
+
+    <!-- telegram: https://github.com/user-attachments/assets/<pt-br mp4 id> -->
+  ```
+
+  The pt-br ✨ items pair with the en-us ones by order and share their GIF, so both languages keep the same ✨ items in the same order. Once the version is verified, `announce-release.yml` posts the notes on the Telegram channels (`npm run release:announce`), with one post per ✨ item that has a demo, as a reply to the opening: the MP4 of the item in the language of the channel, else the en-us MP4, else the GIF. A URL that ends in an extension other than `.gif` or `.mp4` fails the announcement.
 
 ### Emojis
 
@@ -85,9 +112,9 @@ Use only the sections that apply:
 
 ## Process
 
-1. The range is the last tag to `HEAD`: `git describe --tags --abbrev=0` (no tag yet: the whole history), then `git log --oneline <tag>..HEAD` and `git diff --stat <tag>..HEAD`.
-2. Start from the patch notes of the pull requests: `npm run --silent release:patch-notes` (`-- <tag>` for another starting tag). It lists the pull requests merged on `main` since the last tag, by the first-parent merge commits, and prints for each one its number, title and the `🇺🇸 English` and `🇧🇷 Português` blocks of its description, marks the ones from `dependabot/`, `release/v` and `revert/` as exempt, and ends naming the pull requests whose notes are missing, not shown by GitHub, empty, still the template placeholder or not readable as GitHub shows them. Each printed block renders as GitHub shows it in the description. The blocks were written for the public under the same rules as these notes; they are the starting point, not the notes.
-3. Read the draft: `npm run --silent release:cliff -- --unreleased`. It lists the features, fixes, performance and security commits by kind, without the emoji and without maintenance.
+1. The range of a pre-release is the last tag to `HEAD`: `git describe --tags --abbrev=0` (no tag yet: the whole history). The range of a stable version is the previous stable tag to `HEAD`, `git describe --tags --abbrev=0 --exclude '*-*'`, since its notes cover everything since the previous stable, the pre-releases of the version included; with no stable tag yet (the command fails with `No names found`), the range is the whole history, from the first commit, `git rev-list --max-parents=0 HEAD`, which takes the place of the tag in the commands below (step 3 then runs `npm run --silent release:cliff` with no range). Then `git log --oneline <tag>..HEAD` and `git diff --stat <tag>..HEAD`.
+2. Start from the patch notes of the pull requests: `npm run --silent release:patch-notes` for a pre-release, and `npm run --silent release:patch-notes -- <tag>` with the previous stable tag for a stable version. It lists the pull requests merged on `main` since the last tag, by the first-parent merge commits, and prints for each one its number, title and the `🇺🇸 English` and `🇧🇷 Português` blocks of its description, marks the ones from `dependabot/`, `release/v` and `revert/` as exempt, and ends naming the pull requests whose notes are missing, not shown by GitHub, empty, still the template placeholder or not readable as GitHub shows them. Each printed block renders as GitHub shows it in the description. The printed blocks leave out the HTML comments, so the `<!-- telegram: <url> -->` line of each ✨ item comes from the raw description of its pull request: `gh pr view <n> --json body --jq .body`. The blocks were written for the public under the same rules as these notes; they are the starting point, not the notes.
+3. Read the draft: `npm run --silent release:cliff -- --unreleased` for a pre-release, and `npm run --silent release:cliff -- <previous stable tag>..HEAD` for a stable version, whose notes cover the pre-releases too. It lists the features, fixes, performance and security commits by kind, without the emoji and without maintenance.
 4. Reconcile the patch notes with the draft and the commits: a draft item that no patch notes cover is checked in its commits, in case a pull request left out something the public notices; the same change in the notes of more than one pull request becomes one item; an item a later pull request undid or redid leaves the notes or takes the final shape.
 5. A pull request without patch notes, named at the end of the output, is read from its commits and the diff behind each draft item, plus the maintenance commits the draft leaves out, in case one changes something the user notices (a new requirement, a step after updating).
 6. Classify each change by impact: high (the user notices and has to know), medium (a feature changes in a way the user notices), low (internal, repository work or trivial: omitted).
