@@ -10,6 +10,7 @@ PUSHED_OIDS=""
 PUSHED_RANGE=""
 CHANGED=""
 BRANCH_NAME_FAILED=0
+PUSHED_BRANCHES=""
 
 while read -r local_ref local_oid remote_ref remote_oid; do
   case "$local_oid" in
@@ -23,6 +24,7 @@ while read -r local_ref local_oid remote_ref remote_oid; do
 
   case "$remote_ref" in
     refs/heads/*)
+      PUSHED_BRANCHES="$PUSHED_BRANCHES ${remote_ref#refs/heads/}"
       if [ -z "$CI" ] && [ -z "$PREPUSH_SKIP_BRANCH_CHECK" ]; then
         node "$(dirname "$0")/../scripts/require-node.cjs" && node "$(dirname "$0")/../scripts/branch.mjs" check "${remote_ref#refs/heads/}" || BRANCH_NAME_FAILED=1
       fi
@@ -150,6 +152,14 @@ run_mutation() {
   fi
 }
 
+unlock_pull_requests() {
+  [ -n "$PUSHED_BRANCHES" ] || return 0
+  [ -z "$CI" ] || return 0
+  [ -z "$PREPUSH_SKIP_PR_UNLOCK" ] || return 0
+  require_npm_script pr:unlock >/dev/null || return 0
+  npm run --silent pr:unlock -- $PUSHED_BRANCHES || true
+}
+
 ROOT=$(pwd)
 WORKTREE=""
 WORKTREE_LOCK_PREFIX="pre-push pid"
@@ -235,6 +245,7 @@ fi
 
 if [ "$PREPUSH_SKIP_MUTATION" = "1" ]; then
   echo "✓ mutation skipped (PREPUSH_SKIP_MUTATION=1)"
+  unlock_pull_requests
   exit 0
 fi
 
@@ -244,5 +255,7 @@ if [ "$MUTATION_FAILED" = "1" ]; then
   echo "✗ push stopped"
   exit 3
 fi
+
+unlock_pull_requests
 
 exit 0

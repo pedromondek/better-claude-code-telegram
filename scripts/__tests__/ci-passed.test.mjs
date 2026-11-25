@@ -17,10 +17,40 @@ const RUN_WITH_CANCELLED_LEG = [
   job("CI passed", "in_progress", null),
 ];
 
-function fakeGh(pages) {
+const NO_RUNNER = JSON.parse(
+  readFileSync(
+    new URL("fixtures/no-runner-jobs.json", import.meta.url),
+    "utf8",
+  ),
+);
+
+const [NO_RUNNER_JOB, OTHER_NO_RUNNER_JOB] = NO_RUNNER.jobs;
+
+const ANNOTATIONS_PATH = /^repos\/owner\/repo\/check-runs\/(\d+)\/annotations/u;
+
+function annotationsCall(jobId) {
+  return [
+    "api",
+    "--paginate",
+    "--slurp",
+    `repos/owner/repo/check-runs/${jobId}/annotations?per_page=100`,
+  ];
+}
+
+function fakeGh(pages, annotations) {
   const calls = [];
   const gh = (args) => {
     calls.push(args);
+
+    const jobId = ANNOTATIONS_PATH.exec(args.at(-1))?.[1];
+
+    if (jobId !== undefined) {
+      const reply = annotations[jobId];
+
+      if (reply instanceof Error || typeof reply === "string") throw reply;
+
+      return JSON.stringify(reply);
+    }
 
     if (pages instanceof Error) throw pages;
 
@@ -32,8 +62,8 @@ function fakeGh(pages) {
   return { gh, calls };
 }
 
-function runWith(pages, env = ENV) {
-  const { gh, calls } = fakeGh(pages);
+function runWith(pages, env = ENV, annotations = {}) {
+  const { gh, calls } = fakeGh(pages, annotations);
   const out = [];
   const err = [];
   const code = run({
@@ -147,6 +177,173 @@ describe("ci-passed › verdict", () => {
 
   it("passes a run whose pages carry no job", () => {
     expect(runWith([]).code).toBe(0);
+  });
+});
+
+describe("ci-passed › job that got no runner", () => {
+  const WARNING = (name) => `::warning::${name} got no runner and did not run.`;
+  const PASSED = "✓ Every finished job of the run passed or was skipped.";
+  const SUCCESS = job("Rust / Rust on windows-2025", "completed", "success");
+  const NOTICES = NO_RUNNER.annotations.filter(
+    ({ annotation_level }) => annotation_level === "notice",
+  );
+
+  it.each(NO_RUNNER.jobs.map(({ id }) => id))(
+    "passes with a warning naming the job when job %s got no runner",
+    (jobId) => {
+      const noRunnerJob = NO_RUNNER.jobs.find(({ id }) => id === jobId);
+      const { code, out, err, calls } = runWith([[SUCCESS, noRunnerJob]], ENV, {
+        [jobId]: [NO_RUNNER.annotations],
+      });
+
+      expect(code).toBe(0);
+      expect(out).toBe([WARNING("Rust / Rust on macos-15"), PASSED].join("\n"));
+      expect(err).toBe("");
+      expect(calls.slice(1)).toEqual([annotationsCall(jobId)]);
+    },
+  );
+
+  it("passes with one warning per job when every failed job got no runner", () => {
+    const intel = {
+      ...OTHER_NO_RUNNER_JOB,
+      name: "Rust / Rust on macos-15-intel",
+    };
+    const { code, out } = runWith([[NO_RUNNER_JOB, intel]], ENV, {
+      [NO_RUNNER_JOB.id]: [NO_RUNNER.annotations],
+      [intel.id]: [NO_RUNNER.annotations],
+    });
+
+    expect(code).toBe(0);
+    expect(out).toBe(
+      [
+        WARNING("Rust / Rust on macos-15"),
+        WARNING("Rust / Rust on macos-15-intel"),
+        PASSED,
+      ].join("\n"),
+    );
+  });
+
+  it("finds the no runner annotation on a later page of the annotations", () => {
+    const { code } = runWith([[NO_RUNNER_JOB]], ENV, {
+      [NO_RUNNER_JOB.id]: [NOTICES, NO_RUNNER.annotations.slice(0, 1)],
+    });
+
+    expect(code).toBe(0);
+  });
+
+  it("fails on a real failure next to a job that got no runner, warning for the latter", () => {
+    const { code, out, err } = runWith(
+      [[NO_RUNNER_JOB, job("Checks / Checks", "completed", "failure")]],
+      ENV,
+      { [NO_RUNNER_JOB.id]: [NO_RUNNER.annotations] },
+    );
+
+    expect(code).toBe(1);
+    expect(out).toBe(WARNING("Rust / Rust on macos-15"));
+    expect(err).toBe(
+      ["✗ 1 job of the run did not pass:", "  - Checks / Checks: failure"].join(
+        "\n",
+      ),
+    );
+  });
+
+  it.each([
+    ["steps", { steps: [{ name: "Set up job", conclusion: "cancelled" }] }],
+    ["no steps field", { steps: undefined }],
+    ["a runner_id", { runner_id: 12 }],
+    ["no runner_id field", { runner_id: undefined }],
+    ["conclusion failure", { conclusion: "failure" }],
+    ["conclusion timed_out", { conclusion: "timed_out" }],
+  ])(
+    "fails without reading the annotations when the job has %s",
+    (_, change) => {
+      const changed = { ...NO_RUNNER_JOB, ...change };
+      const { code, out, err, calls } = runWith([[changed]], ENV, {
+        [NO_RUNNER_JOB.id]: [NO_RUNNER.annotations],
+      });
+
+      expect(code).toBe(1);
+      expect(out).toBe("");
+      expect(err).toBe(
+        [
+          "✗ 1 job of the run did not pass:",
+          `  - Rust / Rust on macos-15: ${changed.conclusion}`,
+        ].join("\n"),
+      );
+      expect(calls).toHaveLength(1);
+    },
+  );
+
+  it.each([
+    [
+      "another failure message",
+      [
+        [
+          {
+            annotation_level: "failure",
+            message: "The operation was canceled.",
+          },
+        ],
+      ],
+    ],
+    ["only the capacity notices", [NOTICES]],
+    [
+      "the no runner message only at notice level",
+      [[{ ...NO_RUNNER.annotations[0], annotation_level: "notice" }]],
+    ],
+    ["no annotation", [[]]],
+    ["no page", []],
+  ])("fails when the annotations of the job hold %s", (_, pages) => {
+    const { code, out, err, calls } = runWith([[NO_RUNNER_JOB]], ENV, {
+      [NO_RUNNER_JOB.id]: pages,
+    });
+
+    expect(code).toBe(1);
+    expect(out).toBe("");
+    expect(err).toBe(
+      [
+        "✗ 1 job of the run did not pass:",
+        "  - Rust / Rust on macos-15: cancelled",
+      ].join("\n"),
+    );
+    expect(calls.slice(1)).toEqual([annotationsCall(NO_RUNNER_JOB.id)]);
+  });
+
+  it.each([
+    ["an Error", new Error("HTTP 403: Resource not accessible by integration")],
+    ["a string", "HTTP 403: Resource not accessible by integration"],
+  ])(
+    "fails naming the job when reading its annotations throws %s",
+    (_, failure) => {
+      const { code, out, err } = runWith([[NO_RUNNER_JOB]], ENV, {
+        [NO_RUNNER_JOB.id]: failure,
+      });
+
+      expect(code).toBe(1);
+      expect(out).toBe("");
+      expect(err).toBe(
+        [
+          "✗ Could not read the annotations of Rust / Rust on macos-15: HTTP 403: Resource not accessible by integration",
+          "✗ 1 job of the run did not pass:",
+          "  - Rust / Rust on macos-15: cancelled",
+        ].join("\n"),
+      );
+    },
+  );
+
+  it("reads no annotation on a run whose jobs all ran on a runner", () => {
+    const ran = {
+      id: 138758970701,
+      name: "Rust / Rust on macos-15",
+      status: "completed",
+      conclusion: "cancelled",
+      steps: [{ name: "Set up job", conclusion: "success" }],
+      runner_id: 1000123,
+    };
+    const { code, calls } = runWith([[SUCCESS, ran]]);
+
+    expect(code).toBe(1);
+    expect(calls).toHaveLength(1);
   });
 });
 

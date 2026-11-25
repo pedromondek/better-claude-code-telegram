@@ -32,4 +32,4 @@ if git cat-file -e "$head:.husky/pre-push" 2>/dev/null &&
 fi
 
 printf 'refs/heads/check-commit %s refs/heads/check-commit %s\n' "$head" "$parent" |
-  PREPUSH_SKIP_MUTATION=1 PREPUSH_SKIP_BRANCH_CHECK=1 sh "$pre_push" origin check-commit
+  PREPUSH_SKIP_MUTATION=1 PREPUSH_SKIP_BRANCH_CHECK=1 PREPUSH_SKIP_PR_UNLOCK=1 sh "$pre_push" origin check-commit
