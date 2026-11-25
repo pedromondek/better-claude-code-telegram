@@ -148,6 +148,7 @@ describe(".coderabbit.yaml", () => {
     const { security_risk_instructions } = config.reviews;
 
     expect(withSecrets.toSorted()).toEqual([
+      "announce-release.yml",
       "prepare-release.yml",
       "release.yml",
     ]);

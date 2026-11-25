@@ -16,7 +16,8 @@ import {
 
 const FILE = "release.yml";
 const definition = workflow(FILE);
-const { plan, build, publish, npm, approval, verify, stable } = definition.jobs;
+const { plan, build, publish, npm, approval, verify, stable, announce } =
+  definition.jobs;
 const packageScripts = JSON.parse(
   readFileSync(join(ROOT, "package.json"), "utf8"),
 ).scripts;
@@ -51,7 +52,7 @@ describe("release.yml publishes the version pull request that was merged", () =>
     });
   });
 
-  it("has the plan, build, publish, npm, approval, verify and stable jobs, in this order of needs", () => {
+  it("has the plan, build, publish, npm, approval, verify, stable and announce jobs, in this order of needs", () => {
     expect(Object.keys(definition.jobs)).toEqual([
       "plan",
       "build",
@@ -60,7 +61,9 @@ describe("release.yml publishes the version pull request that was merged", () =>
       "approval",
       "verify",
       "stable",
+      "announce",
     ]);
+    expect(announce.needs).toEqual(["plan", "verify"]);
     expect(stable.needs).toEqual(["plan", "verify"]);
     expect(build.needs).toEqual(["plan"]);
     expect(publish.needs).toEqual(["plan", "build"]);
@@ -102,6 +105,26 @@ describe("release.yml publishes the version pull request that was merged", () =>
       expect(verify.permissions).toEqual({
         contents: "read",
         attestations: "read",
+      });
+    });
+  });
+
+  describe("announce", () => {
+    it("announces the verified version on Telegram through announce-release.yml, with the version pull request", () => {
+      expect(announce.uses).toBe(`${LOCAL_WORKFLOW}announce-release.yml`);
+      expect(announce.with).toEqual({
+        pr_number: "${{ needs.plan.outputs.number }}",
+      });
+      expect(announce.if).toBeUndefined();
+    });
+
+    it("passes the bot token by name, the only secret the called job reads, and lets it read the version pull request", () => {
+      expect(announce.secrets).toEqual({
+        TELEGRAM_ANNOUNCE_TOKEN: "${{ secrets.TELEGRAM_ANNOUNCE_TOKEN }}",
+      });
+      expect(announce.permissions).toEqual({
+        contents: "read",
+        "pull-requests": "read",
       });
     });
   });

@@ -47,6 +47,7 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
     const tasks = dispatchableTasks();
 
     expect(tasks.map(({ file }) => file).toSorted()).toEqual([
+      "announce-release.yml",
       "audit-workflows.yml",
       "build-binaries.yml",
       "check-mutation.yml",
@@ -74,7 +75,7 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
     ]);
   });
 
-  it("reads each secret other than GITHUB_TOKEN only in a job with an environment, so secrets-outside-env needs no ignore", () => {
+  it("reads each secret other than GITHUB_TOKEN only in a job with an environment or passes it to the one that has it", () => {
     const readers = Object.entries(allWorkflows()).flatMap(
       ([file, definition]) =>
         Object.entries(definition.jobs).flatMap(([job, body]) =>
@@ -83,28 +84,46 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
             job,
             secret,
             environment: body.environment ?? null,
+            calls: body.uses ?? null,
           })),
         ),
     );
 
     expect(readers).toEqual([
       {
+        file: "announce-release.yml",
+        job: "announce",
+        secret: "TELEGRAM_ANNOUNCE_TOKEN",
+        environment: "telegram-announce",
+        calls: null,
+      },
+      {
         file: "prepare-release.yml",
         job: "prepare",
         secret: "RELEASE_APP_PRIVATE_KEY",
         environment: "release",
+        calls: null,
       },
       {
         file: "release.yml",
         job: "publish",
         secret: "RELEASE_APP_PRIVATE_KEY",
         environment: "release",
+        calls: null,
       },
       {
         file: "release.yml",
         job: "stable",
         secret: "RELEASE_APP_PRIVATE_KEY",
         environment: "release",
+        calls: null,
+      },
+      {
+        file: "release.yml",
+        job: "announce",
+        secret: "TELEGRAM_ANNOUNCE_TOKEN",
+        environment: null,
+        calls: "$/.github/workflows/announce-release.yml",
       },
     ]);
     expect(config.rules["secrets-outside-env"]).toBeUndefined();

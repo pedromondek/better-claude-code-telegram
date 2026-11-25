@@ -41,7 +41,7 @@ export function recordHeadline(version) {
 
 export const short = (sha) => sha.slice(0, 7);
 
-export function mergedRelease(pr) {
+export function mergedReleaseRef(pr) {
   if (pr.state !== "MERGED" || !pr.mergeCommit) {
     throw new Error(`#${pr.number} was not merged`);
   }
@@ -60,17 +60,18 @@ export function mergedRelease(pr) {
     );
   }
 
+  return { version: match[1], merge: pr.mergeCommit.oid };
+}
+
+export function mergedRelease(pr) {
+  const ref = mergedReleaseRef(pr);
   const problem = notesProblem(pr.body);
 
   if (problem !== null) {
     throw new Error(problem);
   }
 
-  return {
-    version: match[1],
-    merge: pr.mergeCommit.oid,
-    notes: notesFrom(pr.body),
-  };
+  return { ...ref, notes: notesFrom(pr.body) };
 }
 
 function refusePublished(github, version) {

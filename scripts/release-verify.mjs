@@ -19,7 +19,7 @@ import { CHECKSUMS_FILE } from "./release-order.mjs";
 import {
   RELEASE_ASSETS,
   githubCli,
-  mergedRelease,
+  mergedReleaseRef,
   output,
   recordHeadline,
   short,
@@ -31,8 +31,13 @@ import {
 } from "./release.constants.mjs";
 import { parseVersion } from "./version.mjs";
 
-const USAGE = "usage: npm run release:verify (pull request in PR_NUMBER)";
+const USAGE =
+  "usage: npm run release:verify [-- record | public] (pull request in PR_NUMBER)";
 const PLATFORMS = TARGETS.map(platformOf);
+const NPM_PACKAGES = [
+  ...PLATFORMS.map(({ packageName }) => packageName),
+  PACKAGE,
+];
 const SIGNER_WORKFLOW = `${REPOSITORY}/.github/workflows/${BUILD_WORKFLOW}`;
 
 export function integrityOf(bytes) {
@@ -44,7 +49,7 @@ function sha256Of(bytes) {
 }
 
 function recordOf(github, number) {
-  const { version, merge } = mergedRelease(github.pullRequest(number));
+  const { version, merge } = mergedReleaseRef(github.pullRequest(number));
   const tag = `v${version}`;
   const commit = github.tagCommit(tag);
 
@@ -266,10 +271,7 @@ async function npmProblems(deps, record) {
   const problems = [];
   let allPublished = true;
 
-  for (const name of [
-    ...PLATFORMS.map(({ packageName }) => packageName),
-    PACKAGE,
-  ]) {
+  for (const name of NPM_PACKAGES) {
     const found = await packageProblems(deps, name, record);
 
     allPublished &&= found.published;
@@ -320,14 +322,51 @@ async function verify({ env, github, registry, tools, out }) {
   return [];
 }
 
+function recordOnly({ env, github, out }) {
+  const { version, tag, commit } = recordOf(github, Number(env.PR_NUMBER));
+
+  output(env, { commit, version });
+  out(`✓ ${tag} is recorded in ${short(commit)}`);
+
+  return [];
+}
+
+async function publicOnly({ env, github, registry, out }) {
+  const { version, tag } = recordOf(github, Number(env.PR_NUMBER));
+  const problems = [];
+
+  for (const name of NPM_PACKAGES) {
+    if ((await registry.manifest(name, version)) === null) {
+      problems.push(
+        `${name}@${version} is not on npm: approve the 7 staged packages on npmjs.com before announcing`,
+      );
+    }
+  }
+
+  if (problems.length === 0) {
+    out(`✓ ${tag}: npm serves the 7 packages`);
+  }
+
+  return problems;
+}
+
 export async function run(args, { env, github, registry, tools, out, err }) {
-  if (args.length > 0) {
+  const action =
+    args.length === 0
+      ? verify
+      : args.length === 1 && args[0] === "record"
+        ? recordOnly
+        : args.length === 1 && args[0] === "public"
+          ? publicOnly
+          : null;
+
+  if (action === null) {
     err(USAGE);
     return 2;
   }
 
   try {
-    const problems = await verify({ env, github, registry, tools, out });
+    const problems = await action({ env, github, registry, tools, out });
 
     for (const problem of problems) {
       err(`✗ ${problem}`);
