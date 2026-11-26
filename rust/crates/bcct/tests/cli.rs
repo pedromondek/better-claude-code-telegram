@@ -1,3 +1,5 @@
+mod stage;
+
 use std::path::Path;
 
 use assert_cmd::cargo::cargo_bin_cmd;
@@ -28,7 +30,7 @@ fn prints_the_package_version_with_the_binary_name() {
         .assert()
         .success()
         .stdout(format!("bcct {}\n", env!("CARGO_PKG_VERSION")))
-        .stderr("");
+        .stderr(stage::built_version_notice());
 }
 
 #[test]

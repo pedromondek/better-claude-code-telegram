@@ -72,6 +72,16 @@ pub(crate) fn marketplace() -> String {
     bcct::install::marketplace_source(env!("CARGO_PKG_VERSION"))
 }
 
+const STABLE_MARKETPLACE: &str = "pedromondek/better-claude-code-telegram#stable";
+
+pub(crate) fn built_stage_form(text: &str) -> String {
+    text.replace(STABLE_MARKETPLACE, &marketplace())
+}
+
+pub(crate) fn stable_stage_form(text: &str) -> String {
+    text.replace(&marketplace(), STABLE_MARKETPLACE)
+}
+
 pub(crate) fn app_text(text: &str, app: &str) -> String {
     text.replace(
         CLONE_STATUSLINE_ESCAPED,

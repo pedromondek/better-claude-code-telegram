@@ -7,6 +7,7 @@ import {
   REPOSITORY,
   SETUP_COMMAND,
 } from "../npm/shim/shim.constants.mjs";
+import { PORTUGUESE_BLOCK } from "./release-notes-layout.mjs";
 import { distTagOf } from "./release-npm-publish.mjs";
 import { notesPath } from "./release-pr.mjs";
 import {
@@ -19,7 +20,6 @@ import { parseVersion } from "./version.mjs";
 
 const USAGE =
   "usage: npm run release:announce -- [--print] [--root <folder>] (version in VERSION)";
-const PORTUGUESE_BLOCK = "<details><summary>🇧🇷 Português</summary>";
 const SUMMARY_HEADINGS = {
   "en-us": "### 📋 Summary",
   "pt-br": "### 📋 Resumo",

@@ -146,3 +146,18 @@ jobs:
           echo "### Checks: exit $code" >> "$GITHUB_STEP_SUMMARY"
           grep -E '^(✓|✗|⚠)' gate.log >> "$GITHUB_STEP_SUMMARY" || true
           exit "$code"
+
+      - name: Range of the Rust tests on the other stage
+        id: other-stage
+        if: ${{ !cancelled() }}
+        env:
+          BEFORE: ${{ needs.target.outputs.before || github.event.pull_request.base.sha || github.event.before }}
+        run: npm run --silent ci:rust-other-stage
+
+      - name: Other stage of the version
+        if: ${{ !cancelled() && steps.other-stage.outputs.run == 'true' }}
+        run: npm run --silent release:version -- swap-stage
+
+      - name: Rust tests on the other stage
+        if: ${{ !cancelled() && steps.other-stage.outputs.run == 'true' }}
+        run: npm run --silent rust:test -- --no-fail-fast

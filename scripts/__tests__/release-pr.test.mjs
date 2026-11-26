@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import czConfig from "../../cz.config.mjs";
 import { validateCommitMessage } from "../../.husky/lib/validate-commit-msg.mjs";
+import { notesSkeleton } from "../release-notes-layout.mjs";
 import {
   DRAFT_MARK,
   NOTES_END,
@@ -161,12 +162,13 @@ describe("draftFromCliff", () => {
 describe("pullRequestBody", () => {
   const body = pullRequestBody("0.1.0-alpha.2", "### Features\n- x");
 
-  it("opens with the draft between the notes markers, marked as a draft", () => {
+  it("opens with the skeleton of the notes between the markers, marked as a draft, with the draft in the English block", () => {
     expect(
       body.startsWith(
-        `${NOTES_START}\n${DRAFT_MARK}\n### Features\n- x\n${NOTES_END}\n`,
+        `${NOTES_START}\n${notesSkeleton("### Features\n- x")}\n${NOTES_END}\n`,
       ),
     ).toBe(true);
+    expect(notesFrom(body).startsWith(DRAFT_MARK)).toBe(true);
   });
 
   it("explains outside the markers how the draft becomes the notes and where they go on merge", () => {
@@ -180,7 +182,12 @@ describe("pullRequestBody", () => {
   });
 
   it("keeps the draft mark when git-cliff found nothing, so the check still asks for the notes", () => {
-    expect(notesFrom(pullRequestBody("0.1.0-alpha.2", ""))).toBe(DRAFT_MARK);
+    const empty = pullRequestBody("0.1.0-alpha.2", "");
+
+    expect(notesFrom(empty)).toBe(notesSkeleton(""));
+    expect(notesProblem(empty)).toContain(
+      "the notes are still the git-cliff draft",
+    );
   });
 });
 
@@ -217,6 +224,46 @@ describe("notesFrom", () => {
 describe("notesProblem", () => {
   it("lets written notes through", () => {
     expect(notesProblem(notesBody("### 📋 Summary\n- x"))).toBeNull();
+  });
+
+  it("stops the skeleton without notes once the draft mark is deleted", () => {
+    const skeleton = pullRequestBody("0.1.0-alpha.2", "").replace(
+      `${DRAFT_MARK}\n`,
+      "",
+    );
+
+    expect(notesProblem(skeleton)).toBe(
+      "the notes are empty: write them with /release-notes",
+    );
+  });
+
+  it("stops the skeleton whose git-cliff draft was deleted with its blank lines left", () => {
+    const skeleton = pullRequestBody("0.1.0-alpha.2", "### Features\n- x")
+      .replace(`${DRAFT_MARK}\n`, "")
+      .replace("### Features\n- x", "");
+
+    expect(notesProblem(skeleton)).toBe(
+      "the notes are empty: write them with /release-notes",
+    );
+  });
+
+  it("stops the empty skeleton with a trailing space added", () => {
+    const skeleton = pullRequestBody("0.1.0-alpha.2", "")
+      .replace(`${DRAFT_MARK}\n`, "")
+      .replace("</details>", "</details> ");
+
+    expect(notesProblem(skeleton)).toBe(
+      "the notes are empty: write them with /release-notes",
+    );
+  });
+
+  it("lets notes written into the skeleton through", () => {
+    const written = pullRequestBody(
+      "0.1.0-alpha.2",
+      "### 📋 Summary\n- x",
+    ).replace(`${DRAFT_MARK}\n`, "");
+
+    expect(notesProblem(written)).toBeNull();
   });
 
   it("stops the git-cliff draft while its mark is there", () => {

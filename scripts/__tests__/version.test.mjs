@@ -11,9 +11,14 @@ import {
   readVersions,
   run,
   setVersion,
+  swappedStage,
 } from "../version.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
+const PROJECT_VERSION = readVersions(ROOT)[0].version;
+const OTHER_VERSION = ["0.1.0-alpha.1", "0.1.0-alpha.2"].find(
+  (version) => version !== PROJECT_VERSION,
+);
 
 let root;
 
@@ -111,6 +116,22 @@ describe("nextVersion", () => {
   });
 });
 
+describe("swappedStage", () => {
+  it.each([
+    ["0.1.0", "0.1.0-alpha.1"],
+    ["1.12.3", "1.12.3-alpha.1"],
+    ["0.1.0-alpha.1", "0.1.0"],
+    ["0.2.0-beta.3", "0.2.0"],
+    ["1.0.0-rc.2", "1.0.0"],
+  ])("turns %s into %s", (current, swapped) => {
+    expect(swappedStage(current)).toBe(swapped);
+  });
+
+  it("throws an Error when the version is invalid", () => {
+    expect(() => swappedStage("0.1")).toThrow("invalid version: 0.1");
+  });
+});
+
 describe("the version files", () => {
   it("are the binary, the npm packages and their lock, and every plugin", () => {
     expect(VERSION_FILES).toEqual([
@@ -135,10 +156,10 @@ describe("the version files", () => {
     );
     const current = readVersions(root)[0].version;
 
-    setVersion(root, "0.1.0-alpha.1");
+    setVersion(root, OTHER_VERSION);
 
     expect(new Set(readVersions(root).map(({ version }) => version))).toEqual(
-      new Set(["0.1.0-alpha.1"]),
+      new Set([OTHER_VERSION]),
     );
     for (const file of VERSION_FILES) {
       const changes = changedLines(file, before[file]);
@@ -149,7 +170,7 @@ describe("the version files", () => {
         changes: expected,
       });
       for (const [was, now] of changes) {
-        expect(now).toBe(was.replace(current, "0.1.0-alpha.1"));
+        expect(now).toBe(was.replace(current, OTHER_VERSION));
       }
     }
   });
@@ -164,11 +185,11 @@ describe("the version files", () => {
   });
 
   it("check names each file that differs from the binary", () => {
-    setVersion(root, "0.1.0-alpha.1");
+    setVersion(root, OTHER_VERSION);
     cpSync(join(ROOT, "package.json"), join(root, "package.json"));
 
     expect(checkVersions(root)).toEqual([
-      { file: "package.json", version: readVersions(ROOT)[0].version },
+      { file: "package.json", version: PROJECT_VERSION },
     ]);
   });
 });
@@ -198,15 +219,15 @@ describe("run", () => {
   });
 
   it("check exits 1 and lists the files that differ", () => {
-    setVersion(root, "0.1.0-alpha.1");
+    setVersion(root, OTHER_VERSION);
     cpSync(join(ROOT, "package.json"), join(root, "package.json"));
 
     const result = captured(["check"]);
 
     expect(result.code).toBe(1);
     expect(result.err).toEqual([
-      "✗ the version differs from rust/Cargo.toml (0.1.0-alpha.1):",
-      `  package.json: ${readVersions(ROOT)[0].version}`,
+      `✗ the version differs from rust/Cargo.toml (${OTHER_VERSION}):`,
+      `  package.json: ${PROJECT_VERSION}`,
     ]);
   });
 
@@ -243,12 +264,35 @@ describe("run", () => {
     });
   });
 
+  it("swap-stage writes the version of the other stage and prints it", () => {
+    setVersion(root, "0.3.0-beta.2");
+
+    expect(captured(["swap-stage"])).toEqual({
+      code: 0,
+      out: ["✓ version set to 0.3.0"],
+      err: [],
+    });
+    expect(captured(["swap-stage"])).toEqual({
+      code: 0,
+      out: ["✓ version set to 0.3.0-alpha.1"],
+      err: [],
+    });
+    expect(checkVersions(root)).toEqual([]);
+  });
+
+  it("swap-stage with an argument exits 2 with the usage", () => {
+    const before = read("package.json");
+
+    expect(captured(["swap-stage", "0.1.0"]).code).toBe(2);
+    expect(read("package.json")).toBe(before);
+  });
+
   it("a usage error exits 2 with the usage", () => {
     expect(captured(["bump"])).toEqual({
       code: 2,
       out: [],
       err: [
-        "usage: npm run release:version -- check | set <version> | next <alpha|beta|rc|stable>",
+        "usage: npm run release:version -- check | set <version> | next <alpha|beta|rc|stable> | swap-stage",
       ],
     });
   });

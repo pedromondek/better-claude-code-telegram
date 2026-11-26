@@ -248,6 +248,38 @@ describe("push-checks.yml runs the pre-push on the server, called by ci.yml or b
       /^\d{4}\.\d{1,2}\.\d+$/,
     );
   });
+
+  describe("Rust tests on the other stage of the version", () => {
+    const range = stepById(checks, "other-stage");
+    const swap = stepNamed(checks, "Other stage of the version");
+    const tests = stepNamed(checks, "Rust tests on the other stage");
+    const ifRange =
+      "${{ !cancelled() && steps.other-stage.outputs.run == 'true' }}";
+
+    it("asks the ci:rust-other-stage script whether the range of the checks touches rust/", () => {
+      expect(range.run).toBe("npm run --silent ci:rust-other-stage");
+      expect(range.env).toEqual({ BEFORE: gateStep.env.BEFORE });
+      expect(packageScripts["ci:rust-other-stage"]).toBeTypeOf("string");
+    });
+
+    it("swaps the stage of the version and runs every Rust test only when the range touches rust/", () => {
+      expect(swap.run).toBe("npm run --silent release:version -- swap-stage");
+      expect(tests.run).toBe("npm run --silent rust:test -- --no-fail-fast");
+      expect(swap.if).toBe(ifRange);
+      expect(tests.if).toBe(ifRange);
+    });
+
+    it("runs also when the pre-push failed, so one run shows both failures", () => {
+      expect(range.if).toBe("${{ !cancelled() }}");
+    });
+
+    it("runs after the pre-push, which validates the commit as it is, and swaps before the tests", () => {
+      expect(indexOf(checks, gateStep)).toBeLessThan(indexOf(checks, range));
+      expect(indexOf(checks, range)).toBeLessThan(indexOf(checks, swap));
+      expect(indexOf(checks, swap)).toBeLessThan(indexOf(checks, tests));
+      expect(checks.steps.at(-1)).toBe(tests);
+    });
+  });
 });
 
 describeWorkflowSecurity(FILE);

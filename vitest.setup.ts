@@ -41,10 +41,18 @@ for (const name of [
 
 const isolated = isolateHome(tmpdir());
 
+export const ISOLATED_CONFIG_VARIABLES = [
+  "CLAUDE_CONFIG_DIR",
+  "XDG_CONFIG_HOME",
+  "TELEGRAM_STATE_DIR",
+  "BETTER_CC_TELEGRAM",
+];
+
 process.env.HOME = isolated.home;
 process.env.USERPROFILE = isolated.home;
-delete process.env.CLAUDE_CONFIG_DIR;
-delete process.env.TELEGRAM_STATE_DIR;
-delete process.env.BETTER_CC_TELEGRAM;
+
+for (const name of ISOLATED_CONFIG_VARIABLES) {
+  delete process.env[name];
+}
 
 afterAll(isolated.remove);

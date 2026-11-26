@@ -50,7 +50,7 @@ const APP_FOLDER: &str = "home/.claude/better-claude-code-telegram/";
 const SHELL_SCRIPT: &str = "home/.claude/better-claude-code-telegram/shell.sh";
 
 fn fixture() -> Value {
-    parse_json(FIXTURE).unwrap()
+    parse_json(&support::built_stage_form(FIXTURE)).unwrap()
 }
 
 const HEALTH_COMMAND: &str = "npx @pedromondek/better-claude-code-telegram health";
@@ -811,11 +811,27 @@ fn blessing_rewrites_the_setup_run_fixture_from_the_binary() {
 
     fs::write(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/setup-run.json"),
-        stringify(&fixture)
-            .replace('\u{2028}', "\\u2028")
-            .replace('\u{2029}', "\\u2029"),
+        support::stable_stage_form(
+            &stringify(&fixture)
+                .replace('\u{2028}', "\\u2028")
+                .replace('\u{2029}', "\\u2029"),
+        ),
     )
     .unwrap();
+}
+
+#[test]
+fn keeps_the_stable_marketplace_of_the_fixture_through_both_stage_forms() {
+    let recorded = "claude plugin marketplace add pedromondek/better-claude-code-telegram#stable\n";
+
+    assert_eq!(
+        support::stable_stage_form(&support::built_stage_form(recorded)),
+        recorded
+    );
+    assert_eq!(
+        support::built_stage_form(recorded),
+        format!("claude plugin marketplace add {}\n", support::marketplace())
+    );
 }
 
 const HEALTH_KEEPS_GOING: &str = "the health stops when the bot answers nothing";

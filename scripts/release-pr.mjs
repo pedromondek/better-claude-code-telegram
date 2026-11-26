@@ -7,6 +7,11 @@ import {
   ledgerVersions,
   releasedVersions,
 } from "./release-order.mjs";
+import {
+  DRAFT_MARK,
+  emptyNotes,
+  notesSkeleton,
+} from "./release-notes-layout.mjs";
 import { NPM_REGISTRY } from "./release.constants.mjs";
 import {
   STAGES,
@@ -22,7 +27,7 @@ import {
 
 export const NOTES_START = "<!-- notes -->";
 export const NOTES_END = "<!-- /notes -->";
-export const DRAFT_MARK = "<!-- draft -->";
+export { DRAFT_MARK };
 
 const BASE_BRANCH = "main";
 const NOTES_CHECK = "Release notes";
@@ -55,18 +60,20 @@ export function draftFromCliff(text) {
 }
 
 export function pullRequestBody(version, draft) {
-  const notes = [DRAFT_MARK, draft].filter((line) => line !== "").join("\n");
-
   return [
     NOTES_START,
-    notes,
+    notesSkeleton(draft),
     NOTES_END,
     "",
     `Version pull request of v${version}, opened by the prepare release workflow.`,
     "",
-    `The text between the two notes markers above is the body of the GitHub Release. It starts as the git-cliff draft, and the \`${NOTES_CHECK}\` check stays red until the public notes replace it: write them with \`/release-notes\`, or edit this description and delete the \`${DRAFT_MARK}\` line. On merge, the release workflow publishes v${version} with these notes and records them in \`${notesPath(version)}\`.`,
+    `The text between the two notes markers above is the body of the GitHub Release. It starts as the layout of the notes, with the git-cliff draft in the English block, and the \`${NOTES_CHECK}\` check stays red until the public notes replace it: write them with \`/release-notes\`, or edit this description and delete the \`${DRAFT_MARK}\` line. On merge, the release workflow publishes v${version} with these notes and records them in \`${notesPath(version)}\`.`,
     "",
   ].join("\n");
+}
+
+function withoutSpace(text) {
+  return text.replaceAll(/\s+/gu, "");
 }
 
 function markedNotes(body) {
@@ -105,7 +112,7 @@ export function notesProblem(body) {
     return `the notes are still the git-cliff draft: write them with /release-notes, or edit the description and delete the ${DRAFT_MARK} line`;
   }
 
-  if (notes === "") {
+  if (notes === "" || withoutSpace(notes) === withoutSpace(emptyNotes())) {
     return "the notes are empty: write them with /release-notes";
   }
 
