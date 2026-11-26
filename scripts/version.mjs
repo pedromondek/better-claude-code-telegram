@@ -23,7 +23,7 @@ const CARGO_WORKSPACE_VERSION =
   /^(\[workspace\.package\]\n(?:(?!\[)[^\n]*\n)*?version = ")([^"]+)(")/m;
 const CARGO_LOCK_VERSION = /^(name = "bcct"\nversion = ")([^"]+)(")/m;
 const USAGE =
-  "usage: npm run release:version -- check | set <version> | next <alpha|beta|rc|stable>";
+  "usage: npm run release:version -- check | set <version> | next <alpha|beta|rc|stable> | swap-stage";
 
 export function parseVersion(text) {
   const match = VERSION_PATTERN.exec(text);
@@ -84,6 +84,12 @@ export function nextVersion(current, stage, bumped) {
   }
 
   return `${base(version)}-${stage}.${to === from ? version.number + 1 : 1}`;
+}
+
+export function swappedStage(current) {
+  const version = parseVersion(current);
+
+  return version.stage === null ? `${base(version)}-alpha.1` : base(version);
 }
 
 function patternsOf(file) {
@@ -207,6 +213,15 @@ export function run(args, { root, bumped, out, err }) {
       const stable = parseVersion(current).stage === null;
 
       out(nextVersion(current, value, stable ? bumped() : current));
+
+      return 0;
+    }
+
+    if (command === "swap-stage" && value === undefined) {
+      const swapped = swappedStage(readVersions(root)[0].version);
+
+      setVersion(root, swapped);
+      out(`✓ version set to ${swapped}`);
 
       return 0;
     }

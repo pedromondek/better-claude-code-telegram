@@ -1368,7 +1368,7 @@ fn reads_the_roots_of_the_update_from_the_environment() {
     std::os::unix::fs::symlink("/bin/sh", bin.join("sh")).unwrap();
     let tags = serve(vec![response("200 OK", "{\"latest\":\"0.3.0\"}")]);
     let listed = cargo_bin_cmd!("bcct")
-        .arg("update")
+        .args(["update", "stable"])
         .env_clear()
         .envs(support::coverage_env())
         .env("PATH", &bin)

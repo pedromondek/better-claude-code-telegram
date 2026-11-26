@@ -1,6 +1,7 @@
 #![cfg(unix)]
 #![cfg(test)]
 
+mod stage;
 mod support;
 
 use std::fmt::Write as _;
@@ -213,7 +214,11 @@ fn every_version_flag_prints_the_same_lines() {
 
         assert_eq!(output.status.code(), Some(0), "{flag}");
         assert_eq!(String::from_utf8_lossy(&output.stdout), expected, "{flag}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), "", "{flag}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            stage::built_version_notice(),
+            "{flag}"
+        );
     }
 }
 

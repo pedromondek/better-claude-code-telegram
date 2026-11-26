@@ -106,6 +106,7 @@
     "rust:mutation:ci": "node scripts/rust-mutation-ci.mjs",
     "ci:cache:delete": "node scripts/delete-pull-request-cache.mjs",
     "ci:passed": "node scripts/ci-passed.mjs",
+    "ci:rust-other-stage": "node scripts/rust-other-stage.mjs",
     "rust:build": "cargo clean --manifest-path rust/Cargo.toml --release && cargo build --manifest-path rust/Cargo.toml --release --locked",
     "rust:clean": "cargo clean --manifest-path rust/Cargo.toml",
     "check:private": "node scripts/check-private-data.mjs",
