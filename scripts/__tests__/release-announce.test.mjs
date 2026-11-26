@@ -9,6 +9,13 @@ import {
   run,
   toTelegramHtml,
 } from "../release-announce.mjs";
+import {
+  BLOCK_END,
+  ENGLISH_BLOCK,
+  PORTUGUESE_BLOCK,
+  followAlert,
+  legendAlert,
+} from "../release-notes-layout.mjs";
 import { ANNOUNCE_CHANNELS } from "../release.constants.mjs";
 
 const [STABLE_EN, STABLE_PT] = ANNOUNCE_CHANNELS.stable.map(({ chat }) => chat);
@@ -108,6 +115,36 @@ function notesText({
     "",
     "</details>",
     "",
+  ].join("\n");
+}
+
+function collapsedNotesText() {
+  const open = notesText();
+  const start = open.indexOf(PORTUGUESE_BLOCK);
+  const english = open
+    .slice(0, start)
+    .replace("\n✨ new · 🐛 fix\n", "")
+    .trim();
+  const portuguese = open
+    .slice(start)
+    .replace("\n✨ novo · 🐛 correção\n", "")
+    .replace(
+      `- ✨ ${QUESTIONS.pt}`,
+      `- ✨ ${QUESTIONS.pt}\n\n  ![Botões](${QUESTIONS.gif})`,
+    );
+
+  return [
+    followAlert(),
+    "",
+    legendAlert(),
+    "",
+    ENGLISH_BLOCK,
+    "",
+    english,
+    "",
+    BLOCK_END,
+    "",
+    portuguese,
   ].join("\n");
 }
 
@@ -512,6 +549,12 @@ describe("release-announce › notes", () => {
     );
   });
 
+  it("reads the notes with the two alerts on top and both languages collapsed as it reads them with en-us open", () => {
+    expect(parseNotes(collapsedNotesText(), PRERELEASE_FILE)).toEqual(
+      parseNotes(notesText(), PRERELEASE_FILE),
+    );
+  });
+
   it("ignores an image line under a pt-br item", () => {
     const text = notesText().replace(
       `- ✨ ${NOTICE.pt}`,
@@ -557,6 +600,16 @@ describe("release-announce › posts of a pre-release", () => {
     expect(
       buildAnnouncements({
         root: tempRoot(),
+        version: PRERELEASE,
+        repository: REPO,
+      }),
+    ).toEqual(PRERELEASE_ANNOUNCEMENTS);
+  });
+
+  it("posts the same from notes with the two alerts on top, both languages collapsed and the GIF under the pt-br items too", () => {
+    expect(
+      buildAnnouncements({
+        root: tempRoot({ [PRERELEASE_FILE]: collapsedNotesText() }),
         version: PRERELEASE,
         repository: REPO,
       }),
