@@ -244,6 +244,8 @@ async function packageProblems({ registry, tools }, name, record) {
   const tagged = (await registry.distTags(name))[tag];
   const tarball = await registry.tarball(manifest.dist.tarball);
   const integral = integrityOf(tarball) === manifest.dist.integrity;
+  const { unpackedSize } = manifest.dist;
+  const sized = Number.isSafeInteger(unpackedSize) && unpackedSize > 0;
 
   return {
     published: true,
@@ -260,8 +262,13 @@ async function packageProblems({ registry, tools }, name, record) {
       PROVENANCE_PREDICATE
         ? []
         : [`${spec} has no ${PROVENANCE_PREDICATE} provenance`]),
-      ...(integral
-        ? contentProblems(name, (path) => tools.untar(tarball, path), record)
+      ...(sized ? [] : [`${spec} has no dist.unpackedSize`]),
+      ...(integral && sized
+        ? contentProblems(
+            name,
+            (path) => tools.untar(tarball, path, unpackedSize),
+            record,
+          )
         : []),
     ],
   };
@@ -496,14 +503,23 @@ function npmIn(dir, args) {
   );
 }
 
-const tools = {
-  untar: (bytes, path) => {
-    const result = spawnSync("tar", ["-xzO", "-f", "-", path], {
-      input: bytes,
-    });
+export function extractedOutput(result) {
+  return result.error === undefined && result.status === 0
+    ? result.stdout
+    : null;
+}
 
-    return result.status === 0 ? result.stdout : null;
-  },
+export function untar(bytes, path, maxBytes) {
+  return extractedOutput(
+    spawnSync("tar", ["-xzO", "-f", "-", path], {
+      input: bytes,
+      maxBuffer: maxBytes,
+    }),
+  );
+}
+
+const tools = {
+  untar,
   auditSignatures: ({ spec, os, cpu }) => {
     const dir = mkdtempSync(join(tmpdir(), "bcct-audit-"));
 
