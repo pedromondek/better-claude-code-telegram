@@ -18,6 +18,10 @@ const ATTEST = {
 };
 const READ_ATTESTATIONS = { contents: "read", attestations: "read" };
 const EXTRA_PERMISSIONS = {
+  "announce-release.yml > record": {
+    contents: "read",
+    "pull-requests": "read",
+  },
   "audit-workflows-on-schedule.yml > audit": READ_ISSUES,
   "audit-workflows-on-schedule.yml > issue": WRITE_ISSUES,
   "audit-plugin-dependencies.yml > audit": WRITE_ISSUES,
@@ -41,6 +45,7 @@ const EXTRA_PERMISSIONS = {
     checks: "read",
   },
   "manage-ci-cache.yml > delete": { contents: "read", actions: "write" },
+  "release.yml > announce": { contents: "read", "pull-requests": "read" },
   "release.yml > build": ATTEST,
   "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },

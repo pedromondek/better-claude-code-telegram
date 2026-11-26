@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { parse } from "yaml";
@@ -144,8 +144,11 @@ function fakeRegistry({
       Buffer.from(JSON.stringify(entries)),
     ]),
   );
+  const requests = [];
   const registry = {
     manifest: async (name, version) => {
+      requests.push(["manifest", name, version]);
+
       if (missing.includes(name) || version !== VERSION) {
         return null;
       }
@@ -163,11 +166,17 @@ function fakeRegistry({
         },
       });
     },
-    distTags: async () => tags,
-    tarball: async (url) => tarballs[url],
+    distTags: async (name) => {
+      requests.push(["distTags", name]);
+      return tags;
+    },
+    tarball: async (url) => {
+      requests.push(["tarball", url]);
+      return tarballs[url];
+    },
   };
 
-  return registry;
+  return { registry, requests };
 }
 
 function fakeTools({ audit = () => true } = {}) {
@@ -196,18 +205,19 @@ async function verifyWith({
 } = {}) {
   const { github, calls } = fakeGithub(githubOptions);
   const { tools, calls: audits } = fakeTools(toolsOptions);
+  const { registry, requests } = fakeRegistry(registryOptions);
   const out = [];
   const err = [];
   const code = await run(args, {
     env: { PR_NUMBER: "12", ...env },
     github,
-    registry: fakeRegistry(registryOptions),
+    registry,
     tools,
     out: (line) => out.push(line),
     err: (line) => err.push(line),
   });
 
-  return { code, out, err, calls, audits };
+  return { code, out, err, calls, audits, requests };
 }
 
 describe("integrityOf", () => {
@@ -221,13 +231,14 @@ describe("integrityOf", () => {
 describe("release:verify › the record", () => {
   it("reads the checksums.txt of the tag commit, the record of the merged version pull request, and hands that commit to the next job", async () => {
     const outputFile = join(mkdtempSync(join(tmpdir(), "verify-")), "out");
-    const { code, out, err, calls } = await verifyWith({
+    const { code, out, err, calls, requests } = await verifyWith({
       env: { GITHUB_OUTPUT: outputFile },
     });
 
     expect(err).toEqual([]);
     expect(code).toBe(0);
     expect(out.at(-1)).toBe(SUMMARY);
+    expect(requests).toContainEqual(["distTags", PACKAGE]);
     expect(calls).toContainEqual(["tagCommit", TAG]);
     expect(calls).toContainEqual(["commit", COMMIT]);
     expect(calls).toContainEqual([
@@ -239,6 +250,19 @@ describe("release:verify › the record", () => {
       `commit=${COMMIT}\nversion=${VERSION}\n`,
     );
   });
+
+  it.each([[[]], [["record"]], [["public"]]])(
+    "finds the record of a pull request whose description lost its notes after the merge (%j)",
+    async (args) => {
+      const { code, err } = await verifyWith({
+        args,
+        github: { pr: { body: "The notes were moved to the Release." } },
+      });
+
+      expect(err).toEqual([]);
+      expect(code).toBe(0);
+    },
+  );
 
   it("refuses a pull request that was not merged", async () => {
     const { code, err } = await verifyWith({
@@ -515,13 +539,102 @@ describe("release:verify › npm", () => {
   });
 });
 
+describe("release:verify › record", () => {
+  it("hands the version and its record commit to the next job without reading the Release or npm", async () => {
+    const outputFile = join(mkdtempSync(join(tmpdir(), "verify-")), "out");
+    const { code, out, err, calls, audits, requests } = await verifyWith({
+      args: ["record"],
+      env: { GITHUB_OUTPUT: outputFile },
+    });
+
+    expect(err).toEqual([]);
+    expect(code).toBe(0);
+    expect(out).toEqual([`✓ ${TAG} is recorded in bbbbbbb`]);
+    expect(calls).toEqual([
+      ["tagCommit", TAG],
+      ["commit", COMMIT],
+    ]);
+    expect(audits).toEqual([]);
+    expect(requests).toEqual([]);
+    expect(readFileSync(outputFile, "utf8")).toBe(
+      `commit=${COMMIT}\nversion=${VERSION}\n`,
+    );
+  });
+
+  it("refuses a tag whose commit is not the record of the merge", async () => {
+    const { code, err, out } = await verifyWith({
+      args: ["record"],
+      github: { record: { parents: [MERGE], headline: "other" } },
+    });
+
+    expect(code).toBe(1);
+    expect(out).toEqual([]);
+    expect(err).toEqual([
+      `✗ ${TAG} points at bbbbbbb, which is not the record of the merge aaaaaaa`,
+    ]);
+  });
+});
+
+describe("release:verify › public", () => {
+  const allPackages = [
+    ...PLATFORMS.map(({ packageName }) => packageName),
+    PACKAGE,
+  ];
+
+  it("passes when npm serves the version of all 7 packages, reading only their manifests", async () => {
+    const outputFile = join(mkdtempSync(join(tmpdir(), "verify-")), "out");
+    const { code, out, err, requests, audits } = await verifyWith({
+      args: ["public"],
+      env: { GITHUB_OUTPUT: outputFile },
+    });
+
+    expect(err).toEqual([]);
+    expect(code).toBe(0);
+    expect(out).toEqual([`✓ ${TAG}: npm serves the 7 packages`]);
+    expect(requests).toEqual(
+      allPackages.map((name) => ["manifest", name, VERSION]),
+    );
+    expect(audits).toEqual([]);
+    expect(existsSync(outputFile)).toBe(false);
+  });
+
+  it("fails naming each package npm does not serve yet, as while they wait for the approval", async () => {
+    const [first, second] = PLATFORMS.map(({ packageName }) => packageName);
+    const { code, out, err } = await verifyWith({
+      args: ["public"],
+      registry: { missing: [first, second] },
+    });
+
+    expect(code).toBe(1);
+    expect(out).toEqual([]);
+    expect(err).toEqual([
+      `✗ ${first}@${VERSION} is not on npm: approve the 7 staged packages on npmjs.com before announcing`,
+      `✗ ${second}@${VERSION} is not on npm: approve the 7 staged packages on npmjs.com before announcing`,
+    ]);
+  });
+
+  it("refuses a pull request whose tag is not the record of the merge", async () => {
+    const { code, err } = await verifyWith({
+      args: ["public"],
+      github: { record: { parents: [MERGE], headline: "other" } },
+    });
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      `✗ ${TAG} points at bbbbbbb, which is not the record of the merge aaaaaaa`,
+    ]);
+  });
+});
+
 describe("release:verify › run", () => {
-  it.each([[["x"]], [["--fix"]]])(
+  it.each([[["x"]], [["--fix"]], [["record", "x"]], [["public", "x"]]])(
     "a usage error exits 2 (%j)",
     async (args) => {
       expect(await verifyWith({ args })).toMatchObject({
         code: 2,
-        err: ["usage: npm run release:verify (pull request in PR_NUMBER)"],
+        err: [
+          "usage: npm run release:verify [-- record | public] (pull request in PR_NUMBER)",
+        ],
       });
     },
   );

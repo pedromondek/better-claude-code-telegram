@@ -4,6 +4,7 @@ rules:
       - push-checks.yml
   concurrency-limits:
     ignore:
+      - announce-release.yml
       - audit-workflows.yml
       - build-binaries.yml
       - check-mutation.yml

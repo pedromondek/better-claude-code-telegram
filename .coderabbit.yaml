@@ -28,10 +28,13 @@ reviews:
       the checksums.txt of the plugin. Skipping or weakening that check is
       critical.
     - Every workflow starts with permissions {} and each job asks only for
-      what it uses; every action is pinned by SHA. The only secret is the
+      what it uses; every action is pinned by SHA. The secrets are the
       release app key, held by the release environment and used only in
-      prepare-release.yml and release.yml. Exposing it, or a write token,
-      to a job that runs pull request code is critical.
+      prepare-release.yml and release.yml, and the bot token of the release
+      announcement, held by the telegram-announce environment, passed by
+      name from release.yml and read only by the announce job of
+      announce-release.yml. Exposing either, or a write token, to a job that
+      runs pull request code is critical.
   merge_risk_instructions: |
     Higher risk: hooks.json and the plugin scripts that launch bcct, the Rust
     hook, launcher, setup, update and uninstall paths, anything that writes

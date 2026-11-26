@@ -1,0 +1,123 @@
+name: Announce release
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: Merged version pull request whose notes to announce on the Telegram channels
+        required: true
+        type: string
+    secrets:
+      TELEGRAM_ANNOUNCE_TOKEN:
+        description: Token of the bot that posts on the Telegram channels, read only by the announce job in the telegram-announce environment
+        required: true
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Merged version pull request whose notes to announce on the Telegram channels
+        required: true
+        type: choice
+        options:
+          - Last merged PR
+          - Second to last merged PR
+          - Third to last merged PR
+      pr_number:
+        description: Another merged version pull request (number), which wins over the select
+        required: false
+        type: string
+        default: ""
+      resume:
+        description: What is left of a partial announcement, as the failed run printed it (v<version>[,test=<test channel>],<channel>=done,<channel>=<opening id>:<posts sent>), with the same pull request and dry run
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  record:
+    name: Find the record of the version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # reads the version pull request to find its version and merge commit
+    outputs:
+      commit: ${{ steps.record.outputs.commit }}
+      version: ${{ steps.record.outputs.version }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Merged pull request of the dispatch
+        id: target
+        if: inputs.pr != ''
+        env:
+          PR_CHOICE: ${{ inputs.pr }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: npm run --silent merged-pr
+
+      - name: Version and record commit of the pull request
+        id: record
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.target.outputs.number || inputs.pr_number }}
+        run: npm run --silent release:verify -- record
+
+      - name: Public on npm
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.target.outputs.number || inputs.pr_number }}
+        run: npm run --silent release:verify -- public
+
+  announce:
+    name: Announce v${{ needs.record.outputs.version }} on Telegram
+    needs:
+      - record
+    environment: telegram-announce
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.record.outputs.commit }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Telegram channels
+        env:
+          VERSION: ${{ needs.record.outputs.version }}
+          GH_REPO: ${{ github.repository }}
+          TELEGRAM_ANNOUNCE_TOKEN: ${{ secrets.TELEGRAM_ANNOUNCE_TOKEN }}
+          TELEGRAM_TEST_CHANNEL: ${{ vars.TELEGRAM_TEST_CHANNEL }}
+          DRY_RUN: ${{ vars.DRY_RUN }}
+          ANNOUNCE_RESUME: ${{ inputs.resume }}
+        run: npm run --silent release:announce

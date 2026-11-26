@@ -266,3 +266,17 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
           COMMIT: ${{ needs.verify.outputs.commit }}
         run: npm run --silent release:publish -- stable
+
+  announce:
+    name: Announce v${{ needs.plan.outputs.version }}
+    needs:
+      - plan
+      - verify
+    permissions:
+      contents: read
+      pull-requests: read # the called record job reads the version pull request
+    uses: $/.github/workflows/announce-release.yml
+    with:
+      pr_number: ${{ needs.plan.outputs.number }}
+    secrets:
+      TELEGRAM_ANNOUNCE_TOKEN: ${{ secrets.TELEGRAM_ANNOUNCE_TOKEN }}

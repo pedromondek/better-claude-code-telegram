@@ -53,6 +53,7 @@
     "lint:typos": "sh scripts/mise-exec.sh typos",
     "lint:plugins": "node scripts/validate-plugins.mjs",
     "tools:lock": "mise lock",
+    "release:announce": "node scripts/release-announce.mjs",
     "release:binary": "node scripts/release-binary.mjs",
     "release:checksums": "node scripts/release-checksums.mjs",
     "release:cliff": "sh scripts/mise-exec.sh git-cliff",
