@@ -1,5 +1,13 @@
-import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { parse } from "yaml";
@@ -9,7 +17,12 @@ import { PACKAGE, REPOSITORY } from "../../npm/shim/shim.constants.mjs";
 import { TARGETS, sha256Line } from "../release-binary.mjs";
 import { platformOf } from "../release-npm.mjs";
 import { recordHeadline } from "../release-publish.mjs";
-import { integrityOf, run } from "../release-verify.mjs";
+import {
+  extractedOutput,
+  integrityOf,
+  run,
+  untar,
+} from "../release-verify.mjs";
 import {
   BUILD_WORKFLOW,
   NPM_REGISTRY,
@@ -27,6 +40,8 @@ const BINARIES = Object.fromEntries(
   TARGETS.map(({ asset }) => [asset, `binary of ${asset}`]),
 );
 const hashOf = (text) => createHash("sha256").update(text).digest("hex");
+const UNPACKED_SIZE = 4064168;
+const MEBIBYTE = 1024 * 1024;
 const CHECKSUMS = [
   "# version asset sha256",
   `0.1.0 bcct-linux-x64 ${"0".repeat(64)}`,
@@ -160,6 +175,7 @@ function fakeRegistry({
         integrity: badIntegrity.includes(name)
           ? integrityOf(Buffer.from("other"))
           : integrityOf(tarballs[tarball]),
+        unpackedSize: UNPACKED_SIZE,
         attestations: {
           url: `${NPM_REGISTRY}/-/npm/v1/attestations/${name}@${VERSION}`,
           provenance: { predicateType: PROVENANCE_PREDICATE },
@@ -181,8 +197,10 @@ function fakeRegistry({
 
 function fakeTools({ audit = () => true } = {}) {
   const calls = [];
+  const extractions = [];
   const tools = {
-    untar: (bytes, path) => {
+    untar: (bytes, path, maxBytes) => {
+      extractions.push([path, maxBytes]);
       const entries = JSON.parse(bytes.toString("utf8"));
 
       return Object.hasOwn(entries, path) ? Buffer.from(entries[path]) : null;
@@ -193,7 +211,7 @@ function fakeTools({ audit = () => true } = {}) {
     },
   };
 
-  return { tools, calls };
+  return { tools, calls, extractions };
 }
 
 async function verifyWith({
@@ -204,7 +222,7 @@ async function verifyWith({
   tools: toolsOptions,
 } = {}) {
   const { github, calls } = fakeGithub(githubOptions);
-  const { tools, calls: audits } = fakeTools(toolsOptions);
+  const { tools, calls: audits, extractions } = fakeTools(toolsOptions);
   const { registry, requests } = fakeRegistry(registryOptions);
   const out = [];
   const err = [];
@@ -217,7 +235,7 @@ async function verifyWith({
     err: (line) => err.push(line),
   });
 
-  return { code, out, err, calls, audits, requests };
+  return { code, out, err, calls, audits, requests, extractions };
 }
 
 describe("integrityOf", () => {
@@ -225,6 +243,73 @@ describe("integrityOf", () => {
     expect(integrityOf(Buffer.from(""))).toBe(
       "sha512-z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP+DGNKHfuwvY7kxvUdBeoGlODJ6+SfaPg==",
     );
+  });
+});
+
+function tarballOf(files) {
+  const dir = mkdtempSync(join(tmpdir(), "bcct-untar-"));
+
+  try {
+    for (const [path, contents] of Object.entries(files)) {
+      mkdirSync(join(dir, path, ".."), { recursive: true });
+      writeFileSync(join(dir, path), contents);
+    }
+
+    const packed = spawnSync("tar", ["-czf", "-", "-C", dir, "package"], {
+      maxBuffer: 8 * MEBIBYTE,
+    });
+
+    if (packed.status !== 0) {
+      throw new Error(`tar failed: ${packed.stderr}`);
+    }
+
+    return packed.stdout;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+describe("untar", () => {
+  const binary = randomBytes(2 * MEBIBYTE);
+  const tarball = tarballOf({
+    "package/bin/bcct": binary,
+    "package/package.json": "{}",
+  });
+
+  it("extracts a file larger than 1 MiB up to the unpacked size of the package", () => {
+    const extracted = untar(tarball, "package/bin/bcct", 3 * MEBIBYTE);
+
+    expect(extracted?.equals(binary)).toBe(true);
+  });
+
+  it("returns null for a path the tarball does not have", () => {
+    expect(untar(tarball, "package/bin/bcct.exe", 3 * MEBIBYTE)).toBeNull();
+  });
+
+  it("returns null when the file is larger than the size it may take", () => {
+    expect(untar(tarball, "package/bin/bcct", MEBIBYTE)).toBeNull();
+  });
+});
+
+describe("extractedOutput", () => {
+  const stdout = Buffer.from("binary");
+  const overflow = Object.assign(new Error("spawnSync tar ENOBUFS"), {
+    code: "ENOBUFS",
+  });
+
+  it("returns the output of a tar that exited with 0 and no error", () => {
+    expect(extractedOutput({ status: 0, stdout })).toBe(stdout);
+  });
+
+  it("returns null when the buffer overflowed even though tar exited with 0", () => {
+    expect(extractedOutput({ status: 0, stdout, error: overflow })).toBeNull();
+  });
+
+  it("returns null when tar was killed or exited with another status", () => {
+    expect(
+      extractedOutput({ status: null, stdout, error: overflow }),
+    ).toBeNull();
+    expect(extractedOutput({ status: 2, stdout })).toBeNull();
   });
 });
 
@@ -482,6 +567,45 @@ describe("release:verify › npm", () => {
       `✗ ${name}@${VERSION} has no ${PROVENANCE_PREDICATE} provenance`,
     ]);
   });
+
+  it("extracts each file of a package up to the dist.unpackedSize of its manifest", async () => {
+    const { extractions } = await verifyWith();
+
+    expect(extractions).toEqual(
+      expect.arrayContaining([
+        ["package/checksums.txt", UNPACKED_SIZE],
+        ["package/package.json", UNPACKED_SIZE],
+        ...PLATFORMS.map(({ binary }) => [
+          `package/bin/${binary}`,
+          UNPACKED_SIZE,
+        ]),
+      ]),
+    );
+    expect(extractions).toHaveLength(2 + PLATFORMS.length);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["zero", 0],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["text", String(UNPACKED_SIZE)],
+  ])(
+    "reports a package whose dist.unpackedSize is %s, without reading its files",
+    async (_, unpackedSize) => {
+      const name = PLATFORMS[1].packageName;
+      const { err, extractions } = await verifyWith({
+        registry: {
+          manifest: (packageName, dist) => ({
+            dist: packageName === name ? { ...dist, unpackedSize } : dist,
+          }),
+        },
+      });
+
+      expect(err).toEqual([`✗ ${name}@${VERSION} has no dist.unpackedSize`]);
+      expect(extractions).toHaveLength(1 + PLATFORMS.length);
+    },
+  );
 
   it("reports a platform package whose binary differs from the record, or that has no binary", async () => {
     const [first, second] = PLATFORMS;
