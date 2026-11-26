@@ -23,12 +23,9 @@ const packageScripts = JSON.parse(
 ).scripts;
 
 describe("release.yml publishes the version pull request that was merged", () => {
-  it("runs when a pull request into main closes, and by hand on a merged one", () => {
-    expect(triggers(definition)).toEqual(["pull_request", "workflow_dispatch"]);
-    expect(definition.on.pull_request).toEqual({
-      types: ["closed"],
-      branches: ["main"],
-    });
+  it("runs on each push to main, whose ref the main-only environments accept, and by hand on a merged one", () => {
+    expect(triggers(definition)).toEqual(["push", "workflow_dispatch"]);
+    expect(definition.on.push).toEqual({ branches: ["main"] });
     expect(definition.on.workflow_dispatch.inputs).toEqual({
       pr: {
         description: expect.any(String),
@@ -220,9 +217,9 @@ describe("release.yml publishes the version pull request that was merged", () =>
   });
 
   describe("plan", () => {
-    it("runs by hand, or when the closed pull request was merged from a version branch", () => {
+    it("runs by hand, or on the push of the merge commit of a version branch, skipping every other push to main", () => {
       expect(plan.if).toBe(
-        "github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))",
+        "github.event_name == 'workflow_dispatch' || (startsWith(github.event.head_commit.message, 'Merge pull request ') && contains(github.event.head_commit.message, '/release/v'))",
       );
     });
 
@@ -233,29 +230,36 @@ describe("release.yml publishes the version pull request that was merged", () =>
       });
     });
 
-    it("finds the merged pull request of a dispatch through merged-pr, from the history of main", () => {
+    it("finds the merged pull request through merged-pr, from the history of main: the pushed merge commit, or the select and number of a dispatch", () => {
       const target = stepById(plan, "target");
 
       expect(stepUsing(plan, "actions/checkout").with).toEqual({
         "fetch-depth": 0,
         "persist-credentials": false,
       });
-      expect(target.if).toBe("github.event_name == 'workflow_dispatch'");
+      expect(target.if).toBeUndefined();
       expect(target.env).toEqual({
         PR_CHOICE: "${{ inputs.pr }}",
         PR_NUMBER: "${{ inputs.pr_number }}",
+        PR_SHA: "${{ github.event_name == 'push' && github.sha || '' }}",
       });
       expect(target.run).toBe("npm run --silent merged-pr");
     });
 
-    it("plans through release:publish with the pull request of the event or of the dispatch", () => {
+    it("plans only a dispatch or the push of a release/v merge, so a merge that only quotes a version branch, as its revert, skips the release", () => {
+      expect(stepById(plan, "plan").if).toBe(
+        "github.event_name == 'workflow_dispatch' || steps.target.outputs.release == 'true'",
+      );
+      expect(build.if).toBe("needs.plan.outputs.number != ''");
+    });
+
+    it("plans through release:publish with the pull request merged-pr found", () => {
       const step = stepById(plan, "plan");
 
       expect(step.env).toEqual({
         GH_TOKEN: "${{ github.token }}",
         GH_REPO: "${{ github.repository }}",
-        PR_NUMBER:
-          "${{ steps.target.outputs.number || github.event.pull_request.number }}",
+        PR_NUMBER: "${{ steps.target.outputs.number }}",
       });
       expect(step.run).toBe("npm run --silent release:publish -- plan");
       expect(packageScripts["release:publish"]).toBe(

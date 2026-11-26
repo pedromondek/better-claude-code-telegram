@@ -23,15 +23,16 @@ const sha = (digit) => digit.repeat(40);
 
 const record = (fields) => `${fields.join("\x1f")}\x1e`;
 
-const merge = (number, digit, parent, title = `PR ${number}`) => ({
+const merge = (number, digit, parent, title = `PR ${number}`, branch = "") => ({
   number,
   title,
+  branch,
   sha: sha(digit),
   before: sha(parent),
 });
 
 describe("merged-pr › parseMerges", () => {
-  it("reads every pull request merge of the log, with the number, the title from the body and the first parent", () => {
+  it("reads every pull request merge of the log, with the number, the head branch, the title from the body and the first parent", () => {
     const log = [
       record([
         sha("a"),
@@ -48,9 +49,26 @@ describe("merged-pr › parseMerges", () => {
     ].join("\n");
 
     expect(parseMerges(log)).toEqual([
-      merge(34, "a", "b", "🐛 fix(telegram): keep the chat open"),
-      merge(33, "b", "d", "🔧 chore(ci): split the workflows"),
+      merge(
+        34,
+        "a",
+        "b",
+        "🐛 fix(telegram): keep the chat open",
+        "0034-fix-chatting",
+      ),
+      merge(33, "b", "d", "🔧 chore(ci): split the workflows", "0033-split-ci"),
     ]);
+  });
+
+  it("reads the head branch from the subject only, not from a body that quotes another merge", () => {
+    const log = record([
+      sha("a"),
+      `${sha("b")} ${sha("c")}`,
+      "Merge pull request #21 from owner/revert/0018-release",
+      'Revert "Merge pull request #18 from owner/release/v0.1.0-alpha.1"\n',
+    ]);
+
+    expect(parseMerges(log)[0].branch).toBe("revert/0018-release");
   });
 
   it("skips a merge that did not come from a pull request and an empty log", () => {
@@ -73,7 +91,19 @@ describe("merged-pr › parseMerges", () => {
       "",
     ]);
 
-    expect(parseMerges(log)).toEqual([merge(7, "a", "b", "")]);
+    expect(parseMerges(log)).toEqual([merge(7, "a", "b", "", "0007-x")]);
+  });
+
+  it("leaves the head branch empty for a pull request merge whose subject names no owner", () => {
+    const log = record([
+      sha("a"),
+      `${sha("b")} ${sha("c")}`,
+      "Merge pull request #7 from nobranch",
+      "",
+    ]);
+
+    expect(parseMerges(log)).toEqual([merge(7, "a", "b", "", "")]);
+    expect(mergedPrTarget(parseMerges(log)[0]).release).toBe(false);
   });
 
   it("reads a record whose fields are missing as an empty subject, without failing", () => {
@@ -132,16 +162,48 @@ describe("merged-pr › pickMergedPr", () => {
       pickMergedPr(merges.slice(0, 2), { choice: MERGED_PR_CHOICES[2] }),
     ).toThrow('Main has no "Third to last merged PR" yet.');
   });
+
+  it("picks the merge of the pushed commit, ignoring the select", () => {
+    expect(
+      pickMergedPr(merges, { choice: "", number: "", sha: sha("b") }),
+    ).toEqual(merges[1]);
+  });
+
+  it("lets the number win over the pushed commit", () => {
+    expect(
+      pickMergedPr(merges, { choice: "", number: "32", sha: sha("a") }),
+    ).toEqual(merges[2]);
+  });
+
+  it("throws naming the pushed commit when it is not a pull request merge of main", () => {
+    expect(() =>
+      pickMergedPr(merges, { choice: "", number: "", sha: sha("z") }),
+    ).toThrow(
+      `The pushed commit ${sha("z")} is not a pull request merge of main.`,
+    );
+  });
 });
 
 describe("merged-pr › mergedPrTarget", () => {
   it("builds the #N - title label and the range from the first parent to the merge", () => {
-    expect(mergedPrTarget(merge(33, "b", "c", "split ci"))).toEqual({
+    expect(
+      mergedPrTarget(merge(33, "b", "c", "split ci", "0033-split-ci")),
+    ).toEqual({
       number: 33,
       label: "#33 - split ci",
       sha: sha("b"),
       before: sha("c"),
+      release: false,
     });
+  });
+
+  it("marks as a release only the merge of a release/v branch", () => {
+    expect(
+      mergedPrTarget(merge(18, "b", "c", "", "release/v0.1.0-alpha.1")).release,
+    ).toBe(true);
+    expect(
+      mergedPrTarget(merge(21, "b", "c", "", "revert/0018-release")).release,
+    ).toBe(false);
   });
 
   it("keeps only the number in the label when the merge has no title", () => {
@@ -173,7 +235,7 @@ describe("merged-pr › command line", () => {
 
   function mergePr(number, branch, title) {
     git("switch", "-q", "-c", branch);
-    writeFileSync(join(repo, `${branch}.txt`), branch);
+    writeFileSync(join(repo, `${branch.replaceAll("/", "-")}.txt`), branch);
     git("add", ".");
     git("commit", "-q", "-m", `commit of ${branch}`);
     git("switch", "-q", "main");
@@ -236,6 +298,7 @@ describe("merged-pr › command line", () => {
         "label=#33 - 🔧 chore(ci): split ci",
         `sha=${merged33}`,
         `before=${first}`,
+        "release=false",
         "",
       ].join("\n"),
     );
@@ -263,6 +326,46 @@ describe("merged-pr › command line", () => {
     expect(result.stderr).toBe("Pull request #99 was not merged into main.\n");
     expect(readFileSync(output, "utf8")).toBe("");
     expect(readFileSync(summary, "utf8")).toBe("");
+  });
+
+  it("resolves the pull request of the pushed merge commit, with no select or number", () => {
+    const first = git("rev-parse", "HEAD");
+    const merged33 = mergePr(
+      33,
+      "release/v0.1.0-alpha.2",
+      "Release v0.1.0-alpha.2",
+    );
+
+    const result = run({ PR_CHOICE: "", PR_NUMBER: "", PR_SHA: merged33 });
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(readFileSync(output, "utf8")).toBe(
+      [
+        "number=33",
+        "label=#33 - Release v0.1.0-alpha.2",
+        `sha=${merged33}`,
+        `before=${first}`,
+        "release=true",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("fails when the pushed commit is not a pull request merge, as the record of a version", () => {
+    mergePr(33, "release/v0.1.0-alpha.2", "Release v0.1.0-alpha.2");
+    writeFileSync(join(repo, "record.txt"), "record");
+    git("add", ".");
+    git("commit", "-q", "-m", "📦 build(root): record the checksums and notes");
+    const recordCommit = git("rev-parse", "HEAD");
+
+    const result = run({ PR_CHOICE: "", PR_NUMBER: "", PR_SHA: recordCommit });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe(
+      `The pushed commit ${recordCommit} is not a pull request merge of main.\n`,
+    );
+    expect(readFileSync(output, "utf8")).toBe("");
   });
 
   it("fails when main has no pull request merge yet", () => {
