@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   gitVariablesIn,
   isolateHome,
+  ISOLATED_CONFIG_VARIABLES,
   PRE_PUSH_CONTROL_VARIABLES,
 } from "../../vitest.setup.ts";
 
@@ -106,7 +107,17 @@ describe("vitest.setup", () => {
 
   it("points HOME to a temporary folder", () => {
     expect(process.env.HOME).toMatch(/bcct-home-/);
-    expect(process.env.CLAUDE_CONFIG_DIR).toBeUndefined();
-    expect(process.env.TELEGRAM_STATE_DIR).toBeUndefined();
+  });
+
+  it("removes CLAUDE_CONFIG_DIR, XDG_CONFIG_HOME, TELEGRAM_STATE_DIR and BETTER_CC_TELEGRAM from the env", () => {
+    expect(ISOLATED_CONFIG_VARIABLES).toEqual([
+      "CLAUDE_CONFIG_DIR",
+      "XDG_CONFIG_HOME",
+      "TELEGRAM_STATE_DIR",
+      "BETTER_CC_TELEGRAM",
+    ]);
+    expect(
+      ISOLATED_CONFIG_VARIABLES.filter((name) => name in process.env),
+    ).toEqual([]);
   });
 });
