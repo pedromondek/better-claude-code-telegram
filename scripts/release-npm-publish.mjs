@@ -107,68 +107,110 @@ export function run(args, { env, npm, out, err }) {
   }
 }
 
-function npmCli(args) {
-  const result = spawnSync("npm", args, { encoding: "utf8" });
+const NOT_FOUND = "E404";
 
-  if (result.error) {
-    throw result.error;
+function jsonError(stdout) {
+  try {
+    const parsed = JSON.parse(stdout);
+
+    return parsed?.error instanceof Object ? parsed.error : null;
+  } catch {
+    return null;
   }
-
-  return result;
 }
 
-function mustRun(args) {
-  const result = npmCli(args);
+export function createNpm(spawn) {
+  function npmCli(args) {
+    const result = spawn("npm", args, { encoding: "utf8" });
 
-  if (result.status !== 0) {
-    throw new Error(`npm ${args.join(" ")} failed: ${result.stderr.trim()}`);
+    if (result.error) {
+      throw result.error;
+    }
+
+    return result;
   }
 
-  return result.stdout;
+  function mustRun(args) {
+    const result = npmCli(args);
+
+    if (result.status !== 0) {
+      throw new Error(`npm ${args.join(" ")} failed: ${result.stderr.trim()}`);
+    }
+
+    return result.stdout;
+  }
+
+  return {
+    version: () => mustRun(["--version"]).trim(),
+    published: (spec) => {
+      const result = npmCli(["view", spec, "version", "--json"]);
+
+      if (result.status === 0) {
+        return result.stdout.trim() !== "";
+      }
+
+      const error = jsonError(result.stdout);
+
+      if (error?.code === NOT_FOUND || result.stderr.includes(NOT_FOUND)) {
+        return false;
+      }
+
+      const reason = error
+        ? `${error.code} ${error.summary ?? ""}`.trim()
+        : result.stderr.trim();
+
+      throw new Error(`npm view ${spec} failed: ${reason}`.trim());
+    },
+    stagePublish: ({ dir, tag }) => {
+      mustRun([
+        "stage",
+        "publish",
+        dir,
+        "--tag",
+        tag,
+        "--access",
+        "public",
+        "--loglevel",
+        "notice",
+      ]);
+    },
+    trust: ({ name, file, repository, environment }) => {
+      const result = spawn(
+        "npm",
+        [
+          "trust",
+          "github",
+          name,
+          "--file",
+          file,
+          "--repo",
+          repository,
+          "--env",
+          environment,
+          "--allow-stage-publish",
+          "--yes",
+        ],
+        { stdio: "inherit" },
+      );
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      if (result.status !== 0) {
+        throw new Error(`npm trust github ${name} failed`);
+      }
+    },
+    sleep: (ms) => {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+    },
+  };
 }
-
-const npm = {
-  version: () => mustRun(["--version"]).trim(),
-  published: (spec) => {
-    const result = npmCli(["view", spec, "version", "--json"]);
-
-    if (result.status === 0) {
-      return result.stdout.trim() !== "";
-    }
-
-    if (result.stderr.includes("E404")) {
-      return false;
-    }
-
-    throw new Error(`npm view ${spec} failed: ${result.stderr.trim()}`);
-  },
-  stagePublish: ({ dir, tag }) => {
-    mustRun(["stage", "publish", dir, "--tag", tag, "--access", "public"]);
-  },
-  trust: ({ name, file, repository, environment }) => {
-    mustRun([
-      "trust",
-      "github",
-      name,
-      "--file",
-      file,
-      "--repo",
-      repository,
-      "--env",
-      environment,
-      "--allow-stage-publish",
-      "--yes",
-    ]);
-  },
-  sleep: (ms) => {
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-  },
-};
 
 if (import.meta.main) {
   process.exitCode = run(process.argv.slice(2), {
     env: process.env,
-    npm,
+    npm: createNpm(spawnSync),
     out: (line) => console.log(line),
     err: (line) => console.error(line),
   });

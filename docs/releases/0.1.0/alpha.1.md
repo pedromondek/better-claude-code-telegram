@@ -104,7 +104,7 @@
 
 - 🔐 The bot token is asked without echo, saved readable only by you, and kept out of Claude Code's reach.
 - 🔐 Only your paired Telegram account talks to the bot.
-- 🔐 Every release binary is attested by the workflow that built it and published in an immutable GitHub Release, and the npm packages come through trusted publishing with provenance.
+- 🔐 Every release binary is attested by the workflow that built it and published in an immutable GitHub Release. The npm packages of this first version were published by hand; from the next one on they come through trusted publishing with provenance.
 
 </details>
 
@@ -206,6 +206,6 @@
 
 - 🔐 O token do bot é pedido sem eco, salvo legível só para você e fora do alcance do Claude Code.
 - 🔐 Só a sua conta pareada do Telegram fala com o bot.
-- 🔐 Todo binário da release é atestado pelo workflow que o gerou e publicado numa GitHub Release imutável, e os pacotes npm vêm por trusted publishing com proveniência.
+- 🔐 Todo binário da release é atestado pelo workflow que o gerou e publicado numa GitHub Release imutável. Os pacotes npm desta primeira versão foram publicados à mão; a partir da próxima, vêm por trusted publishing com proveniência.
 
 </details>

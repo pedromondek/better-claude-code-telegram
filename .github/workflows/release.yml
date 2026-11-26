@@ -1,9 +1,7 @@
 name: Release
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
       - main
   workflow_dispatch:
@@ -25,7 +23,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ (github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))) && 'release' || format('release-skipped-{0}', github.run_id) }}
+  group: ${{ (github.event_name == 'workflow_dispatch' || (startsWith(github.event.head_commit.message, 'Merge pull request ') && contains(github.event.head_commit.message, '/release/v'))) && 'release' || format('release-skipped-{0}', github.run_id) }}
   cancel-in-progress: false
 
 defaults:
@@ -35,7 +33,7 @@ defaults:
 jobs:
   plan:
     name: Plan the release
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))
+    if: github.event_name == 'workflow_dispatch' || (startsWith(github.event.head_commit.message, 'Merge pull request ') && contains(github.event.head_commit.message, '/release/v'))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -61,26 +59,28 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Merged pull request of the dispatch
+      - name: Merged pull request of the push or of the dispatch
         id: target
-        if: github.event_name == 'workflow_dispatch'
         env:
           PR_CHOICE: ${{ inputs.pr }}
           PR_NUMBER: ${{ inputs.pr_number }}
+          PR_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
         run: npm run --silent merged-pr
 
       - name: Version, merge commit and state of the release
         id: plan
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.target.outputs.number || github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.target.outputs.number }}
         run: npm run --silent release:publish -- plan
 
   build:
     name: Build
     needs:
       - plan
+    if: needs.plan.outputs.number != ''
     permissions:
       contents: read
       id-token: write # actions/attest signs the provenance with the OIDC token of the build job

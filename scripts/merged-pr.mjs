@@ -11,7 +11,8 @@ export const MERGED_PR_CHOICES = [
 
 export const MERGE_LOG_FORMAT = "--format=%H%x1f%P%x1f%s%x1f%b%x1e";
 
-const MERGE_SUBJECT = /^Merge pull request #(\d+) from /;
+const MERGE_SUBJECT = /^Merge pull request #(\d+) from (?:[^/\s]+\/(\S+))?/;
+const RELEASE_BRANCH_PREFIX = "release/v";
 const LOG_DEPTH = "200";
 
 export function parseMerges(log) {
@@ -33,6 +34,7 @@ export function parseMerges(log) {
               .split("\n")
               .map((line) => line.trim())
               .find(Boolean) ?? "",
+          branch: match[2] ?? "",
           sha,
           before: parents.split(" ")[0],
         },
@@ -40,8 +42,9 @@ export function parseMerges(log) {
     });
 }
 
-export function pickMergedPr(merges, { choice, number = "" }) {
+export function pickMergedPr(merges, { choice, number = "", sha = "" }) {
   const wanted = number.trim();
+  const pushed = sha.trim();
 
   if (wanted) {
     if (!/^\d+$/.test(wanted)) {
@@ -52,6 +55,17 @@ export function pickMergedPr(merges, { choice, number = "" }) {
 
     if (!found)
       throw new Error(`Pull request #${wanted} was not merged into main.`);
+
+    return found;
+  }
+
+  if (pushed) {
+    const found = merges.find((merge) => merge.sha === pushed);
+
+    if (!found)
+      throw new Error(
+        `The pushed commit ${pushed} is not a pull request merge of main.`,
+      );
 
     return found;
   }
@@ -76,6 +90,7 @@ export function mergedPrTarget(merge) {
       : `#${merge.number}`,
     sha: merge.sha,
     before: merge.before,
+    release: merge.branch.startsWith(RELEASE_BRANCH_PREFIX),
   };
 }
 
@@ -91,7 +106,11 @@ function main(env) {
     ]),
   );
   const target = mergedPrTarget(
-    pickMergedPr(merges, { choice: env.PR_CHOICE, number: env.PR_NUMBER }),
+    pickMergedPr(merges, {
+      choice: env.PR_CHOICE,
+      number: env.PR_NUMBER,
+      sha: env.PR_SHA,
+    }),
   );
 
   appendFileSync(
@@ -101,6 +120,7 @@ function main(env) {
       `label=${target.label}`,
       `sha=${target.sha}`,
       `before=${target.before}`,
+      `release=${target.release}`,
       "",
     ].join("\n"),
   );
