@@ -7,7 +7,7 @@ import {
   PLATFORMS,
   REPOSITORY,
 } from "../../npm/shim/shim.constants.mjs";
-import { distTagOf, run } from "../release-npm-publish.mjs";
+import { createNpm, distTagOf, run } from "../release-npm-publish.mjs";
 import {
   DIST_TAGS,
   MIN_STAGE_NPM,
@@ -149,6 +149,145 @@ describe("trust", () => {
 
     expect(code).toBe(1);
     expect(calls.some(([name]) => name === "trust")).toBe(false);
+  });
+});
+
+const SPEC = `${PLATFORM_PACKAGES[0]}@0.1.0-alpha.1`;
+const E404_JSON = JSON.stringify({
+  error: {
+    code: "E404",
+    summary: `Not Found - GET https://registry.npmjs.org/${PLATFORM_PACKAGES[0]}`,
+    detail: "The requested resource could not be found.",
+  },
+});
+
+function npmWithSpawn(result) {
+  const spawns = [];
+  const npm = createNpm((command, args, options) => {
+    spawns.push({ command, args, options });
+    return { status: 0, stdout: "", stderr: "", ...result };
+  });
+
+  return { npm, spawns };
+}
+
+describe("npm › published", () => {
+  it("answers true when npm view prints the version", () => {
+    const { npm, spawns } = npmWithSpawn({ stdout: '"0.1.0-alpha.1"\n' });
+
+    expect(npm.published(SPEC)).toBe(true);
+    expect(spawns[0].args).toEqual(["view", SPEC, "version", "--json"]);
+  });
+
+  it("answers false for an E404 that comes only as JSON on stdout, as with the silent loglevel of npm run --silent", () => {
+    const { npm } = npmWithSpawn({ status: 1, stdout: E404_JSON, stderr: "" });
+
+    expect(npm.published(SPEC)).toBe(false);
+  });
+
+  it("answers false for an E404 that npm logs on stderr", () => {
+    const { npm } = npmWithSpawn({
+      status: 1,
+      stdout: "",
+      stderr: "npm error code E404\nnpm error 404 Not Found",
+    });
+
+    expect(npm.published(SPEC)).toBe(false);
+  });
+
+  it("throws the summary of any other npm error, such as E401", () => {
+    const { npm } = npmWithSpawn({
+      status: 1,
+      stdout: JSON.stringify({
+        error: { code: "E401", summary: "Unable to authenticate" },
+      }),
+      stderr: "",
+    });
+
+    expect(() => npm.published(SPEC)).toThrow(
+      `npm view ${SPEC} failed: E401 Unable to authenticate`,
+    );
+  });
+
+  it("throws on a failure with no JSON error and nothing on stderr", () => {
+    const { npm } = npmWithSpawn({ status: 1, stdout: "", stderr: "" });
+
+    expect(() => npm.published(SPEC)).toThrow(`npm view ${SPEC} failed`);
+  });
+});
+
+describe("npm › stagePublish", () => {
+  it("stages with the notice loglevel, so a failure is not hidden by the silent loglevel of npm run --silent", () => {
+    const { npm, spawns } = npmWithSpawn({ status: 0 });
+
+    npm.stagePublish({ dir: `${FOLDER}/${PACKAGE}`, tag: "alpha" });
+
+    expect(spawns[0].args).toEqual([
+      "stage",
+      "publish",
+      `${FOLDER}/${PACKAGE}`,
+      "--tag",
+      "alpha",
+      "--access",
+      "public",
+      "--loglevel",
+      "notice",
+    ]);
+  });
+
+  it("throws with what npm wrote on stderr when the stage fails", () => {
+    const { npm } = npmWithSpawn({
+      status: 254,
+      stderr: "npm error code ENOENT\n",
+    });
+
+    expect(() =>
+      npm.stagePublish({ dir: `${FOLDER}/${PACKAGE}`, tag: "alpha" }),
+    ).toThrow("failed: npm error code ENOENT");
+  });
+});
+
+describe("npm › trust", () => {
+  it("runs npm trust on the terminal, so npm can ask for the one-time password of the account", () => {
+    const { npm, spawns } = npmWithSpawn({ status: 0 });
+
+    npm.trust({
+      name: PACKAGE,
+      file: RELEASE_WORKFLOW,
+      repository: REPOSITORY,
+      environment: RELEASE_ENVIRONMENT,
+    });
+
+    expect(spawns[0]).toEqual({
+      command: "npm",
+      args: [
+        "trust",
+        "github",
+        PACKAGE,
+        "--file",
+        RELEASE_WORKFLOW,
+        "--repo",
+        REPOSITORY,
+        "--env",
+        RELEASE_ENVIRONMENT,
+        "--allow-stage-publish",
+        "--yes",
+      ],
+      options: { stdio: "inherit" },
+    });
+  });
+
+  it("throws when npm trust fails", () => {
+    const { npm } = npmWithSpawn({ status: 1 });
+
+    expect(() =>
+      npm.trust({
+        name: PACKAGE,
+        file: RELEASE_WORKFLOW,
+        repository: REPOSITORY,
+        environment: RELEASE_ENVIRONMENT,
+      }),
+    ).toThrow(`npm trust github ${PACKAGE} failed`);
   });
 });
 
