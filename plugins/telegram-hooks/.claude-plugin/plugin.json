@@ -1,7 +1,7 @@
 {
   "name": "telegram-hooks",
   "description": "Brings every Claude Code instance on the machine to the Telegram bot of 'claude --telegram': AskUserQuestion answered from Telegram and waiting notices.",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "author": {
     "name": "pedromondek"
   },
