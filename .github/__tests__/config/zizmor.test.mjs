@@ -12,6 +12,11 @@ const installsOutsideLockfile = (definition) =>
     .map((step) => step.run ?? "")
     .filter((run) => /\bnpm (?:install|i)\b/u.test(run));
 
+const npmInstallLine = () =>
+  read(".github/workflows/release.yml")
+    .split("\n")
+    .findIndex((line) => line.includes("npm install --global npm@")) + 1;
+
 const secretsReadBy = (job) => [
   ...new Set(
     [...JSON.stringify(job).matchAll(/secrets\.([A-Z0-9_]+)/gu)]
@@ -30,10 +35,12 @@ const dispatchableTasks = () =>
     .map(([file, definition]) => ({ file, definition }));
 
 describe("zizmor.yml: the audits ignored on purpose", () => {
-  it("ignores only adhoc-packages in push-checks.yml and concurrency-limits in the tasks", () => {
+  it("ignores only adhoc-packages in push-checks.yml and on the npm install line of release.yml, and concurrency-limits in the tasks", () => {
     expect(config).toEqual({
       rules: {
-        "adhoc-packages": { ignore: ["push-checks.yml"] },
+        "adhoc-packages": {
+          ignore: ["push-checks.yml", `release.yml:${npmInstallLine()}`],
+        },
         "concurrency-limits": {
           ignore: dispatchableTasks()
             .map(({ file }) => file)
@@ -61,7 +68,7 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
     ).toEqual([]);
   });
 
-  it("keeps a single install outside a lockfile in all the workflows, the latest Claude Code in push-checks.yml", () => {
+  it("keeps two installs outside a lockfile in all the workflows: the latest Claude Code in push-checks.yml and the exact npm that moves dist-tags in release.yml", () => {
     const installs = Object.entries(allWorkflows()).flatMap(
       ([file, definition]) =>
         installsOutsideLockfile(definition).map((run) => ({ file, run })),
@@ -72,7 +79,12 @@ describe("zizmor.yml: the audits ignored on purpose", () => {
         file: "push-checks.yml",
         run: "npm install --global @anthropic-ai/claude-code@latest",
       },
+      { file: "release.yml", run: "npm install --global npm@11.21.3" },
     ]);
+  });
+
+  it("points the release.yml exception at its npm install line, so a moved line fails here before zizmor flags it", () => {
+    expect(npmInstallLine()).toBeGreaterThan(0);
   });
 
   it("reads each secret other than GITHUB_TOKEN only in a job with an environment or passes it to the one that has it", () => {

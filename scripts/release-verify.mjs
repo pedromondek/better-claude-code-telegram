@@ -15,7 +15,7 @@ import { PACKAGE, REPOSITORY } from "../npm/shim/shim.constants.mjs";
 import { TARGETS, sha256Line } from "./release-binary.mjs";
 import { distTagOf } from "./release-npm-publish.mjs";
 import { platformOf } from "./release-npm.mjs";
-import { CHECKSUMS_FILE } from "./release-order.mjs";
+import { CHECKSUMS_FILE, compareVersions } from "./release-order.mjs";
 import {
   RELEASE_ASSETS,
   githubCli,
@@ -26,6 +26,7 @@ import {
 } from "./release-publish.mjs";
 import {
   BUILD_WORKFLOW,
+  DIST_TAGS,
   NPM_REGISTRY,
   PROVENANCE_PREDICATE,
 } from "./release.constants.mjs";
@@ -226,6 +227,23 @@ function contentProblems(name, files, { version, commit, checksums }) {
   ];
 }
 
+function latestProblems(name, version, latest) {
+  if (parseVersion(version).stage === null) {
+    return [];
+  }
+
+  const behind =
+    latest === undefined ||
+    (parseVersion(latest).stage !== null &&
+      compareVersions(latest, version) < 0);
+
+  return behind
+    ? [
+        `the latest tag of ${name} is ${latest ?? "unset"}, not ${version} or later, while no stable version exists`,
+      ]
+    : [];
+}
+
 async function packageProblems({ registry, tools }, name, record) {
   const { version } = record;
   const spec = `${name}@${version}`;
@@ -241,7 +259,8 @@ async function packageProblems({ registry, tools }, name, record) {
   }
 
   const tag = distTagOf(version);
-  const tagged = (await registry.distTags(name))[tag];
+  const tags = await registry.distTags(name);
+  const tagged = tags[tag];
   const tarball = await registry.tarball(manifest.dist.tarball);
   const integral = integrityOf(tarball) === manifest.dist.integrity;
   const { unpackedSize } = manifest.dist;
@@ -255,6 +274,7 @@ async function packageProblems({ registry, tools }, name, record) {
         : [
             `the ${tag} tag of ${name} is ${tagged ?? "unset"}, not ${version}`,
           ]),
+      ...latestProblems(name, version, tags[DIST_TAGS.stable]),
       ...(integral
         ? []
         : [`the tarball of ${spec} does not match its dist.integrity`]),

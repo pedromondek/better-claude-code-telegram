@@ -146,12 +146,19 @@ function fakeGithub({
   return { github, calls };
 }
 
+const STABLE_RELEASE = {
+  pr: { headRefName: "release/v0.2.0" },
+  record: { parents: [MERGE], headline: recordHeadline("0.2.0") },
+  release: { isDraft: false, isImmutable: true, isPrerelease: false },
+};
+
 function fakeRegistry({
   files = packageFiles(),
   missing = [],
   tags = { beta: VERSION, latest: "0.1.0" },
   manifest = (name, dist) => ({ name, version: VERSION, dist }),
   badIntegrity = [],
+  served = VERSION,
 } = {}) {
   const tarballs = Object.fromEntries(
     Object.entries(files).map(([name, entries]) => [
@@ -164,7 +171,7 @@ function fakeRegistry({
     manifest: async (name, version) => {
       requests.push(["manifest", name, version]);
 
-      if (missing.includes(name) || version !== VERSION) {
+      if (missing.includes(name) || version !== served) {
         return null;
       }
 
@@ -530,7 +537,7 @@ describe("release:verify › npm", () => {
   });
 
   it.each([
-    [{ beta: "0.2.0-beta.0" }, "0.2.0-beta.0"],
+    [{ beta: "0.2.0-beta.0", latest: "0.1.0" }, "0.2.0-beta.0"],
     [{ latest: VERSION }, "unset"],
   ])(
     "reports the dist-tag of the stage when it does not point at the version (%j)",
@@ -543,6 +550,61 @@ describe("release:verify › npm", () => {
       );
     },
   );
+
+  it.each([
+    [{ beta: VERSION, latest: "0.2.0-alpha.3" }, "0.2.0-alpha.3"],
+    [{ beta: VERSION }, "unset"],
+  ])(
+    "reports a latest tag behind the pre-release while no stable version exists (%j)",
+    async (tags, found) => {
+      const { err } = await verifyWith({ registry: { tags } });
+
+      expect(err).toHaveLength(7);
+      expect(err[0]).toBe(
+        `✗ the latest tag of ${PLATFORMS[0].packageName} is ${found}, not ${VERSION} or later, while no stable version exists`,
+      );
+    },
+  );
+
+  it.each([
+    ["at the pre-release", { beta: VERSION, latest: VERSION }],
+    ["at a newer pre-release", { beta: VERSION, latest: "0.2.0-rc.1" }],
+    ["at a stable version", { beta: VERSION, latest: "0.1.0" }],
+  ])("accepts a latest tag %s", async (_case, tags) => {
+    const { code, err } = await verifyWith({ registry: { tags } });
+
+    expect(err).toEqual([]);
+    expect(code).toBe(0);
+  });
+
+  it.each([
+    [{}, "unset"],
+    [{ latest: "0.2.0-rc.1" }, "0.2.0-rc.1"],
+  ])(
+    "reports only the latest tag of the stage for a stable version whose latest is behind (%j)",
+    async (tags, found) => {
+      const { err } = await verifyWith({
+        github: STABLE_RELEASE,
+        registry: { tags, served: "0.2.0" },
+      });
+
+      expect(
+        err.filter((line) => line.includes("while no stable version exists")),
+      ).toEqual([]);
+      expect(err).toContain(
+        `✗ the latest tag of ${PLATFORMS[0].packageName} is ${found}, not 0.2.0`,
+      );
+    },
+  );
+
+  it("reports no latest tag problem for a stable version on latest", async () => {
+    const { err } = await verifyWith({
+      github: STABLE_RELEASE,
+      registry: { tags: { latest: "0.2.0" }, served: "0.2.0" },
+    });
+
+    expect(err.filter((line) => line.includes("latest tag"))).toEqual([]);
+  });
 
   it("reports a tarball that does not match dist.integrity", async () => {
     const { err } = await verifyWith({ registry: { badIntegrity: [PACKAGE] } });

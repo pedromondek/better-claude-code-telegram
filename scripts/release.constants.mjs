@@ -5,6 +5,7 @@ export const DIST_TAGS = {
   stable: "latest",
 };
 export const MIN_STAGE_NPM = "11.15.0";
+export const MIN_DIST_TAG_NPM = "11.21.0";
 export const RELEASE_WORKFLOW = "release.yml";
 export const BUILD_WORKFLOW = "build-binaries.yml";
 export const RELEASE_ENVIRONMENT = "release";

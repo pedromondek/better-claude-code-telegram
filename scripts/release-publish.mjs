@@ -117,7 +117,29 @@ export function output(env, values) {
   }
 }
 
+function planLatest({ env, github, out }) {
+  const number = Number(env.PR_NUMBER);
+  const { version, merge } = mergedReleaseRef(github.pullRequest(number));
+  const found = github.releaseByTag(`v${version}`);
+
+  if (found === null || found.draft) {
+    throw new Error(
+      `v${version} is not published yet: run the release without only latest`,
+    );
+  }
+
+  const prerelease = parseVersion(version).stage !== null;
+
+  output(env, { number, version, merge, prerelease });
+  out(`✓ v${version} from #${number} is published: only latest moves`);
+}
+
 function plan({ root, env, github, released, out }) {
+  if (env.ONLY_LATEST === "true") {
+    planLatest({ env, github, out });
+    return;
+  }
+
   const number = Number(env.PR_NUMBER);
   const { version, merge } = mergedRelease(github.pullRequest(number));
   const draft = refusePublished(github, version);

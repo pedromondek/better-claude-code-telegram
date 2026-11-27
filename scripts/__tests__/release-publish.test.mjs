@@ -142,6 +142,63 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
+describe("plan › only latest", () => {
+  const ONLY_LATEST = { ONLY_LATEST: "true" };
+
+  it("plans a published version for the latest job alone, with main already past its merge", () => {
+    const result = runWith(["plan"], {
+      env: ONLY_LATEST,
+      state: { release: { draft: false }, head: "c".repeat(40) },
+    });
+
+    expect(result.code).toBe(0);
+    expect(result.outputs).toBe(
+      `number=12\nversion=${VERSION}\nmerge=${MERGE}\nprerelease=true\n`,
+    );
+    expect(result.out).toEqual([
+      `✓ v${VERSION} from #12 is published: only latest moves`,
+    ]);
+  });
+
+  it.each([
+    ["no Release", null],
+    ["a draft Release", { draft: true }],
+  ])(
+    "refuses a version with %s, which the full release publishes first",
+    (_case, release) => {
+      const result = runWith(["plan"], {
+        env: ONLY_LATEST,
+        state: { release },
+      });
+
+      expect(result.code).toBe(1);
+      expect(result.err).toEqual([
+        `✗ v${VERSION} is not published yet: run the release without only latest`,
+      ]);
+      expect(result.outputs).toBe("");
+    },
+  );
+
+  it("refuses a pull request that is not a version pull request", () => {
+    const result = runWith(["plan"], {
+      env: ONLY_LATEST,
+      state: { pullRequest: pullRequest({ headRefName: "0042-feature" }) },
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.err[0]).toContain("not from a release/v<version> branch");
+  });
+
+  it("runs the full plan for any value other than true", () => {
+    const result = runWith(["plan"], {
+      env: { ONLY_LATEST: "false" },
+      state: { release: { draft: false } },
+    });
+
+    expect(result.err).toEqual([`✗ v${VERSION} is already published`]);
+  });
+});
+
 describe("plan", () => {
   it("takes the version, the merge commit and the stage from the merged version pull request, with main still at the merge", () => {
     project();

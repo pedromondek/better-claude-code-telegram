@@ -9,15 +9,17 @@ import {
 } from "../npm/shim/shim.constants.mjs";
 import {
   DIST_TAGS,
+  MIN_DIST_TAG_NPM,
   MIN_STAGE_NPM,
   RELEASE_ENVIRONMENT,
   RELEASE_WORKFLOW,
   TRUST_PAUSE_MS,
 } from "./release.constants.mjs";
-import { parseVersion } from "./version.mjs";
+import { compareVersions } from "./release-order.mjs";
+import { isVersion, parseVersion } from "./version.mjs";
 
 const USAGE =
-  "usage: npm run release:npm:publish -- stage <packages folder> (version in VERSION) | trust";
+  "usage: npm run release:npm:publish -- stage <packages folder> (version in VERSION) | latest (version in VERSION) | trust";
 
 export function distTagOf(version) {
   return DIST_TAGS[parseVersion(version).stage ?? "stable"];
@@ -44,12 +46,12 @@ function isAtLeast(version, minimum) {
   return index === -1 || have[index] > need[index];
 }
 
-function requireNpm(npm) {
+function requireNpm(npm, minimum = MIN_STAGE_NPM, purpose = "stages packages") {
   const version = npm.version();
 
-  if (!isAtLeast(version, MIN_STAGE_NPM)) {
+  if (!isAtLeast(version, minimum)) {
     throw new Error(
-      `npm ${MIN_STAGE_NPM} or later stages packages; this runner has ${version}`,
+      `npm ${minimum} or later ${purpose}; this runner has ${version}`,
     );
   }
 }
@@ -77,6 +79,51 @@ function stage({ env, npm, folder, out }) {
   );
 }
 
+const LATEST = DIST_TAGS.stable;
+
+function isStable(version) {
+  return isVersion(version) && parseVersion(version).stage === null;
+}
+
+function moveLatest({ env, npm, out }) {
+  const version = env.VERSION;
+
+  if (parseVersion(version).stage === null) {
+    out(`- v${version} is stable, so npm published it on ${LATEST}`);
+    return;
+  }
+
+  requireNpm(npm, MIN_DIST_TAG_NPM, "moves dist-tags");
+
+  const stable = npm.versions(PACKAGE).find(isStable);
+
+  if (stable !== undefined) {
+    out(`- ${LATEST} stays with the stable v${stable}`);
+    return;
+  }
+
+  for (const name of packagesInOrder()) {
+    const current = npm.distTags(name)[LATEST];
+
+    if (current === version) {
+      out(`- ${name}@${LATEST} is already ${version}`);
+      continue;
+    }
+
+    if (current !== undefined && compareVersions(current, version) > 0) {
+      out(`- ${name}@${LATEST} stays at the newer ${current}`);
+      continue;
+    }
+
+    npm.distTagAdd(`${name}@${version}`, LATEST);
+    out(`✓ ${name}@${LATEST} → ${version}`);
+  }
+
+  out(
+    `✓ ${LATEST} of the ${packagesInOrder().length} packages points at v${version} or a newer pre-release`,
+  );
+}
+
 function trust({ npm, out }) {
   requireNpm(npm);
 
@@ -100,9 +147,11 @@ export function run(args, { env, npm, out, err }) {
   const action =
     command === "stage" && folder !== undefined && rest.length === 0
       ? () => stage({ env, npm, folder, out })
-      : command === "trust" && folder === undefined
-        ? () => trust({ npm, out })
-        : null;
+      : command === "latest" && folder === undefined
+        ? () => moveLatest({ env, npm, out })
+        : command === "trust" && folder === undefined
+          ? () => trust({ npm, out })
+          : null;
 
   if (action === null) {
     err(USAGE);
@@ -141,6 +190,28 @@ export function createNpm(spawn) {
     return result;
   }
 
+  function view(spec, field) {
+    const result = npmCli(["view", spec, field, "--json"]);
+
+    if (result.status === 0) {
+      const text = result.stdout.trim();
+
+      return text === "" ? null : JSON.parse(text);
+    }
+
+    const error = jsonError(result.stdout);
+
+    if (error?.code === NOT_FOUND || result.stderr.includes(NOT_FOUND)) {
+      return null;
+    }
+
+    const reason = error
+      ? `${error.code} ${error.summary ?? ""}`.trim()
+      : result.stderr.trim();
+
+    throw new Error(`npm view ${spec} failed: ${reason}`.trim());
+  }
+
   function mustRun(args) {
     const result = npmCli(args);
 
@@ -153,24 +224,15 @@ export function createNpm(spawn) {
 
   return {
     version: () => mustRun(["--version"]).trim(),
-    published: (spec) => {
-      const result = npmCli(["view", spec, "version", "--json"]);
+    published: (spec) => view(spec, "version") !== null,
+    versions: (name) => {
+      const versions = view(name, "versions") ?? [];
 
-      if (result.status === 0) {
-        return result.stdout.trim() !== "";
-      }
-
-      const error = jsonError(result.stdout);
-
-      if (error?.code === NOT_FOUND || result.stderr.includes(NOT_FOUND)) {
-        return false;
-      }
-
-      const reason = error
-        ? `${error.code} ${error.summary ?? ""}`.trim()
-        : result.stderr.trim();
-
-      throw new Error(`npm view ${spec} failed: ${reason}`.trim());
+      return Array.isArray(versions) ? versions : [versions];
+    },
+    distTags: (name) => view(name, "dist-tags") ?? {},
+    distTagAdd: (spec, tag) => {
+      mustRun(["dist-tag", "add", spec, tag, "--loglevel", "notice"]);
     },
     stagePublish: ({ dir, tag }) => {
       mustRun([

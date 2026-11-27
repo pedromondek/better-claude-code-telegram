@@ -47,6 +47,7 @@ const EXTRA_PERMISSIONS = {
   "manage-ci-cache.yml > delete": { contents: "read", actions: "write" },
   "release.yml > announce": { contents: "read", "pull-requests": "read" },
   "release.yml > build": ATTEST,
+  "release.yml > latest": { contents: "read", "id-token": "write" },
   "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },
   "release.yml > verify": READ_ATTESTATIONS,
