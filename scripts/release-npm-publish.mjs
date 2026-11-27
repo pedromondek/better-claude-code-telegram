@@ -1,7 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
-import { PACKAGE, PLATFORMS, REPOSITORY } from "../npm/shim/shim.constants.mjs";
+import {
+  PACKAGE,
+  PLATFORMS,
+  REPOSITORY,
+  SETUP_COMMAND,
+} from "../npm/shim/shim.constants.mjs";
 import {
   DIST_TAGS,
   MIN_STAGE_NPM,
@@ -16,6 +21,12 @@ const USAGE =
 
 export function distTagOf(version) {
   return DIST_TAGS[parseVersion(version).stage ?? "stable"];
+}
+
+export function installCommand(version) {
+  return parseVersion(version).stage === null
+    ? SETUP_COMMAND
+    : `${SETUP_COMMAND}@${distTagOf(version)}`;
 }
 
 function packagesInOrder() {

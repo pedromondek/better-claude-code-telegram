@@ -165,7 +165,7 @@ describe("pullRequestBody", () => {
   it("opens with the skeleton of the notes between the markers, marked as a draft, with the draft in the English block", () => {
     expect(
       body.startsWith(
-        `${NOTES_START}\n${notesSkeleton("### Features\n- x")}\n${NOTES_END}\n`,
+        `${NOTES_START}\n${notesSkeleton("### Features\n- x", "0.1.0-alpha.2")}\n${NOTES_END}\n`,
       ),
     ).toBe(true);
     expect(notesFrom(body).startsWith(DRAFT_MARK)).toBe(true);
@@ -184,7 +184,7 @@ describe("pullRequestBody", () => {
   it("keeps the draft mark when git-cliff found nothing, so the check still asks for the notes", () => {
     const empty = pullRequestBody("0.1.0-alpha.2", "");
 
-    expect(notesFrom(empty)).toBe(notesSkeleton(""));
+    expect(notesFrom(empty)).toBe(notesSkeleton("", "0.1.0-alpha.2"));
     expect(notesProblem(empty)).toContain(
       "the notes are still the git-cliff draft",
     );
@@ -253,6 +253,38 @@ describe("notesProblem", () => {
       .replace("</details>", "</details> ");
 
     expect(notesProblem(skeleton)).toBe(
+      "the notes are empty: write them with /release-notes",
+    );
+  });
+
+  it("stops notes that keep only the alerts, whatever version the install alert names", () => {
+    const skeleton = pullRequestBody("0.3.0-beta.2", "")
+      .replace(`${DRAFT_MARK}\n`, "")
+      .replace("@beta", "@next");
+
+    expect(notesProblem(skeleton)).toBe(
+      "the notes are empty: write them with /release-notes",
+    );
+  });
+
+  it("stops the empty skeleton whose block markers were split over lines", () => {
+    const skeleton = pullRequestBody("0.1.0-alpha.2", "")
+      .replace(`${DRAFT_MARK}\n`, "")
+      .replace("<details><summary>", "<details>\n<summary>");
+
+    expect(notesProblem(skeleton)).toBe(
+      "the notes are empty: write them with /release-notes",
+    );
+  });
+
+  it("stops notes that keep the alerts but lost both language blocks", () => {
+    const alertsOnly = notesSkeleton("", "0.1.0-alpha.2")
+      .replace(`${DRAFT_MARK}\n`, "")
+      .split("\n")
+      .filter((line) => line.startsWith(">") || line === "")
+      .join("\n");
+
+    expect(notesProblem(notesBody(alertsOnly))).toBe(
       "the notes are empty: write them with /release-notes",
     );
   });

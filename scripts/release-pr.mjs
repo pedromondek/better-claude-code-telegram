@@ -8,8 +8,10 @@ import {
   releasedVersions,
 } from "./release-order.mjs";
 import {
+  BLOCK_END,
   DRAFT_MARK,
-  emptyNotes,
+  ENGLISH_BLOCK,
+  PORTUGUESE_BLOCK,
   notesSkeleton,
 } from "./release-notes-layout.mjs";
 import { NPM_REGISTRY } from "./release.constants.mjs";
@@ -62,7 +64,7 @@ export function draftFromCliff(text) {
 export function pullRequestBody(version, draft) {
   return [
     NOTES_START,
-    notesSkeleton(draft),
+    notesSkeleton(draft, version),
     NOTES_END,
     "",
     `Version pull request of v${version}, opened by the prepare release workflow.`,
@@ -74,6 +76,18 @@ export function pullRequestBody(version, draft) {
 
 function withoutSpace(text) {
   return text.replaceAll(/\s+/gu, "");
+}
+
+function withoutLayout(text) {
+  return [ENGLISH_BLOCK, PORTUGUESE_BLOCK, BLOCK_END].reduce(
+    (rest, marker) => rest.replaceAll(withoutSpace(marker), ""),
+    withoutSpace(
+      text
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith(">"))
+        .join("\n"),
+    ),
+  );
 }
 
 function markedNotes(body) {
@@ -112,7 +126,7 @@ export function notesProblem(body) {
     return `the notes are still the git-cliff draft: write them with /release-notes, or edit the description and delete the ${DRAFT_MARK} line`;
   }
 
-  if (notes === "" || withoutSpace(notes) === withoutSpace(emptyNotes())) {
+  if (withoutLayout(notes) === "") {
     return "the notes are empty: write them with /release-notes";
   }
 

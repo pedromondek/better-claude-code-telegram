@@ -7,7 +7,7 @@ const LOCALE_VARIABLES = ["LC_ALL", "LC_MESSAGES", "LANG"];
 const LOCALES = ["en-us", "pt-br"];
 const YES = new Set(["y", "yes", "s", "sim"]);
 const NO = new Set(["n", "no", "não", "nao"]);
-const TOP_LEVEL_COMMANDS = new Set(["health", "uninstall"]);
+const TOP_LEVEL_COMMANDS = new Set(["health", "uninstall", "update"]);
 
 const MESSAGES = {
   "en-us": {
