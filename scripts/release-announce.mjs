@@ -2,13 +2,9 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import {
-  COMMAND,
-  REPOSITORY,
-  SETUP_COMMAND,
-} from "../npm/shim/shim.constants.mjs";
+import { COMMAND, REPOSITORY } from "../npm/shim/shim.constants.mjs";
 import { PORTUGUESE_BLOCK } from "./release-notes-layout.mjs";
-import { distTagOf } from "./release-npm-publish.mjs";
+import { installCommand } from "./release-npm-publish.mjs";
 import { notesPath } from "./release-pr.mjs";
 import {
   ANNOUNCE_CHANNELS,
@@ -16,7 +12,8 @@ import {
   ANNOUNCE_RETRIES,
   TELEGRAM_API,
 } from "./release.constants.mjs";
-import { parseVersion } from "./version.mjs";
+import { compareVersions } from "./release-order.mjs";
+import { isVersion, parseVersion } from "./version.mjs";
 
 const USAGE =
   "usage: npm run release:announce -- [--print] [--root <folder>] (version in VERSION)";
@@ -257,7 +254,7 @@ function newFeatures(root, version, features) {
 }
 
 function openingText({ marker, title, bullets, language, context }) {
-  const { version, repository, tag } = context;
+  const { version, repository } = context;
   const wording = WORDING[language];
 
   return [
@@ -267,7 +264,7 @@ function openingText({ marker, title, bullets, language, context }) {
       ? [...bullets.map((bullet) => `• ${toTelegramHtml(bullet)}`), ""]
       : []),
     `<a href="https://github.com/${repository}/releases/tag/v${version}">${wording.notes}</a>`,
-    `${wording.install}: <code>${escapeHtml(`${SETUP_COMMAND}@${tag}`)}</code>`,
+    `${wording.install}: <code>${escapeHtml(installCommand(version))}</code>`,
   ].join("\n");
 }
 
@@ -347,7 +344,7 @@ function stableNewsAnnouncement(channel, notes, fresh, context) {
 
 export function buildAnnouncements({ root, version, repository }) {
   const notes = readNotes(root, version);
-  const context = { version, repository, tag: distTagOf(version) };
+  const context = { version, repository };
 
   if (parseVersion(version).stage !== null) {
     return ANNOUNCE_CHANNELS.prereleases.map((channel) =>
@@ -442,17 +439,76 @@ function openingIdOf(result, chat) {
   return messageId;
 }
 
+const jsonRequest = (body) => ({
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+const releaseLinkOf = (repository) =>
+  `https://github.com/${repository}/releases/tag/v`;
+
+function openingVersionOf(message, repository) {
+  const link = releaseLinkOf(repository);
+
+  return (message?.entities ?? [])
+    .filter(
+      ({ type, url }) =>
+        type === "text_link" && typeof url === "string" && url.startsWith(link),
+    )
+    .map(({ url }) => url.slice(link.length))
+    .find(isVersion);
+}
+
+async function pinOpening(target, { openingId, repository, version }) {
+  const chat = await callTelegram(
+    { ...target, method: "getChat" },
+    jsonRequest({ chat_id: target.destination }),
+  );
+  const pinned = chat?.pinned_message;
+
+  if (pinned?.message_id === openingId) {
+    return null;
+  }
+
+  const pinnedVersion = openingVersionOf(pinned, repository);
+
+  if (
+    pinnedVersion !== undefined &&
+    compareVersions(pinnedVersion, version) > 0
+  ) {
+    return pinnedVersion;
+  }
+
+  if (pinnedVersion !== undefined) {
+    await callTelegram(
+      { ...target, method: "unpinChatMessage" },
+      jsonRequest({
+        chat_id: target.destination,
+        message_id: pinned.message_id,
+      }),
+    );
+  }
+
+  await callTelegram(
+    { ...target, method: "pinChatMessage" },
+    jsonRequest({
+      chat_id: target.destination,
+      message_id: openingId,
+      disable_notification: true,
+    }),
+  );
+
+  return null;
+}
+
 function requestOf({ destination, prefix, media }, post, openingId) {
   if (post.method === "sendMessage") {
-    return {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        chat_id: destination,
-        text: `${prefix}${post.text}`,
-        parse_mode: "HTML",
-      }),
-    };
+    return jsonRequest({
+      chat_id: destination,
+      text: `${prefix}${post.text}`,
+      parse_mode: "HTML",
+    });
   }
 
   const form = new FormData();
@@ -561,7 +617,7 @@ function resumeEntry(entry, postsOf) {
 
   const count = Number(sent);
 
-  if (count < 1 || count >= total) {
+  if (count < 1 || count > total) {
     throw new Error(
       `ANNOUNCE_RESUME: ${chat} has ${total} posts, so ${count} cannot be left to post`,
     );
@@ -625,11 +681,7 @@ function parseResume(text, announcements, cursor) {
   );
 }
 
-function withResume(
-  error,
-  { cursor, finished },
-  { chat, openingId, sent, total },
-) {
+function withResume(error, { cursor, finished }, { chat, openingId, sent }) {
   const resumeOf = (entries) => [...cursorHeader(cursor), ...entries].join(",");
   const done = finished.map((channel) => `${channel}=done`);
   const notShown = [
@@ -646,14 +698,8 @@ function withResume(
         );
   }
 
-  const shown = [
-    ...done,
-    sent + 1 === total
-      ? `${chat}=done`
-      : `${chat}=${openingId ?? OPENING_ID}:${sent + 1}`,
-  ];
-  const hint =
-    openingId === null && sent + 1 < total ? ` (${OPENING_ID_HINT})` : "";
+  const shown = [...done, `${chat}=${openingId ?? OPENING_ID}:${sent + 1}`];
+  const hint = openingId === null ? ` (${OPENING_ID_HINT})` : "";
   const ifNot =
     notShown.length === 0
       ? "run the announcement again"
@@ -671,7 +717,7 @@ function withResume(
 
 async function postAnnouncements(
   announcements,
-  { env, fetch, sleep, out, token },
+  { env, fetch, sleep, out, token, repository },
 ) {
   if (token === "") {
     throw new Error(
@@ -751,7 +797,7 @@ async function postAnnouncements(
           throw withResume(
             error,
             { cursor, finished },
-            { chat, openingId, sent, total },
+            { chat, openingId, sent },
           );
         });
 
@@ -760,9 +806,27 @@ async function postAnnouncements(
       openingId = postedId ?? openingId;
     }
 
+    const newerPinned = await pinOpening(target, {
+      openingId,
+      repository,
+      version: cursor.version,
+    }).catch((error) => {
+      throw withResume(
+        new Error(messageOf(error), { cause: error }),
+        { cursor, finished },
+        { chat, openingId, sent: total },
+      );
+    });
+    const pinStatus =
+      newerPinned === null
+        ? "opening pinned"
+        : `opening kept, v${newerPinned} is pinned`;
+
     finished.push(chat);
     out(
-      `✓ ${chat}: ${posts.length} ${posts.length === 1 ? "post" : "posts"}${dryRun ? ` in ${testChannel}` : ""}`,
+      posts.length === 0
+        ? `✓ ${chat}: ${pinStatus}`
+        : `✓ ${chat}: ${posts.length} ${posts.length === 1 ? "post" : "posts"}${dryRun ? ` in ${testChannel}` : ""}, ${pinStatus}`,
     );
   }
 }
@@ -806,10 +870,11 @@ export async function run(args, { root, env, fetch, sleep, out, err }) {
       throw new Error("VERSION is required");
     }
 
+    const repository = env.GH_REPO || REPOSITORY;
     const announcements = buildAnnouncements({
       root: resolve(root, options.root),
       version,
-      repository: env.GH_REPO || REPOSITORY,
+      repository,
     });
 
     if (options.print) {
@@ -825,6 +890,7 @@ export async function run(args, { root, env, fetch, sleep, out, err }) {
         sleep,
         out,
         token,
+        repository,
       });
     }
 

@@ -25,6 +25,10 @@ const CARGO_LOCK_VERSION = /^(name = "bcct"\nversion = ")([^"]+)(")/m;
 const USAGE =
   "usage: npm run release:version -- check | set <version> | next <alpha|beta|rc|stable> | swap-stage";
 
+export function isVersion(text) {
+  return VERSION_PATTERN.test(text);
+}
+
 export function parseVersion(text) {
   const match = VERSION_PATTERN.exec(text);
 
