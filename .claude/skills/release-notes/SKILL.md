@@ -1,6 +1,6 @@
 ---
 name: release-notes
-description: Use when the user asks for the release notes of a version, before the version pull request. Turns the patch notes of the pull requests merged since the last tag, the git-cliff draft and the commits into the public notes of the GitHub Release, with the follow, install, update and legend alerts on top and the en-us and pt-br blocks collapsed, and gets each part approved.
+description: Use when the user asks for the release notes of a version, before the version pull request. Turns the patch notes of the pull requests merged since the last tag (or, in a version that gathers others, since the tag before the first one it gathers), the git-cliff draft and the commits into the public notes of the GitHub Release, with the follow, install, update, includes and legend alerts on top and the en-us and pt-br blocks collapsed, and gets each part approved.
 argument-hint: "[<version>] [replace] [no omitted]"
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, AskUserQuestion
 ---
