@@ -12,7 +12,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import czConfig from "../../cz.config.mjs";
 import { validateCommitMessage } from "../../.husky/lib/validate-commit-msg.mjs";
-import { notesSkeleton } from "../release-notes-layout.mjs";
+import {
+  BLOCK_END,
+  ENGLISH_BLOCK,
+  PORTUGUESE_BLOCK,
+  notesSkeleton,
+} from "../release-notes-layout.mjs";
 import {
   DRAFT_MARK,
   NOTES_END,
@@ -110,6 +115,17 @@ function prepare(target, github, { released = sources() } = {}) {
 
   return { result, asked };
 }
+
+const WRITTEN_NOTES = [
+  ENGLISH_BLOCK,
+  "### 📋 Summary",
+  "- x",
+  BLOCK_END,
+  PORTUGUESE_BLOCK,
+  "### 📋 Resumo",
+  "- x",
+  BLOCK_END,
+].join("\n");
 
 function notesBody(notes) {
   return `${NOTES_START}\n${notes}\n${NOTES_END}\n\nText outside the notes.`;
@@ -223,7 +239,20 @@ describe("notesFrom", () => {
 
 describe("notesProblem", () => {
   it("lets written notes through", () => {
-    expect(notesProblem(notesBody("### 📋 Summary\n- x"))).toBeNull();
+    expect(notesProblem(notesBody(WRITTEN_NOTES))).toBeNull();
+  });
+
+  it("stops notes without the Portuguese block, which the release needs to build the feature docs", () => {
+    const englishOnly = [
+      ENGLISH_BLOCK,
+      "### 📋 Summary",
+      "- x",
+      BLOCK_END,
+    ].join("\n");
+
+    expect(notesProblem(notesBody(englishOnly))).toBe(
+      `the notes have no ${PORTUGUESE_BLOCK} block: write them with /release-notes`,
+    );
   });
 
   it("stops the skeleton without notes once the draft mark is deleted", () => {
@@ -743,7 +772,7 @@ describe("run", () => {
   it("check-notes reads the description from PR_BODY and exits 0 on written notes", () => {
     expect(
       runWith(["check-notes"], {
-        env: { PR_BODY: notesBody("### 📋 Summary") },
+        env: { PR_BODY: notesBody(WRITTEN_NOTES) },
       }),
     ).toEqual({ code: 0, out: ["✓ the release notes are written"], err: [] });
   });

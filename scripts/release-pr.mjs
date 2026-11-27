@@ -130,6 +130,10 @@ export function notesProblem(body) {
     return "the notes are empty: write them with /release-notes";
   }
 
+  if (!notes.includes(PORTUGUESE_BLOCK)) {
+    return `the notes have no ${PORTUGUESE_BLOCK} block: write them with /release-notes`;
+  }
+
   return null;
 }
 

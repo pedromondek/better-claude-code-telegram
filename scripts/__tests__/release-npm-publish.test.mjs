@@ -15,6 +15,7 @@ import {
 } from "../release-npm-publish.mjs";
 import {
   DIST_TAGS,
+  MIN_DIST_TAG_NPM,
   MIN_STAGE_NPM,
   RELEASE_ENVIRONMENT,
   RELEASE_WORKFLOW,
@@ -24,7 +25,12 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const FOLDER = "/tmp/dist/npm";
 const PLATFORM_PACKAGES = PLATFORMS.map((name) => `${PACKAGE}-${name}`);
 
-function fakeNpm({ version = "11.19.0", published = [] } = {}) {
+function fakeNpm({
+  version = "11.19.0",
+  published = [],
+  versions = [],
+  latest = {},
+} = {}) {
   const calls = [];
   const npm = {
     version: () => version,
@@ -32,6 +38,15 @@ function fakeNpm({ version = "11.19.0", published = [] } = {}) {
       calls.push(["published", spec]);
       return published.includes(spec);
     },
+    versions: (name) => {
+      calls.push(["versions", name]);
+      return versions;
+    },
+    distTags: (name) => {
+      calls.push(["distTags", name]);
+      return name in latest ? { latest: latest[name] } : {};
+    },
+    distTagAdd: (spec, tag) => calls.push(["distTagAdd", spec, tag]),
     stagePublish: (stage) => calls.push(["stagePublish", stage]),
     trust: (trust) => calls.push(["trust", trust]),
     sleep: (ms) => calls.push(["sleep", ms]),
@@ -147,6 +162,123 @@ describe("stage", () => {
   });
 });
 
+describe("latest", () => {
+  const NPM = { version: "11.21.3" };
+  const ALL = [...PLATFORM_PACKAGES, PACKAGE];
+  const added = (calls) =>
+    calls
+      .filter(([name]) => name === "distTagAdd")
+      .map(([, spec, tag]) => `${spec} ${tag}`);
+  const everyLatest = (version) =>
+    Object.fromEntries(ALL.map((name) => [name, version]));
+
+  it("moves latest of the 6 platform packages and then the main one to the pre-release while no stable exists", () => {
+    const { code, calls, out } = runWith(["latest"], {
+      npm: {
+        ...NPM,
+        versions: ["0.1.0-alpha.1"],
+        latest: everyLatest("0.1.0-alpha.1"),
+      },
+    });
+
+    expect(code).toBe(0);
+    expect(added(calls)).toEqual(
+      ALL.map((name) => `${name}@0.2.0-beta.1 latest`),
+    );
+    expect(calls.find(([name]) => name === "versions")).toEqual([
+      "versions",
+      PACKAGE,
+    ]);
+    expect(out.at(-1)).toBe(
+      "✓ latest of the 7 packages points at v0.2.0-beta.1 or a newer pre-release",
+    );
+  });
+
+  it("adds latest to a package that has no latest tag yet", () => {
+    const { calls } = runWith(["latest"], { npm: NPM });
+
+    expect(added(calls)).toHaveLength(7);
+  });
+
+  it("leaves latest alone for a stable version, which npm already published on latest", () => {
+    const { code, calls, out } = runWith(["latest"], {
+      env: { VERSION: "0.2.0" },
+      npm: { version: "11.5.1" },
+    });
+
+    expect(code).toBe(0);
+    expect(calls).toEqual([]);
+    expect(out).toEqual(["- v0.2.0 is stable, so npm published it on latest"]);
+  });
+
+  it("leaves latest with the stable once a stable version exists", () => {
+    const { code, calls, out } = runWith(["latest"], {
+      env: { VERSION: "0.3.0-alpha.1" },
+      npm: { ...NPM, versions: ["0.1.0-alpha.1", "0.2.0", "0.3.0-alpha.1"] },
+    });
+
+    expect(code).toBe(0);
+    expect(added(calls)).toEqual([]);
+    expect(out).toEqual(["- latest stays with the stable v0.2.0"]);
+  });
+
+  it("skips a package whose latest is already the version, so a run that stopped halfway goes on", () => {
+    const { calls, out } = runWith(["latest"], {
+      npm: { ...NPM, latest: { [PLATFORM_PACKAGES[0]]: "0.2.0-beta.1" } },
+    });
+
+    expect(added(calls)).not.toContain(
+      `${PLATFORM_PACKAGES[0]}@0.2.0-beta.1 latest`,
+    );
+    expect(added(calls)).toHaveLength(6);
+    expect(out).toContain(
+      `- ${PLATFORM_PACKAGES[0]}@latest is already 0.2.0-beta.1`,
+    );
+  });
+
+  it("never moves latest back from a newer pre-release", () => {
+    const { calls, out } = runWith(["latest"], {
+      npm: { ...NPM, latest: everyLatest("0.2.0-rc.1") },
+    });
+
+    expect(added(calls)).toEqual([]);
+    expect(out).toContain(`- ${PACKAGE}@latest stays at the newer 0.2.0-rc.1`);
+    expect(out.at(-1)).toBe(
+      "✓ latest of the 7 packages points at v0.2.0-beta.1 or a newer pre-release",
+    );
+  });
+
+  it("refuses an npm older than the one that moves dist-tags through trusted publishing", () => {
+    const { code, err, calls } = runWith(["latest"], {
+      npm: { version: "11.20.9" },
+    });
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      `✗ npm ${MIN_DIST_TAG_NPM} or later moves dist-tags; this runner has 11.20.9`,
+    ]);
+    expect(calls).toEqual([]);
+  });
+
+  it("accepts the oldest npm that moves dist-tags", () => {
+    const { code } = runWith(["latest"], {
+      npm: { version: MIN_DIST_TAG_NPM },
+    });
+
+    expect(code).toBe(0);
+  });
+
+  it("refuses a version that is not a release version", () => {
+    const { code, err } = runWith(["latest"], {
+      env: { VERSION: "0.0.0-stage" },
+      npm: NPM,
+    });
+
+    expect(code).toBe(1);
+    expect(err[0]).toMatch(/^✗ /u);
+  });
+});
+
 describe("trust", () => {
   it("lets release.yml in the release environment stage each of the 7 packages, pausing between calls as the npm docs ask", () => {
     const { code, calls } = runWith(["trust"]);
@@ -237,6 +369,89 @@ describe("npm › published", () => {
   });
 });
 
+describe("npm › versions", () => {
+  it("reads the published versions of a package", () => {
+    const { npm, spawns } = npmWithSpawn({
+      stdout: '["0.1.0-alpha.1","0.1.0-alpha.2"]\n',
+    });
+
+    expect(npm.versions(PACKAGE)).toEqual(["0.1.0-alpha.1", "0.1.0-alpha.2"]);
+    expect(spawns[0].args).toEqual(["view", PACKAGE, "versions", "--json"]);
+  });
+
+  it("reads a package with a single version, which npm prints as a string", () => {
+    const { npm } = npmWithSpawn({ stdout: '"0.1.0-alpha.1"\n' });
+
+    expect(npm.versions(PACKAGE)).toEqual(["0.1.0-alpha.1"]);
+  });
+
+  it("answers no versions for a package that is not on npm", () => {
+    const { npm } = npmWithSpawn({ status: 1, stdout: E404_JSON, stderr: "" });
+
+    expect(npm.versions(PACKAGE)).toEqual([]);
+  });
+
+  it("throws on any other npm error", () => {
+    const { npm } = npmWithSpawn({
+      status: 1,
+      stdout: "",
+      stderr: "npm error code E500",
+    });
+
+    expect(() => npm.versions(PACKAGE)).toThrow(
+      `npm view ${PACKAGE} failed: npm error code E500`,
+    );
+  });
+});
+
+describe("npm › distTags", () => {
+  it("reads the dist-tags of a package", () => {
+    const { npm, spawns } = npmWithSpawn({
+      stdout: '{"latest":"0.1.0-alpha.1","alpha":"0.1.0-alpha.2"}\n',
+    });
+
+    expect(npm.distTags(PACKAGE)).toEqual({
+      latest: "0.1.0-alpha.1",
+      alpha: "0.1.0-alpha.2",
+    });
+    expect(spawns[0].args).toEqual(["view", PACKAGE, "dist-tags", "--json"]);
+  });
+
+  it("answers no dist-tags for a package that is not on npm", () => {
+    const { npm } = npmWithSpawn({ status: 1, stdout: E404_JSON, stderr: "" });
+
+    expect(npm.distTags(PACKAGE)).toEqual({});
+  });
+});
+
+describe("npm › distTagAdd", () => {
+  it("adds the dist-tag with the notice loglevel, so a refusal shows", () => {
+    const { npm, spawns } = npmWithSpawn({ status: 0 });
+
+    npm.distTagAdd(`${PACKAGE}@0.1.0-alpha.2`, "latest");
+
+    expect(spawns[0].args).toEqual([
+      "dist-tag",
+      "add",
+      `${PACKAGE}@0.1.0-alpha.2`,
+      "latest",
+      "--loglevel",
+      "notice",
+    ]);
+  });
+
+  it("throws with what npm wrote on stderr when the registry refuses", () => {
+    const { npm } = npmWithSpawn({
+      status: 1,
+      stderr: "npm error code E403\n",
+    });
+
+    expect(() => npm.distTagAdd(`${PACKAGE}@0.1.0-alpha.2`, "latest")).toThrow(
+      "failed: npm error code E403",
+    );
+  });
+});
+
 describe("npm › stagePublish", () => {
   it("stages with the notice loglevel, so a failure is not hidden by the silent loglevel of npm run --silent", () => {
     const { npm, spawns } = npmWithSpawn({ status: 0 });
@@ -313,13 +528,13 @@ describe("npm › trust", () => {
 });
 
 describe("run", () => {
-  it.each([[[]], [["stage"]], [["trust", "x"]], [["nope"]]])(
+  it.each([[[]], [["stage"]], [["trust", "x"]], [["latest", "x"]], [["nope"]]])(
     "a usage error exits 2 (%j)",
     (args) => {
       expect(runWith(args)).toMatchObject({
         code: 2,
         err: [
-          "usage: npm run release:npm:publish -- stage <packages folder> (version in VERSION) | trust",
+          "usage: npm run release:npm:publish -- stage <packages folder> (version in VERSION) | latest (version in VERSION) | trust",
         ],
       });
     },

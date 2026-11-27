@@ -2,6 +2,7 @@ rules:
   adhoc-packages:
     ignore:
       - push-checks.yml
+      - release.yml:250
   concurrency-limits:
     ignore:
       - announce-release.yml

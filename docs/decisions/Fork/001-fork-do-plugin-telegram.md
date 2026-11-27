@@ -1,0 +1,11 @@
+# 001. Canal do Telegram por fork versionado do plugin oficial
+
+> **Versão:** 3 · **Decidido por:** pedromondek
+> **Criado em:** 2026-10-19 01:16 · **Atualizado em:** 2026-11-20 02:51
+> **Âncoras:** `plugins/telegram/server.ts` · `plugins/telegram/extensions/` · `plugins/telegram/skills/configure/SKILL.md` · `.claude-plugin/marketplace.json` · `rust/crates/bcct/src/launch.rs` · `NOTICE`
+
+**Decisão:** o canal do Telegram do Claude Code é um fork do plugin oficial `telegram@claude-plugins-official`, versionado em `plugins/telegram/` e publicado pelo marketplace `better-claude-code-telegram` (`.claude-plugin/marketplace.json`). Os arquivos do upstream ficam idênticos ao oficial, fora do prettier, do oxlint e do ESLint do repositório; as exceções são as que o `NOTICE` lista, entre elas o `server.ts`, ligado à lógica nossa de `plugins/telegram/extensions/` por trechos curtos, e o skill `configure`, reescrito para o token nunca passar pelo Claude (ele só mostra o estado e aponta o setup no terminal). O plugin fica desativado no usuário e só é ativado na instância aberta pelo `bcct launch` (`launch.rs`), com `--settings` e `--dangerously-load-development-channels`, que o canal de um plugin fora da lista oficial exige.
+
+**Porquê:** o plugin oficial descarta qualquer clique em botão que não seja de permissão, e um bot só aceita um leitor de atualizações por vez, então nenhum script à parte consegue ler os cliques sem tirar o bot do plugin. Espelhar o `AskUserQuestion` com botões exige que o próprio plugin trate esses cliques. O fork versionado deixa todo mundo com a mesma versão, e o upstream intacto mantém barato o merge com o oficial. O `configure` original grava o token colado na conversa, que fica no histórico e vai à API; aqui o token só entra pelo setup, num campo que não aparece, e o Claude Code é proibido de ler o arquivo dele.
+
+**Descartado:** plugin oficial intacto — sem botões no `AskUserQuestion`, a pergunta viraria texto numerado. Remote Control pelo app do Claude — a conversa iria pelo app, não pelo Telegram, e depende de login no claude.ai. Adaptar o código do upstream ao lint do repositório — cada atualização do oficial viraria um merge trabalhoso. Manter o `configure` do upstream — o token colado no chat ficaria no histórico da conversa.

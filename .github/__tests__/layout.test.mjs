@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -47,6 +47,7 @@ const EXTRA_PERMISSIONS = {
   "manage-ci-cache.yml > delete": { contents: "read", actions: "write" },
   "release.yml > announce": { contents: "read", "pull-requests": "read" },
   "release.yml > build": ATTEST,
+  "release.yml > latest": { contents: "read", "id-token": "write" },
   "release.yml > npm": { contents: "read", "id-token": "write" },
   "release.yml > plan": { contents: "read", "pull-requests": "read" },
   "release.yml > verify": READ_ATTESTATIONS,
@@ -125,6 +126,92 @@ describe("each .github file has the test with the same name in the mirrored __te
     );
 
     expect(loose).toEqual([]);
+  });
+});
+
+const ASSETS = join(GITHUB, "assets");
+const GITHUB_FOLDERS = new Set([
+  "ISSUE_TEMPLATE",
+  "__tests__",
+  "assets",
+  "workflows",
+]);
+const IMAGE_EXTENSIONS = new Set([".gif", ".png", ".svg", ".webp"]);
+const SOCIAL_PREVIEW = "bcct-social-preview.png";
+const SOCIAL_PREVIEW_SIZE = { width: 1280, height: 640 };
+const READMES = ["README.md", "README.pt-br.md"].map((name) =>
+  join(GITHUB, "..", name),
+);
+
+const assetFiles = () => (existsSync(ASSETS) ? readdirSync(ASSETS) : []);
+
+const localImagesOf = (markdown) =>
+  [
+    ...markdown.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g),
+    ...markdown.matchAll(/<img[^>]*\ssrc="([^"]+)"/g),
+  ]
+    .map(([, source]) => source)
+    .filter((source) => !/^https?:\/\//.test(source));
+
+const readmeImages = () =>
+  READMES.flatMap((file) => localImagesOf(readFileSync(file, "utf8")));
+
+describe(".github/assets holds only the images the READMEs show", () => {
+  it("keeps only the known folders at the root of .github", () => {
+    const folders = readdirSync(GITHUB, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .toSorted();
+
+    expect(folders.filter((folder) => !GITHUB_FOLDERS.has(folder))).toEqual([]);
+  });
+
+  it("holds only .gif, .png, .svg and .webp files in .github/assets", () => {
+    expect(
+      assetFiles().filter((file) => !IMAGE_EXTENSIONS.has(extname(file))),
+    ).toEqual([]);
+  });
+
+  it("shows every file of .github/assets in a README, except the social preview that the repository settings use", () => {
+    const shown = readmeImages();
+
+    expect(
+      assetFiles().filter(
+        (file) =>
+          file !== SOCIAL_PREVIEW && !shown.includes(`.github/assets/${file}`),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps the social preview as a PNG of the 1280x640 that GitHub recommends", () => {
+    const png = readFileSync(join(ASSETS, SOCIAL_PREVIEW));
+
+    expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect({
+      width: png.readUInt32BE(16),
+      height: png.readUInt32BE(20),
+    }).toEqual(SOCIAL_PREVIEW_SIZE);
+  });
+
+  it("points every local image of the READMEs at an existing file in .github/assets", () => {
+    const images = readmeImages();
+
+    expect(images.length).toBeGreaterThan(0);
+    expect(
+      images.filter(
+        (image) =>
+          !image.startsWith(".github/assets/") ||
+          !existsSync(join(GITHUB, "..", image)),
+      ),
+    ).toEqual([]);
+  });
+
+  it("finds Markdown and HTML images and skips remote ones", () => {
+    expect(
+      localImagesOf(
+        '![a](.github/assets/a.gif) <img alt="b" src=".github/assets/b.png"> ![c](https://x.test/c.svg)',
+      ),
+    ).toEqual([".github/assets/a.gif", ".github/assets/b.png"]);
   });
 });
 

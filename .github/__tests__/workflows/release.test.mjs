@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { MERGED_PR_CHOICES } from "../../../scripts/merged-pr.mjs";
+import { compareVersions } from "../../../scripts/release-order.mjs";
+import { MIN_DIST_TAG_NPM } from "../../../scripts/release.constants.mjs";
 import {
   LOCAL_WORKFLOW,
   ROOT,
@@ -16,8 +18,17 @@ import {
 
 const FILE = "release.yml";
 const definition = workflow(FILE);
-const { plan, build, publish, npm, approval, verify, stable, announce } =
-  definition.jobs;
+const {
+  plan,
+  build,
+  publish,
+  npm,
+  approval,
+  latest,
+  verify,
+  stable,
+  announce,
+} = definition.jobs;
 const packageScripts = JSON.parse(
   readFileSync(join(ROOT, "package.json"), "utf8"),
 ).scripts;
@@ -39,6 +50,12 @@ describe("release.yml publishes the version pull request that was merged", () =>
         type: "string",
         default: "",
       },
+      only_latest: {
+        description: expect.any(String),
+        required: false,
+        type: "boolean",
+        default: false,
+      },
     });
   });
 
@@ -49,13 +66,14 @@ describe("release.yml publishes the version pull request that was merged", () =>
     });
   });
 
-  it("has the plan, build, publish, npm, approval, verify, stable and announce jobs, in this order of needs", () => {
+  it("has the plan, build, publish, npm, approval, latest, verify, stable and announce jobs, in this order of needs", () => {
     expect(Object.keys(definition.jobs)).toEqual([
       "plan",
       "build",
       "publish",
       "npm",
       "approval",
+      "latest",
       "verify",
       "stable",
       "announce",
@@ -66,7 +84,61 @@ describe("release.yml publishes the version pull request that was merged", () =>
     expect(publish.needs).toEqual(["plan", "build"]);
     expect(npm.needs).toEqual(["plan", "publish"]);
     expect(approval.needs).toEqual(["plan", "npm"]);
-    expect(verify.needs).toEqual(["plan", "approval"]);
+    expect(latest.needs).toEqual(["plan", "approval"]);
+    expect(verify.needs).toEqual(["plan", "latest"]);
+  });
+
+  it("runs only the latest job and the verify on a dispatch with only_latest, which never builds, publishes or announces again", () => {
+    expect(build.if).toBe(
+      "needs.plan.outputs.number != '' && inputs.only_latest != true",
+    );
+    expect(latest.if).toBe(
+      "${{ !cancelled() && needs.plan.outputs.number != '' && (needs.approval.result == 'success' || inputs.only_latest == true) }}",
+    );
+    expect(verify.if).toBe(
+      "${{ !cancelled() && needs.latest.result == 'success' }}",
+    );
+    expect(stable.if).toBe(
+      "needs.plan.outputs.prerelease == 'false' && inputs.only_latest != true",
+    );
+    expect(announce.if).toBe("inputs.only_latest != true");
+  });
+
+  describe("latest", () => {
+    it("moves latest only from the release environment, with the OIDC token of trusted publishing and nothing to write in the repository", () => {
+      expect(latest.environment).toBe("release");
+      expect(latest.permissions).toEqual({
+        contents: "read",
+        "id-token": "write",
+      });
+      expect(JSON.stringify(latest)).not.toMatch(/secrets\.|NODE_AUTH_TOKEN/u);
+    });
+
+    it("points setup-node at the npm registry and installs an npm that moves dist-tags through trusted publishing", () => {
+      expect(stepUsing(latest, "actions/setup-node").with).toEqual({
+        "node-version-file": ".nvmrc",
+        "registry-url": "https://registry.npmjs.org",
+      });
+
+      const install = stepNamed(latest, "npm that moves dist-tags");
+      const version = /^npm install --global npm@(\S+)$/u.exec(
+        install.run,
+      )?.[1];
+
+      expect(version).toBeDefined();
+      expect(compareVersions(version, MIN_DIST_TAG_NPM)).toBeGreaterThanOrEqual(
+        0,
+      );
+    });
+
+    it("moves latest through release:npm:publish, with the planned version", () => {
+      const step = stepNamed(latest, "Latest on npm");
+
+      expect(step.env).toEqual({
+        VERSION: "${{ needs.plan.outputs.version }}",
+      });
+      expect(step.run).toBe("npm run --silent release:npm:publish -- latest");
+    });
   });
 
   describe("approval", () => {
@@ -112,7 +184,6 @@ describe("release.yml publishes the version pull request that was merged", () =>
       expect(announce.with).toEqual({
         pr_number: "${{ needs.plan.outputs.number }}",
       });
-      expect(announce.if).toBeUndefined();
     });
 
     it("passes the bot token by name, the only secret the called job reads, and lets it read the version pull request", () => {
@@ -128,7 +199,7 @@ describe("release.yml publishes the version pull request that was merged", () =>
 
   describe("stable", () => {
     it("runs only for a stable version, whose users follow stable, while a pre-release keeps its tag", () => {
-      expect(stable.if).toBe("needs.plan.outputs.prerelease == 'false'");
+      expect(stable.if).toContain("needs.plan.outputs.prerelease == 'false'");
     });
 
     it("reads the release app key only in the release environment, with a read-only GITHUB_TOKEN", () => {
@@ -250,7 +321,7 @@ describe("release.yml publishes the version pull request that was merged", () =>
       expect(stepById(plan, "plan").if).toBe(
         "github.event_name == 'workflow_dispatch' || steps.target.outputs.release == 'true'",
       );
-      expect(build.if).toBe("needs.plan.outputs.number != ''");
+      expect(build.if).toContain("needs.plan.outputs.number != ''");
     });
 
     it("plans through release:publish with the pull request merged-pr found", () => {
@@ -260,6 +331,7 @@ describe("release.yml publishes the version pull request that was merged", () =>
         GH_TOKEN: "${{ github.token }}",
         GH_REPO: "${{ github.repository }}",
         PR_NUMBER: "${{ steps.target.outputs.number }}",
+        ONLY_LATEST: "${{ inputs.only_latest }}",
       });
       expect(step.run).toBe("npm run --silent release:publish -- plan");
       expect(packageScripts["release:publish"]).toBe(

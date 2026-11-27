@@ -19,6 +19,11 @@ on:
         required: false
         type: string
         default: ""
+      only_latest:
+        description: Only move the npm latest tag to that published pre-release, then verify, with no build, publish or announcement
+        required: false
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -74,13 +79,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.target.outputs.number }}
+          ONLY_LATEST: ${{ inputs.only_latest }}
         run: npm run --silent release:publish -- plan
 
   build:
     name: Build
     needs:
       - plan
-    if: needs.plan.outputs.number != ''
+    if: needs.plan.outputs.number != '' && inputs.only_latest != true
     permissions:
       contents: read
       id-token: write # actions/attest signs the provenance with the OIDC token of the build job
@@ -213,11 +219,47 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
         run: echo "v${VERSION} was approved on npm, so its packages are public"
 
+  latest:
+    name: Move latest to v${{ needs.plan.outputs.version }} on npm
+    needs:
+      - plan
+      - approval
+    if: ${{ !cancelled() && needs.plan.outputs.number != '' && (needs.approval.result == 'success' || inputs.only_latest == true) }}
+    environment: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing trades the OIDC token of this job for the right to move the latest dist-tag
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: npm that moves dist-tags
+        run: npm install --global npm@11.21.3
+
+      - name: Latest on npm
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: npm run --silent release:npm:publish -- latest
+
   verify:
     name: Verify v${{ needs.plan.outputs.version }}
     needs:
       - plan
-      - approval
+      - latest
+    if: ${{ !cancelled() && needs.latest.result == 'success' }}
     permissions:
       contents: read
       attestations: read # gh attestation verify and gh release verify-asset read the attestations of the binaries
@@ -230,7 +272,7 @@ jobs:
     needs:
       - plan
       - verify
-    if: needs.plan.outputs.prerelease == 'false'
+    if: needs.plan.outputs.prerelease == 'false' && inputs.only_latest != true
     environment: release
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -272,6 +314,7 @@ jobs:
     needs:
       - plan
       - verify
+    if: inputs.only_latest != true
     permissions:
       contents: read
       pull-requests: read # the called record job reads the version pull request
