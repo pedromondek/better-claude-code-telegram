@@ -97,6 +97,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    outputs:
+      openings: ${{ steps.announce.outputs.openings }}
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -113,11 +115,46 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Telegram channels
+        id: announce
         env:
           VERSION: ${{ needs.record.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TELEGRAM_ANNOUNCE_TOKEN: ${{ secrets.TELEGRAM_ANNOUNCE_TOKEN }}
           TELEGRAM_TEST_CHANNEL: ${{ vars.TELEGRAM_TEST_CHANNEL }}
           DRY_RUN: ${{ vars.DRY_RUN }}
           ANNOUNCE_RESUME: ${{ inputs.resume }}
         run: npm run --silent release:announce
+
+  link:
+    name: Link the Release of v${{ needs.record.outputs.version }} to its announcement
+    needs:
+      - record
+      - announce
+    if: ${{ !cancelled() && needs.announce.outputs.openings != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # edits the body of the Release to link the opening posted on each channel
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.record.outputs.commit }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Release
+        env:
+          VERSION: ${{ needs.record.outputs.version }}
+          OPENINGS: ${{ needs.announce.outputs.openings }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: npm run --silent release:announce -- link

@@ -14,13 +14,18 @@ import {
 
 const FILE = "announce-release.yml";
 const definition = workflow(FILE);
-const { record, announce } = definition.jobs;
+const { record, announce, link } = definition.jobs;
 const packageScripts = JSON.parse(read("package.json")).scripts;
 
 describe("announce-release.yml announces a published version on the Telegram channels", () => {
-  it("has the record and announce jobs, the announce after the record", () => {
-    expect(Object.keys(definition.jobs)).toEqual(["record", "announce"]);
+  it("has the record, announce and link jobs, the announce after the record and the link after both", () => {
+    expect(Object.keys(definition.jobs)).toEqual([
+      "record",
+      "announce",
+      "link",
+    ]);
     expect(announce.needs).toEqual(["record"]);
+    expect(link.needs).toEqual(["record", "announce"]);
   });
 
   it("is called by the release with the number of the version pull request", () => {
@@ -135,11 +140,13 @@ describe("announce-release.yml announces a published version on the Telegram cha
       });
     });
 
-    it("posts through release:announce, the only step with the token, the test channel and the dry run", () => {
+    it("posts through release:announce, the only step with the token, the test channel and the dry run, reading the Releases of the gathered versions", () => {
       const step = stepNamed(announce, "Telegram channels");
 
+      expect(step.id).toBe("announce");
       expect(step.env).toEqual({
         VERSION: "${{ needs.record.outputs.version }}",
+        GH_TOKEN: "${{ github.token }}",
         GH_REPO: "${{ github.repository }}",
         TELEGRAM_ANNOUNCE_TOKEN: "${{ secrets.TELEGRAM_ANNOUNCE_TOKEN }}",
         TELEGRAM_TEST_CHANNEL: "${{ vars.TELEGRAM_TEST_CHANNEL }}",
@@ -154,6 +161,43 @@ describe("announce-release.yml announces a published version on the Telegram cha
       for (const item of announce.steps.filter((entry) => entry !== step)) {
         expect(JSON.stringify(item)).not.toMatch(/secrets\.|vars\./u);
       }
+    });
+
+    it("hands over the ids of the openings it posted, also from a run that failed after some", () => {
+      expect(announce.outputs).toEqual({
+        openings: "${{ steps.announce.outputs.openings }}",
+      });
+    });
+  });
+
+  describe("link", () => {
+    it("edits the Release outside the telegram-announce environment, with no secret", () => {
+      expect(link.permissions).toEqual({ contents: "write" });
+      expect(link.environment).toBeUndefined();
+      expect(JSON.stringify(link)).not.toMatch(/secrets\.|TELEGRAM_ANNOUNCE/u);
+    });
+
+    it("runs after a finished or failed announcement that posted an opening, never after a cancelled one", () => {
+      expect(link.if).toBe(
+        "${{ !cancelled() && needs.announce.outputs.openings != '' }}",
+      );
+    });
+
+    it("links the Release to its openings through release:announce -- link", () => {
+      const step = stepNamed(link, "Release");
+
+      expect(stepUsing(link, "actions/checkout").with).toEqual({
+        ref: "${{ needs.record.outputs.commit }}",
+        "persist-credentials": false,
+      });
+      expect(step.env).toEqual({
+        VERSION: "${{ needs.record.outputs.version }}",
+        OPENINGS: "${{ needs.announce.outputs.openings }}",
+        GH_TOKEN: "${{ github.token }}",
+        GH_REPO: "${{ github.repository }}",
+      });
+      expect(step.run).toBe("npm run --silent release:announce -- link");
+      expect(link.steps.at(-1)).toBe(step);
     });
   });
 });
