@@ -12,7 +12,13 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { FEATURES_DOCS } from "../features-doc.mjs";
 import { TARGETS } from "../release-binary.mjs";
+import {
+  BLOCK_END,
+  ENGLISH_BLOCK,
+  PORTUGUESE_BLOCK,
+} from "../release-notes-layout.mjs";
 import { CHECKSUMS_FILE } from "../release-order.mjs";
 import { NOTES_END, NOTES_START, notesPath } from "../release-pr.mjs";
 import { RELEASE_ASSETS, recordHeadline, run } from "../release-publish.mjs";
@@ -22,7 +28,31 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const VERSION = "0.2.0-beta.1";
 const MERGE = "a".repeat(40);
 const RECORD = "b".repeat(40);
-const NOTES = "### 📋 Summary\n\nFaster buttons.";
+const NOTES = [
+  ENGLISH_BLOCK,
+  "",
+  "### 📋 Summary",
+  "",
+  "- Faster buttons.",
+  "",
+  "### 💬 Telegram channel",
+  "",
+  "- ✨ **Faster buttons.** The buttons arrive sooner.",
+  "",
+  BLOCK_END,
+  "",
+  PORTUGUESE_BLOCK,
+  "",
+  "### 📋 Resumo",
+  "",
+  "- Botões mais rápidos.",
+  "",
+  "### 💬 Canal do Telegram",
+  "",
+  "- ✨ **Botões mais rápidos.** Os botões chegam antes.",
+  "",
+  BLOCK_END,
+].join("\n");
 
 let root;
 let assets;
@@ -329,6 +359,36 @@ describe("plan", () => {
 });
 
 describe("record", () => {
+  it("rebuilds the feature docs with the new notes and commits them with the checksums and the notes", () => {
+    project();
+
+    const result = runWith(["record", "dist"], {
+      env: { MERGE, VERSION },
+    });
+    const [, commit] = result.calls.find(([name]) => name === "commitFiles");
+    const committed = (path) =>
+      Buffer.from(
+        commit.files.find((file) => file.path === path).contents,
+        "base64",
+      ).toString("utf8");
+
+    expect(commit.files.map(({ path }) => path)).toEqual([
+      CHECKSUMS_FILE,
+      notesPath(VERSION),
+      FEATURES_DOCS["en-us"],
+      FEATURES_DOCS["pt-br"],
+    ]);
+    expect(committed(FEATURES_DOCS["en-us"])).toContain(
+      "- ✨ **Faster buttons.** The buttons arrive sooner.",
+    );
+    expect(committed(FEATURES_DOCS["pt-br"])).toContain(
+      "- ✨ **Botões mais rápidos.** Os botões chegam antes.",
+    );
+    expect(readFileSync(join(root, FEATURES_DOCS["en-us"]), "utf8")).toBe(
+      committed(FEATURES_DOCS["en-us"]),
+    );
+  });
+
   it("appends the checksums, writes the notes and commits both on main over the merge, through the API", () => {
     project();
 
@@ -343,7 +403,7 @@ describe("record", () => {
       expectedHead: MERGE,
       headline: recordHeadline(VERSION),
     });
-    expect(commit.files.map(({ path }) => path)).toEqual([
+    expect(commit.files.map(({ path }) => path).slice(0, 2)).toEqual([
       CHECKSUMS_FILE,
       notesPath(VERSION),
     ]);

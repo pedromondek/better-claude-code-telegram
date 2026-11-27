@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+import { featuresFiles } from "./features-doc.mjs";
 import { TARGETS } from "./release-binary.mjs";
 import { appendChecksums } from "./release-checksums.mjs";
 import { CHECKSUMS_FILE } from "./release-order.mjs";
@@ -188,15 +189,24 @@ function record({ root, env, github, assetsDir, out }) {
   mkdirSync(dirname(join(root, notesFile)), { recursive: true });
   writeFileSync(join(root, notesFile), `${notes}\n`);
 
+  const features = featuresFiles(root);
+
+  for (const { path, text } of features) {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), text);
+  }
+
   const commit = github.commitFiles({
     branch: BASE_BRANCH,
     expectedHead: merge,
     headline: recordHeadline(version),
-    body: `Records the checksums of the 6 binaries of v${version}, built at ${merge}, and its release notes.`,
-    files: [CHECKSUMS_FILE, notesFile].map((path) => ({
-      path,
-      contents: readFileSync(join(root, path)).toString("base64"),
-    })),
+    body: `Records the checksums of the 6 binaries of v${version}, built at ${merge}, its release notes and the feature docs built from them.`,
+    files: [CHECKSUMS_FILE, notesFile, ...features.map(({ path }) => path)].map(
+      (path) => ({
+        path,
+        contents: readFileSync(join(root, path)).toString("base64"),
+      }),
+    ),
   });
 
   output(env, { commit });
