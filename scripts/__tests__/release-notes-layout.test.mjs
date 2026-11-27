@@ -5,6 +5,7 @@ import {
   ENGLISH_BLOCK,
   PORTUGUESE_BLOCK,
   followAlert,
+  includesAlert,
   installAlert,
   legendAlert,
   notesSkeleton,
@@ -117,7 +118,36 @@ describe("updateAlert", () => {
   });
 });
 
+const RELEASES =
+  "https://github.com/pedromondek/better-claude-code-telegram/releases/tag";
+const INCLUDES = [
+  "> [!NOTE]",
+  `> 📦 **Includes · Inclui:** [v0.1.0-alpha.1](${RELEASES}/v0.1.0-alpha.1) · [v0.1.0-alpha.2](${RELEASES}/v0.1.0-alpha.2)`,
+].join("\n");
+
+describe("includesAlert", () => {
+  it("builds a NOTE linking the Release of each gathered version, in order", () => {
+    expect(includesAlert(["0.1.0-alpha.1", "0.1.0-alpha.2"])).toBe(INCLUDES);
+  });
+
+  it("links a single gathered version alone", () => {
+    expect(includesAlert(["0.1.0-beta.1"])).toBe(
+      `> [!NOTE]\n> 📦 **Includes · Inclui:** [v0.1.0-beta.1](${RELEASES}/v0.1.0-beta.1)`,
+    );
+  });
+});
+
 describe("notesSkeleton", () => {
+  it("puts the includes NOTE right before the legend when the version gathers others", () => {
+    expect(
+      notesSkeleton("", "0.1.0-beta.1", ["0.1.0-alpha.1", "0.1.0-alpha.2"]),
+    ).toContain(`${INCLUDES}\n\n${LEGEND}\n\n${ENGLISH_BLOCK}`);
+  });
+
+  it("leaves the includes NOTE out when the version gathers nothing", () => {
+    expect(notesSkeleton("", VERSION, [])).not.toContain("Includes");
+  });
+
   it("puts the draft mark, the four alerts, the draft in the English block and an empty Portuguese block", () => {
     expect(notesSkeleton("### Features\n- x", VERSION)).toBe(
       [

@@ -1,4 +1,4 @@
-import { SETUP_COMMAND } from "../npm/shim/shim.constants.mjs";
+import { REPOSITORY, SETUP_COMMAND } from "../npm/shim/shim.constants.mjs";
 import { PATCH_NOTES_LANGUAGES } from "./patch-notes.constants.mjs";
 import { installCommand } from "./release-npm-publish.mjs";
 import { ANNOUNCE_CHANNELS } from "./release.constants.mjs";
@@ -85,6 +85,18 @@ export function updateAlert(version) {
   ]);
 }
 
+export function releaseUrl(version, repository = REPOSITORY) {
+  return `https://github.com/${repository}/releases/tag/v${version}`;
+}
+
+export function includesAlert(gathered) {
+  const links = gathered.map(
+    (version) => `[v${version}](${releaseUrl(version)})`,
+  );
+
+  return `> [!NOTE]\n> 📦 **Includes · Inclui:** ${links.join(" · ")}`;
+}
+
 export function legendAlert() {
   const entries = LEGEND.map(
     ([emoji, english, portuguese]) => `${emoji} ${english} · ${portuguese}`,
@@ -93,7 +105,7 @@ export function legendAlert() {
   return `> [!NOTE]\n> ${entries.join(LEGEND_GAP)}`;
 }
 
-export function notesSkeleton(draft, version) {
+export function notesSkeleton(draft, version, gathered = []) {
   return [
     DRAFT_MARK,
     followAlert(),
@@ -102,6 +114,7 @@ export function notesSkeleton(draft, version) {
     "",
     updateAlert(version),
     "",
+    ...(gathered.length === 0 ? [] : [includesAlert(gathered), ""]),
     legendAlert(),
     "",
     ENGLISH_BLOCK,

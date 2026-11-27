@@ -113,6 +113,8 @@ The first push of a branch without upstream, or with an upstream of another name
 
 After the push, show the PR check (`gh pr checks <n>`): every push reruns the PR checks and cancels the previous run.
 
+With no PR open yet, push every theme of the plan before section 5 opens it, and show the PR check only once the PR exists. With the PR open, the push per theme above gives way in both modes: the themes of the plan go together, in one push after the last commit, since CodeRabbit skips a push that reaches the pull request while it still reviews the one before.
+
 ## 5. PR body
 
 Skipped when there is no remote. A new commit changes what the PR delivers; a `fixup!` does not. With a new commit in the round, write the PR body in the sections of `.github/pull_request_template.md`:
@@ -123,7 +125,7 @@ Skipped when there is no remote. A new commit changes what the PR delivers; a `f
 
 Each part is approved through `AskUserQuestion`, one question per part (the summary with its `Closes` lines, how it was verified, the en-us notes, the pt-br notes), with its text in the `preview` and `Approve (Recommended)` first. Every option that changes the text carries its own full preview of the part as it would be saved, short enough to show; the adjustment through "Other". A changed part comes back in a new question for that part only. Compare the approved body with the current one (`gh pr view <n> --json body`) and show the difference.
 
-`<body> | gh pr edit <n> --body-file -`; with no PR open, after the first push, `gh pr create --base main --assignee @me --title "<issue number padded to 4 digits>: <issue title>" --body-file -` (the title pattern is `0042: title`, which the repo checks and which ties the PR to the issue). In autonomous mode, `gh pr edit` and `gh pr create` run without a new question only when they are in the chosen scope; outside it they ask on the spot. In stage mode, hand the command to the user. Check afterwards with `gh pr view <n> --json body` that the saved body has the `Closes` lines, and with `npm run --silent pr:patch-notes -- check <n>` that it carries both blocks of patch notes.
+`<body> | gh pr edit <n> --body-file -`; with no PR open, only after the last push of the plan, once every theme is on the remote, so CodeRabbit reviews the whole branch when the PR opens: a push that reaches the PR while its review still runs is skipped, and the conversation is locked when that review ends. Then `gh pr create --base main --assignee @me --title "<issue number padded to 4 digits>: <issue title>" --body-file -` (the title pattern is `0042: title`, which the repo checks and which ties the PR to the issue). In autonomous mode, `gh pr edit` and `gh pr create` run without a new question only when they are in the chosen scope; outside it they ask on the spot. In stage mode, hand the command to the user. Check afterwards with `gh pr view <n> --json body` that the saved body has the `Closes` lines, and with `npm run --silent pr:patch-notes -- check <n>` that it carries both blocks of patch notes.
 
 ## 6. Before the merge
 

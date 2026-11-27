@@ -1,12 +1,15 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildAnnouncements,
+  ghGithub,
   parseNotes,
+  parseTelegramLine,
   run,
+  telegramLine,
   toTelegramHtml,
 } from "../release-announce.mjs";
 import {
@@ -179,7 +182,7 @@ function stableFiles(extra = {}) {
         {
           en: "  `BCCT update`    updates EVERYTHING. ",
           pt: "Atualiza.",
-          gif: null,
+          gif: GIF_B,
         },
       ],
     }),
@@ -188,17 +191,49 @@ function stableFiles(extra = {}) {
   };
 }
 
-function opening({ marker, title, bullets, version, language, tag }) {
+const releaseLink = (version) =>
+  `https://github.com/${REPO}/releases/tag/v${version}`;
+
+function includesLines(includes, language) {
+  if (includes.length === 0) {
+    return [];
+  }
+
+  return [
+    language === "en-us" ? "Includes:" : "Inclui:",
+    ...includes.flatMap(({ version, telegram = null }) => [
+      `• v${version}`,
+      `   ${telegram === null ? "" : `<a href="${telegram}">📣 Telegram</a> · `}<a href="${releaseLink(version)}">🔗 Release</a>`,
+    ]),
+    "",
+  ];
+}
+
+function opening({
+  marker,
+  title,
+  bullets,
+  version,
+  language,
+  tag,
+  includes = [],
+}) {
   const english = language === "en-us";
 
   return [
     `${marker} <b>${title}</b>`,
     "",
     ...(bullets.length > 0 ? [...bullets, ""] : []),
-    `<a href="https://github.com/${REPO}/releases/tag/v${version}">${english ? "Release notes" : "Notas da versão"}</a>`,
+    ...includesLines(includes, language),
+    `<a href="${releaseLink(version)}">📝 ${english ? "Release notes" : "Notas da versão"}</a>`,
     `${english ? "Install" : "Instalar"}: <code>npx @pedromondek/better-claude-code-telegram${tag === null ? "" : `@${tag}`}</code>`,
   ].join("\n");
 }
+
+const STABLE_INCLUDES = [
+  { version: "0.3.0-alpha.1" },
+  { version: "0.3.0-beta.1" },
+];
 
 const EN_SUMMARY = [
   "• <b>Buttons</b> answer the questions of Claude.",
@@ -359,16 +394,45 @@ function fakeSleep() {
   };
 }
 
+function fakeGithub({ bodies = {}, failOn = null } = {}) {
+  const reads = [];
+  const edits = [];
+
+  return {
+    reads,
+    edits,
+    releaseBody: async (tag) => {
+      reads.push(tag);
+
+      if (failOn === "read") {
+        throw new Error("gh is down");
+      }
+
+      return Object.hasOwn(bodies, tag) ? bodies[tag] : null;
+    },
+    editReleaseBody: async (tag, body) => {
+      edits.push({ tag, body });
+
+      if (failOn === "edit") {
+        throw new Error("gh refused the edit");
+      }
+    },
+  };
+}
+
 async function announceWith({
   args = [],
   env = {},
   root = tempRoot(),
   fetch: fetchOptions = {},
+  github = fakeGithub(),
+  record = undefined,
 } = {}) {
   const clock = fakeSleep();
   const { fetch, calls } = fakeFetch(fetchOptions);
   const out = [];
   const err = [];
+  const recorded = [];
   const code = await run(args, {
     root,
     env: {
@@ -381,9 +445,11 @@ async function announceWith({
     sleep: clock.sleep,
     out: (line) => out.push(line),
     err: (line) => err.push(line),
+    github,
+    record: record === null ? undefined : (openings) => recorded.push(openings),
   });
 
-  return { code, out, err, calls, sleeps: clock.sleeps };
+  return { code, out, err, calls, sleeps: clock.sleeps, github, recorded };
 }
 
 const telegramCalls = (calls) =>
@@ -718,6 +784,7 @@ describe("release-announce › posts of a stable version", () => {
             version: STABLE,
             language: "en-us",
             tag: null,
+            includes: STABLE_INCLUDES,
           }),
         },
         ...animations(EN_CAPTIONS, [GIF_A, GIF_B, GIF_C]),
@@ -736,6 +803,7 @@ describe("release-announce › posts of a stable version", () => {
             version: STABLE,
             language: "pt-br",
             tag: null,
+            includes: STABLE_INCLUDES,
           }),
         },
         ...animations(PT_CAPTIONS, [GIF_A, GIF_B, GIF_C]),
@@ -743,7 +811,7 @@ describe("release-announce › posts of a stable version", () => {
     });
   });
 
-  it("tells the pre-release channels the version is stable, with only the ✨ items no pre-release of the folder had, by GIF and then by text", () => {
+  it("tells the pre-release channels the version is stable, with only the ✨ items no pre-release of the folder had, by demo and by text when neither has one", () => {
     const [, , english, portuguese] = buildAnnouncements({
       root: tempRoot(stableFiles()),
       version: STABLE,
@@ -836,7 +904,7 @@ describe("release-announce › posts of a stable version", () => {
         text: [
           `✅ <b>${STABLE}</b> is stable`,
           "",
-          `<a href="https://github.com/${REPO}/releases/tag/v${STABLE}">Release notes</a>`,
+          `<a href="https://github.com/${REPO}/releases/tag/v${STABLE}">📝 Release notes</a>`,
           "Install: <code>npx @pedromondek/better-claude-code-telegram</code>",
         ].join("\n"),
       },
@@ -847,7 +915,7 @@ describe("release-announce › posts of a stable version", () => {
         text: [
           `✅ <b>${STABLE}</b> está estável`,
           "",
-          `<a href="https://github.com/${REPO}/releases/tag/v${STABLE}">Notas da versão</a>`,
+          `<a href="https://github.com/${REPO}/releases/tag/v${STABLE}">📝 Notas da versão</a>`,
           "Instalar: <code>npx @pedromondek/better-claude-code-telegram</code>",
         ].join("\n"),
       },
@@ -1216,6 +1284,991 @@ describe("release-announce › the MP4 of each language", () => {
       null,
       GIF_C,
     ]);
+  });
+});
+
+const BETA = "0.3.0-beta.1";
+const ALPHA_1 = "0.3.0-alpha.1";
+const ALPHA_2 = "0.3.0-alpha.2";
+const TELEGRAM_EN = "https://t.me/bcct_tips_prereleases/40";
+const TELEGRAM_PT = "https://t.me/bcct_tips_prelancamentos/38";
+const TELEGRAM_LINE = `📣 Telegram: [${PRE_EN}](${TELEGRAM_EN}) · [${PRE_PT}](${TELEGRAM_PT})`;
+
+const folderFile = (name) => `docs/releases/0.3.0/${name}.md`;
+const item = (en, gif, video = null) => ({ en, pt: `${en} (pt)`, gif, video });
+const featuresFile = (...features) => notesText({ features });
+const buildAt = (files, version, extra = {}) =>
+  buildAnnouncements({
+    root: tempRoot(files),
+    version,
+    repository: REPO,
+    ...extra,
+  });
+const animationsOf = ({ posts }) =>
+  posts
+    .filter(({ method }) => method === "sendAnimation")
+    .map(({ animation }) => animation);
+
+describe("release-announce › freshness of the ✨ items", () => {
+  it("posts again an item that gained a demo", () => {
+    const [, , english] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("Replies are faster.", GIF_A)),
+        [PRERELEASE_FILE]: featuresFile(item("Replies are faster.", null)),
+      },
+      STABLE,
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_A]);
+  });
+
+  it("posts again an item that got a new demo with the same text", () => {
+    const [, , english] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("Replies are faster.", GIF_B)),
+        [PRERELEASE_FILE]: featuresFile(item("Replies are faster.", GIF_A)),
+      },
+      STABLE,
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_B]);
+  });
+
+  it("does not post a reworded item that keeps its demo", () => {
+    const [, , english, portuguese] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("Replies come faster now.", GIF_A)),
+        [PRERELEASE_FILE]: featuresFile(item("Replies are faster.", GIF_A)),
+      },
+      STABLE,
+    );
+
+    expect(animationsOf(english)).toEqual([]);
+    expect(animationsOf(portuguese)).toEqual([]);
+  });
+
+  it("does not post an item without a demo whose text differs only in case and spaces", () => {
+    const [, , english] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("  replies   ARE faster. ", null)),
+        [PRERELEASE_FILE]: featuresFile(item("Replies are faster.", null)),
+      },
+      STABLE,
+    );
+
+    expect(english.posts).toHaveLength(1);
+    expect(english.posts[0].text).not.toContain("faster");
+  });
+
+  it("lists an item without a demo whose text is new", () => {
+    const [, , english] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("Replies are much faster.", null)),
+        [PRERELEASE_FILE]: featuresFile(item("Replies are faster.", null)),
+      },
+      STABLE,
+    );
+
+    expect(english.posts[0].text).toContain("• Replies are much faster.");
+  });
+
+  it("does not match an item without a demo to one that has a demo", () => {
+    const [, , english] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("Replies are faster.", null)),
+        [PRERELEASE_FILE]: featuresFile(item("Replies are faster.", GIF_A)),
+      },
+      STABLE,
+    );
+
+    expect(english.posts[0].text).toContain("• Replies are faster.");
+  });
+
+  it("takes the MP4 as the demo of an item that has both, so the GIF alone is not the same demo", () => {
+    const [, , english] = buildAt(
+      {
+        [STABLE_FILE]: featuresFile(item("Replies are faster.", GIF_A)),
+        [PRERELEASE_FILE]: featuresFile(
+          item("Replies are faster.", GIF_A, VIDEO_A),
+        ),
+      },
+      STABLE,
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_A]);
+  });
+
+  it("posts only the demos that no earlier pre-release posted, keeping the whole summary in the opening", () => {
+    const [english, portuguese] = buildAt(
+      {
+        [folderFile("alpha.1")]: featuresFile(item("Questions.", GIF_A)),
+        [folderFile("beta.1")]: featuresFile(
+          item("Questions.", GIF_A),
+          item("Updates.", GIF_B),
+        ),
+      },
+      BETA,
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_B]);
+    expect(animationsOf(portuguese)).toEqual([GIF_B]);
+    expect(english.posts[0].text).toContain("• <b>Buttons</b> answer");
+    expect(english.posts[0].text).toContain("• The setup is faster.");
+    expect(portuguese.posts[0].text).toContain("• <b>Botões</b> respondem");
+  });
+
+  it("posts only the opening when every demo of a pre-release was posted before", () => {
+    const [english] = buildAt(
+      {
+        [folderFile("alpha.1")]: featuresFile(item("Questions.", GIF_A)),
+        [folderFile("alpha.2")]: featuresFile(item("Questions.", GIF_A)),
+      },
+      ALPHA_2,
+    );
+
+    expect(english.posts).toHaveLength(1);
+  });
+
+  it("does not count a later pre-release of the folder as seen", () => {
+    const [english] = buildAt(
+      {
+        [folderFile("beta.1")]: featuresFile(item("Questions.", GIF_A)),
+        [folderFile("beta.2")]: featuresFile(item("Questions.", GIF_A)),
+      },
+      BETA,
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_A]);
+  });
+
+  it("counts every earlier pre-release of the folder as seen, from any stage", () => {
+    const [english] = buildAt(
+      {
+        [folderFile("alpha.1")]: featuresFile(item("One.", GIF_A)),
+        [folderFile("beta.1")]: featuresFile(item("Two.", GIF_B)),
+        [folderFile("rc.1")]: featuresFile(
+          item("One.", GIF_A),
+          item("Two.", GIF_B),
+          item("Three.", GIF_C),
+        ),
+      },
+      "0.3.0-rc.1",
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_C]);
+  });
+
+  it("matches only the en-us item of the earlier pre-releases", () => {
+    const [english, portuguese] = buildAt(
+      {
+        [folderFile("alpha.1")]: featuresFile({
+          en: "Other.",
+          pt: "Outro.",
+          gif: GIF_B,
+          ptVideo: VIDEO_PT,
+        }),
+        [folderFile("alpha.2")]: featuresFile({
+          en: "Voice.",
+          pt: "Voz.",
+          gif: GIF_C,
+          ptVideo: VIDEO_PT,
+        }),
+      },
+      ALPHA_2,
+    );
+
+    expect(animationsOf(english)).toEqual([GIF_C]);
+    expect(animationsOf(portuguese)).toEqual([VIDEO_PT]);
+  });
+});
+
+describe("release-announce › the Includes block", () => {
+  const stageFiles = (extra = {}) => ({
+    [folderFile("alpha.1")]: featuresFile(QUESTIONS),
+    [folderFile("alpha.2")]: featuresFile(NOTICE),
+    [folderFile("beta.1")]: notesText(),
+    ...extra,
+  });
+  const includesOf = (...versions) => versions.map((version) => ({ version }));
+
+  it("lists the alphas in the opening of the first beta, in both languages", () => {
+    const [english, portuguese] = buildAt(stageFiles(), BETA);
+
+    expect(english.posts[0].text).toBe(
+      opening({
+        marker: "🧪",
+        title: `better-claude-code-telegram ${BETA}`,
+        bullets: EN_SUMMARY,
+        version: BETA,
+        language: "en-us",
+        tag: "beta",
+        includes: includesOf(ALPHA_1, ALPHA_2),
+      }),
+    );
+    expect(portuguese.posts[0].text).toBe(
+      opening({
+        marker: "🧪",
+        title: `better-claude-code-telegram ${BETA}`,
+        bullets: PT_SUMMARY,
+        version: BETA,
+        language: "pt-br",
+        tag: "beta",
+        includes: includesOf(ALPHA_1, ALPHA_2),
+      }),
+    );
+    expect(animationsOf(english)).toEqual([GIF_B]);
+  });
+
+  it("shows the Includes block after the summary and before the Release notes link", () => {
+    const [english] = buildAt(stageFiles(), BETA);
+
+    expect(english.posts[0].text.split("\n")).toEqual([
+      `🧪 <b>better-claude-code-telegram ${BETA}</b>`,
+      "",
+      ...EN_SUMMARY,
+      "",
+      "Includes:",
+      `• v${ALPHA_1}`,
+      `   <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+      `• v${ALPHA_2}`,
+      `   <a href="${releaseLink(ALPHA_2)}">🔗 Release</a>`,
+      "",
+      `<a href="${releaseLink(BETA)}">📝 Release notes</a>`,
+      "Install: <code>npx @pedromondek/better-claude-code-telegram@beta</code>",
+    ]);
+  });
+
+  it("does not double the blank line when the notes have no summary bullets", () => {
+    const [english] = buildAt(
+      stageFiles({
+        [folderFile("beta.1")]: notesText({ summaryEn: [], summaryPt: [] }),
+      }),
+      BETA,
+    );
+
+    expect(english.posts[0].text.split("\n").slice(0, 4)).toEqual([
+      `🧪 <b>better-claude-code-telegram ${BETA}</b>`,
+      "",
+      "Includes:",
+      `• v${ALPHA_1}`,
+    ]);
+    expect(english.posts[0].text).not.toContain("\n\n\n");
+  });
+
+  it("lists no Includes for the first alpha and for the later versions of a stage", () => {
+    const files = stageFiles({
+      [folderFile("beta.2")]: notesText(),
+      [folderFile("alpha.3")]: notesText(),
+    });
+
+    for (const version of [ALPHA_1, "0.3.0-alpha.3", "0.3.0-beta.2"]) {
+      const [english] = buildAt(files, version);
+
+      expect(english.posts[0].text).not.toContain("Includes:");
+    }
+  });
+
+  it("lists only the betas in the opening of the first rc", () => {
+    const [english] = buildAt(
+      stageFiles({
+        [folderFile("beta.2")]: notesText(),
+        [folderFile("rc.1")]: notesText(),
+      }),
+      "0.3.0-rc.1",
+    );
+
+    expect(english.posts[0].text).toContain(
+      [
+        "Includes:",
+        `• v${BETA}`,
+        `   <a href="${releaseLink(BETA)}">🔗 Release</a>`,
+        "• v0.3.0-beta.2",
+      ].join("\n"),
+    );
+    expect(english.posts[0].text).not.toContain(`v${ALPHA_1}`);
+  });
+
+  it("lists every pre-release in the opening of a stable version on the stable channels, in pt-br too", () => {
+    const [english, portuguese] = buildAt(
+      stageFiles({
+        [STABLE_FILE]: notesText({ features: STABLE_FEATURES }),
+      }),
+      STABLE,
+    );
+
+    expect(english.posts[0].text).toContain(
+      `Includes:\n• v${ALPHA_1}\n   <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>\n• v${ALPHA_2}\n   <a href="${releaseLink(ALPHA_2)}">🔗 Release</a>\n• v${BETA}`,
+    );
+    expect(portuguese.posts[0].text).toContain("Inclui:\n• v");
+  });
+
+  it("shows no Includes in the stable news of the pre-release channels", () => {
+    const channels = buildAt(
+      stageFiles({
+        [STABLE_FILE]: notesText({ features: STABLE_FEATURES }),
+      }),
+      STABLE,
+    );
+
+    expect(channels[2].posts[0].text).not.toContain("Includes:");
+    expect(channels[3].posts[0].text).not.toContain("Inclui:");
+    expect(channels[2].posts[0].text).toContain("📝 Release notes");
+    expect(channels[3].posts[0].text).toContain("📝 Notas da versão");
+  });
+});
+
+describe("release-announce › the Telegram links of the included versions", () => {
+  const files = {
+    [folderFile("alpha.1")]: featuresFile(QUESTIONS),
+    [folderFile("alpha.2")]: featuresFile(NOTICE),
+    [folderFile("beta.1")]: notesText(),
+    [STABLE_FILE]: notesText({ features: STABLE_FEATURES }),
+  };
+  const telegramOf = (text, version) => {
+    const lines = text.split("\n");
+    const at = lines.indexOf(`• v${version}`);
+
+    return lines[at + 1];
+  };
+
+  it("links the record of the channel of each included version, and only the Release when it has none", () => {
+    const [english, portuguese] = buildAt(files, BETA, {
+      records: {
+        [ALPHA_1]: { [PRE_EN]: TELEGRAM_EN, [PRE_PT]: TELEGRAM_PT },
+      },
+    });
+
+    expect(telegramOf(english.posts[0].text, ALPHA_1)).toBe(
+      `   <a href="${TELEGRAM_EN}">📣 Telegram</a> · <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+    expect(telegramOf(portuguese.posts[0].text, ALPHA_1)).toBe(
+      `   <a href="${TELEGRAM_PT}">📣 Telegram</a> · <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+    expect(telegramOf(english.posts[0].text, ALPHA_2)).toBe(
+      `   <a href="${releaseLink(ALPHA_2)}">🔗 Release</a>`,
+    );
+  });
+
+  it("falls back to the record of the pre-release channel of the same language on the stable channels", () => {
+    const [english, portuguese] = buildAt(files, STABLE, {
+      records: {
+        [ALPHA_1]: { [PRE_EN]: TELEGRAM_EN, [PRE_PT]: TELEGRAM_PT },
+      },
+    });
+
+    expect(telegramOf(english.posts[0].text, ALPHA_1)).toBe(
+      `   <a href="${TELEGRAM_EN}">📣 Telegram</a> · <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+    expect(telegramOf(portuguese.posts[0].text, ALPHA_1)).toBe(
+      `   <a href="${TELEGRAM_PT}">📣 Telegram</a> · <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+  });
+
+  it("prefers the record of the channel itself over the pre-release channel of its language", () => {
+    const [english] = buildAt(files, STABLE, {
+      records: {
+        [ALPHA_1]: {
+          [STABLE_EN]: "https://t.me/bcct_tips/7",
+          [PRE_EN]: TELEGRAM_EN,
+        },
+      },
+    });
+
+    expect(telegramOf(english.posts[0].text, ALPHA_1)).toContain(
+      'href="https://t.me/bcct_tips/7"',
+    );
+  });
+
+  it("links only the Release when the records have neither the channel nor the pre-release channel of its language", () => {
+    const [english] = buildAt(files, STABLE, {
+      records: {
+        [ALPHA_1]: { [PRE_PT]: TELEGRAM_PT },
+        [ALPHA_2]: {},
+      },
+    });
+
+    expect(telegramOf(english.posts[0].text, ALPHA_1)).toBe(
+      `   <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+    expect(telegramOf(english.posts[0].text, ALPHA_2)).toBe(
+      `   <a href="${releaseLink(ALPHA_2)}">🔗 Release</a>`,
+    );
+    expect(telegramOf(english.posts[0].text, BETA)).toBe(
+      `   <a href="${releaseLink(BETA)}">🔗 Release</a>`,
+    );
+  });
+
+  it("escapes the record URL inside the href", () => {
+    const [english] = buildAt(files, BETA, {
+      records: { [ALPHA_1]: { [PRE_EN]: 'https://t.me/x?a=1&b="2' } },
+    });
+
+    expect(english.posts[0].text).toContain(
+      '<a href="https://t.me/x?a=1&amp;b=&quot;2">📣 Telegram</a>',
+    );
+  });
+
+  it("keeps --print offline, reading no Release and linking only the Release of each included version", async () => {
+    const { code, out, github } = await announceWith({
+      args: ["--print"],
+      root: tempRoot(files),
+      env: { VERSION: BETA },
+    });
+
+    expect(code).toBe(0);
+    expect(github.reads).toEqual([]);
+    expect(out[0]).toContain(
+      `• v${ALPHA_1}\n   <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+    expect(out.join("\n")).not.toContain("📣");
+  });
+
+  it("reads the Release of each included version before posting and links what their lines hold", async () => {
+    const { code, calls, github } = await announceWith({
+      root: tempRoot(files),
+      env: { VERSION: BETA },
+      github: fakeGithub({
+        bodies: { [`v${ALPHA_1}`]: `Notes.\n\n${TELEGRAM_LINE}` },
+      }),
+    });
+    const posts = await sentPosts(calls);
+
+    expect(code).toBe(0);
+    expect(github.reads).toEqual([`v${ALPHA_1}`, `v${ALPHA_2}`]);
+    expect(posts[0].text).toContain(
+      `<a href="${TELEGRAM_EN}">📣 Telegram</a> · <a href="${releaseLink(ALPHA_1)}">🔗 Release</a>`,
+    );
+    expect(posts.find(({ chat }) => chat === PRE_PT).text).toContain(
+      `<a href="${TELEGRAM_PT}">📣 Telegram</a>`,
+    );
+    expect(posts[0].text).not.toContain(
+      `<a href="${TELEGRAM_EN}">📣 Telegram</a> · <a href="${releaseLink(ALPHA_2)}">`,
+    );
+  });
+
+  it("reads the Releases on DRY_RUN=1 too", async () => {
+    const { code, github } = await announceWith({
+      root: tempRoot(files),
+      env: {
+        VERSION: BETA,
+        DRY_RUN: "1",
+        TELEGRAM_TEST_CHANNEL: TEST_CHANNEL,
+      },
+    });
+
+    expect(code).toBe(0);
+    expect(github.reads).toEqual([`v${ALPHA_1}`, `v${ALPHA_2}`]);
+  });
+
+  it("reads no Release for a version that includes none", async () => {
+    const { github } = await announceWith();
+
+    expect(github.reads).toEqual([]);
+  });
+
+  it("fails before any post when the Release of an included version cannot be read", async () => {
+    const { code, err, calls } = await announceWith({
+      root: tempRoot(files),
+      env: { VERSION: BETA },
+      github: fakeGithub({ failOn: "read" }),
+    });
+
+    expect(code).toBe(1);
+    expect(calls).toEqual([]);
+    expect(err).toEqual(["✗ gh is down"]);
+  });
+
+  it("fails with the notes message when the folder of the version has no notes", async () => {
+    const { code, err, calls } = await announceWith({
+      root: tempRoot({}),
+    });
+
+    expect(code).toBe(1);
+    expect(calls).toEqual([]);
+    expect(err).toEqual([
+      `✗ there are no notes of v${PRERELEASE} in ${PRERELEASE_FILE}, which the release records`,
+    ]);
+  });
+});
+
+describe("release-announce › the Telegram line of a Release", () => {
+  it("reads the channel and the link of each entry of the line", () => {
+    expect(parseTelegramLine(`Notes.\n\n${TELEGRAM_LINE}`)).toEqual({
+      [PRE_EN]: TELEGRAM_EN,
+      [PRE_PT]: TELEGRAM_PT,
+    });
+  });
+
+  it("reads the line from a body with CRLF line ends", () => {
+    expect(
+      parseTelegramLine(`Notes.\r\n\r\n${TELEGRAM_LINE}\r\nMore.\r\n`),
+    ).toEqual({ [PRE_EN]: TELEGRAM_EN, [PRE_PT]: TELEGRAM_PT });
+  });
+
+  it("reads the line when it is not the last of the body", () => {
+    expect(parseTelegramLine(`${TELEGRAM_LINE}\n\nMore.`)).toEqual({
+      [PRE_EN]: TELEGRAM_EN,
+      [PRE_PT]: TELEGRAM_PT,
+    });
+  });
+
+  it.each([
+    ["an empty body", ""],
+    ["a body without the line", "Notes.\n\n📣 Telegram is nice"],
+    ["the prefix in the middle of a line", `See ${TELEGRAM_LINE}`],
+    ["a line without links", "📣 Telegram: soon"],
+    [
+      "a link that is not a t.me one",
+      `📣 Telegram: [${PRE_EN}](https://example.com/40)`,
+    ],
+  ])("gives an empty object for %s", (_case, body) => {
+    expect(parseTelegramLine(body)).toEqual({});
+  });
+
+  it("writes the channels in the order of the stable ones and then the pre-release ones, only those present", () => {
+    expect(
+      telegramLine({
+        [PRE_PT]: TELEGRAM_PT,
+        [STABLE_EN]: "https://t.me/bcct_tips/7",
+        [PRE_EN]: TELEGRAM_EN,
+      }),
+    ).toBe(
+      `📣 Telegram: [${STABLE_EN}](https://t.me/bcct_tips/7) · [${PRE_EN}](${TELEGRAM_EN}) · [${PRE_PT}](${TELEGRAM_PT})`,
+    );
+    expect(telegramLine({ [PRE_EN]: TELEGRAM_EN })).toBe(
+      `📣 Telegram: [${PRE_EN}](${TELEGRAM_EN})`,
+    );
+  });
+
+  it("writes a line that it reads back the same", () => {
+    const links = {
+      [STABLE_PT]: "https://t.me/bcct_tips_br/3",
+      [PRE_EN]: TELEGRAM_EN,
+    };
+
+    expect(parseTelegramLine(telegramLine(links))).toEqual(links);
+  });
+
+  it("writes nothing when no channel of the announcement is present", () => {
+    expect(telegramLine({})).toBe("");
+    expect(telegramLine({ "@other": "https://t.me/other/1" })).toBe("");
+  });
+});
+
+describe("release-announce › recording the openings", () => {
+  const V = `v${PRERELEASE}`;
+  const DRY = { DRY_RUN: "1", TELEGRAM_TEST_CHANNEL: TEST_CHANNEL };
+  const rejectCall = (failing) => (count) =>
+    count === failing
+      ? { status: 400, body: { ok: false, description: "Bad Request" } }
+      : sentWithId(count);
+
+  it("records the cumulative openings each time a channel opening is posted", async () => {
+    const { code, recorded } = await announceWith();
+
+    expect(code).toBe(0);
+    expect(recorded).toEqual([
+      { [PRE_EN]: 101 },
+      { [PRE_EN]: 101, [PRE_PT]: 104 },
+    ]);
+  });
+
+  it("records the opening given by ANNOUNCE_RESUME when the loop reaches its channel", async () => {
+    const { recorded } = await announceWith({
+      env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=done,${PRE_PT}=104:2` },
+    });
+
+    expect(recorded).toEqual([{ [PRE_PT]: 104 }]);
+  });
+
+  it("records the openings of two resumed channels one after the other", async () => {
+    const { recorded } = await announceWith({
+      env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=101:3,${PRE_PT}=104:3` },
+    });
+
+    expect(recorded).toEqual([
+      { [PRE_EN]: 101 },
+      { [PRE_EN]: 101, [PRE_PT]: 104 },
+    ]);
+  });
+
+  it("records nothing when every channel is done", async () => {
+    const { code, recorded } = await announceWith({
+      env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=done,${PRE_PT}=done` },
+    });
+
+    expect(code).toBe(0);
+    expect(recorded).toEqual([]);
+  });
+
+  it("records nothing on DRY_RUN=1", async () => {
+    const { code, recorded } = await announceWith({ env: DRY });
+
+    expect(code).toBe(0);
+    expect(recorded).toEqual([]);
+  });
+
+  it("records nothing on --print", async () => {
+    const { recorded } = await announceWith({ args: ["--print"] });
+
+    expect(recorded).toEqual([]);
+  });
+
+  it("keeps the opening of the first channel when a post of the next channel fails", async () => {
+    const { code, recorded } = await announceWith({
+      fetch: { telegram: rejectCall(4) },
+    });
+
+    expect(code).toBe(1);
+    expect(recorded).toEqual([{ [PRE_EN]: 101 }]);
+  });
+
+  it("keeps both openings when a GIF of the second channel fails", async () => {
+    const { code, recorded } = await announceWith({
+      fetch: { telegram: rejectCall(5) },
+    });
+
+    expect(code).toBe(1);
+    expect(recorded).toEqual([
+      { [PRE_EN]: 101 },
+      { [PRE_EN]: 101, [PRE_PT]: 104 },
+    ]);
+  });
+
+  it("records nothing when the first opening fails", async () => {
+    const { code, recorded } = await announceWith({
+      fetch: { telegram: rejectCall(1) },
+    });
+
+    expect(code).toBe(1);
+    expect(recorded).toEqual([]);
+  });
+
+  it("appends the openings as a line of GITHUB_OUTPUT, the last line being the cumulative one", async () => {
+    const output = join(
+      mkdtempSync(join(tmpdir(), "output-")),
+      "github-output",
+    );
+    const { code } = await announceWith({
+      env: { GITHUB_OUTPUT: output },
+      record: null,
+    });
+
+    expect(code).toBe(0);
+    expect(readFileSync(output, "utf8")).toBe(
+      `openings=${JSON.stringify({ [PRE_EN]: 101 })}\nopenings=${JSON.stringify({ [PRE_EN]: 101, [PRE_PT]: 104 })}\n`,
+    );
+  });
+
+  it("posts without writing anywhere when GITHUB_OUTPUT is not set", async () => {
+    const { code, out } = await announceWith({ record: null });
+
+    expect(code).toBe(0);
+    expect(out).toHaveLength(2);
+  });
+
+  it("writes nothing to GITHUB_OUTPUT on DRY_RUN=1", async () => {
+    const output = join(
+      mkdtempSync(join(tmpdir(), "output-")),
+      "github-output",
+    );
+    const { code } = await announceWith({
+      env: { ...DRY, GITHUB_OUTPUT: output },
+      record: null,
+    });
+
+    expect(code).toBe(0);
+    expect(() => readFileSync(output, "utf8")).toThrow(/ENOENT/u);
+  });
+});
+
+describe("release-announce › link", () => {
+  const LINK_ENV = {
+    VERSION: PRERELEASE,
+    TELEGRAM_ANNOUNCE_TOKEN: "",
+  };
+  const TAG = `v${PRERELEASE}`;
+  const linkWith = (openings, body, env = {}) =>
+    announceWith({
+      args: ["link"],
+      env: {
+        ...LINK_ENV,
+        OPENINGS:
+          typeof openings === "string" ? openings : JSON.stringify(openings),
+        ...env,
+      },
+      github: fakeGithub({ bodies: body === null ? {} : { [TAG]: body } }),
+    });
+  const lineOf = (links) => telegramLine(links);
+
+  it("appends the Telegram line of the openings at the end of the Release body", async () => {
+    const { code, out, calls, github } = await linkWith(
+      { [PRE_EN]: 101, [PRE_PT]: 104 },
+      "Notes.",
+    );
+
+    expect(code).toBe(0);
+    expect(calls).toEqual([]);
+    expect(github.edits).toEqual([
+      {
+        tag: TAG,
+        body: `Notes.\n\n${lineOf({
+          [PRE_EN]: "https://t.me/bcct_tips_prereleases/101",
+          [PRE_PT]: "https://t.me/bcct_tips_prelancamentos/104",
+        })}`,
+      },
+    ]);
+    expect(out).toEqual([
+      `✓ ${TAG}: recorded the Telegram links of ${PRE_EN}, ${PRE_PT}`,
+    ]);
+  });
+
+  it("works without the announcement token", async () => {
+    const { code, err } = await linkWith({ [STABLE_EN]: 7 }, "Notes.");
+
+    expect(code).toBe(0);
+    expect(err).toEqual([]);
+  });
+
+  it("merges the existing line with the new links", async () => {
+    const { github } = await linkWith(
+      { [PRE_PT]: 104 },
+      `Notes.\n\n📣 Telegram: [${PRE_EN}](${TELEGRAM_EN})`,
+    );
+
+    expect(github.edits[0].body).toBe(
+      `Notes.\n\n📣 Telegram: [${PRE_EN}](${TELEGRAM_EN}) · [${PRE_PT}](https://t.me/bcct_tips_prelancamentos/104)`,
+    );
+  });
+
+  it("replaces only the chat it is given", async () => {
+    const { github } = await linkWith(
+      { [PRE_EN]: 55 },
+      `Notes.\n\n${TELEGRAM_LINE}`,
+    );
+
+    expect(github.edits[0].body).toBe(
+      `Notes.\n\n📣 Telegram: [${PRE_EN}](https://t.me/bcct_tips_prereleases/55) · [${PRE_PT}](${TELEGRAM_PT})`,
+    );
+  });
+
+  it("removes the old line with the blank line before it and keeps the text after it", async () => {
+    const { github } = await linkWith(
+      { [PRE_EN]: 55 },
+      `A\n\n${TELEGRAM_LINE}\n\nB`,
+    );
+
+    expect(github.edits[0].body).toBe(
+      `A\n\nB\n\n📣 Telegram: [${PRE_EN}](https://t.me/bcct_tips_prereleases/55) · [${PRE_PT}](${TELEGRAM_PT})`,
+    );
+  });
+
+  it("removes the old line of a body with CRLF line ends", async () => {
+    const { github } = await linkWith(
+      { [PRE_EN]: 55 },
+      `Notes.\r\n\r\n${TELEGRAM_LINE}`,
+    );
+
+    expect(github.edits[0].body).toBe(
+      `Notes.\n\n📣 Telegram: [${PRE_EN}](https://t.me/bcct_tips_prereleases/55) · [${PRE_PT}](${TELEGRAM_PT})`,
+    );
+  });
+
+  it("writes the same body when run twice with the same openings", async () => {
+    const first = await linkWith({ [PRE_EN]: 101 }, "Notes.");
+    const second = await linkWith(
+      { [PRE_EN]: 101 },
+      first.github.edits[0].body,
+    );
+
+    expect(second.github.edits[0].body).toBe(first.github.edits[0].body);
+  });
+
+  it("appends to an empty body", async () => {
+    const { github } = await linkWith({ [PRE_EN]: 101 }, "");
+
+    expect(github.edits[0].body).toBe(
+      `\n\n📣 Telegram: [${PRE_EN}](https://t.me/bcct_tips_prereleases/101)`,
+    );
+  });
+
+  it.each([[""], ["{}"], [" \n"]])(
+    "says there is nothing to record and edits nothing for OPENINGS %j",
+    async (openings) => {
+      const { code, out, err, github } = await linkWith(openings, "Notes.");
+
+      expect(code).toBe(0);
+      expect(out).toEqual(["nothing to record: no channel posted an opening"]);
+      expect(err).toEqual([]);
+      expect(github.reads).toEqual([]);
+      expect(github.edits).toEqual([]);
+    },
+  );
+
+  it("says there is nothing to record when OPENINGS is not set", async () => {
+    const { code, out, github } = await announceWith({
+      args: ["link"],
+      env: LINK_ENV,
+    });
+
+    expect(code).toBe(0);
+    expect(out).toEqual(["nothing to record: no channel posted an opening"]);
+    expect(github.edits).toEqual([]);
+  });
+
+  it("refuses to run without VERSION", async () => {
+    const { code, err, github } = await linkWith({ [PRE_EN]: 1 }, "Notes.", {
+      VERSION: "",
+    });
+
+    expect(code).toBe(1);
+    expect(err).toEqual(["✗ VERSION is required"]);
+    expect(github.edits).toEqual([]);
+  });
+
+  it.each([
+    ["not JSON", "not json"],
+    ["a JSON array", "[1]"],
+    ["JSON null", "null"],
+    ["a JSON string", '"x"'],
+    ["a JSON number", "5"],
+  ])("refuses OPENINGS that is %s", async (_case, openings) => {
+    const { code, err, github } = await linkWith(openings, "Notes.");
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      "✗ OPENINGS must be a JSON object of channel to opening id",
+    ]);
+    expect(github.edits).toEqual([]);
+  });
+
+  it.each([
+    ["a string", "5"],
+    ["zero", 0],
+    ["a negative number", -3],
+    ["a fraction", 1.5],
+    ["null", null],
+  ])("refuses an opening id that is %s", async (_case, id) => {
+    const { code, err, github } = await linkWith({ [PRE_EN]: id }, "Notes.");
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      `✗ OPENINGS: the opening id of ${PRE_EN} must be a positive integer`,
+    ]);
+    expect(github.edits).toEqual([]);
+  });
+
+  it("refuses a chat that is not a channel of the announcement", async () => {
+    const { code, err, github } = await linkWith(
+      { [PRE_EN]: 1, "@other": 2 },
+      "Notes.",
+    );
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      "✗ OPENINGS: @other is not a channel of the announcement",
+    ]);
+    expect(github.edits).toEqual([]);
+  });
+
+  it("refuses when the version has no Release", async () => {
+    const { code, err, github } = await linkWith({ [PRE_EN]: 1 }, null);
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      `✗ there is no Release ${TAG} to record the Telegram links in`,
+    ]);
+    expect(github.edits).toEqual([]);
+  });
+
+  it("fails when the Release cannot be read", async () => {
+    const { code, err } = await announceWith({
+      args: ["link"],
+      env: { ...LINK_ENV, OPENINGS: JSON.stringify({ [PRE_EN]: 1 }) },
+      github: fakeGithub({ failOn: "read" }),
+    });
+
+    expect(code).toBe(1);
+    expect(err).toEqual(["✗ gh is down"]);
+  });
+
+  it("fails when the Release cannot be edited", async () => {
+    const { code, err } = await announceWith({
+      args: ["link"],
+      env: { ...LINK_ENV, OPENINGS: JSON.stringify({ [PRE_EN]: 1 }) },
+      github: fakeGithub({ bodies: { [TAG]: "Notes." }, failOn: "edit" }),
+    });
+
+    expect(code).toBe(1);
+    expect(err).toEqual(["✗ gh refused the edit"]);
+  });
+});
+
+describe("release-announce › gh", () => {
+  const github = (execFile) => ghGithub("owner/repo", execFile);
+
+  it("reads the body of a Release with gh and drops the line end gh adds", () => {
+    const execFile = vi.fn(() => "Body.\n");
+
+    expect(github(execFile).releaseBody("v1.0.0")).toBe("Body.");
+    expect(execFile).toHaveBeenCalledWith(
+      "gh",
+      [
+        "release",
+        "view",
+        "v1.0.0",
+        "--repo",
+        "owner/repo",
+        "--json",
+        "body",
+        "--jq",
+        ".body",
+      ],
+      expect.objectContaining({ encoding: "utf8" }),
+    );
+  });
+
+  it("gives null when the Release does not exist", () => {
+    const execFile = vi.fn(() => {
+      throw Object.assign(new Error("Command failed"), {
+        stderr: "release not found\n",
+      });
+    });
+
+    expect(github(execFile).releaseBody("v1.0.0")).toBeNull();
+  });
+
+  it.each([
+    ["another stderr", { stderr: "HTTP 401: Bad credentials" }],
+    ["no stderr", {}],
+  ])("rethrows a failure of gh with %s", (_case, extra) => {
+    const execFile = vi.fn(() => {
+      throw Object.assign(new Error("Command failed: gh"), extra);
+    });
+
+    expect(() => github(execFile).releaseBody("v1.0.0")).toThrow(
+      "Command failed: gh",
+    );
+  });
+
+  it("edits the body of a Release with the body on stdin", () => {
+    const execFile = vi.fn(() => "");
+
+    github(execFile).editReleaseBody("v1.0.0", "New body.");
+
+    expect(execFile).toHaveBeenCalledWith(
+      "gh",
+      [
+        "release",
+        "edit",
+        "v1.0.0",
+        "--repo",
+        "owner/repo",
+        "--notes-file",
+        "-",
+      ],
+      expect.objectContaining({ input: "New body.", encoding: "utf8" }),
+    );
   });
 });
 
@@ -1923,6 +2976,61 @@ describe("release-announce › pin", () => {
     ]);
   });
 
+  it("recognizes the version of an opening by its own Release link, the last one, after the included versions", async () => {
+    const link = (version) => ({
+      type: "text_link",
+      url: `https://github.com/${REPO}/releases/tag/v${version}`,
+    });
+    const { out, calls } = await announceWith({
+      env: { VERSION: ALPHA_2 },
+      root: tempRoot({ [folderFile("alpha.2")]: notesText() }),
+      fetch: {
+        pinning: pinnedIn({
+          pinned_message: {
+            message_id: 55,
+            entities: [link(ALPHA_1), link("0.3.0-alpha.0"), link(BETA)],
+          },
+        }),
+      },
+    });
+
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: 3 posts, opening kept, v${BETA} is pinned`,
+      `✓ ${PRE_PT}: 3 posts, opening kept, v${BETA} is pinned`,
+    ]);
+    expect(
+      pinCalls(calls).filter(({ method }) => method !== "getChat"),
+    ).toEqual([]);
+  });
+
+  it("recognizes the last link that is a version when a later link is not one", async () => {
+    const { out } = await announceWith({
+      env: { VERSION: ALPHA_2 },
+      root: tempRoot({ [folderFile("alpha.2")]: notesText() }),
+      fetch: {
+        pinning: pinnedIn({
+          pinned_message: {
+            message_id: 55,
+            entities: [
+              {
+                type: "text_link",
+                url: `https://github.com/${REPO}/releases/tag/v${BETA}`,
+              },
+              {
+                type: "text_link",
+                url: `https://github.com/${REPO}/releases/tag/vnext`,
+              },
+            ],
+          },
+        }),
+      },
+    });
+
+    expect(out[0]).toBe(
+      `✓ ${PRE_EN}: 3 posts, opening kept, v${BETA} is pinned`,
+    );
+  });
+
   it("replaces another opening of the same version", async () => {
     const { calls } = await announceWith({
       fetch: { pinning: pinnedIn(openingOf(90, PRERELEASE)) },
@@ -2385,18 +3493,22 @@ describe("release-announce › run", () => {
     expect(err).toEqual(["✗ invalid version: next"]);
   });
 
-  it.each([[["x"]], [["--root"]], [["--print", "--root"]], [["--fix"]]])(
-    "a usage error exits 2 (%j)",
-    async (args) => {
-      const { code, err, calls } = await announceWith({ args });
+  it.each([
+    [["x"]],
+    [["--root"]],
+    [["--print", "--root"]],
+    [["--fix"]],
+    [["link", "--print"]],
+    [["--print", "link"]],
+  ])("a usage error exits 2 (%j)", async (args) => {
+    const { code, err, calls } = await announceWith({ args });
 
-      expect(code).toBe(2);
-      expect(calls).toEqual([]);
-      expect(err).toEqual([
-        "usage: npm run release:announce -- [--print] [--root <folder>] (version in VERSION)",
-      ]);
-    },
-  );
+    expect(code).toBe(2);
+    expect(calls).toEqual([]);
+    expect(err).toEqual([
+      "usage: npm run release:announce -- [--print] [--root <folder>] | link (version in VERSION)",
+    ]);
+  });
 
   it("is the release:announce npm script", () => {
     const { scripts } = JSON.parse(

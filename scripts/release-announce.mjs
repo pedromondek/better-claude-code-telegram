@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { COMMAND, REPOSITORY } from "../npm/shim/shim.constants.mjs";
-import { PORTUGUESE_BLOCK } from "./release-notes-layout.mjs";
+import { PORTUGUESE_BLOCK, releaseUrl } from "./release-notes-layout.mjs";
 import { installCommand } from "./release-npm-publish.mjs";
 import { notesPath } from "./release-pr.mjs";
 import {
@@ -12,11 +13,19 @@ import {
   ANNOUNCE_RETRIES,
   TELEGRAM_API,
 } from "./release.constants.mjs";
-import { compareVersions } from "./release-order.mjs";
+import { compareVersions, gatheredVersions } from "./release-order.mjs";
 import { isVersion, parseVersion } from "./version.mjs";
 
 const USAGE =
-  "usage: npm run release:announce -- [--print] [--root <folder>] (version in VERSION)";
+  "usage: npm run release:announce -- [--print] [--root <folder>] | link (version in VERSION)";
+const TELEGRAM_LINE_PREFIX = "📣 Telegram: ";
+const TELEGRAM_LINE = /^📣 Telegram: (.*)$/mu;
+const TELEGRAM_LINE_WITH_GAP = /(?:\r?\n\r?\n)?^📣 Telegram: .*$/mu;
+const TELEGRAM_LINK = /\[(@\w+)\]\((https:\/\/t\.me\/[^)\s]+)\)/gu;
+const NO_RELEASE = "release not found";
+const NOTHING_TO_RECORD = "nothing to record: no channel posted an opening";
+const OPENINGS_SHAPE =
+  "OPENINGS must be a JSON object of channel to opening id";
 const SUMMARY_HEADINGS = {
   "en-us": "### 📋 Summary",
   "pt-br": "### 📋 Resumo",
@@ -30,7 +39,11 @@ const MEDIA_LINES = {
 const ITEM_BODY_LINE = /^(?:\s+\S|\s*$)/u;
 const PARAGRAPH_LINE = /^ {2,}\S/u;
 const COMMENT_LINE = /^ {2,}<!--.*-->\s*$/u;
-const PRERELEASE_NOTES = /^(?:alpha|beta|rc)\.\d+\.md$/u;
+const PRERELEASE_NOTES = /^((?:alpha|beta|rc)\.\d+)\.md$/u;
+const ALL_CHANNELS = [
+  ...ANNOUNCE_CHANNELS.stable,
+  ...ANNOUNCE_CHANNELS.prereleases,
+];
 const CAPTION_LIMIT = 1024;
 const MESSAGE_LIMIT = 4096;
 const ANIMATION_LIMIT_BYTES = 50 * 1024 * 1024;
@@ -50,11 +63,17 @@ const MEDIA_TYPES = {
 };
 const EXTENSION_OF_LINE = { gif: ".gif", video: ".mp4" };
 const WORDING = {
-  "en-us": { notes: "Release notes", install: "Install", stable: "is stable" },
+  "en-us": {
+    notes: "Release notes",
+    install: "Install",
+    stable: "is stable",
+    includes: "Includes:",
+  },
   "pt-br": {
     notes: "Notas da versão",
     install: "Instalar",
     stable: "está estável",
+    includes: "Inclui:",
   },
 };
 
@@ -227,35 +246,92 @@ function readNotes(root, version) {
 const normalizedText = (text) =>
   text.trim().replaceAll(/\s+/gu, " ").toLowerCase();
 
-function newFeatures(root, version, features) {
-  const file = notesPath(version);
-  const folder = dirname(file);
-  const seen = readdirSync(join(root, folder))
-    .filter((name) => PRERELEASE_NOTES.test(name))
-    .flatMap(
-      (name) =>
-        parseNotes(
-          readFileSync(join(root, folder, name), "utf8"),
-          join(folder, name),
-        )["en-us"].features,
-    );
-  const seenUrls = (key) =>
-    new Set(seen.map((item) => item[key]).filter((url) => url !== null));
-  const seenGifs = seenUrls("gif");
-  const seenVideos = seenUrls("video");
-  const seenTexts = new Set(seen.map(({ text }) => normalizedText(text)));
+function folderNotes(root, version) {
+  const folder = dirname(notesPath(version));
 
-  return features.map(
-    ({ text, gif, video }) =>
-      !seenGifs.has(gif) &&
-      !seenVideos.has(video) &&
-      !seenTexts.has(normalizedText(text)),
+  if (!existsSync(join(root, folder))) {
+    return [];
+  }
+
+  return readdirSync(join(root, folder)).flatMap((name) => {
+    const stage = PRERELEASE_NOTES.exec(name)?.[1];
+
+    return stage === undefined
+      ? []
+      : [{ version: `${basename(folder)}-${stage}`, path: join(folder, name) }];
+  });
+}
+
+const demoOf = ({ video, gif }) => video ?? gif;
+
+function alreadyPosted(item, seen) {
+  const demo = demoOf(item);
+
+  return seen.some((earlier) =>
+    demo === null
+      ? demoOf(earlier) === null &&
+        normalizedText(earlier.text) === normalizedText(item.text)
+      : demoOf(earlier) === demo,
   );
 }
 
-function openingText({ marker, title, bullets, language, context }) {
+function freshFeatures(root, version, features) {
+  const seen = folderNotes(root, version)
+    .filter((notes) => compareVersions(notes.version, version) < 0)
+    .flatMap(
+      ({ path }) =>
+        parseNotes(readFileSync(join(root, path), "utf8"), path)["en-us"]
+          .features,
+    );
+
+  return features.map((item) => !alreadyPosted(item, seen));
+}
+
+function gatheredOf(root, version) {
+  return gatheredVersions(
+    version,
+    folderNotes(root, version).map((notes) => notes.version),
+  );
+}
+
+function hrefOf(url) {
+  return escapeHtml(url).replaceAll('"', "&quot;");
+}
+
+function telegramLinkOf(records, version, { chat, language }) {
+  const recorded = records[version] ?? {};
+  const prereleaseChat = ANNOUNCE_CHANNELS.prereleases.find(
+    (channel) => channel.language === language,
+  )?.chat;
+
+  return recorded[chat] ?? recorded[prereleaseChat] ?? null;
+}
+
+function includesLines(channel, { gathered, records, repository }) {
+  if (gathered.length === 0) {
+    return [];
+  }
+
+  return [
+    WORDING[channel.language].includes,
+    ...gathered.flatMap((gatheredVersion) => {
+      const telegram = telegramLinkOf(records, gatheredVersion, channel);
+      const release = `<a href="${hrefOf(releaseUrl(gatheredVersion, repository))}">🔗 Release</a>`;
+
+      return [
+        `• v${gatheredVersion}`,
+        telegram === null
+          ? `   ${release}`
+          : `   <a href="${hrefOf(telegram)}">📣 Telegram</a> · ${release}`,
+      ];
+    }),
+    "",
+  ];
+}
+
+function openingText({ marker, title, bullets, channel, context }) {
   const { version, repository } = context;
-  const wording = WORDING[language];
+  const wording = WORDING[channel.language];
 
   return [
     `${marker} ${title}`,
@@ -263,7 +339,8 @@ function openingText({ marker, title, bullets, language, context }) {
     ...(bullets.length > 0
       ? [...bullets.map((bullet) => `• ${toTelegramHtml(bullet)}`), ""]
       : []),
-    `<a href="https://github.com/${repository}/releases/tag/v${version}">${wording.notes}</a>`,
+    ...includesLines(channel, context),
+    `<a href="${releaseUrl(version, repository)}">📝 ${wording.notes}</a>`,
     `${wording.install}: <code>${escapeHtml(installCommand(version))}</code>`,
   ].join("\n");
 }
@@ -310,7 +387,10 @@ function announcement({ chat, language }, { opening, features }) {
   };
 }
 
-function fullAnnouncement(channel, notes, marker, context) {
+const onlyFresh = (features, fresh) =>
+  features.filter((_feature, index) => fresh[index]);
+
+function fullAnnouncement(channel, notes, marker, context, postedFeatures) {
   const { summary, features } = notes[channel.language];
 
   return announcement(channel, {
@@ -318,50 +398,212 @@ function fullAnnouncement(channel, notes, marker, context) {
       marker,
       title: `<b>${COMMAND} ${context.version}</b>`,
       bullets: summary,
-      language: channel.language,
+      channel,
       context,
     }),
-    features,
+    features: postedFeatures(features),
   });
 }
 
 function stableNewsAnnouncement(channel, notes, fresh, context) {
-  const features = notes[channel.language].features.filter(
-    (_feature, index) => fresh[index],
-  );
+  const features = onlyFresh(notes[channel.language].features, fresh);
 
   return announcement(channel, {
     opening: openingText({
       marker: "✅",
       title: `<b>${context.version}</b> ${WORDING[channel.language].stable}`,
       bullets: features.map(({ text }) => withoutSparkle(text)),
-      language: channel.language,
-      context,
+      channel,
+      context: { ...context, gathered: [] },
     }),
     features,
   });
 }
 
-export function buildAnnouncements({ root, version, repository }) {
+export function buildAnnouncements({
+  root,
+  version,
+  repository,
+  records = {},
+}) {
   const notes = readNotes(root, version);
-  const context = { version, repository };
+  const context = {
+    version,
+    repository,
+    records,
+    gathered: gatheredOf(root, version),
+  };
+  const fresh = freshFeatures(root, version, notes["en-us"].features);
 
   if (parseVersion(version).stage !== null) {
     return ANNOUNCE_CHANNELS.prereleases.map((channel) =>
-      fullAnnouncement(channel, notes, "🧪", context),
+      fullAnnouncement(channel, notes, "🧪", context, (features) =>
+        onlyFresh(features, fresh),
+      ),
     );
   }
 
-  const fresh = newFeatures(root, version, notes["en-us"].features);
-
   return [
     ...ANNOUNCE_CHANNELS.stable.map((channel) =>
-      fullAnnouncement(channel, notes, "🚀", context),
+      fullAnnouncement(channel, notes, "🚀", context, (features) => features),
     ),
     ...ANNOUNCE_CHANNELS.prereleases.map((channel) =>
       stableNewsAnnouncement(channel, notes, fresh, context),
     ),
   ];
+}
+
+export function parseTelegramLine(body) {
+  const line = TELEGRAM_LINE.exec(body)?.[1] ?? "";
+
+  return Object.fromEntries(
+    [...line.matchAll(TELEGRAM_LINK)].map(([, chat, url]) => [chat, url]),
+  );
+}
+
+export function telegramLine(links) {
+  const entries = ALL_CHANNELS.filter(({ chat }) =>
+    Object.hasOwn(links, chat),
+  ).map(({ chat }) => `[${chat}](${links[chat]})`);
+
+  return entries.length === 0
+    ? ""
+    : `${TELEGRAM_LINE_PREFIX}${entries.join(" · ")}`;
+}
+
+export function ghGithub(repository, execFile = execFileSync) {
+  const options = { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] };
+
+  return {
+    releaseBody(tag) {
+      try {
+        return execFile(
+          "gh",
+          [
+            "release",
+            "view",
+            tag,
+            "--repo",
+            repository,
+            "--json",
+            "body",
+            "--jq",
+            ".body",
+          ],
+          options,
+        ).replace(/\n$/u, "");
+      } catch (error) {
+        if (`${error.stderr ?? ""}`.includes(NO_RELEASE)) {
+          return null;
+        }
+
+        throw error;
+      }
+    },
+    editReleaseBody(tag, body) {
+      execFile(
+        "gh",
+        ["release", "edit", tag, "--repo", repository, "--notes-file", "-"],
+        { ...options, input: body },
+      );
+    },
+  };
+}
+
+function recordToGithubOutput(env) {
+  return (openings) => {
+    if (env.GITHUB_OUTPUT) {
+      appendFileSync(
+        env.GITHUB_OUTPUT,
+        `openings=${JSON.stringify(openings)}\n`,
+      );
+    }
+  };
+}
+
+async function readRecords(github, gathered) {
+  const bodies = await Promise.all(
+    gathered.map((gatheredVersion) =>
+      github.releaseBody(`v${gatheredVersion}`),
+    ),
+  );
+
+  return Object.fromEntries(
+    gathered.flatMap((gatheredVersion, index) =>
+      bodies[index] === null
+        ? []
+        : [[gatheredVersion, parseTelegramLine(bodies[index])]],
+    ),
+  );
+}
+
+function parseOpenings(text) {
+  if (text.trim() === "") {
+    return {};
+  }
+
+  let openings;
+
+  try {
+    openings = JSON.parse(text);
+  } catch {
+    throw new Error(OPENINGS_SHAPE);
+  }
+
+  if (
+    typeof openings !== "object" ||
+    openings === null ||
+    Array.isArray(openings)
+  ) {
+    throw new Error(OPENINGS_SHAPE);
+  }
+
+  for (const [chat, id] of Object.entries(openings)) {
+    if (!ALL_CHANNELS.some((channel) => channel.chat === chat)) {
+      throw new Error(`OPENINGS: ${chat} is not a channel of the announcement`);
+    }
+
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new Error(
+        `OPENINGS: the opening id of ${chat} must be a positive integer`,
+      );
+    }
+  }
+
+  return openings;
+}
+
+async function linkOpenings({ version, env, github, out }) {
+  const openings = parseOpenings(env.OPENINGS ?? "");
+  const chats = Object.keys(openings);
+
+  if (chats.length === 0) {
+    out(NOTHING_TO_RECORD);
+    return;
+  }
+
+  const tag = `v${version}`;
+  const body = await github.releaseBody(tag);
+
+  if (body === null) {
+    throw new Error(
+      `there is no Release ${tag} to record the Telegram links in`,
+    );
+  }
+
+  const links = {
+    ...parseTelegramLine(body),
+    ...Object.fromEntries(
+      chats.map((chat) => [
+        chat,
+        `https://t.me/${chat.slice(1)}/${openings[chat]}`,
+      ]),
+    ),
+  };
+  const kept = body.replace(TELEGRAM_LINE_WITH_GAP, "").trimEnd();
+
+  await github.editReleaseBody(tag, `${kept}\n\n${telegramLine(links)}`);
+  out(`✓ ${tag}: recorded the Telegram links of ${chats.join(", ")}`);
 }
 
 function printPost(chat, post) {
@@ -457,7 +699,7 @@ function openingVersionOf(message, repository) {
         type === "text_link" && typeof url === "string" && url.startsWith(link),
     )
     .map(({ url }) => url.slice(link.length))
-    .find(isVersion);
+    .findLast(isVersion);
 }
 
 async function pinOpening(target, { openingId, repository, version }) {
@@ -717,7 +959,7 @@ function withResume(error, { cursor, finished }, { chat, openingId, sent }) {
 
 async function postAnnouncements(
   announcements,
-  { env, fetch, sleep, out, token, repository },
+  { env, fetch, sleep, out, token, repository, record },
 ) {
   if (token === "") {
     throw new Error(
@@ -758,6 +1000,13 @@ async function postAnnouncements(
   const media = await downloadAnimations(fetch, pending);
   const postedTo = new Set();
   const finished = [];
+  const openings = {};
+  const noteOpening = (chat, openingId) => {
+    if (!dryRun) {
+      openings[chat] = openingId;
+      record({ ...openings });
+    }
+  };
 
   for (const { chat, done, posts, total, ...progress } of pending) {
     if (done) {
@@ -778,6 +1027,10 @@ async function postAnnouncements(
     };
 
     let { openingId, sent } = progress;
+
+    if (openingId !== null) {
+      noteOpening(chat, openingId);
+    }
 
     for (const item of posts) {
       const init = requestOf(target, item, openingId);
@@ -804,6 +1057,10 @@ async function postAnnouncements(
       postedTo.add(destination);
       sent += 1;
       openingId = postedId ?? openingId;
+
+      if (postedId !== null) {
+        noteOpening(chat, postedId);
+      }
     }
 
     const newerPinned = await pinOpening(target, {
@@ -832,7 +1089,11 @@ async function postAnnouncements(
 }
 
 function parseArgs(args) {
-  const options = { print: false, root: "." };
+  if (args.length === 1 && args[0] === "link") {
+    return { link: true };
+  }
+
+  const options = { link: false, print: false, root: "." };
   const queue = [...args];
 
   while (queue.length > 0) {
@@ -853,7 +1114,10 @@ function parseArgs(args) {
 const redact = (text, token) =>
   token === "" ? text : text.replaceAll(token, "***");
 
-export async function run(args, { root, env, fetch, sleep, out, err }) {
+export async function run(
+  args,
+  { root, env, fetch, sleep, out, err, github, record },
+) {
   const options = parseArgs(args);
 
   if (options === null) {
@@ -871,10 +1135,22 @@ export async function run(args, { root, env, fetch, sleep, out, err }) {
     }
 
     const repository = env.GH_REPO || REPOSITORY;
+    const releases = github ?? ghGithub(repository);
+
+    if (options.link) {
+      await linkOpenings({ version, env, github: releases, out });
+      return 0;
+    }
+
+    const base = resolve(root, options.root);
+    const records = options.print
+      ? {}
+      : await readRecords(releases, gatheredOf(base, version));
     const announcements = buildAnnouncements({
-      root: resolve(root, options.root),
+      root: base,
       version,
       repository,
+      records,
     });
 
     if (options.print) {
@@ -891,6 +1167,7 @@ export async function run(args, { root, env, fetch, sleep, out, err }) {
         out,
         token,
         repository,
+        record: record ?? recordToGithubOutput(env),
       });
     }
 

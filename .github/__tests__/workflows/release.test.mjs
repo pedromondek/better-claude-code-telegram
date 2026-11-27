@@ -186,12 +186,12 @@ describe("release.yml publishes the version pull request that was merged", () =>
       });
     });
 
-    it("passes the bot token by name, the only secret the called job reads, and lets it read the version pull request", () => {
+    it("passes the bot token by name, the only secret the called job reads, and lets it read the version pull request and link the Release", () => {
       expect(announce.secrets).toEqual({
         TELEGRAM_ANNOUNCE_TOKEN: "${{ secrets.TELEGRAM_ANNOUNCE_TOKEN }}",
       });
       expect(announce.permissions).toEqual({
-        contents: "read",
+        contents: "write",
         "pull-requests": "read",
       });
     });

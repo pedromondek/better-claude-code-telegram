@@ -316,7 +316,7 @@ jobs:
       - verify
     if: inputs.only_latest != true
     permissions:
-      contents: read
+      contents: write # the called link job edits the body of the Release to link its announcement
       pull-requests: read # the called record job reads the version pull request
     uses: $/.github/workflows/announce-release.yml
     with:

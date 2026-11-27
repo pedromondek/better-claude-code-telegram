@@ -83,7 +83,7 @@ The workflow only runs from `main` and has three jobs:
 
 ## 🔀 The version pull request
 
-The workflow opens the pull request `release/v<version>`, titled `Release v<version>`, with one commit that writes the version to the 8 files. Between `<!-- notes -->` and `<!-- /notes -->`, the description holds the layout of the notes: a `<!-- draft -->` line, the TIP with the Telegram channels, the IMPORTANT with the install commands, the IMPORTANT with the update commands, the legend NOTE, the English block (`<details><summary>` English) with the draft that git-cliff generates from the commits, and an empty Portuguese block:
+The workflow opens the pull request `release/v<version>`, titled `Release v<version>`, with one commit that writes the version to the 8 files. Between `<!-- notes -->` and `<!-- /notes -->`, the description holds the layout of the notes: a `<!-- draft -->` line, the TIP with the Telegram channels, the IMPORTANT with the install commands, the IMPORTANT with the update commands, in a version that gathers others the 📦 includes NOTE linking the Release of each one (the first beta gathers the alphas of its base, the first rc the betas, a stable every pre-release of its base), the legend NOTE, the English block (`<details><summary>` English) with the draft that git-cliff generates from the commits, and an empty Portuguese block:
 
 ```
 <!-- notes -->
@@ -102,14 +102,14 @@ The workflow opens the pull request `release/v<version>`, titled `Release v<vers
 <!-- /notes -->
 ```
 
-Everything between `<!-- notes -->` and `<!-- /notes -->` becomes the body of the Release. Write the final notes with `/release-notes`, which starts from the patch notes of the pull requests merged since the last tag (`npm run release:patch-notes`), drafts the public notes in en-us and pt-br and asks you to approve each part, or edit the description on GitHub and delete the `<!-- draft -->` line.
+Everything between `<!-- notes -->` and `<!-- /notes -->` becomes the body of the Release. Write the final notes with `/release-notes`, which starts from the patch notes of the pull requests merged since the last tag, or, in a version that gathers others, since the tag before the first one it gathers (`npm run release:patch-notes`), so the first beta carries the alphas and what the beta changed, and the next betas only what changed since the last, drafts the public notes in en-us and pt-br and asks you to approve each part, or edit the description on GitHub and delete the `<!-- draft -->` line.
 
 Two checks gate the pull request on every push and every edit of the description:
 
 - **Release notes** fails while the `<!-- draft -->` line is still between the markers, while the notes are empty or lack the 🇧🇷 block, which the release needs to build `docs/features`, or when a marker is missing or repeated, so a raw draft never gets published.
 - **Release version** re-checks the three rules, in case another version shipped while the pull request was open, and verifies that all 8 files carry the version in the branch name.
 
-The workflow opens the pull request only once. To prepare the same version again, close the pull request and delete its branch.
+The workflow opens the pull request only once. To prepare the same version again, close the pull request and delete its branch. A version that gathers one without a published Release, left by a release run that stopped before publishing it, is refused until that release finishes.
 
 ## 🚀 What happens on merge
 
@@ -151,6 +151,7 @@ On merge, the release workflow:
 6. Points the `latest` dist-tag of the 7 packages at a pre-release while no stable version is on npm, through trusted publishing; it never moves `latest` back from a newer version. Each package needs the "Allow npm dist-tag" option of its trusted publisher, which only its settings on npmjs.com turn on.
 7. Verifies the published version (`verify-release.yml`): the Release is immutable and carries exactly the binaries, their `.sha256` and `checksums.txt`; each binary passes `gh release verify-asset` and `gh attestation verify`; each npm package has the version on the stage's dist-tag, `latest` at the version or later while no stable version exists, a tarball that matches its integrity, the provenance of trusted publishing and the files of that commit; and `npm audit signatures` passes on an install for each of the 6 platforms.
 8. For a stable release only, advances the `stable` branch to the verified commit. `stable` is the marketplace ref that the setup and `bcct update` register for a stable version; a pre-release registers its own tag, `v<version>`.
+9. Announces the version on the Telegram channels (`announce-release.yml`): a pre-release posts on the pre-release channels its full opening and, as a reply to it, the demo of each ✨ item no earlier pre-release of the version posted; a stable version posts on the stable channels its full opening and, as a reply to it, the demo of every ✨ item and, on the pre-release channels, only a notice listing the ✨ items no pre-release posted, with their demos. The demo is the identity of an item, so a reworded item with the same demo does not post again, and an item without a demo matches by its text. A version that gathers others lists them in its opening under `Includes:`, each with its Release and, when its Release records the opening of that channel or of the pre-release channel of the same language, the opening posted for it on Telegram. Then the `link` job writes at the end of the Release a `📣 Telegram:` line linking the opening of each channel.
 
 The release also runs by hand (Actions ▸ Release ▸ Run workflow) on a merged version pull request, for when the merge did not start it or a run stopped halfway. Until the Release is published, it picks up where the last run stopped: a record already on `main` or a draft Release is reused, not made again. Once the Release is published (a run that stopped at the npm stage, its approval, the `latest` step or the verify), a plain dispatch refuses it with `v<version> is already published`: re-run the failed jobs of that run instead, whose npm stage skips a package already on npm. With **only_latest** checked, the dispatch on a published version runs only the `latest` step and the verify, with no build, publish or announcement. When the run that published the version stopped before its announcement, run `announce-release.yml` by hand on the same pull request afterwards. `verify-release.yml` also runs alone, by hand, on a merged version pull request.
 
