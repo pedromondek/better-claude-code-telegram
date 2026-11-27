@@ -45,6 +45,39 @@ export function compareVersions(left, right) {
   );
 }
 
+export function gatheredVersions(version, versions) {
+  const current = parseVersion(version);
+  const sameBase = versions.filter((other) => {
+    const parsed = parseVersion(other);
+
+    return (
+      base(parsed) === base(current) &&
+      parsed.stage !== null &&
+      compareVersions(other, version) < 0
+    );
+  });
+
+  if (current.stage === null) {
+    return sameBase.toSorted(compareVersions);
+  }
+
+  if (current.number !== 1) {
+    return [];
+  }
+
+  const earlier = sameBase.filter(
+    (other) => stageRank(parseVersion(other)) < stageRank(current),
+  );
+  const previousStage = earlier
+    .map((other) => parseVersion(other).stage)
+    .toSorted((left, right) => STAGES.indexOf(left) - STAGES.indexOf(right))
+    .at(-1);
+
+  return earlier
+    .filter((other) => parseVersion(other).stage === previousStage)
+    .toSorted(compareVersions);
+}
+
 function highestOf(versions) {
   return versions.toSorted(compareVersions).at(-1) ?? null;
 }

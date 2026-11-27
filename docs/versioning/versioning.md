@@ -83,7 +83,7 @@ The workflow only runs from `main` and has three jobs:
 
 ## 🔀 The version pull request
 
-The workflow opens the pull request `release/v<version>`, titled `Release v<version>`, with one commit that writes the version to the 8 files. Between `<!-- notes -->` and `<!-- /notes -->`, the description holds the layout of the notes: a `<!-- draft -->` line, the TIP with the Telegram channels, the IMPORTANT with the install commands, the IMPORTANT with the update commands, the legend NOTE, the English block (`<details><summary>` English) with the draft that git-cliff generates from the commits, and an empty Portuguese block:
+The workflow opens the pull request `release/v<version>`, titled `Release v<version>`, with one commit that writes the version to the 8 files. Between `<!-- notes -->` and `<!-- /notes -->`, the description holds the layout of the notes: a `<!-- draft -->` line, the TIP with the Telegram channels, the IMPORTANT with the install commands, the IMPORTANT with the update commands, in a version that gathers others the 📦 includes NOTE linking the Release of each one (the first beta gathers the alphas of its base, the first rc the betas, a stable every pre-release of its base), the legend NOTE, the English block (`<details><summary>` English) with the draft that git-cliff generates from the commits, and an empty Portuguese block:
 
 ```
 <!-- notes -->
@@ -102,7 +102,7 @@ The workflow opens the pull request `release/v<version>`, titled `Release v<vers
 <!-- /notes -->
 ```
 
-Everything between `<!-- notes -->` and `<!-- /notes -->` becomes the body of the Release. Write the final notes with `/release-notes`, which starts from the patch notes of the pull requests merged since the last tag (`npm run release:patch-notes`), drafts the public notes in en-us and pt-br and asks you to approve each part, or edit the description on GitHub and delete the `<!-- draft -->` line.
+Everything between `<!-- notes -->` and `<!-- /notes -->` becomes the body of the Release. Write the final notes with `/release-notes`, which starts from the patch notes of the pull requests merged since the last tag, or, in a version that gathers others, since the tag before the first one it gathers (`npm run release:patch-notes`), so the first beta carries the alphas and what the beta changed, and the next betas only what changed since the last, drafts the public notes in en-us and pt-br and asks you to approve each part, or edit the description on GitHub and delete the `<!-- draft -->` line.
 
 Two checks gate the pull request on every push and every edit of the description:
 

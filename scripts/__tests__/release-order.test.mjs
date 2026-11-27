@@ -14,6 +14,7 @@ import {
   FIRST_BASE,
   checkOrder,
   compareVersions,
+  gatheredVersions,
   ledgerVersions,
   releasedVersions,
 } from "../release-order.mjs";
@@ -218,6 +219,83 @@ describe("checkOrder", () => {
 
   it("refuses an invalid version", () => {
     expect(() => checkOrder("0.2", [])).toThrow("invalid version: 0.2");
+  });
+});
+
+describe("gatheredVersions", () => {
+  const RELEASED = [
+    "0.1.0-alpha.1",
+    "0.1.0-alpha.2",
+    "0.1.0-beta.1",
+    "0.1.0-beta.2",
+    "0.1.0-rc.1",
+    "0.1.0",
+    "0.2.0-alpha.1",
+    "0.2.0-rc.1",
+    "0.2.0-rc.2",
+  ];
+
+  it("gathers every alpha of the same base in the first beta", () => {
+    expect(gatheredVersions("0.1.0-beta.1", RELEASED)).toEqual([
+      "0.1.0-alpha.1",
+      "0.1.0-alpha.2",
+    ]);
+  });
+
+  it("gathers every beta in the first rc", () => {
+    expect(gatheredVersions("0.1.0-rc.1", RELEASED)).toEqual([
+      "0.1.0-beta.1",
+      "0.1.0-beta.2",
+    ]);
+  });
+
+  it("gathers the alphas in the first rc when the base had no beta", () => {
+    expect(gatheredVersions("0.2.0-rc.1", RELEASED)).toEqual(["0.2.0-alpha.1"]);
+  });
+
+  it("gathers every pre-release of its base in a stable version", () => {
+    expect(gatheredVersions("0.1.0", RELEASED)).toEqual([
+      "0.1.0-alpha.1",
+      "0.1.0-alpha.2",
+      "0.1.0-beta.1",
+      "0.1.0-beta.2",
+      "0.1.0-rc.1",
+    ]);
+  });
+
+  it.each(["0.1.0-alpha.2", "0.1.0-beta.2", "0.2.0-rc.2", "0.1.0-alpha.1"])(
+    "gathers nothing in %s, which is not the first of a later stage",
+    (version) => {
+      expect(gatheredVersions(version, RELEASED)).toEqual([]);
+    },
+  );
+
+  it("gathers nothing in the first beta of a base that had no alpha", () => {
+    expect(gatheredVersions("0.3.0-beta.1", RELEASED)).toEqual([]);
+  });
+
+  it("gathers nothing in a stable version with no pre-release", () => {
+    expect(gatheredVersions("0.1.1", RELEASED)).toEqual([]);
+  });
+
+  it("leaves out the version itself and the versions after it", () => {
+    expect(
+      gatheredVersions("0.1.0-beta.1", [
+        "0.1.0-alpha.1",
+        "0.1.0-beta.1",
+        "0.1.0-beta.2",
+      ]),
+    ).toEqual(["0.1.0-alpha.1"]);
+  });
+
+  it("orders the gathered versions by version, whatever the order it gets", () => {
+    expect(
+      gatheredVersions("0.1.0-beta.1", [
+        "0.1.0-alpha.10",
+        "0.1.0-alpha.2",
+        "0.1.0-alpha.1",
+      ]),
+    ).toEqual(["0.1.0-alpha.1", "0.1.0-alpha.2", "0.1.0-alpha.10"]);
   });
 });
 

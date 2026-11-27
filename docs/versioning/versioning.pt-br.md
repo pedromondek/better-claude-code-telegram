@@ -83,7 +83,7 @@ O workflow só roda a partir da `main` e tem três jobs:
 
 ## 🔀 A PR de versão
 
-O workflow abre a PR `release/v<versão>`, com o título `Release v<versão>` e um commit que grava a versão nos 8 arquivos. Entre `<!-- notes -->` e `<!-- /notes -->`, a descrição traz o layout das notas: uma linha `<!-- draft -->`, o TIP com os canais do Telegram, o IMPORTANT com os comandos de instalação, o IMPORTANT com os comandos de atualização, o NOTE da legenda, o bloco em inglês (`<details><summary>` English) com o rascunho que o git-cliff gera a partir dos commits e um bloco em português vazio:
+O workflow abre a PR `release/v<versão>`, com o título `Release v<versão>` e um commit que grava a versão nos 8 arquivos. Entre `<!-- notes -->` e `<!-- /notes -->`, a descrição traz o layout das notas: uma linha `<!-- draft -->`, o TIP com os canais do Telegram, o IMPORTANT com os comandos de instalação, o IMPORTANT com os comandos de atualização, numa versão que junta outras o NOTE 📦 de inclusões com o link do Release de cada uma (a primeira beta junta as alphas da sua base, a primeira rc as betas, uma estável todas as pré-versões da sua base), o NOTE da legenda, o bloco em inglês (`<details><summary>` English) com o rascunho que o git-cliff gera a partir dos commits e um bloco em português vazio:
 
 ```
 <!-- notes -->
@@ -102,7 +102,7 @@ O workflow abre a PR `release/v<versão>`, com o título `Release v<versão>` e 
 <!-- /notes -->
 ```
 
-O que fica entre `<!-- notes -->` e `<!-- /notes -->` é o corpo do Release. As notas finais entram pela `/release-notes`, que parte das patch notes das PRs mergeadas desde a última tag (`npm run release:patch-notes`), escreve as notas públicas em en-us e pt-br e aprova cada parte com você, ou editando a descrição na tela e apagando a linha `<!-- draft -->`.
+O que fica entre `<!-- notes -->` e `<!-- /notes -->` é o corpo do Release. As notas finais entram pela `/release-notes`, que parte das patch notes das PRs mergeadas desde a última tag ou, numa versão que junta outras, desde a tag anterior à primeira que ela junta (`npm run release:patch-notes`), então a primeira beta traz as alphas e o que a beta mudou, e as betas seguintes só o que mudou desde a anterior, escreve as notas públicas em en-us e pt-br e aprova cada parte com você, ou editando a descrição na tela e apagando a linha `<!-- draft -->`.
 
 Dois checks seguram a PR, a cada push e a cada edição da descrição:
 

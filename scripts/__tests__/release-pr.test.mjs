@@ -404,6 +404,34 @@ describe("prepareRelease", () => {
     });
   });
 
+  it("lists the alphas a first beta gathers in the includes NOTE of the pull request", () => {
+    copyProject("0.1.0-alpha.2");
+    const github = fakeGithub();
+
+    prepare("beta", github, {
+      released: sources(["0.1.0-alpha.1", "0.1.0-alpha.2"]),
+    });
+
+    expect(github.calls[2][1].body).toBe(
+      pullRequestBody("0.1.0-beta.1", draftFromCliff(CLIFF), [
+        "0.1.0-alpha.1",
+        "0.1.0-alpha.2",
+      ]),
+    );
+    expect(github.calls[2][1].body).toContain(
+      "📦 **Includes · Inclui:** [v0.1.0-alpha.1]",
+    );
+  });
+
+  it("writes no includes NOTE for a version that gathers nothing", () => {
+    copyProject("0.1.0-alpha.1");
+    const github = fakeGithub();
+
+    prepare("alpha", github, { released: sources(["0.1.0-alpha.1"]) });
+
+    expect(github.calls[2][1].body).not.toContain("Includes");
+  });
+
   it("writes a commit message the commit-msg hook accepts", () => {
     copyProject("0.1.0-alpha.1");
     const github = fakeGithub();

@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import {
   checkOrder,
+  gatheredVersions,
   ledgerVersions,
   releasedVersions,
 } from "./release-order.mjs";
@@ -61,10 +62,10 @@ export function draftFromCliff(text) {
     .trim();
 }
 
-export function pullRequestBody(version, draft) {
+export function pullRequestBody(version, draft, gathered = []) {
   return [
     NOTES_START,
-    notesSkeleton(draft, version),
+    notesSkeleton(draft, version, gathered),
     NOTES_END,
     "",
     `Version pull request of v${version}, opened by the prepare release workflow.`,
@@ -233,7 +234,11 @@ export function prepareRelease({
       base: BASE_BRANCH,
       head: branch,
       title: `Release v${version}`,
-      body: pullRequestBody(version, draft),
+      body: pullRequestBody(
+        version,
+        draft,
+        gatheredVersions(version, released().versions),
+      ),
     });
 
     return { version, branch, url, warnings };
