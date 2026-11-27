@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   VERSION_FILES,
   checkVersions,
+  isVersion,
   nextVersion,
   parseVersion,
   readVersions,
@@ -73,6 +74,19 @@ describe("parseVersion", () => {
   ])("refuses %s", (text) => {
     expect(() => parseVersion(text)).toThrow(`invalid version: ${text}`);
   });
+});
+
+describe("isVersion", () => {
+  it.each(["0.1.0", "0.2.0-alpha.3", "1.4.2-rc.1"])("accepts %s", (text) => {
+    expect(isVersion(text)).toBe(true);
+  });
+
+  it.each(["v0.1.0", "next", "0.1.0-alpha", "0.1.0-alpha.1/", ""])(
+    "refuses %s",
+    (text) => {
+      expect(isVersion(text)).toBe(false);
+    },
+  );
 });
 
 describe("nextVersion", () => {

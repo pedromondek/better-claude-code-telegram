@@ -1,4 +1,6 @@
+import { SETUP_COMMAND } from "../npm/shim/shim.constants.mjs";
 import { PATCH_NOTES_LANGUAGES } from "./patch-notes.constants.mjs";
+import { installCommand } from "./release-npm-publish.mjs";
 import { ANNOUNCE_CHANNELS } from "./release.constants.mjs";
 
 export const ENGLISH_BLOCK = `<details><summary>${PATCH_NOTES_LANGUAGES.english}</summary>`;
@@ -24,6 +26,10 @@ const FOLLOW_LANGUAGES = [
     prereleases: "todas as versões",
   },
 ];
+const CODE_FENCE = "```";
+const LAUNCH_COMMAND = "claude --telegram";
+const UPDATE_COMMAND = "bcct update";
+const UPDATE_SKILL = "/bcct:update";
 const LEGEND = [
   ["✨", "new", "novo"],
   ["🐛", "fix", "correção"],
@@ -53,6 +59,32 @@ export function followAlert() {
     .join("\n");
 }
 
+const codeBlock = (command) => [CODE_FENCE, command, CODE_FENCE];
+
+const importantAlert = (lines) =>
+  ["[!IMPORTANT]", ...lines].map((line) => `> ${line}`).join("\n");
+
+export function installAlert(version) {
+  return importantAlert([
+    "🚀 **Install · Instalar**",
+    ...codeBlock(installCommand(version)),
+    "📌 **This exact version · Esta versão exata**",
+    ...codeBlock(`${SETUP_COMMAND}@${version}`),
+    `Then · Depois: \`${LAUNCH_COMMAND}\``,
+  ]);
+}
+
+export function updateAlert(version) {
+  return importantAlert([
+    "🔄 **Update · Atualizar**",
+    ...codeBlock(UPDATE_COMMAND),
+    "Or, without bcct on the PATH · Ou, sem o bcct no PATH:",
+    ...codeBlock(`${installCommand(version)} update`),
+    "Or in Claude Code · Ou no Claude Code:",
+    ...codeBlock(UPDATE_SKILL),
+  ]);
+}
+
 export function legendAlert() {
   const entries = LEGEND.map(
     ([emoji, english, portuguese]) => `${emoji} ${english} · ${portuguese}`,
@@ -61,14 +93,14 @@ export function legendAlert() {
   return `> [!NOTE]\n> ${entries.join(LEGEND_GAP)}`;
 }
 
-export function emptyNotes() {
-  return notesSkeleton("").replace(`${DRAFT_MARK}\n`, "");
-}
-
-export function notesSkeleton(draft) {
+export function notesSkeleton(draft, version) {
   return [
     DRAFT_MARK,
     followAlert(),
+    "",
+    installAlert(version),
+    "",
+    updateAlert(version),
     "",
     legendAlert(),
     "",

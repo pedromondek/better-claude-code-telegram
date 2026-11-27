@@ -7,7 +7,12 @@ import {
   PLATFORMS,
   REPOSITORY,
 } from "../../npm/shim/shim.constants.mjs";
-import { createNpm, distTagOf, run } from "../release-npm-publish.mjs";
+import {
+  createNpm,
+  distTagOf,
+  installCommand,
+  run,
+} from "../release-npm-publish.mjs";
 import {
   DIST_TAGS,
   MIN_STAGE_NPM,
@@ -48,6 +53,22 @@ function runWith(args, { env = {}, npm: options } = {}) {
 
   return { code, out, err, calls };
 }
+
+describe("installCommand", () => {
+  it.each([
+    ["0.2.0-alpha.3", "npx @pedromondek/better-claude-code-telegram@alpha"],
+    ["0.2.0-beta.1", "npx @pedromondek/better-claude-code-telegram@beta"],
+    ["0.2.0-rc.2", "npx @pedromondek/better-claude-code-telegram@next"],
+  ])("installs %s from the dist-tag of its stage", (version, command) => {
+    expect(installCommand(version)).toBe(command);
+  });
+
+  it("installs a stable version with no tag, as npx takes latest by default", () => {
+    expect(installCommand("0.2.0")).toBe(
+      "npx @pedromondek/better-claude-code-telegram",
+    );
+  });
+});
 
 describe("distTagOf", () => {
   it.each([

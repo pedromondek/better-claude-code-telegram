@@ -206,6 +206,9 @@ describe("binaryCommand", () => {
     [["uninstall", "0.1.0"], ["uninstall", "0.1.0"], false],
     [["health"], ["health"], false],
     [["health", "--download-binary"], ["health"], true],
+    [["update"], ["update"], false],
+    [["update", "alpha"], ["update", "alpha"], false],
+    [["update", "--download-binary"], ["update"], true],
     [["--download-binary"], ["setup"], true],
     [["path", "--download-binary"], ["setup", "path"], true],
   ])("turns %j into the bcct command %j", (args, command, download) => {

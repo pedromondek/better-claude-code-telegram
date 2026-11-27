@@ -14,7 +14,9 @@ import {
   ENGLISH_BLOCK,
   PORTUGUESE_BLOCK,
   followAlert,
+  installAlert,
   legendAlert,
+  updateAlert,
 } from "../release-notes-layout.mjs";
 import { ANNOUNCE_CHANNELS } from "../release.constants.mjs";
 
@@ -136,6 +138,10 @@ function collapsedNotesText() {
   return [
     followAlert(),
     "",
+    installAlert(PRERELEASE),
+    "",
+    updateAlert(PRERELEASE),
+    "",
     legendAlert(),
     "",
     ENGLISH_BLOCK,
@@ -190,7 +196,7 @@ function opening({ marker, title, bullets, version, language, tag }) {
     "",
     ...(bullets.length > 0 ? [...bullets, ""] : []),
     `<a href="https://github.com/${REPO}/releases/tag/v${version}">${english ? "Release notes" : "Notas da versão"}</a>`,
-    `${english ? "Install" : "Instalar"}: <code>npx @pedromondek/better-claude-code-telegram@${tag}</code>`,
+    `${english ? "Install" : "Instalar"}: <code>npx @pedromondek/better-claude-code-telegram${tag === null ? "" : `@${tag}`}</code>`,
   ].join("\n");
 }
 
@@ -266,8 +272,37 @@ const sentWithId = (count) => ({
   body: { ok: true, result: { message_id: 100 + count } },
 });
 
+const PIN_METHODS = new Set(["getChat", "unpinChatMessage", "pinChatMessage"]);
+const methodOf = (url) => url.slice(url.lastIndexOf("/") + 1);
+const isPost = (url) =>
+  url.startsWith("https://api.telegram.org/") &&
+  !PIN_METHODS.has(methodOf(url));
+const nothingPinned = (method) => ({
+  status: 200,
+  body: { ok: true, result: method === "getChat" ? { id: -100 } : true },
+});
+const pinnedIn = (pinned) => (method) =>
+  method === "getChat"
+    ? { status: 200, body: { ok: true, result: { id: -100, ...pinned } } }
+    : nothingPinned(method);
+const openingOf = (messageId, version = "0.2.0") => ({
+  pinned_message: {
+    message_id: messageId,
+    text: `🧪 better-claude-code-telegram ${version}`,
+    entities: [
+      {
+        type: "text_link",
+        offset: 0,
+        length: 13,
+        url: `https://github.com/${REPO}/releases/tag/v${version}`,
+      },
+    ],
+  },
+});
+
 function fakeFetch({
   telegram = sentWithId,
+  pinning = nothingPinned,
   gifStatus = () => 200,
   gifBody = (url) => `bytes of ${url}`,
   failWith = null,
@@ -282,10 +317,9 @@ function fakeFetch({
     }
 
     if (url.startsWith("https://api.telegram.org/")) {
-      const count = calls.filter((call) =>
-        call.url.startsWith("https://api.telegram.org/"),
-      ).length;
-      const answer = telegram(count);
+      const answer = isPost(url)
+        ? telegram(calls.filter((call) => isPost(call.url)).length)
+        : pinning(methodOf(url), JSON.parse(init.body));
 
       if (answer.bodyError !== undefined) {
         return new Response(
@@ -355,10 +389,26 @@ async function announceWith({
 const telegramCalls = (calls) =>
   calls.filter((call) => call.url.startsWith("https://api.telegram.org/"));
 
+const pinCalls = (calls) =>
+  telegramCalls(calls)
+    .filter(({ url }) => !isPost(url))
+    .map(({ url, init }) => {
+      const body = JSON.parse(init.body);
+
+      return {
+        method: methodOf(url),
+        chat: body.chat_id,
+        messageId: body.message_id,
+        disableNotification: body.disable_notification,
+      };
+    });
+
 async function sentPosts(calls) {
   const posts = [];
 
-  for (const { url, init } of telegramCalls(calls)) {
+  for (const { url, init } of telegramCalls(calls).filter((call) =>
+    isPost(call.url),
+  )) {
     const method = url.slice(url.lastIndexOf("/") + 1);
 
     if (init.body instanceof FormData) {
@@ -549,7 +599,7 @@ describe("release-announce › notes", () => {
     );
   });
 
-  it("reads the notes with the two alerts on top and both languages collapsed as it reads them with en-us open", () => {
+  it("reads the notes with the four alerts on top and both languages collapsed as it reads them with en-us open", () => {
     expect(parseNotes(collapsedNotesText(), PRERELEASE_FILE)).toEqual(
       parseNotes(notesText(), PRERELEASE_FILE),
     );
@@ -606,7 +656,7 @@ describe("release-announce › posts of a pre-release", () => {
     ).toEqual(PRERELEASE_ANNOUNCEMENTS);
   });
 
-  it("posts the same from notes with the two alerts on top, both languages collapsed and the GIF under the pt-br items too", () => {
+  it("posts the same from notes with the four alerts on top, both languages collapsed and the GIF under the pt-br items too", () => {
     expect(
       buildAnnouncements({
         root: tempRoot({ [PRERELEASE_FILE]: collapsedNotesText() }),
@@ -667,7 +717,7 @@ describe("release-announce › posts of a stable version", () => {
             bullets: EN_SUMMARY,
             version: STABLE,
             language: "en-us",
-            tag: "latest",
+            tag: null,
           }),
         },
         ...animations(EN_CAPTIONS, [GIF_A, GIF_B, GIF_C]),
@@ -685,7 +735,7 @@ describe("release-announce › posts of a stable version", () => {
             bullets: PT_SUMMARY,
             version: STABLE,
             language: "pt-br",
-            tag: "latest",
+            tag: null,
           }),
         },
         ...animations(PT_CAPTIONS, [GIF_A, GIF_B, GIF_C]),
@@ -712,7 +762,7 @@ describe("release-announce › posts of a stable version", () => {
             bullets: ["• Voice messages are <b>transcribed</b>."],
             version: STABLE,
             language: "en-us",
-            tag: "latest",
+            tag: null,
           }).replace(`<b>${STABLE}</b>`, `<b>${STABLE}</b> is stable`),
         },
         ...animations(EN_CAPTIONS, [GIF_C]),
@@ -730,7 +780,7 @@ describe("release-announce › posts of a stable version", () => {
             bullets: ["• Mensagens de voz são <b>transcritas</b>."],
             version: STABLE,
             language: "pt-br",
-            tag: "latest",
+            tag: null,
           }).replace(`<b>${STABLE}</b>`, `<b>${STABLE}</b> está estável`),
         },
         ...animations(PT_CAPTIONS, [GIF_C]),
@@ -787,7 +837,7 @@ describe("release-announce › posts of a stable version", () => {
           `✅ <b>${STABLE}</b> is stable`,
           "",
           `<a href="https://github.com/${REPO}/releases/tag/v${STABLE}">Release notes</a>`,
-          "Install: <code>npx @pedromondek/better-claude-code-telegram@latest</code>",
+          "Install: <code>npx @pedromondek/better-claude-code-telegram</code>",
         ].join("\n"),
       },
     ]);
@@ -798,7 +848,7 @@ describe("release-announce › posts of a stable version", () => {
           `✅ <b>${STABLE}</b> está estável`,
           "",
           `<a href="https://github.com/${REPO}/releases/tag/v${STABLE}">Notas da versão</a>`,
-          "Instalar: <code>npx @pedromondek/better-claude-code-telegram@latest</code>",
+          "Instalar: <code>npx @pedromondek/better-claude-code-telegram</code>",
         ].join("\n"),
       },
     ]);
@@ -1299,9 +1349,13 @@ describe("release-announce › posting", () => {
       `${API}/sendMessage`,
       `${API}/sendAnimation`,
       `${API}/sendAnimation`,
+      `${API}/getChat`,
+      `${API}/pinChatMessage`,
       `${API}/sendMessage`,
       `${API}/sendAnimation`,
       `${API}/sendAnimation`,
+      `${API}/getChat`,
+      `${API}/pinChatMessage`,
     ]);
     expect(posts.slice(0, 3)).toEqual([
       {
@@ -1335,7 +1389,10 @@ describe("release-announce › posting", () => {
     expect(posts[4].animation.bytes).toBe(`bytes of ${GIF_A}`);
     expect(calls[2].init.method).toBe("POST");
     expect(calls[3].init.method).toBe("POST");
-    expect(out).toEqual([`✓ ${PRE_EN}: 3 posts`, `✓ ${PRE_PT}: 3 posts`]);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: 3 posts, opening pinned`,
+      `✓ ${PRE_PT}: 3 posts, opening pinned`,
+    ]);
   });
 
   it("sends each GIF of a channel as a reply to the opening of that channel", async () => {
@@ -1521,8 +1578,8 @@ describe("release-announce › posting", () => {
     );
     expect(sleeps).toEqual([1000, 1000, 1000, 1000, 1000]);
     expect(out).toEqual([
-      `✓ ${PRE_EN}: 3 posts in ${TEST_CHANNEL}`,
-      `✓ ${PRE_PT}: 3 posts in ${TEST_CHANNEL}`,
+      `✓ ${PRE_EN}: 3 posts in ${TEST_CHANNEL}, opening pinned`,
+      `✓ ${PRE_PT}: 3 posts in ${TEST_CHANNEL}, opening pinned`,
     ]);
   });
 
@@ -1534,10 +1591,10 @@ describe("release-announce › posting", () => {
 
     expect(code).toBe(0);
     expect(out).toEqual([
-      `✓ ${STABLE_EN}: 4 posts`,
-      `✓ ${STABLE_PT}: 4 posts`,
-      `✓ ${PRE_EN}: 2 posts`,
-      `✓ ${PRE_PT}: 2 posts`,
+      `✓ ${STABLE_EN}: 4 posts, opening pinned`,
+      `✓ ${STABLE_PT}: 4 posts, opening pinned`,
+      `✓ ${PRE_EN}: 2 posts, opening pinned`,
+      `✓ ${PRE_PT}: 2 posts, opening pinned`,
     ]);
   });
 
@@ -1552,8 +1609,8 @@ describe("release-announce › posting", () => {
     });
 
     expect(out.slice(2)).toEqual([
-      `✓ ${PRE_EN}: 1 post`,
-      `✓ ${PRE_PT}: 1 post`,
+      `✓ ${PRE_EN}: 1 post, opening pinned`,
+      `✓ ${PRE_PT}: 1 post, opening pinned`,
     ]);
   });
 });
@@ -1789,6 +1846,233 @@ describe("release-announce › Telegram answers", () => {
   });
 });
 
+describe("release-announce › pin", () => {
+  const V = `v${PRERELEASE}`;
+  const DRY = { DRY_RUN: "1", TELEGRAM_TEST_CHANNEL: TEST_CHANNEL };
+
+  it("pins the opening of each channel after its last post, with no notification", async () => {
+    const { code, out, calls } = await announceWith();
+
+    expect(code).toBe(0);
+    expect(pinCalls(calls)).toEqual([
+      { method: "getChat", chat: PRE_EN },
+      {
+        method: "pinChatMessage",
+        chat: PRE_EN,
+        messageId: 101,
+        disableNotification: true,
+      },
+      { method: "getChat", chat: PRE_PT },
+      {
+        method: "pinChatMessage",
+        chat: PRE_PT,
+        messageId: 104,
+        disableNotification: true,
+      },
+    ]);
+    expect(methodOf(telegramCalls(calls).at(3).url)).toBe("getChat");
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: 3 posts, opening pinned`,
+      `✓ ${PRE_PT}: 3 posts, opening pinned`,
+    ]);
+  });
+
+  it("unpins the opening of the previous version before pinning the new one", async () => {
+    const { calls } = await announceWith({
+      fetch: { pinning: pinnedIn(openingOf(55)) },
+    });
+
+    expect(pinCalls(calls).slice(0, 3)).toEqual([
+      { method: "getChat", chat: PRE_EN },
+      { method: "unpinChatMessage", chat: PRE_EN, messageId: 55 },
+      {
+        method: "pinChatMessage",
+        chat: PRE_EN,
+        messageId: 101,
+        disableNotification: true,
+      },
+    ]);
+  });
+
+  it("keeps the pinned opening of a newer version and says so", async () => {
+    const { code, out, calls } = await announceWith({
+      env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=101:3,${PRE_PT}=104:3` },
+      fetch: { pinning: pinnedIn(openingOf(120, "0.3.0-alpha.2")) },
+    });
+
+    expect(code).toBe(0);
+    expect(pinCalls(calls)).toEqual([
+      { method: "getChat", chat: PRE_EN },
+      { method: "getChat", chat: PRE_PT },
+    ]);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: opening kept, v0.3.0-alpha.2 is pinned`,
+      `✓ ${PRE_PT}: opening kept, v0.3.0-alpha.2 is pinned`,
+    ]);
+  });
+
+  it("says the opening was kept after posting when a newer one is pinned", async () => {
+    const { code, out } = await announceWith({
+      fetch: { pinning: pinnedIn(openingOf(120, "1.0.0")) },
+    });
+
+    expect(code).toBe(0);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: 3 posts, opening kept, v1.0.0 is pinned`,
+      `✓ ${PRE_PT}: 3 posts, opening kept, v1.0.0 is pinned`,
+    ]);
+  });
+
+  it("replaces another opening of the same version", async () => {
+    const { calls } = await announceWith({
+      fetch: { pinning: pinnedIn(openingOf(90, PRERELEASE)) },
+    });
+
+    expect(pinCalls(calls).slice(0, 3)).toEqual([
+      { method: "getChat", chat: PRE_EN },
+      { method: "unpinChatMessage", chat: PRE_EN, messageId: 90 },
+      {
+        method: "pinChatMessage",
+        chat: PRE_EN,
+        messageId: 101,
+        disableNotification: true,
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      "a message without links",
+      { pinned_message: { message_id: 55, text: "Welcome" } },
+    ],
+    [
+      "a Release link of this repository without a version",
+      {
+        pinned_message: {
+          message_id: 55,
+          entities: [
+            {
+              type: "text_link",
+              url: `https://github.com/${REPO}/releases/tag/vnext`,
+            },
+          ],
+        },
+      },
+    ],
+    [
+      "a link to another repository",
+      {
+        pinned_message: {
+          message_id: 55,
+          entities: [
+            {
+              type: "text_link",
+              url: "https://github.com/other/repo/releases/tag/v1.0.0",
+            },
+          ],
+        },
+      },
+    ],
+    ["no pinned message", {}],
+  ])("keeps a pinned message with %s", async (_case, pinned) => {
+    const { calls } = await announceWith({
+      fetch: { pinning: pinnedIn(pinned) },
+    });
+
+    expect(
+      pinCalls(calls).filter(({ method }) => method === "unpinChatMessage"),
+    ).toEqual([]);
+    expect(
+      pinCalls(calls).filter(({ method }) => method === "pinChatMessage"),
+    ).toHaveLength(2);
+  });
+
+  it("does not pin again an opening that is already the pinned one", async () => {
+    const { code, out, calls } = await announceWith({
+      env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=done,${PRE_PT}=104:3` },
+      fetch: { pinning: pinnedIn(openingOf(104, PRERELEASE)) },
+    });
+
+    expect(code).toBe(0);
+    expect(pinCalls(calls)).toEqual([{ method: "getChat", chat: PRE_PT }]);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: posted before`,
+      `✓ ${PRE_PT}: opening pinned`,
+    ]);
+  });
+
+  it("only pins the opening when the resume says every post of the channel went", async () => {
+    const { code, out, calls } = await announceWith({
+      env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=done,${PRE_PT}=104:3` },
+    });
+
+    expect(code).toBe(0);
+    expect(await sentPosts(calls)).toEqual([]);
+    expect(pinCalls(calls)).toEqual([
+      { method: "getChat", chat: PRE_PT },
+      {
+        method: "pinChatMessage",
+        chat: PRE_PT,
+        messageId: 104,
+        disableNotification: true,
+      },
+    ]);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: posted before`,
+      `✓ ${PRE_PT}: opening pinned`,
+    ]);
+  });
+
+  it("tells the resume that only pins when Telegram rejects the pin", async () => {
+    const { code, err } = await announceWith({
+      fetch: {
+        pinning: (method) =>
+          method === "pinChatMessage"
+            ? {
+                status: 400,
+                body: { ok: false, description: "not enough rights" },
+              }
+            : nothingPinned(method),
+      },
+    });
+
+    expect(code).toBe(1);
+    expect(err).toEqual([
+      `✗ Telegram answered 400 to pinChatMessage for ${PRE_EN}: not enough rights; to post only what is left, dispatch announce-release.yml with resume: ${V},${PRE_EN}=101:3`,
+    ]);
+  });
+
+  it("tells the same resume when the answer to the pin is lost, since pinning again changes nothing", async () => {
+    const { err } = await announceWith({
+      fetch: {
+        pinning: (method) =>
+          method === "pinChatMessage"
+            ? { status: 200, bodyError: new TypeError("terminated") }
+            : nothingPinned(method),
+      },
+    });
+
+    expect(err).toEqual([
+      `✗ could not read the answer of Telegram to pinChatMessage for ${PRE_EN}: terminated; to post only what is left, dispatch announce-release.yml with resume: ${V},${PRE_EN}=101:3`,
+    ]);
+  });
+
+  it("pins in TELEGRAM_TEST_CHANNEL on DRY_RUN=1", async () => {
+    const { out, calls } = await announceWith({ env: DRY });
+
+    expect(
+      pinCalls(calls).filter(({ method }) => method === "pinChatMessage"),
+    ).toEqual([
+      expect.objectContaining({ chat: TEST_CHANNEL, messageId: 101 }),
+      expect.objectContaining({ chat: TEST_CHANNEL, messageId: 104 }),
+    ]);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: 3 posts in ${TEST_CHANNEL}, opening pinned`,
+      `✓ ${PRE_PT}: 3 posts in ${TEST_CHANNEL}, opening pinned`,
+    ]);
+  });
+});
+
 describe("release-announce › resume", () => {
   const V = `v${PRERELEASE}`;
   const DRY = { DRY_RUN: "1", TELEGRAM_TEST_CHANNEL: TEST_CHANNEL };
@@ -1850,6 +2134,8 @@ describe("release-announce › resume", () => {
     expect(calls.map(({ url }) => url)).toEqual([
       GIF_B,
       `${API}/sendAnimation`,
+      `${API}/getChat`,
+      `${API}/pinChatMessage`,
     ]);
     expect(posts).toEqual([
       expect.objectContaining({
@@ -1858,7 +2144,10 @@ describe("release-announce › resume", () => {
         replyParameters: { message_id: 104 },
       }),
     ]);
-    expect(out).toEqual([`✓ ${PRE_EN}: posted before`, `✓ ${PRE_PT}: 1 post`]);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: posted before`,
+      `✓ ${PRE_PT}: 1 post, opening pinned`,
+    ]);
   });
 
   it("carries the finished and the given progress into the resume of a rejection on the resumed run", async () => {
@@ -1878,8 +2167,12 @@ describe("release-announce › resume", () => {
       env: { ANNOUNCE_RESUME: `${V},${PRE_EN}=done` },
     });
 
-    expect(telegramCalls(calls)).toHaveLength(3);
-    expect(out).toEqual([`✓ ${PRE_EN}: posted before`, `✓ ${PRE_PT}: 3 posts`]);
+    expect(await sentPosts(calls)).toHaveLength(3);
+    expect(pinCalls(calls)).toHaveLength(2);
+    expect(out).toEqual([
+      `✓ ${PRE_EN}: posted before`,
+      `✓ ${PRE_PT}: 3 posts, opening pinned`,
+    ]);
   });
 
   it("gives both resumes when the answer to a GIF is lost, since Telegram may have taken it", async () => {
@@ -1914,7 +2207,7 @@ describe("release-announce › resume", () => {
     ]);
   });
 
-  it("names the channel as done in the shown resume when the lost answer is of its last post", async () => {
+  it("leaves only the pin in the shown resume when the lost answer is of the last post of a channel", async () => {
     const { err } = await announceWith({
       fetch: {
         telegram: (count) =>
@@ -1925,7 +2218,7 @@ describe("release-announce › resume", () => {
     });
 
     expect(err).toEqual([
-      `✗ could not read the answer of Telegram to sendAnimation for ${PRE_EN}: terminated; Telegram may have taken it: if it shows in ${PRE_EN}, dispatch announce-release.yml with resume: ${V},${PRE_EN}=done; if not, resume: ${V},${PRE_EN}=101:2`,
+      `✗ could not read the answer of Telegram to sendAnimation for ${PRE_EN}: terminated; Telegram may have taken it: if it shows in ${PRE_EN}, dispatch announce-release.yml with resume: ${V},${PRE_EN}=101:3; if not, resume: ${V},${PRE_EN}=101:2`,
     ]);
   });
 
@@ -1944,7 +2237,7 @@ describe("release-announce › resume", () => {
     ]);
   });
 
-  it("names a channel of only the opening as done when the answer to that opening is lost", async () => {
+  it("asks for the opening id to pin when the lost answer is of the only post of a channel", async () => {
     const { err } = await announceWith({
       root: tempRoot(
         stableFiles({
@@ -1962,7 +2255,7 @@ describe("release-announce › resume", () => {
     const finished = `v${STABLE},${STABLE_EN}=done,${STABLE_PT}=done`;
 
     expect(err).toEqual([
-      `✗ could not read the answer of Telegram to sendMessage for ${PRE_EN}: terminated; Telegram may have taken it: if it shows in ${PRE_EN}, dispatch announce-release.yml with resume: ${finished},${PRE_EN}=done; if not, resume: ${finished}`,
+      `✗ could not read the answer of Telegram to sendMessage for ${PRE_EN}: terminated; Telegram may have taken it: if it shows in ${PRE_EN}, dispatch announce-release.yml with resume: ${finished},${PRE_EN}=<opening id>:1 (the opening id is the number at the end of its t.me link); if not, resume: ${finished}`,
     ]);
   });
 
@@ -1977,7 +2270,7 @@ describe("release-announce › resume", () => {
     expect(code).toBe(0);
     expect(out).toEqual([
       `✓ ${PRE_EN}: posted before`,
-      `✓ ${PRE_PT}: 3 posts in ${TEST_CHANNEL}`,
+      `✓ ${PRE_PT}: 3 posts in ${TEST_CHANNEL}, opening pinned`,
     ]);
   });
 
@@ -2019,7 +2312,7 @@ describe("release-announce › resume", () => {
       `"${PRE_EN}=abc:1" is not <channel>=done or <channel>=<opening id>:<posts sent>`,
     ],
     [`@other=done`, "@other is not a channel of this version"],
-    [`${PRE_EN}=101:3`, `${PRE_EN} has 3 posts, so 3 cannot be left to post`],
+    [`${PRE_EN}=101:4`, `${PRE_EN} has 3 posts, so 4 cannot be left to post`],
     [`${PRE_EN}=101:0`, `${PRE_EN} has 3 posts, so 0 cannot be left to post`],
   ])(
     "refuses the ANNOUNCE_RESUME entry %s before any request",
