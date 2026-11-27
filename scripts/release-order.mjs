@@ -181,7 +181,11 @@ export function releasedVersions(sources) {
     ];
   });
 
-  return { versions, warnings };
+  const published = [...new Set(sources.releases.filter(isVersion))].toSorted(
+    compareVersions,
+  );
+
+  return { versions, warnings, published };
 }
 
 function notesVersions(root) {

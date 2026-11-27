@@ -319,7 +319,22 @@ describe("releasedVersions", () => {
         npm: ["0.0.0-stage", "0.1.0-alpha.1"],
         ledger: ["0.1.0-alpha.1"],
       }),
-    ).toEqual({ versions: ["0.1.0-alpha.1"], warnings: [] });
+    ).toEqual({
+      versions: ["0.1.0-alpha.1"],
+      warnings: [],
+      published: ["0.1.0-alpha.1"],
+    });
+  });
+
+  it("lists as published only the versions that have a published Release, in version order", () => {
+    expect(
+      releasedVersions({
+        tags: ["0.1.0-alpha.1", "0.1.0-alpha.2"],
+        releases: ["0.1.0-alpha.2", "stage", "0.1.0-alpha.1", "0.1.0-alpha.2"],
+        npm: ["0.1.0-alpha.1", "0.1.0-alpha.2"],
+        ledger: ["0.1.0-alpha.1", "0.1.0-alpha.2", "0.1.0-alpha.3"],
+      }).published,
+    ).toEqual(["0.1.0-alpha.1", "0.1.0-alpha.2"]);
   });
 
   it("warns about a version that the tags, the Releases and npm do not all have", () => {

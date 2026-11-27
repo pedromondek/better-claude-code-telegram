@@ -203,6 +203,19 @@ export function prepareRelease({
   });
   const tag = `v${version}`;
   const branch = releaseBranch(version);
+  const sources = released();
+  const gathered = gatheredVersions(version, sources.versions);
+  const unpublished = gathered.filter(
+    (item) => !sources.published.includes(item),
+  );
+
+  if (unpublished.length > 0) {
+    const one = unpublished.length === 1;
+
+    throw new Error(
+      `${unpublished.map((item) => `v${item}`).join(", ")} ${one ? "has" : "have"} no published Release: finish ${one ? "its release" : "their releases"} before preparing v${version}`,
+    );
+  }
 
   if (github.refExists(`heads/${branch}`)) {
     throw new Error(
@@ -234,11 +247,7 @@ export function prepareRelease({
       base: BASE_BRANCH,
       head: branch,
       title: `Release v${version}`,
-      body: pullRequestBody(
-        version,
-        draft,
-        gatheredVersions(version, released().versions),
-      ),
+      body: pullRequestBody(version, draft, gathered),
     });
 
     return { version, branch, url, warnings };

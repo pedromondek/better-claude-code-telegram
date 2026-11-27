@@ -109,7 +109,7 @@ Dois checks seguram a PR, a cada push e a cada edição da descrição:
 - **Release notes** fica vermelho enquanto a linha `<!-- draft -->` estiver entre os marcadores, as notas estiverem vazias ou sem o bloco 🇧🇷, de que o release precisa para gerar o `docs/features`, ou os marcadores faltarem ou se repetirem, então o rascunho cru nunca é publicado.
 - **Release version** confere de novo as três regras, para o caso de outra versão ter saído enquanto a PR estava aberta, e que os 8 arquivos têm a versão da branch.
 
-A PR abre uma vez só. Para preparar de novo a mesma versão, feche a PR e apague a branch.
+A PR abre uma vez só. Para preparar de novo a mesma versão, feche a PR e apague a branch. Uma versão que junta outra sem Release publicado, deixada por uma run do release que parou antes de publicá-lo, é recusada até esse release terminar.
 
 ## 🚀 O merge publica
 

@@ -88,8 +88,8 @@ function fakeGithub({ refs = [], failOn = null } = {}) {
   };
 }
 
-function sources(versions = [], warnings = []) {
-  return () => ({ versions, warnings });
+function sources(versions = [], warnings = [], published = versions) {
+  return () => ({ versions, warnings, published });
 }
 
 function prepare(target, github, { released = sources() } = {}) {
@@ -421,6 +421,39 @@ describe("prepareRelease", () => {
     expect(github.calls[2][1].body).toContain(
       "📦 **Includes · Inclui:** [v0.1.0-alpha.1]",
     );
+  });
+
+  it("refuses a first beta that gathers an alpha without a published Release, writing nothing", () => {
+    copyProject("0.1.0-alpha.2");
+    const github = fakeGithub();
+
+    expect(() =>
+      prepare("beta", github, {
+        released: sources(
+          ["0.1.0-alpha.1", "0.1.0-alpha.2"],
+          [],
+          ["0.1.0-alpha.1"],
+        ),
+      }),
+    ).toThrow(
+      "v0.1.0-alpha.2 has no published Release: finish its release before preparing v0.1.0-beta.1",
+    );
+    expect(github.calls).toEqual([]);
+    expect(readVersions(root)[0].version).toBe("0.1.0-alpha.2");
+  });
+
+  it("names every gathered version without a published Release", () => {
+    copyProject("0.1.0-alpha.2");
+    const github = fakeGithub();
+
+    expect(() =>
+      prepare("beta", github, {
+        released: sources(["0.1.0-alpha.1", "0.1.0-alpha.2"], [], []),
+      }),
+    ).toThrow(
+      "v0.1.0-alpha.1, v0.1.0-alpha.2 have no published Release: finish their releases before preparing v0.1.0-beta.1",
+    );
+    expect(github.calls).toEqual([]);
   });
 
   it("writes no includes NOTE for a version that gathers nothing", () => {
@@ -933,6 +966,7 @@ describe("collectReleased", () => {
     expect(released).toEqual({
       versions: ["0.1.0", "0.2.0", "0.3.0-alpha.1"],
       warnings: [],
+      published: ["0.1.0", "0.2.0"],
     });
     expect(asked).toEqual([
       [
@@ -960,6 +994,6 @@ describe("collectReleased", () => {
         ghJson: () => [[]],
         fetch: async () => ({ status: 404, ok: false, json: async () => ({}) }),
       }),
-    ).toEqual({ versions: [], warnings: [] });
+    ).toEqual({ versions: [], warnings: [], published: [] });
   });
 });

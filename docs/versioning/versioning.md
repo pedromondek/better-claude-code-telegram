@@ -109,7 +109,7 @@ Two checks gate the pull request on every push and every edit of the description
 - **Release notes** fails while the `<!-- draft -->` line is still between the markers, while the notes are empty or lack the 🇧🇷 block, which the release needs to build `docs/features`, or when a marker is missing or repeated, so a raw draft never gets published.
 - **Release version** re-checks the three rules, in case another version shipped while the pull request was open, and verifies that all 8 files carry the version in the branch name.
 
-The workflow opens the pull request only once. To prepare the same version again, close the pull request and delete its branch.
+The workflow opens the pull request only once. To prepare the same version again, close the pull request and delete its branch. A version that gathers one without a published Release, left by a release run that stopped before publishing it, is refused until that release finishes.
 
 ## 🚀 What happens on merge
 
